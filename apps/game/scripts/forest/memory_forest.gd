@@ -1,5 +1,11 @@
 extends Node2D
 
+# Mechanics prototype only.
+# These procedural rectangles, polygons, and circles are temporary stand-ins
+# for the final original pixel-art production assets. Later passes should
+# replace this drawing layer with TileMap layers, animated sprites, Muji's
+# sprite sheet, portal animations, and environmental VFX while preserving the
+# portal metadata contract loaded below.
 const PORTAL_DATA_PATH := "res://forest_data/portal_manifest.seed.json"
 const MUJI_SPEED := 150.0
 const PORTAL_RADIUS := 64.0
