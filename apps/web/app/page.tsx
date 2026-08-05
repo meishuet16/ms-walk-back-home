@@ -1,6 +1,7 @@
 import { createFixtureAuthAdapter, createFixtureDiaryStore } from "@walk/shared";
 import { PortalBadge } from "@walk/ui";
 import { ImportComposerWorkspace } from "../components/ImportComposerWorkspace";
+import { GodotForestEmbed } from "../features/forest/GodotForestEmbed";
 
 const diaryStore = createFixtureDiaryStore();
 const auth = createFixtureAuthAdapter();
@@ -10,6 +11,7 @@ export default async function HomePage() {
 
   return (
     <main className="shell">
+      <GodotForestEmbed />
       <div className="workspace">
         <section className="panel forest-panel" aria-labelledby="forest-title">
           <p>Local fixture mode · {session.user.displayName}</p>

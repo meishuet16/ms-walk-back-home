@@ -6,7 +6,7 @@ describe("redactDiaryLogPayload", () => {
     const redacted = redactDiaryLogPayload({
       event: "diary_entry_saved",
       entryId: "entry-123",
-      body: "I met Real Person Name at a private address.",
+      body: "I met Fictional Person at a made-up address.",
       title: "Private raw title",
       mood: "nostalgic",
       nested: {
@@ -34,13 +34,13 @@ describe("redactDiaryLogPayload", () => {
       entries: [
         {
           entryId: "fixture-entry-001",
-          diaryText: "private diary line",
-          photoCaption: "private photo caption",
-          importPath: "imports/private.md"
+          diaryText: "fictional sensitive diary line",
+          photoCaption: "fictional sensitive photo caption",
+          importPath: "imports/fictional-private.md"
         }
       ],
       generatedGraph: {
-        summary: "private generated summary",
+        summary: "fictional generated summary",
         nodeCount: 4
       }
     };
@@ -59,6 +59,6 @@ describe("redactDiaryLogPayload", () => {
       ],
       generatedGraph: "[redacted]"
     });
-    expect(payload.entries[0]?.diaryText).toBe("private diary line");
+    expect(payload.entries[0]?.diaryText).toBe("fictional sensitive diary line");
   });
 });

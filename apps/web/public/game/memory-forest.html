@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Memory Forest Fixture</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #08101d;
+      }
+
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+        image-rendering: pixelated;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="forest" width="960" height="540" aria-label="Playable Memory Forest fixture"></canvas>
+    <script>
+      const canvas = document.querySelector("#forest");
+      const ctx = canvas.getContext("2d");
+      const keys = new Set();
+      const muji = { x: 480, y: 330, speed: 150 };
+      let portals = [];
+      let activePortal = null;
+      let lastTime = performance.now();
+      let message = "Walk with Muji. WASD or arrows move. Approach a glowing path.";
+
+      window.addEventListener("keydown", (event) => {
+        keys.add(event.key.toLowerCase());
+        if ((event.key.toLowerCase() === "e" || event.key === "Enter") && activePortal) {
+          message =
+            activePortal.state === "playable"
+              ? `Entering ${activePortal.chapterTitle}...`
+              : activePortal.state === "processing"
+                ? "This memory is still becoming a door."
+                : "This path is locked for now.";
+        }
+      });
+
+      window.addEventListener("keyup", (event) => keys.delete(event.key.toLowerCase()));
+
+      fetch("./fictional-portals.json")
+        .then((response) => response.json())
+        .then((data) => {
+          portals = data;
+          requestAnimationFrame(loop);
+        })
+        .catch(() => {
+          portals = [];
+          requestAnimationFrame(loop);
+        });
+
+      function loop(now) {
+        const delta = Math.min((now - lastTime) / 1000, 0.05);
+        lastTime = now;
+        update(delta, now / 1000);
+        draw(now / 1000);
+        requestAnimationFrame(loop);
+      }
+
+      function update(delta) {
+        let dx = 0;
+        let dy = 0;
+        if (keys.has("a") || keys.has("arrowleft")) dx -= 1;
+        if (keys.has("d") || keys.has("arrowright")) dx += 1;
+        if (keys.has("w") || keys.has("arrowup")) dy -= 1;
+        if (keys.has("s") || keys.has("arrowdown")) dy += 1;
+        const length = Math.hypot(dx, dy) || 1;
+        muji.x = clamp(muji.x + (dx / length) * muji.speed * delta, 32, 928);
+        muji.y = clamp(muji.y + (dy / length) * muji.speed * delta, 80, 500);
+
+        activePortal = null;
+        let nearestDistance = 64;
+        for (const portal of portals) {
+          const distance = Math.hypot(muji.x - portal.x, muji.y - portal.y);
+          if (distance < nearestDistance) {
+            activePortal = portal;
+            nearestDistance = distance;
+          }
+        }
+
+        if (activePortal) {
+          const action = activePortal.state === "playable" ? "Press E to enter" : "Not ready to enter";
+          message = `${activePortal.chapterTitle}\n${activePortal.date} · ${activePortal.mood} · ${activePortal.state}\n${action}`;
+        } else if (!message.startsWith("Entering") && !message.startsWith("This")) {
+          message = "Walk with Muji. WASD or arrows move. Approach a glowing path.";
+        }
+      }
+
+      function draw(time) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawSky();
+        drawForest(time);
+        drawFireflies(time);
+        portals.forEach((portal) => drawPortal(portal, time));
+        drawMuji();
+        drawHud();
+      }
+
+      function drawSky() {
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, "#101b32");
+        gradient.addColorStop(0.6, "#0b1827");
+        gradient.addColorStop(1, "#071015");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "rgba(88, 132, 134, 0.12)";
+        for (let y = 90; y < 500; y += 34) ctx.fillRect(0, y, 960, 2);
+      }
+
+      function drawForest(time) {
+        ctx.fillStyle = "rgba(41, 72, 58, 0.86)";
+        pixelEllipse(480, 405, 760, 150);
+        for (let i = 0; i < 17; i += 1) {
+          const x = 34 + i * 58 + Math.sin(time * 1.2 + i) * 4;
+          const y = 150 + (i % 3) * 16;
+          ctx.fillStyle = "#11221f";
+          ctx.fillRect(x - 5, y + 92, 10, 220);
+          ctx.fillStyle = "#123d38";
+          triangle(x - 34, y + 120, x, y + 8, x + 34, y + 120);
+          ctx.fillStyle = "#174f49";
+          triangle(x - 26, y + 78, x, y - 18, x + 26, y + 78);
+        }
+        ctx.strokeStyle = "rgba(115, 94, 62, 0.55)";
+        ctx.lineWidth = 42;
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        ctx.moveTo(468, 540);
+        ctx.lineTo(440, 455);
+        ctx.lineTo(482, 375);
+        ctx.lineTo(506, 290);
+        ctx.stroke();
+      }
+
+      function drawFireflies(time) {
+        for (let i = 0; i < 18; i += 1) {
+          const pulse = 0.45 + Math.sin(time * 2 + i) * 0.22;
+          const x = 80 + ((i * 137) % 780);
+          const y = 130 + ((i * 59) % 270);
+          ctx.fillStyle = `rgba(242, 196, 88, ${0.42 + pulse})`;
+          pixelEllipse(x, y, 4 + pulse * 2, 4 + pulse * 2);
+        }
+      }
+
+      function drawPortal(portal, time) {
+        const colors = {
+          playable: "rgba(232, 161, 77, 0.34)",
+          processing: "rgba(143, 196, 235, 0.32)",
+          locked: "rgba(120, 140, 155, 0.22)",
+        };
+        ctx.fillStyle = colors[portal.state] || colors.locked;
+        pixelEllipse(portal.x, portal.y, 92 + Math.sin(time * 2) * 6, 92 + Math.sin(time * 2) * 6);
+        ctx.fillStyle = "#17282b";
+        ctx.fillRect(portal.x - 22, portal.y - 38, 44, 76);
+        ctx.fillStyle = portal.state === "playable" ? "rgba(232, 161, 77, 0.44)" : "rgba(143, 196, 235, 0.28)";
+        ctx.fillRect(portal.x - 15, portal.y - 28, 30, 58);
+        if (portal.state === "locked") {
+          ctx.strokeStyle = "#c2d1d9";
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(portal.x - 17, portal.y - 3);
+          ctx.lineTo(portal.x + 17, portal.y + 3);
+          ctx.stroke();
+        }
+      }
+
+      function drawMuji() {
+        ctx.strokeStyle = "#090d17";
+        ctx.lineWidth = 3;
+        line(muji.x - 16, muji.y + 20, muji.x - 24, muji.y + 36);
+        line(muji.x + 16, muji.y + 20, muji.x + 24, muji.y + 36);
+        line(muji.x - 22, muji.y - 2, muji.x - 34, muji.y + 10);
+        line(muji.x + 22, muji.y - 2, muji.x + 34, muji.y + 10);
+        ctx.fillStyle = "#050b17";
+        ctx.fillRect(muji.x - 18, muji.y - 48, 36, 14);
+        ctx.strokeStyle = "#050b17";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(muji.x + 19, muji.y - 41, 11, -1.5, 1.5);
+        ctx.stroke();
+        ctx.fillStyle = "rgba(104, 145, 168, 0.62)";
+        ctx.fillRect(muji.x - 22, muji.y - 34, 44, 58);
+        ctx.fillStyle = "rgba(199, 232, 245, 0.20)";
+        ctx.fillRect(muji.x - 14, muji.y - 24, 28, 38);
+        ctx.fillStyle = "#050b17";
+        ctx.fillRect(muji.x - 11, muji.y - 10, 22, 4);
+      }
+
+      function drawHud() {
+        ctx.fillStyle = "rgba(5, 10, 18, 0.34)";
+        ctx.fillRect(20, 18, 540, 86);
+        ctx.fillStyle = "#fff2dc";
+        ctx.font = "20px Georgia, serif";
+        const lines = message.split("\n");
+        lines.forEach((lineText, index) => ctx.fillText(lineText, 34, 48 + index * 24));
+      }
+
+      function triangle(x1, y1, x2, y2, x3, y3) {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.lineTo(x3, y3);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      function line(x1, y1, x2, y2) {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+
+      function pixelEllipse(x, y, width, height) {
+        ctx.beginPath();
+        ctx.ellipse(x, y, width / 2, height / 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+      }
+    </script>
+  </body>
+</html>

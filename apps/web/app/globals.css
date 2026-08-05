@@ -35,6 +35,42 @@ textarea {
     linear-gradient(180deg, var(--night-800), var(--night-950) 62%);
 }
 
+.primary-forest {
+  position: relative;
+  min-height: min(78vh, 46rem);
+  border-bottom: 1px solid rgba(244, 235, 221, 0.14);
+  background: #08101d;
+}
+
+.primary-forest-copy {
+  position: absolute;
+  z-index: 2;
+  left: clamp(1rem, 4vw, 3rem);
+  top: clamp(1rem, 5vw, 3rem);
+  max-width: 28rem;
+  text-shadow: 0 3px 20px rgba(0, 0, 0, 0.72);
+  pointer-events: none;
+}
+
+.primary-forest-copy p,
+.primary-forest-copy h1 {
+  margin: 0.25rem 0;
+}
+
+.primary-forest-copy h1 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.4rem, 8vw, 5.8rem);
+  line-height: 0.92;
+}
+
+.godot-frame {
+  display: block;
+  width: 100%;
+  min-height: min(78vh, 46rem);
+  border: 0;
+  background: #08101d;
+}
+
 .workspace {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(20rem, 0.85fr);

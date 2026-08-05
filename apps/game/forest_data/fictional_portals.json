@@ -1,0 +1,29 @@
+[
+  {
+    "id": "portal-bakery-lamp",
+    "date": "2030-01-01",
+    "chapterTitle": "Bakery Day",
+    "mood": "gentle",
+    "state": "playable",
+    "x": 210,
+    "y": 210
+  },
+  {
+    "id": "portal-lantern-road",
+    "date": "2030-01-02",
+    "chapterTitle": "Lantern Road",
+    "mood": "curious",
+    "state": "processing",
+    "x": 700,
+    "y": 265
+  },
+  {
+    "id": "portal-quiet-door",
+    "date": "fixture",
+    "chapterTitle": "Quiet Door",
+    "mood": "locked",
+    "state": "locked",
+    "x": 485,
+    "y": 405
+  }
+]

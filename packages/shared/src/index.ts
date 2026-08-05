@@ -29,7 +29,23 @@ export {
   updateDraft
 } from "./import/review-drafts";
 export type { ConfirmedImportEntry, DiaryImportResult, ImportDraftEntry } from "./import/types";
+export { createFixtureDiaryParser } from "./memory-graph/fixture-diary-parser";
+export {
+  createInMemoryMemoryGraphRepository,
+  type MemoryGraphRepository
+} from "./memory-graph/memory-graph-repository";
+export type {
+  DiaryParser,
+  DiaryParserOptions,
+  DiaryParserResult,
+  GenerationState,
+  MemoryGraphRecord
+} from "./memory-graph/types";
 export { redactDiaryLogPayload } from "./privacy/redact-log";
+export {
+  createInMemoryConfirmedDiaryRepository,
+  type ConfirmedDiaryRepository
+} from "./runtime/confirmed-diary-repository";
 export {
   DiaryEntryInputSchema,
   DiaryEntryPatchSchema,
