@@ -1,5 +1,6 @@
 import { createFixtureAuthAdapter, createFixtureDiaryStore } from "@walk/shared";
 import { PortalBadge } from "@walk/ui";
+import { ImportComposerWorkspace } from "../components/ImportComposerWorkspace";
 
 const diaryStore = createFixtureDiaryStore();
 const auth = createFixtureAuthAdapter();
@@ -49,6 +50,7 @@ export default async function HomePage() {
           </div>
         </aside>
       </div>
+      <ImportComposerWorkspace />
     </main>
   );
 }

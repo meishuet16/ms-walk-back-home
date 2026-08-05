@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "description": "Walk Back Home MVP monorepo",
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "workspaces": [
     "apps/*",
     "packages/*"

@@ -1,7 +1,34 @@
 export { createFixtureAuthAdapter } from "./auth/fixture-auth";
+export {
+  addComposerElement,
+  createEmptyComposerDocument,
+  deleteComposerElement,
+  duplicateComposerElement,
+  moveComposerLayer,
+  updateComposerElement,
+  type ComposerDocument,
+  type ComposerElement,
+  type ComposerElementKind
+} from "./composer/composer-document";
+export { createFixtureBackgroundRemovalAdapter } from "./cutout/fixture-background-removal";
+export type {
+  BackgroundRemovalAdapter,
+  BackgroundRemovalInput,
+  BackgroundRemovalResult
+} from "./cutout/types";
 export { createFixtureDiaryStore } from "./diary/fixture-store";
 export { fictionalDiaryEntries } from "./fixtures/diary-entries";
+export { fictionalMultiEntryImport } from "./fixtures/fictional-imports";
 export { fictionalMemoryGraph } from "./fixtures/memory-graph";
+export { parseDiaryImport } from "./import/parse-diary-import";
+export {
+  confirmImportDrafts,
+  mergeAdjacentDrafts,
+  removeDraft,
+  splitDraft,
+  updateDraft
+} from "./import/review-drafts";
+export type { ConfirmedImportEntry, DiaryImportResult, ImportDraftEntry } from "./import/types";
 export { redactDiaryLogPayload } from "./privacy/redact-log";
 export {
   DiaryEntryInputSchema,

@@ -167,3 +167,173 @@ textarea {
     padding: 1rem;
   }
 }
+
+.week-two {
+  margin: 0 auto;
+  max-width: 1180px;
+  padding: 0 2rem 2rem;
+}
+
+.week-two-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.week-two-header p,
+.week-two-header h2 {
+  margin: 0.2rem 0;
+}
+
+.week-two-header span,
+.status-line,
+.draft-meta,
+.draft-card small {
+  color: var(--text-muted);
+}
+
+.week-two-grid {
+  display: grid;
+  grid-template-columns: minmax(17rem, 0.8fr) minmax(20rem, 1fr);
+  gap: 1rem;
+}
+
+.composer-panel {
+  grid-column: 1 / -1;
+}
+
+.import-panel,
+.review-panel,
+.composer-panel {
+  padding: 1.25rem;
+}
+
+.import-panel textarea {
+  display: block;
+  width: 100%;
+  min-height: 16rem;
+  margin: 1rem 0;
+  border: 1px solid rgba(34, 48, 71, 0.22);
+  border-radius: 8px;
+  padding: 1rem;
+  resize: vertical;
+  background: var(--paper-100);
+  color: var(--night-950);
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1.5;
+}
+
+.control-row,
+.composer-toolbar,
+.review-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.review-heading,
+.composer-toolbar {
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.control-row button,
+.composer-toolbar button,
+.review-heading button,
+.file-button {
+  min-height: 2.25rem;
+  border: 1px solid rgba(244, 235, 221, 0.16);
+  border-radius: 4px;
+  padding: 0.45rem 0.65rem;
+  background: rgba(228, 184, 106, 0.15);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.control-row button:disabled,
+.composer-toolbar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.file-button input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.draft-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.draft-card {
+  border: 1px solid rgba(244, 235, 221, 0.14);
+  border-radius: 8px;
+  padding: 0.85rem;
+  background:
+    linear-gradient(90deg, rgba(228, 184, 106, 0.12), transparent 36%),
+    rgba(244, 235, 221, 0.08);
+}
+
+.draft-fields {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr);
+  gap: 0.5rem;
+}
+
+.draft-fields input {
+  min-width: 0;
+  border: 1px solid rgba(244, 235, 221, 0.12);
+  border-radius: 4px;
+  padding: 0.45rem;
+  background: rgba(16, 24, 39, 0.64);
+  color: var(--text-primary);
+}
+
+.draft-card p {
+  color: var(--text-muted);
+}
+
+.draft-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.65rem;
+  font-size: 0.8rem;
+}
+
+.composer-stage {
+  width: 100%;
+  max-width: 900px;
+  overflow: auto;
+  border: 10px solid rgba(244, 235, 221, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(223, 166, 160, 0.16) 0 24px, transparent 24px),
+    var(--paper-100);
+}
+
+.preview-image {
+  display: block;
+  width: min(100%, 28rem);
+  margin-top: 1rem;
+  border: 1px solid rgba(244, 235, 221, 0.16);
+  border-radius: 8px;
+}
+
+@media (max-width: 760px) {
+  .week-two {
+    padding: 0 1rem 1rem;
+  }
+
+  .week-two-grid,
+  .draft-fields {
+    grid-template-columns: 1fr;
+  }
+}
