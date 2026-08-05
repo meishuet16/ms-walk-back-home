@@ -103,12 +103,38 @@ textarea {
   line-height: 0.92;
 }
 
+.primary-forest[data-runtime="godot"] .primary-forest-copy {
+  display: none;
+}
+
 .godot-frame {
   display: block;
   width: 100%;
   min-height: min(78vh, 46rem);
   border: 0;
   background: #08101d;
+}
+
+.runtime-indicator {
+  position: absolute;
+  z-index: 3;
+  right: clamp(1rem, 4vw, 3rem);
+  bottom: 1rem;
+  border: 1px solid rgba(228, 184, 106, 0.42);
+  border-radius: 4px;
+  padding: 0.35rem 0.5rem;
+  background: rgba(8, 16, 29, 0.78);
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  pointer-events: none;
+}
+
+@media (max-width: 720px), (max-height: 480px) {
+  .runtime-indicator {
+    top: 0.75rem;
+    right: 0.75rem;
+    bottom: auto;
+  }
 }
 
 .workspace {

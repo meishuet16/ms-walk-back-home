@@ -7,6 +7,9 @@ const TEMPORARY_FALLBACK_PATH = "/game/memory-forest.html";
 
 export function GodotForestEmbed() {
   const [gameSrc, setGameSrc] = useState(GODOT_WEB_EXPORT_PATH);
+  const runtimeLabel =
+    gameSrc === GODOT_WEB_EXPORT_PATH ? "Godot Web runtime" : "HTML fallback runtime";
+  const showRuntimeIndicator = process.env.NODE_ENV === "development";
 
   useEffect(() => {
     let cancelled = false;
@@ -29,12 +32,21 @@ export function GodotForestEmbed() {
   }, []);
 
   return (
-    <section className="primary-forest" aria-labelledby="primary-forest-title">
+    <section
+      className="primary-forest"
+      data-runtime={gameSrc === GODOT_WEB_EXPORT_PATH ? "godot" : "fallback"}
+      aria-labelledby="primary-forest-title"
+    >
       <div className="primary-forest-copy">
         <p>Local fixture mode</p>
         <h1 id="primary-forest-title">Walk Back Home</h1>
         <p>陪过去的自己，再走一次。</p>
       </div>
+      {showRuntimeIndicator ? (
+        <div className="runtime-indicator" aria-live="polite">
+          {runtimeLabel}
+        </div>
+      ) : null}
       <iframe
         className="godot-frame"
         src={gameSrc}
