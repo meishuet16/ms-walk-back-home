@@ -25,6 +25,7 @@ describe("portal manifest", () => {
     expect(PortalManifestSchema.parse(manifest).portals).toEqual([
       expect.objectContaining({
         entryId: fictionalMemoryGraph.entryId,
+        chapterId: `chapter-${fictionalMemoryGraph.entryId}`,
         date: fictionalMemoryGraph.date,
         chapterTitle: fictionalMemoryGraph.title,
         mood: fictionalMemoryGraph.mood?.primary,
