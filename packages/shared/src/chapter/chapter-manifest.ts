@@ -9,6 +9,8 @@ export const DialogueSourceSchema = z.enum([
   "silent_beat"
 ]);
 
+export const ChapterTemplateSchema = z.literal("bakery_day");
+
 const PointSchema = z
   .object({
     x: z.number().min(0).max(960),
@@ -76,6 +78,7 @@ export const ChapterEndingSchema = z
 export const ChapterManifestSchema = z
   .object({
     id: z.string().min(1),
+    template: ChapterTemplateSchema,
     entryId: z.string().min(1),
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     title: z.string().min(1),
@@ -90,6 +93,21 @@ export const ChapterManifestSchema = z
   })
   .strict();
 
+export const ChapterRegistryEntrySchema = z
+  .object({
+    chapterId: z.string().min(1),
+    scenePath: z.string().min(1),
+    manifestPath: z.string().min(1),
+    supportedTemplate: ChapterTemplateSchema
+  })
+  .strict();
+
+export const ChapterRegistrySchema = z
+  .object({
+    chapters: z.array(ChapterRegistryEntrySchema)
+  })
+  .strict();
+
 export const ChapterCompletionStateSchema = z
   .object({
     chapterId: z.string().min(1),
@@ -100,16 +118,32 @@ export const ChapterCompletionStateSchema = z
   .strict();
 
 export type DialogueSource = z.infer<typeof DialogueSourceSchema>;
+export type ChapterTemplate = z.infer<typeof ChapterTemplateSchema>;
 export type ChapterManifest = z.infer<typeof ChapterManifestSchema>;
+export type ChapterRegistry = z.infer<typeof ChapterRegistrySchema>;
+export type ChapterRegistryEntry = z.infer<typeof ChapterRegistryEntrySchema>;
 export type ChapterCompletionState = z.infer<typeof ChapterCompletionStateSchema>;
 
-export function createChapterManifestFromMemoryGraph(graph: MemoryGraph): ChapterManifest {
+export interface ChapterPlanner {
+  readonly supportedTemplate: ChapterTemplate;
+  plan(graph: MemoryGraph): ChapterManifest;
+}
+
+export function createBakeryChapterManifestPlanner(): ChapterPlanner {
+  return {
+    supportedTemplate: "bakery_day",
+    plan: createBakeryDayChapterManifest
+  };
+}
+
+function createBakeryDayChapterManifest(graph: MemoryGraph): ChapterManifest {
   const firstCharacter = graph.characters?.[0];
   const firstObject = graph.objects?.[0];
   const firstDialogue = graph.dialogueCandidates?.[0];
 
   return ChapterManifestSchema.parse({
     id: `chapter-${graph.entryId}`,
+    template: "bakery_day",
     entryId: graph.entryId,
     date: graph.date,
     title: graph.title,
@@ -138,6 +172,13 @@ export function createChapterManifestFromMemoryGraph(graph: MemoryGraph): Chapte
         label: firstObject?.label ?? "pastry",
         type: firstObject?.type ?? "food",
         position: { x: 610, y: 304 }
+      },
+      {
+        id: "exit_bakery",
+        sceneId: "bakery",
+        label: "bakery exit",
+        type: "exit",
+        position: { x: 834, y: 314 }
       }
     ],
     objectives: [
@@ -183,8 +224,16 @@ export function createChapterManifestFromMemoryGraph(graph: MemoryGraph): Chapte
   });
 }
 
+export function createChapterManifestFromMemoryGraph(graph: MemoryGraph): ChapterManifest {
+  return createBakeryChapterManifestPlanner().plan(graph);
+}
+
 export function parseChapterManifest(input: unknown) {
   return ChapterManifestSchema.safeParse(input);
+}
+
+export function parseChapterRegistry(input: unknown) {
+  return ChapterRegistrySchema.safeParse(input);
 }
 
 export function parseChapterCompletionState(input: unknown) {

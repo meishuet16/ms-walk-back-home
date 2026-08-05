@@ -1,5 +1,6 @@
 {
   "id": "chapter-fixture-001",
+  "template": "bakery_day",
   "entryId": "fixture-001",
   "date": "2030-01-01",
   "title": "A fictional bakery day",
@@ -37,6 +38,16 @@
       "position": {
         "x": 610,
         "y": 304
+      }
+    },
+    {
+      "id": "exit_bakery",
+      "sceneId": "bakery",
+      "label": "bakery exit",
+      "type": "exit",
+      "position": {
+        "x": 834,
+        "y": 314
       }
     }
   ],

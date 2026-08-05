@@ -1,0 +1,10 @@
+{
+  "chapters": [
+    {
+      "chapterId": "chapter-fixture-001",
+      "scenePath": "res://scenes/chapters/bakery_day.tscn",
+      "manifestPath": "res://chapters/bakery_day.chapter.json",
+      "supportedTemplate": "bakery_day"
+    }
+  ]
+}

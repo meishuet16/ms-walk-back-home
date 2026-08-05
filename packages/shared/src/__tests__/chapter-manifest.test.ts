@@ -3,17 +3,21 @@ import { fictionalMemoryGraph } from "../fixtures/memory-graph";
 import {
   ChapterCompletionStateSchema,
   ChapterManifestSchema,
-  createChapterManifestFromMemoryGraph,
+  ChapterRegistrySchema,
+  createBakeryChapterManifestPlanner,
   parseChapterCompletionState,
-  parseChapterManifest
+  parseChapterManifest,
+  parseChapterRegistry
 } from "../chapter/chapter-manifest";
 
 describe("chapter manifest", () => {
   it("converts the Bakery Day memory graph into ordered scenes and objectives", () => {
-    const manifest = createChapterManifestFromMemoryGraph(fictionalMemoryGraph);
+    const planner = createBakeryChapterManifestPlanner();
+    const manifest = planner.plan(fictionalMemoryGraph);
 
     expect(ChapterManifestSchema.parse(manifest)).toMatchObject({
       id: "chapter-fixture-001",
+      template: "bakery_day",
       entryId: fictionalMemoryGraph.entryId,
       date: fictionalMemoryGraph.date,
       title: fictionalMemoryGraph.title,
@@ -27,10 +31,12 @@ describe("chapter manifest", () => {
       "inspect-pastry",
       "walk-to-exit"
     ]);
+    expect(manifest.interactiveObjects.map((object) => object.id)).toContain("exit_bakery");
+    expect(planner.supportedTemplate).toBe("bakery_day");
   });
 
   it("preserves dialogue source labels without promoting reconstructed dialogue", () => {
-    const manifest = createChapterManifestFromMemoryGraph(fictionalMemoryGraph);
+    const manifest = createBakeryChapterManifestPlanner().plan(fictionalMemoryGraph);
 
     expect(manifest.dialogueNodes).toEqual(
       expect.arrayContaining([
@@ -54,6 +60,7 @@ describe("chapter manifest", () => {
       entryId: "",
       date: "not-a-date",
       title: "",
+      template: "bakery_day",
       scenes: [],
       playerSpawn: { sceneId: "", x: -1, y: -1 },
       npcs: [],
@@ -65,6 +72,24 @@ describe("chapter manifest", () => {
     });
 
     expect(result.success).toBe(false);
+  });
+
+  it("validates the small chapter registry used by the forest", () => {
+    const parsed = parseChapterRegistry({
+      chapters: [
+        {
+          chapterId: "chapter-fixture-001",
+          scenePath: "res://scenes/chapters/bakery_day.tscn",
+          manifestPath: "res://chapters/bakery_day.chapter.json",
+          supportedTemplate: "bakery_day"
+        }
+      ]
+    });
+
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(ChapterRegistrySchema.parse(parsed.data).chapters[0].supportedTemplate).toBe("bakery_day");
+    }
   });
 
   it("serializes completion state safely", () => {

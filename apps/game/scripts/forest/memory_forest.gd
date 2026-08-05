@@ -7,21 +7,25 @@ extends Node2D
 # sprite sheet, portal animations, and environmental VFX while preserving the
 # portal metadata contract loaded below.
 const PORTAL_DATA_PATH := "res://forest_data/portal_manifest.seed.json"
-const BAKERY_CHAPTER_SCENE_PATH := "res://scenes/chapters/bakery_day.tscn"
+const CHAPTER_REGISTRY_PATH := "res://chapters/chapter_registry.json"
 const CompletionStore := preload("res://scripts/chapters/chapter_completion_store.gd")
+const MobileControls := preload("res://scripts/input/mobile_controls.gd")
 const MUJI_SPEED := 150.0
 const PORTAL_RADIUS := 64.0
 const FOREST_BOUNDS := Rect2(Vector2(32.0, 80.0), Vector2(896.0, 420.0))
 
 var muji_position := Vector2(480.0, 330.0)
 var portals: Array[Dictionary] = []
+var chapter_registry := {}
 var active_portal: Dictionary = {}
 var completed_chapters := {}
 var time_seconds := 0.0
 var info_label: Label
+var mobile_controls := MobileControls.new()
 
 func _ready() -> void:
 	portals = _load_portals()
+	chapter_registry = _load_chapter_registry()
 	completed_chapters = CompletionStore.load_completed_chapters()
 	info_label = Label.new()
 	info_label.position = Vector2(28.0, 24.0)
@@ -33,9 +37,8 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	time_seconds += delta
-	var direction := Vector2.ZERO
-	direction.x = Input.get_axis("move_left", "move_right")
-	direction.y = Input.get_axis("move_up", "move_down")
+	mobile_controls.update_layout(get_viewport_rect().size)
+	var direction := _movement_direction()
 	if direction.length() > 1.0:
 		direction = direction.normalized()
 	muji_position += direction * MUJI_SPEED * delta
@@ -46,10 +49,25 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("enter_portal") and not active_portal.is_empty():
+	if mobile_controls.handle_input(event, get_viewport_rect().size):
+		if mobile_controls.consume_interaction_pressed():
+			_try_enter_active_portal()
+		queue_redraw()
+		return
+	if event.is_action_pressed("enter_portal"):
+		_try_enter_active_portal()
+
+func _try_enter_active_portal() -> void:
+	if not active_portal.is_empty():
 		var state := str(active_portal.get("state", "locked"))
 		if state == "playable":
-			get_tree().change_scene_to_file(BAKERY_CHAPTER_SCENE_PATH)
+			var chapter_id := str(active_portal.get("chapterId", ""))
+			var registry_entry: Dictionary = chapter_registry.get(chapter_id, {})
+			var scene_path := str(registry_entry.get("scenePath", ""))
+			if scene_path == "":
+				info_label.text = "Fixture error: no chapter scene is registered for this portal."
+				return
+			get_tree().change_scene_to_file(scene_path)
 		elif state == "processing":
 			info_label.text = "This memory is still becoming a door."
 		else:
@@ -62,6 +80,7 @@ func _draw() -> void:
 	for portal in portals:
 		_draw_portal(portal)
 	_draw_muji()
+	mobile_controls.draw(self, get_viewport_rect().size)
 
 func _load_portals() -> Array[Dictionary]:
 	if not FileAccess.file_exists(PORTAL_DATA_PATH):
@@ -80,6 +99,36 @@ func _load_portals() -> Array[Dictionary]:
 		if typeof(item) == TYPE_DICTIONARY:
 			result.append(item)
 	return result
+
+func _load_chapter_registry() -> Dictionary:
+	if not FileAccess.file_exists(CHAPTER_REGISTRY_PATH):
+		push_error("Missing fictional chapter registry.")
+		return {}
+	var file := FileAccess.open(CHAPTER_REGISTRY_PATH, FileAccess.READ)
+	if file == null:
+		push_error("Could not open fictional chapter registry.")
+		return {}
+	var parsed = JSON.parse_string(file.get_as_text())
+	if typeof(parsed) != TYPE_DICTIONARY or not parsed.has("chapters"):
+		push_error("Invalid fictional chapter registry.")
+		return {}
+	var result := {}
+	for item in parsed.get("chapters", []):
+		if typeof(item) != TYPE_DICTIONARY:
+			continue
+		var chapter_id := str(item.get("chapterId", ""))
+		var scene_path := str(item.get("scenePath", ""))
+		var template := str(item.get("supportedTemplate", ""))
+		if chapter_id != "" and scene_path != "" and template == "bakery_day":
+			result[chapter_id] = item
+	return result
+
+func _movement_direction() -> Vector2:
+	var direction := Vector2.ZERO
+	direction.x = Input.get_axis("move_left", "move_right")
+	direction.y = Input.get_axis("move_up", "move_down")
+	direction += mobile_controls.touch_direction
+	return direction.normalized() if direction.length() > 1.0 else direction
 
 func _nearest_portal() -> Dictionary:
 	var nearest: Dictionary = {}

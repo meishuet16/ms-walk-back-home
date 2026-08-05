@@ -7,13 +7,22 @@ export {
   ChapterManifestSchema,
   ChapterNpcSchema,
   ChapterObjectiveSchema,
+  ChapterRegistryEntrySchema,
+  ChapterRegistrySchema,
   ChapterSceneSchema,
+  ChapterTemplateSchema,
   DialogueSourceSchema,
+  createBakeryChapterManifestPlanner,
   createChapterManifestFromMemoryGraph,
   parseChapterCompletionState,
   parseChapterManifest,
+  parseChapterRegistry,
   type ChapterCompletionState,
   type ChapterManifest,
+  type ChapterPlanner,
+  type ChapterRegistry,
+  type ChapterRegistryEntry,
+  type ChapterTemplate,
   type DialogueSource
 } from "./chapter/chapter-manifest";
 export {
