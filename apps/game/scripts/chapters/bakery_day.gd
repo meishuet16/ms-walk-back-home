@@ -2,6 +2,7 @@ extends Node2D
 
 const CHAPTER_MANIFEST_PATH := "res://chapters/bakery_day.chapter.json"
 const FOREST_SCENE_PATH := "res://scenes/forest/memory_forest.tscn"
+const CompletionStore := preload("res://scripts/chapters/chapter_completion_store.gd")
 const MUJI_SPEED := 150.0
 const INTERACTION_RADIUS := 54.0
 const BAKERY_BOUNDS := Rect2(Vector2(42.0, 120.0), Vector2(876.0, 330.0))
@@ -23,7 +24,7 @@ var facing := "down"
 func _ready() -> void:
 	manifest = _load_manifest()
 	objectives = manifest.get("objectives", [])
-	var spawn := manifest.get("playerSpawn", {})
+	var spawn: Dictionary = manifest.get("playerSpawn", {})
 	muji_position = Vector2(float(spawn.get("x", 88.0)), float(spawn.get("y", 312.0)))
 	_complete_current_objective("enter_scene")
 	set_process(true)
@@ -127,7 +128,7 @@ func _dialogue_for_objective(objective_id: String) -> String:
 	return ""
 
 func _save_completion() -> void:
-	ChapterCompletionStore.save_completed(
+	CompletionStore.save_completed(
 		str(manifest.get("id", "chapter-fixture-001")),
 		str(manifest.get("entryId", "fixture-001"))
 	)

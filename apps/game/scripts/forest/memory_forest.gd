@@ -8,6 +8,7 @@ extends Node2D
 # portal metadata contract loaded below.
 const PORTAL_DATA_PATH := "res://forest_data/portal_manifest.seed.json"
 const BAKERY_CHAPTER_SCENE_PATH := "res://scenes/chapters/bakery_day.tscn"
+const CompletionStore := preload("res://scripts/chapters/chapter_completion_store.gd")
 const MUJI_SPEED := 150.0
 const PORTAL_RADIUS := 64.0
 const FOREST_BOUNDS := Rect2(Vector2(32.0, 80.0), Vector2(896.0, 420.0))
@@ -21,7 +22,7 @@ var info_label: Label
 
 func _ready() -> void:
 	portals = _load_portals()
-	completed_chapters = ChapterCompletionStore.load_completed_chapters()
+	completed_chapters = CompletionStore.load_completed_chapters()
 	info_label = Label.new()
 	info_label.position = Vector2(28.0, 24.0)
 	info_label.size = Vector2(540.0, 92.0)
