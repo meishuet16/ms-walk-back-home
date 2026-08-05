@@ -17,6 +17,16 @@ export type {
   BackgroundRemovalResult
 } from "./cutout/types";
 export { createFixtureDiaryStore } from "./diary/fixture-store";
+export {
+  ForestPortalSchema,
+  PortalManifestSchema,
+  PortalStateSchema,
+  createPortalManifestFromGraphRecords,
+  parsePortalManifest,
+  type ForestPortal,
+  type PortalManifest,
+  type PortalState
+} from "./forest/portal-manifest";
 export { fictionalDiaryEntries } from "./fixtures/diary-entries";
 export { fictionalMultiEntryImport } from "./fixtures/fictional-imports";
 export { fictionalMemoryGraph } from "./fixtures/memory-graph";
