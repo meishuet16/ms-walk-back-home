@@ -12,6 +12,32 @@
     "filtering": "nearest",
     "mipmaps": false
   },
+  "godotIntegration": {
+    "templateScenes": {
+      "characterBody": "res://scenes/art_pipeline/art_locked_character_body.tscn",
+      "tileLayers": "res://scenes/art_pipeline/art_locked_tile_layers.tscn"
+    },
+    "scripts": {
+      "paths": "res://scripts/art_pipeline/external_art_paths.gd",
+      "spriteLoader": "res://scripts/art_pipeline/external_sprite_loader.gd",
+      "characterBody": "res://scripts/art_pipeline/art_locked_character_body.gd",
+      "tileLayers": "res://scripts/art_pipeline/art_locked_tile_layers.gd"
+    },
+    "shaderHooks": {
+      "blueHourCanvasItem": "res://shaders/art_lock_blue_hour.gdshader"
+    },
+    "lightingNodes": [
+      "CanvasModulate",
+      "PointLight2D warm-light anchors",
+      "LightingVfx node for animated rain, fireflies, wind leaves, and portal glow"
+    ],
+    "importSettings": {
+      "filter": false,
+      "mipmaps": false,
+      "repeat": false,
+      "compression": "lossless_or_uncompressed"
+    }
+  },
   "palette": {
     "coolBlueHour": ["#07101d", "#0d1b2a", "#142b34", "#4f6370", "#8da8b3"],
     "warmLight": ["#704626", "#b06f37", "#d99545", "#f6c76e", "#f0dfbd"],

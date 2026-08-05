@@ -29,6 +29,8 @@ Place externally supplied art under `apps/game/assets/external/`.
 
 The machine-readable contract lives at `apps/game/art_pipeline/art_lock_v1_assets.json`.
 
+These filenames are the asset naming convention. When final external art arrives at these paths, the Godot integration scenes can load it without gameplay code changes.
+
 ## Sprite Configuration
 
 Muji and NPC rows:
@@ -51,6 +53,15 @@ Godot import settings:
 - Compression: lossless or uncompressed for pixel art
 - Premultiplied alpha: disabled unless the supplied art specifically requires it
 
+The reusable character template is `apps/game/scenes/art_pipeline/art_locked_character_body.tscn`. It is a `CharacterBody2D` with:
+
+- `Sprite2D` configured for nearest-neighbor filtering
+- `AnimationPlayer` configured at runtime from the fixed 4-direction sheet layout
+- a small feet collision shape suitable for top-down movement
+- exported `sprite_sheet_path`, `frame_size`, and `sprite_scale` properties
+
+Use this scene as the integration target for Muji and NPCs after final art is supplied. It intentionally ships without embedded art.
+
 ## TileMap Layer Structure
 
 Future scene integration should use these TileMap layers:
@@ -59,6 +70,20 @@ Future scene integration should use these TileMap layers:
 - `Midground`: walkable paths, trunks, counters, doors, collision-aligned features
 - `Foreground`: overlapping leaves, canopy edges, interior occluders
 - `LightingVfx`: warm lamps, portal glow, rain, fireflies, wind movement
+
+The reusable layer template is `apps/game/scenes/art_pipeline/art_locked_tile_layers.tscn`. Its draw order is:
+
+| Node | Z index | Purpose |
+| --- | ---: | --- |
+| `Background` | `-30` | base ground and distant environment |
+| `Midground` | `-10` | walkable paths and solid world features |
+| `Props` | `0` | manifest-driven portals, objects, and decorative props |
+| `Foreground` | `20` | leaves, canopy edges, and occluding interior pieces |
+| `LightingVfx` | `40` | ambient tint, lamps, portal glow, rain, fireflies, wind |
+
+Lighting hooks are present as nodes, not art: `CanvasModulate` establishes the cool blue-hour base, and disabled `PointLight2D` anchors mark where warm supplied lamp textures can be connected later.
+
+The shader hook `apps/game/shaders/art_lock_blue_hour.gdshader` is available for future sprites/props that need cool shadow tint plus warm light influence. It is not applied to current gameplay scenes yet.
 
 ## Prop Placement Hooks
 
