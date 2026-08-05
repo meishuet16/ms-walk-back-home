@@ -1,0 +1,17 @@
+{
+  "version": "1.0",
+  "generatedAt": "2026-08-01T12:00:00.000Z",
+  "portals": [
+    {
+      "id": "portal-fixture-001",
+      "entryId": "fixture-001",
+      "graphId": "memory-graph-seed-001",
+      "date": "2030-01-01",
+      "chapterTitle": "A fictional bakery day",
+      "mood": "nostalgic",
+      "state": "playable",
+      "x": 210,
+      "y": 210
+    }
+  ]
+}

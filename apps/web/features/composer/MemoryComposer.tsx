@@ -1,3 +1,5 @@
+"use client";
+
 import { ComposerStage } from "./ComposerStage";
 import { ComposerToolbar } from "./ComposerToolbar";
 import { useComposerDocument } from "./useComposerDocument";

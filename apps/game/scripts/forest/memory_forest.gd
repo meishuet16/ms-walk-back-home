@@ -1,6 +1,6 @@
 extends Node2D
 
-const PORTAL_DATA_PATH := "res://forest_data/fictional_portals.json"
+const PORTAL_DATA_PATH := "res://forest_data/portal_manifest.seed.json"
 const MUJI_SPEED := 150.0
 const PORTAL_RADIUS := 64.0
 const FOREST_BOUNDS := Rect2(Vector2(32.0, 80.0), Vector2(896.0, 420.0))
@@ -62,11 +62,11 @@ func _load_portals() -> Array[Dictionary]:
 		push_error("Could not open fictional portal metadata.")
 		return []
 	var parsed = JSON.parse_string(file.get_as_text())
-	if typeof(parsed) != TYPE_ARRAY:
+	if typeof(parsed) != TYPE_DICTIONARY or not parsed.has("portals"):
 		push_error("Invalid fictional portal metadata.")
 		return []
 	var result: Array[Dictionary] = []
-	for item in parsed:
+	for item in parsed.get("portals", []):
 		if typeof(item) == TYPE_DICTIONARY:
 			result.append(item)
 	return result

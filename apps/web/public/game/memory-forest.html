@@ -26,6 +26,7 @@
     <script>
       const canvas = document.querySelector("#forest");
       const ctx = canvas.getContext("2d");
+      const PORTAL_MANIFEST_KEY = "walk.fixture.portal-manifest";
       const keys = new Set();
       const muji = { x: 480, y: 330, speed: 150 };
       let portals = [];
@@ -47,16 +48,63 @@
 
       window.addEventListener("keyup", (event) => keys.delete(event.key.toLowerCase()));
 
-      fetch("./fictional-portals.json")
-        .then((response) => response.json())
-        .then((data) => {
-          portals = data;
+      loadPortalManifest()
+        .then((manifest) => {
+          portals = manifest.portals;
           requestAnimationFrame(loop);
         })
         .catch(() => {
           portals = [];
           requestAnimationFrame(loop);
         });
+
+      async function loadPortalManifest() {
+        const storedValue = window.localStorage.getItem(PORTAL_MANIFEST_KEY);
+        if (storedValue) {
+          try {
+            const stored = JSON.parse(storedValue);
+            if (isValidPortalManifest(stored)) return stored;
+          } catch {
+            message = "Forest portal data was invalid, so the seed path is shown.";
+          }
+          message = "Forest portal data was invalid, so the seed path is shown.";
+        }
+        const response = await fetch("./portal-manifest.json");
+        const manifest = await response.json();
+        if (!isValidPortalManifest(manifest)) throw new Error("Invalid seed portal manifest");
+        return manifest;
+      }
+
+      function isValidPortalManifest(value) {
+        return (
+          value &&
+          value.version === "1.0" &&
+          typeof value.generatedAt === "string" &&
+          Array.isArray(value.portals) &&
+          value.portals.every(isValidPortal)
+        );
+      }
+
+      function isValidPortal(portal) {
+        return (
+          portal &&
+          typeof portal.id === "string" &&
+          portal.id.length > 0 &&
+          typeof portal.entryId === "string" &&
+          portal.entryId.length > 0 &&
+          typeof portal.date === "string" &&
+          typeof portal.chapterTitle === "string" &&
+          portal.chapterTitle.length > 0 &&
+          typeof portal.mood === "string" &&
+          ["locked", "processing", "playable"].includes(portal.state) &&
+          Number.isFinite(portal.x) &&
+          portal.x >= 0 &&
+          portal.x <= canvas.width &&
+          Number.isFinite(portal.y) &&
+          portal.y >= 0 &&
+          portal.y <= canvas.height
+        );
+      }
 
       function loop(now) {
         const delta = Math.min((now - lastTime) / 1000, 0.05);
