@@ -1,9 +1,10 @@
-import type { ImportDraftEntry, MemoryGraphRecord } from "@walk/shared";
+import type { ImportDraftEntry, MemoryGraphRecord, PortalManifest } from "@walk/shared";
 
 type ImportReviewPanelProps = {
   drafts: ImportDraftEntry[];
   confirmedCount: number;
   graphRecords: MemoryGraphRecord[];
+  portalManifest: PortalManifest | null;
   confirmImport: () => Promise<void>;
   updateDraftById: (id: string, patch: Partial<Pick<ImportDraftEntry, "entryDate" | "title" | "body" | "weather">>) => void;
   mergeDraft: (id: string) => void;
@@ -17,6 +18,7 @@ export function ImportReviewPanel({
   drafts,
   graphRecords,
   mergeDraft,
+  portalManifest,
   removeDraftById,
   splitDraftById,
   updateDraftById
@@ -41,6 +43,9 @@ export function ImportReviewPanel({
             </p>
           ))}
         </div>
+      ) : null}
+      {portalManifest ? (
+        <p className="status-line">{portalManifest.portals.length} forest portals prepared from validated graph records.</p>
       ) : null}
       <div className="draft-list">
         {drafts.map((draft, index) => (

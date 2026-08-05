@@ -1,24 +1,26 @@
 "use client";
 
-import { MemoryComposer } from "../features/composer/MemoryComposer";
-import { DiaryImportPanel } from "../features/import/DiaryImportPanel";
-import { ImportReviewPanel } from "../features/import/ImportReviewPanel";
-import { useDiaryImport } from "../features/import/useDiaryImport";
+import Link from "next/link";
+import { DiaryImportPanel } from "./DiaryImportPanel";
+import { ImportReviewPanel } from "./ImportReviewPanel";
+import { useDiaryImport } from "./useDiaryImport";
 
-export function ImportComposerWorkspace() {
+export function DiaryImportWorkspace() {
   const diaryImport = useDiaryImport();
 
   return (
-    <section className="week-two" aria-labelledby="week-two-title">
+    <section className="week-two route-surface" aria-labelledby="import-title">
       <div className="week-two-header">
         <div>
-          <p>Week 2 fixture workspace</p>
-          <h2 id="week-two-title">Import Review + Memory Composer</h2>
+          <p>Fixture import</p>
+          <h1 id="import-title">Diary Import</h1>
         </div>
-        <span>Fixture mode · no paid APIs</span>
+        <Link className="text-link" href="/forest">
+          Return to forest
+        </Link>
       </div>
 
-      <div className="week-two-grid">
+      <div className="week-two-grid import-route-grid">
         <DiaryImportPanel
           importDiaryFile={diaryImport.importDiaryFile}
           parseCurrentText={diaryImport.parseCurrentText}
@@ -36,7 +38,6 @@ export function ImportComposerWorkspace() {
           splitDraftById={diaryImport.splitDraftById}
           updateDraftById={diaryImport.updateDraftById}
         />
-        <MemoryComposer />
       </div>
     </section>
   );

@@ -1,5 +1,6 @@
 import {
   confirmImportDrafts,
+  createPortalManifestFromGraphRecords,
   createFixtureDiaryParser,
   createInMemoryConfirmedDiaryRepository,
   createInMemoryMemoryGraphRepository,
@@ -10,7 +11,8 @@ import {
   splitDraft,
   updateDraft,
   type ImportDraftEntry,
-  type MemoryGraphRecord
+  type MemoryGraphRecord,
+  type PortalManifest
 } from "@walk/shared";
 import { useMemo, useRef, useState } from "react";
 import { createLocalDiaryImportRuntimeStorage } from "./runtime-storage";
@@ -20,6 +22,7 @@ export function useDiaryImport() {
   const [drafts, setDrafts] = useState<ImportDraftEntry[]>(() => parseDiaryImport(fictionalMultiEntryImport).drafts);
   const [confirmedCount, setConfirmedCount] = useState(0);
   const [graphRecords, setGraphRecords] = useState<MemoryGraphRecord[]>([]);
+  const [portalManifest, setPortalManifest] = useState<PortalManifest | null>(() => null);
   const confirmedRepository = useRef(createInMemoryConfirmedDiaryRepository());
   const graphRepository = useRef(createInMemoryMemoryGraphRepository());
   const parser = useRef(createFixtureDiaryParser());
@@ -56,8 +59,11 @@ export function useDiaryImport() {
     }
 
     const records = await graphRepository.current.list();
+    const manifest = createPortalManifestFromGraphRecords(records);
     runtimeStorage?.saveMemoryGraphRecords(records);
+    runtimeStorage?.savePortalManifest(manifest);
     setGraphRecords(records);
+    setPortalManifest(manifest);
   }
 
   return {
@@ -66,6 +72,7 @@ export function useDiaryImport() {
     drafts,
     confirmedCount,
     graphRecords,
+    portalManifest,
     parseCurrentText,
     importDiaryFile,
     confirmImport,

@@ -2,8 +2,12 @@ import { ComposerStage } from "./ComposerStage";
 import { ComposerToolbar } from "./ComposerToolbar";
 import { useComposerDocument } from "./useComposerDocument";
 
-export function MemoryComposer() {
-  const composer = useComposerDocument();
+type MemoryComposerProps = {
+  entryId?: string;
+};
+
+export function MemoryComposer({ entryId }: MemoryComposerProps) {
+  const composer = useComposerDocument(entryId);
 
   return (
     <div className="panel composer-panel">

@@ -12,8 +12,8 @@ import {
 import Konva from "konva";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-export function useComposerDocument() {
-  const [document, setDocument] = useState<ComposerDocument>(() => createEmptyComposerDocument("fixture-entry-001"));
+export function useComposerDocument(entryId = "fixture-entry-001") {
+  const [document, setDocument] = useState<ComposerDocument>(() => createEmptyComposerDocument(entryId));
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
   const stageRef = useRef<Konva.Stage>(null);
