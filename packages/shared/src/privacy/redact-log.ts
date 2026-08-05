@@ -1,4 +1,16 @@
-const SENSITIVE_KEYS = new Set(["body", "title", "rawContent", "rawDiary", "diaryText", "content"]);
+const SENSITIVE_KEYS = new Set([
+  "body",
+  "content",
+  "diaryText",
+  "generatedGraph",
+  "graphJson",
+  "importPath",
+  "memoryGraph",
+  "photoCaption",
+  "rawContent",
+  "rawDiary",
+  "title"
+]);
 
 type LogValue = string | number | boolean | null | LogValue[] | { [key: string]: LogValue };
 

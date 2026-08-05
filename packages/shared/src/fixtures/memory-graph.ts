@@ -8,24 +8,29 @@ export const fictionalMemoryGraph: MemoryGraph = {
   summary: "Friend A and the narrator visited a small bakery.",
   mood: {
     primary: "nostalgic",
-    intensity: 0.6
+    intensity: 0.6,
+    evidence: [{ source: "fixture", note: "Fictional sample mood", confidence: 0.8 }]
   },
   weather: {
     condition: "sunny",
-    timeOfDay: "afternoon"
+    timeOfDay: "afternoon",
+    evidence: [{ source: "fixture", note: "Fictional sample weather", confidence: 0.8 }]
   },
   characters: [
     {
       id: "npc_friend_01",
       displayName: "Friend A",
-      role: "friend"
+      role: "friend",
+      evidence: [{ source: "fixture", note: "Fictional sample character", confidence: 0.9 }]
     }
   ],
   locations: [
     {
       id: "loc_bakery",
       module: "bakery_shop",
-      order: 1
+      order: 1,
+      label: "small bakery",
+      evidence: [{ source: "fixture", note: "Fictional sample location", confidence: 0.9 }]
     }
   ],
   events: [
@@ -34,26 +39,31 @@ export const fictionalMemoryGraph: MemoryGraph = {
       locationId: "loc_bakery",
       order: 1,
       type: "inspect",
-      objectRef: "obj_pastry"
+      objectRef: "obj_pastry",
+      evidence: [{ source: "fixture", note: "Fictional sample event", confidence: 0.9 }]
     }
   ],
   objects: [
     {
       id: "obj_pastry",
       type: "food",
-      label: "pastry"
+      label: "pastry",
+      evidence: [{ source: "fixture", note: "Fictional sample object", confidence: 0.9 }]
     }
   ],
   dialogueCandidates: [
     {
       speakerId: "npc_friend_01",
       text: "This place smells good.",
-      source: "reconstructed"
+      source: "reconstructed",
+      evidence: [{ source: "fixture", note: "Fictional sample dialogue", confidence: 0.7 }]
     }
   ],
   quotes: [],
   chapterPlan: {
     estimatedMinutes: 4,
-    guided: true
+    guided: true,
+    objectiveIds: ["evt_01"],
+    evidence: [{ source: "fixture", note: "Fictional sample chapter plan", confidence: 0.8 }]
   }
 };

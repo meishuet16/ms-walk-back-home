@@ -11,4 +11,29 @@ export {
   type DiaryEntryInput,
   type DiaryEntryPatch
 } from "./schemas/diary-entry";
-export { MemoryGraphSchema, type MemoryGraph } from "./schemas/memory-graph";
+export {
+  ChapterPlanSchema,
+  CharacterNodeSchema,
+  ConfidenceSchema,
+  DialogueCandidateSchema,
+  EventNodeSchema,
+  LocationNodeSchema,
+  MemoryGraphSchema,
+  MoodSchema,
+  ObjectNodeSchema,
+  QuoteNodeSchema,
+  SourceEvidenceSchema,
+  WeatherSchema,
+  type ChapterPlan,
+  type CharacterNode,
+  type Confidence,
+  type DialogueCandidate,
+  type EventNode,
+  type LocationNode,
+  type MemoryGraph,
+  type Mood,
+  type ObjectNode,
+  type QuoteNode,
+  type SourceEvidence,
+  type Weather
+} from "./schemas/memory-graph";

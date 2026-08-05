@@ -9,6 +9,8 @@ coverage/
 *.tsbuildinfo
 .dev-server*.log
 data/
+diary-data/
+real-diaries/
 uploads/
 imports/
 exports/

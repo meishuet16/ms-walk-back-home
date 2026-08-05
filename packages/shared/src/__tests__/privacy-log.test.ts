@@ -27,4 +27,38 @@ describe("redactDiaryLogPayload", () => {
       }
     });
   });
+
+  it("redacts sensitive fields inside arrays without mutating the original payload", () => {
+    const payload = {
+      event: "batch_import_reviewed",
+      entries: [
+        {
+          entryId: "fixture-entry-001",
+          diaryText: "private diary line",
+          photoCaption: "private photo caption",
+          importPath: "imports/private.md"
+        }
+      ],
+      generatedGraph: {
+        summary: "private generated summary",
+        nodeCount: 4
+      }
+    };
+
+    const redacted = redactDiaryLogPayload(payload);
+
+    expect(redacted).toEqual({
+      event: "batch_import_reviewed",
+      entries: [
+        {
+          entryId: "fixture-entry-001",
+          diaryText: "[redacted]",
+          photoCaption: "[redacted]",
+          importPath: "[redacted]"
+        }
+      ],
+      generatedGraph: "[redacted]"
+    });
+    expect(payload.entries[0]?.diaryText).toBe("private diary line");
+  });
 });

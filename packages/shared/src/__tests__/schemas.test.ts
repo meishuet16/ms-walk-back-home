@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { DiaryEntrySchema, MemoryGraphSchema, fictionalMemoryGraph } from "../index";
+import {
+  CharacterNodeSchema,
+  ConfidenceSchema,
+  DiaryEntrySchema,
+  MemoryGraphSchema,
+  SourceEvidenceSchema,
+  fictionalMemoryGraph
+} from "../index";
 
 describe("shared schemas", () => {
   it("validates diary entries with fictional privacy tags", () => {
@@ -20,5 +27,45 @@ describe("shared schemas", () => {
 
   it("validates the fictional Memory Graph fixture", () => {
     expect(MemoryGraphSchema.parse(fictionalMemoryGraph).entryId).toBe("fixture-001");
+  });
+
+  it("validates explicit Memory Graph node schemas", () => {
+    expect(CharacterNodeSchema.parse({
+      id: "npc_friend_01",
+      displayName: "Friend A",
+      role: "friend",
+      evidence: [{ source: "fixture", note: "Fictional sample character", confidence: 0.9 }]
+    }).displayName).toBe("Friend A");
+
+    expect(SourceEvidenceSchema.parse({
+      source: "fixture",
+      note: "Fictional source note",
+      confidence: 0.8
+    }).source).toBe("fixture");
+
+    expect(ConfidenceSchema.safeParse(1.1).success).toBe(false);
+  });
+
+  it("rejects malformed Memory Graph nested nodes", () => {
+    const malformed = {
+      ...fictionalMemoryGraph,
+      characters: [
+        {
+          id: "npc_friend_01",
+          displayName: "Friend A",
+          role: "friend",
+          inventedFact: "not allowed"
+        }
+      ],
+      locations: [
+        {
+          id: "loc_bakery",
+          module: "space_station",
+          order: 1
+        }
+      ]
+    };
+
+    expect(MemoryGraphSchema.safeParse(malformed).success).toBe(false);
   });
 });
