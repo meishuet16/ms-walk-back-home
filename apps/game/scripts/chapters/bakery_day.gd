@@ -2,7 +2,6 @@ extends Node2D
 
 const CHAPTER_MANIFEST_PATH := "res://chapters/bakery_day.chapter.json"
 const FOREST_SCENE_PATH := "res://scenes/forest/memory_forest.tscn"
-const COMPLETION_PATH := "user://chapter_completion.json"
 const MUJI_SPEED := 150.0
 const INTERACTION_RADIUS := 54.0
 const BAKERY_BOUNDS := Rect2(Vector2(42.0, 120.0), Vector2(876.0, 330.0))
@@ -128,15 +127,10 @@ func _dialogue_for_objective(objective_id: String) -> String:
 	return ""
 
 func _save_completion() -> void:
-	var completion := {
-		"chapterId": manifest.get("id", "chapter-fixture-001"),
-		"entryId": manifest.get("entryId", "fixture-001"),
-		"completed": true,
-		"completedAt": Time.get_datetime_string_from_system(true)
-	}
-	var file := FileAccess.open(COMPLETION_PATH, FileAccess.WRITE)
-	if file != null:
-		file.store_string(JSON.stringify(completion))
+	ChapterCompletionStore.save_completed(
+		str(manifest.get("id", "chapter-fixture-001")),
+		str(manifest.get("entryId", "fixture-001"))
+	)
 
 func _draw_bakery() -> void:
 	draw_rect(Rect2(Vector2.ZERO, Vector2(960.0, 540.0)), Color(0.07, 0.08, 0.12))

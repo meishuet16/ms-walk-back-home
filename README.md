@@ -53,6 +53,12 @@ The current forest is a mechanics prototype. The procedural shapes are temporary
 
 Invalid portal or graph data is rejected at the shared schema layer and again by the web forest boundary. The fallback seed path is used when runtime portal data is invalid.
 
+## Bakery Day Vertical Slice
+
+Week 4 adds the canonical Godot-only playable chapter for “Bakery Day.” Run `res://scenes/forest/memory_forest.tscn`, enter the Bakery Day portal, talk to Friend A, inspect the pastry, walk to the exit, and return to Memory Forest. Completion is persisted locally in Godot `user://chapter_completion.json` and the portal is visually marked completed when returning.
+
+The HTML Canvas forest fallback remains temporary and does not implement chapter gameplay.
+
 ## Data safety
 
 Only fictional fixtures belong in source control. Runtime imports, uploads, generated graphs, exports, databases, embeddings, and `.private-spec/` are ignored.

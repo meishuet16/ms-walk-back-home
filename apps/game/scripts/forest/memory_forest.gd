@@ -8,7 +8,6 @@ extends Node2D
 # portal metadata contract loaded below.
 const PORTAL_DATA_PATH := "res://forest_data/portal_manifest.seed.json"
 const BAKERY_CHAPTER_SCENE_PATH := "res://scenes/chapters/bakery_day.tscn"
-const COMPLETION_PATH := "user://chapter_completion.json"
 const MUJI_SPEED := 150.0
 const PORTAL_RADIUS := 64.0
 const FOREST_BOUNDS := Rect2(Vector2(32.0, 80.0), Vector2(896.0, 420.0))
@@ -22,7 +21,7 @@ var info_label: Label
 
 func _ready() -> void:
 	portals = _load_portals()
-	completed_chapters = _load_completion_state()
+	completed_chapters = ChapterCompletionStore.load_completed_chapters()
 	info_label = Label.new()
 	info_label.position = Vector2(28.0, 24.0)
 	info_label.size = Vector2(540.0, 92.0)
@@ -107,19 +106,6 @@ func _update_info_label() -> void:
 		state,
 		action
 	]
-
-func _load_completion_state() -> Dictionary:
-	if not FileAccess.file_exists(COMPLETION_PATH):
-		return {}
-	var file := FileAccess.open(COMPLETION_PATH, FileAccess.READ)
-	if file == null:
-		return {}
-	var parsed = JSON.parse_string(file.get_as_text())
-	if typeof(parsed) != TYPE_DICTIONARY:
-		return {}
-	if bool(parsed.get("completed", false)):
-		return { str(parsed.get("chapterId", "")): true }
-	return {}
 
 func _draw_sky() -> void:
 	draw_rect(Rect2(Vector2.ZERO, Vector2(960.0, 540.0)), Color(0.05, 0.09, 0.16))

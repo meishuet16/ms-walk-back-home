@@ -39,3 +39,27 @@ godot4 --headless --path apps/game --export-release Web ../web/public/game/index
 ```
 
 If Godot is not installed, the Next.js app still loads the local HTML forest mechanics fallback at `/game/memory-forest.html`.
+
+## Bakery Day Manual Test
+
+1. Open `apps/game` in Godot 4.
+2. Run the main scene, `res://scenes/forest/memory_forest.tscn`.
+3. Move Muji near the playable Bakery Day portal and press `E`.
+4. In the Bakery chapter, follow the objective text:
+   - enter the bakery
+   - approach Friend A and press `E`
+   - inspect the pastry and press `E`
+   - walk to the exit
+5. On the ending overlay, press `E` to return to Memory Forest.
+6. Confirm the Bakery portal is marked completed.
+
+Dialogue source labels stay internal to the manifest and code. Reconstructed dialogue is prefixed in the prototype UI and must not be presented as an exact historical quote.
+
+## Godot Web Export Tradeoffs
+
+Measured in this repository so far:
+
+- Godot keeps Forest and Chapter logic canonical in one engine, which avoids duplicating movement, interaction, objective, and completion rules in React or Canvas.
+- The Next.js fallback is faster to smoke-test in this environment, but it must remain a temporary loader fallback and must not receive new chapter gameplay systems.
+- Godot Web export requires a local Godot 4 binary and export templates. This environment currently does not expose `godot` or `godot4` on PATH, so open/export checks cannot be completed here.
+- A future web-native engine could simplify browser automation and deployment, but migration would split from the current canonical Godot architecture. No migration is planned in this sprint.
