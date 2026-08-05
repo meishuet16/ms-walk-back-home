@@ -1,0 +1,13 @@
+[gd_scene load_steps=2 format=3 uid="uid://memoryforestfixture"]
+
+[ext_resource type="Script" path="res://scripts/forest/memory_forest.gd" id="1_forest"]
+
+[node name="MemoryForest" type="Node2D"]
+script = ExtResource("1_forest")
+
+[node name="Label" type="Label" parent="."]
+offset_left = 32.0
+offset_top = 32.0
+offset_right = 380.0
+offset_bottom = 84.0
+text = "Memory Forest fixture"

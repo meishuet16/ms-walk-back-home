@@ -1,0 +1,22 @@
+; Engine configuration file.
+; Use Godot 4.x to open this project.
+
+config_version=5
+
+[application]
+
+config/name="Walk Back Home"
+config/features=PackedStringArray("4.3", "Forward Plus")
+run/main_scene="res://scenes/forest/memory_forest.tscn"
+
+[display]
+
+window/size/viewport_width=960
+window/size/viewport_height=540
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
