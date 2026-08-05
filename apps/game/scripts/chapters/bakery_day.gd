@@ -269,7 +269,7 @@ func _save_completion() -> void:
 	)
 
 func _draw_bakery() -> void:
-	draw_rect(Rect2(Vector2.ZERO, Vector2(960.0, 540.0)), Color(0.07, 0.08, 0.12))
+	draw_rect(Rect2(Vector2.ZERO, get_viewport_rect().size), Color(0.07, 0.08, 0.12))
 	draw_rect(Rect2(Vector2(40.0, 110.0), Vector2(880.0, 350.0)), Color(0.18, 0.12, 0.10))
 	draw_rect(Rect2(Vector2(68.0, 140.0), Vector2(824.0, 270.0)), Color(0.29, 0.20, 0.16))
 	draw_rect(Rect2(Vector2(88.0, 334.0), Vector2(640.0, 54.0)), Color(0.43, 0.29, 0.18))
@@ -324,7 +324,7 @@ func _draw_ui() -> void:
 		draw_string(ThemeDB.fallback_font, Vector2(260.0, 285.0), "Press E to return to Memory Forest.", HORIZONTAL_ALIGNMENT_LEFT, 440.0, 18, Color(0.86, 0.92, 0.96))
 
 func _draw_fixture_error() -> void:
-	draw_rect(Rect2(Vector2.ZERO, Vector2(960.0, 540.0)), Color(0.04, 0.04, 0.06))
+	draw_rect(Rect2(Vector2.ZERO, get_viewport_rect().size), Color(0.04, 0.04, 0.06))
 	draw_rect(Rect2(Vector2(120.0, 120.0), Vector2(720.0, 280.0)), Color(0.16, 0.08, 0.08, 0.92))
 	draw_string(ThemeDB.fallback_font, Vector2(160.0, 170.0), fixture_error_text, HORIZONTAL_ALIGNMENT_LEFT, 640.0, 18, Color(1.0, 0.82, 0.72))
 	draw_string(ThemeDB.fallback_font, Vector2(160.0, 350.0), "Press E to return to Memory Forest.", HORIZONTAL_ALIGNMENT_LEFT, 640.0, 18, Color(0.94, 0.94, 0.90))

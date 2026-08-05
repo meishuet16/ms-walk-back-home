@@ -2,6 +2,7 @@ extends RefCounted
 class_name MobileControls
 
 const BREAKPOINT_WIDTH := 720.0
+const BREAKPOINT_HEIGHT := 480.0
 
 var touch_direction := Vector2.ZERO
 var interaction_pressed := false
@@ -20,7 +21,14 @@ func update_layout(viewport_size: Vector2) -> void:
 	action_rect = Rect2(Vector2(viewport_size.x - 120.0, base + 42.0), Vector2(76.0, 76.0))
 
 func should_show(viewport_size: Vector2) -> bool:
-	return DisplayServer.is_touchscreen_available() or viewport_size.x <= BREAKPOINT_WIDTH
+	var window_size := Vector2(DisplayServer.window_get_size())
+	return (
+		DisplayServer.is_touchscreen_available()
+		or viewport_size.x <= BREAKPOINT_WIDTH
+		or viewport_size.y <= BREAKPOINT_HEIGHT
+		or window_size.x <= BREAKPOINT_WIDTH
+		or window_size.y <= BREAKPOINT_HEIGHT
+	)
 
 func handle_input(event: InputEvent, viewport_size: Vector2) -> bool:
 	if not should_show(viewport_size):

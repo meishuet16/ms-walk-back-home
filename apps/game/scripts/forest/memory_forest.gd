@@ -158,8 +158,9 @@ func _update_info_label() -> void:
 	]
 
 func _draw_sky() -> void:
-	draw_rect(Rect2(Vector2.ZERO, Vector2(960.0, 540.0)), Color(0.05, 0.09, 0.16))
-	draw_rect(Rect2(Vector2.ZERO, Vector2(960.0, 540.0)), Color(0.08, 0.17, 0.20, 0.32))
+	var viewport_size := get_viewport_rect().size
+	draw_rect(Rect2(Vector2.ZERO, viewport_size), Color(0.05, 0.09, 0.16))
+	draw_rect(Rect2(Vector2.ZERO, viewport_size), Color(0.08, 0.17, 0.20, 0.32))
 	for i in range(12):
 		var y := 90.0 + float(i) * 34.0
 		draw_line(Vector2(0.0, y), Vector2(960.0, y + 34.0), Color(0.11, 0.24, 0.25, 0.16), 2.0)
