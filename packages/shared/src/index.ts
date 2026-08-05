@@ -1,5 +1,22 @@
 export { createFixtureAuthAdapter } from "./auth/fixture-auth";
 export {
+  ChapterCompletionStateSchema,
+  ChapterDialogueNodeSchema,
+  ChapterEndingSchema,
+  ChapterInteractiveObjectSchema,
+  ChapterManifestSchema,
+  ChapterNpcSchema,
+  ChapterObjectiveSchema,
+  ChapterSceneSchema,
+  DialogueSourceSchema,
+  createChapterManifestFromMemoryGraph,
+  parseChapterCompletionState,
+  parseChapterManifest,
+  type ChapterCompletionState,
+  type ChapterManifest,
+  type DialogueSource
+} from "./chapter/chapter-manifest";
+export {
   addComposerElement,
   createEmptyComposerDocument,
   deleteComposerElement,
