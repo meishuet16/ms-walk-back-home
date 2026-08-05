@@ -6,6 +6,7 @@
       "id": "portal-fixture-001",
       "entryId": "fixture-001",
       "graphId": "memory-graph-seed-001",
+      "chapterId": "chapter-fixture-001",
       "date": "2030-01-01",
       "chapterTitle": "A fictional bakery day",
       "mood": "nostalgic",

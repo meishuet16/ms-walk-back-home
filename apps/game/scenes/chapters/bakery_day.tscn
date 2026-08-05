@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bakerydayfixture"]
+
+[ext_resource type="Script" path="res://scripts/chapters/bakery_day.gd" id="1_bakery"]
+
+[node name="BakeryDay" type="Node2D"]
+script = ExtResource("1_bakery")

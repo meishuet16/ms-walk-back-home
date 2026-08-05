@@ -1,0 +1,94 @@
+{
+  "id": "chapter-fixture-001",
+  "entryId": "fixture-001",
+  "date": "2030-01-01",
+  "title": "A fictional bakery day",
+  "scenes": [
+    {
+      "id": "bakery",
+      "module": "bakery_shop",
+      "order": 0,
+      "title": "Small bakery"
+    }
+  ],
+  "playerSpawn": {
+    "sceneId": "bakery",
+    "x": 88,
+    "y": 312
+  },
+  "npcs": [
+    {
+      "id": "npc_friend_01",
+      "sceneId": "bakery",
+      "displayName": "Friend A",
+      "role": "friend",
+      "position": {
+        "x": 420,
+        "y": 295
+      }
+    }
+  ],
+  "interactiveObjects": [
+    {
+      "id": "obj_pastry",
+      "sceneId": "bakery",
+      "label": "pastry",
+      "type": "food",
+      "position": {
+        "x": 610,
+        "y": 304
+      }
+    }
+  ],
+  "objectives": [
+    {
+      "id": "enter-bakery",
+      "order": 0,
+      "prompt": "Enter Bakery",
+      "completion": "enter_scene"
+    },
+    {
+      "id": "talk-to-friend-a",
+      "order": 1,
+      "prompt": "Approach Friend A and talk",
+      "targetId": "npc_friend_01",
+      "completion": "talk"
+    },
+    {
+      "id": "inspect-pastry",
+      "order": 2,
+      "prompt": "Inspect the pastry",
+      "targetId": "obj_pastry",
+      "completion": "inspect"
+    },
+    {
+      "id": "walk-to-exit",
+      "order": 3,
+      "prompt": "Walk to the exit",
+      "targetId": "exit_bakery",
+      "completion": "exit"
+    }
+  ],
+  "dialogueNodes": [
+    {
+      "id": "dialogue-friend-a-01",
+      "speakerId": "npc_friend_01",
+      "text": "This place smells good.",
+      "source": "reconstructed",
+      "objectiveId": "talk-to-friend-a"
+    },
+    {
+      "id": "dialogue-muji-01",
+      "speakerId": "muji",
+      "text": "Muji remembers the warm light on the counter.",
+      "source": "muji_observation",
+      "objectiveId": "inspect-pastry"
+    }
+  ],
+  "ending": {
+    "id": "ending-return-to-forest",
+    "text": "Bakery Day settles into the forest as a lit doorway.",
+    "returnTarget": "forest"
+  },
+  "validationErrors": []
+}

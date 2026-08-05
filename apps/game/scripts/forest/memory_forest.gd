@@ -7,6 +7,8 @@ extends Node2D
 # sprite sheet, portal animations, and environmental VFX while preserving the
 # portal metadata contract loaded below.
 const PORTAL_DATA_PATH := "res://forest_data/portal_manifest.seed.json"
+const BAKERY_CHAPTER_SCENE_PATH := "res://scenes/chapters/bakery_day.tscn"
+const COMPLETION_PATH := "user://chapter_completion.json"
 const MUJI_SPEED := 150.0
 const PORTAL_RADIUS := 64.0
 const FOREST_BOUNDS := Rect2(Vector2(32.0, 80.0), Vector2(896.0, 420.0))
@@ -14,11 +16,13 @@ const FOREST_BOUNDS := Rect2(Vector2(32.0, 80.0), Vector2(896.0, 420.0))
 var muji_position := Vector2(480.0, 330.0)
 var portals: Array[Dictionary] = []
 var active_portal: Dictionary = {}
+var completed_chapters := {}
 var time_seconds := 0.0
 var info_label: Label
 
 func _ready() -> void:
 	portals = _load_portals()
+	completed_chapters = _load_completion_state()
 	info_label = Label.new()
 	info_label.position = Vector2(28.0, 24.0)
 	info_label.size = Vector2(540.0, 92.0)
@@ -45,7 +49,7 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("enter_portal") and not active_portal.is_empty():
 		var state := str(active_portal.get("state", "locked"))
 		if state == "playable":
-			info_label.text = "Entering " + str(active_portal.get("chapterTitle", "memory")) + "..."
+			get_tree().change_scene_to_file(BAKERY_CHAPTER_SCENE_PATH)
 		elif state == "processing":
 			info_label.text = "This memory is still becoming a door."
 		else:
@@ -93,7 +97,9 @@ func _update_info_label() -> void:
 		info_label.text = "Walk with Muji. WASD or arrows move. Approach a glowing path."
 		return
 	var state := str(active_portal.get("state", "locked"))
-	var action := "Press E to enter" if state == "playable" else "Not ready to enter"
+	var chapter_id := str(active_portal.get("chapterId", "chapter-fixture-001"))
+	var completed := bool(completed_chapters.get(chapter_id, false))
+	var action := "Completed. Press E to revisit" if completed else ("Press E to enter" if state == "playable" else "Not ready to enter")
 	info_label.text = "%s\n%s · %s · %s\n%s" % [
 		str(active_portal.get("chapterTitle", "Untitled chapter")),
 		str(active_portal.get("date", "fixture")),
@@ -101,6 +107,19 @@ func _update_info_label() -> void:
 		state,
 		action
 	]
+
+func _load_completion_state() -> Dictionary:
+	if not FileAccess.file_exists(COMPLETION_PATH):
+		return {}
+	var file := FileAccess.open(COMPLETION_PATH, FileAccess.READ)
+	if file == null:
+		return {}
+	var parsed = JSON.parse_string(file.get_as_text())
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return {}
+	if bool(parsed.get("completed", false)):
+		return { str(parsed.get("chapterId", "")): true }
+	return {}
 
 func _draw_sky() -> void:
 	draw_rect(Rect2(Vector2.ZERO, Vector2(960.0, 540.0)), Color(0.05, 0.09, 0.16))
@@ -152,7 +171,11 @@ func _draw_fireflies() -> void:
 func _draw_portal(portal: Dictionary) -> void:
 	var portal_position := Vector2(float(portal.get("x", 0.0)), float(portal.get("y", 0.0)))
 	var state := str(portal.get("state", "locked"))
+	var chapter_id := str(portal.get("chapterId", "chapter-fixture-001"))
+	var completed := bool(completed_chapters.get(chapter_id, false))
 	var glow := Color(0.91, 0.63, 0.30, 0.34)
+	if completed:
+		glow = Color(0.54, 0.92, 0.72, 0.34)
 	if state == "locked":
 		glow = Color(0.47, 0.55, 0.61, 0.22)
 	elif state == "processing":
@@ -162,6 +185,9 @@ func _draw_portal(portal: Dictionary) -> void:
 	draw_rect(Rect2(portal_position + Vector2(-15.0, -28.0), Vector2(30.0, 58.0)), Color(glow.r, glow.g, glow.b, 0.44))
 	if state == "locked":
 		draw_line(portal_position + Vector2(-17.0, -3.0), portal_position + Vector2(17.0, 3.0), Color(0.77, 0.83, 0.86), 4.0)
+	if completed:
+		draw_line(portal_position + Vector2(-13.0, 5.0), portal_position + Vector2(-2.0, 18.0), Color(0.77, 1.0, 0.82), 4.0)
+		draw_line(portal_position + Vector2(-2.0, 18.0), portal_position + Vector2(18.0, -14.0), Color(0.77, 1.0, 0.82), 4.0)
 
 func _draw_muji() -> void:
 	draw_line(muji_position + Vector2(-16.0, 20.0), muji_position + Vector2(-24.0, 36.0), Color(0.06, 0.08, 0.13), 3.0)
