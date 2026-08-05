@@ -1,0 +1,183 @@
+{
+  "version": "art-lock-v1",
+  "sourceOfTruth": "Attached Art Lock v1 document in project discussion",
+  "rules": {
+    "minimumProductionUnit": ["tile", "sprite", "prop"],
+    "forbidden": [
+      "cropped mood-reference backgrounds",
+      "traced mood-reference artwork",
+      "complete pasted illustrations in gameplay screenshots",
+      "programmer-art placeholders promoted to production"
+    ],
+    "filtering": "nearest",
+    "mipmaps": false
+  },
+  "palette": {
+    "coolBlueHour": ["#07101d", "#0d1b2a", "#142b34", "#4f6370", "#8da8b3"],
+    "warmLight": ["#704626", "#b06f37", "#d99545", "#f6c76e", "#f0dfbd"],
+    "nature": ["#10291f", "#1f4b36", "#3c5f34", "#4f3929"],
+    "neutral": ["#12151a", "#2b2e35", "#555962", "#d8d7d0"]
+  },
+  "assets": [
+    {
+      "id": "muji",
+      "path": "res://assets/external/sprites/muji_v1.png",
+      "kind": "sprite_sheet",
+      "frameWidth": 16,
+      "frameHeight": 20,
+      "columns": 4,
+      "rows": 4,
+      "animations": {
+        "idle_down": [0],
+        "idle_up": [4],
+        "idle_left": [8],
+        "idle_right": [12],
+        "walk_down": [0, 1, 2, 3],
+        "walk_up": [4, 5, 6, 7],
+        "walk_left": [8, 9, 10, 11],
+        "walk_right": [12, 13, 14, 15]
+      },
+      "requirements": [
+        "translucent smoky blue-gray bottle body",
+        "dark navy cap and loop handle",
+        "visible measurement markings",
+        "tiny arms and legs",
+        "expressive but not childish"
+      ]
+    },
+    {
+      "id": "friend_a",
+      "path": "res://assets/external/sprites/friend_a_v1.png",
+      "kind": "sprite_sheet",
+      "frameWidth": 16,
+      "frameHeight": 20,
+      "columns": 4,
+      "rows": 4,
+      "animations": {
+        "idle_down": [0],
+        "idle_up": [4],
+        "idle_left": [8],
+        "idle_right": [12],
+        "walk_down": [0, 1, 2, 3],
+        "walk_up": [4, 5, 6, 7],
+        "walk_left": [8, 9, 10, 11],
+        "walk_right": [12, 13, 14, 15]
+      },
+      "requirements": [
+        "bakery friend silhouette",
+        "warm gentle palette",
+        "readable at 16x20 px",
+        "4-direction idle and walk spacing"
+      ]
+    },
+    {
+      "id": "forest_tiles",
+      "path": "res://assets/external/tiles/forest_v1.png",
+      "kind": "tileset",
+      "tileWidth": 16,
+      "tileHeight": 16,
+      "columns": 16,
+      "rows": 8,
+      "minimumTiles": [
+        "night_ground",
+        "moss_ground",
+        "soft_path",
+        "canopy",
+        "trunk",
+        "foreground_leaves",
+        "portal_door",
+        "portal_glow",
+        "lamp",
+        "rain",
+        "firefly"
+      ]
+    },
+    {
+      "id": "bakery_tiles",
+      "path": "res://assets/external/tiles/bakery_v1.png",
+      "kind": "tileset",
+      "tileWidth": 16,
+      "tileHeight": 16,
+      "columns": 16,
+      "rows": 8,
+      "minimumTiles": [
+        "floorboards",
+        "warm_wall",
+        "counter",
+        "window",
+        "pastry",
+        "exit_door",
+        "string_light",
+        "shadow_corner"
+      ]
+    },
+    {
+      "id": "props",
+      "path": "res://assets/external/props/props_v1.png",
+      "kind": "prop_atlas",
+      "tileWidth": 16,
+      "tileHeight": 16,
+      "columns": 16,
+      "rows": 8,
+      "minimumProps": [
+        "forest_lamp",
+        "bakery_lamp",
+        "door_sign",
+        "flowers",
+        "crate",
+        "tabletop_memory_item"
+      ]
+    },
+    {
+      "id": "vfx",
+      "path": "res://assets/external/vfx/vfx_v1.png",
+      "kind": "sprite_sheet",
+      "frameWidth": 16,
+      "frameHeight": 16,
+      "columns": 8,
+      "rows": 4,
+      "minimumEffects": [
+        "soft_rain",
+        "firefly_loop",
+        "portal_glow_loop",
+        "lamp_flicker",
+        "wind_leaf"
+      ]
+    }
+  ],
+  "tileMapLayers": [
+    {
+      "name": "Background",
+      "purpose": "base ground and far environment"
+    },
+    {
+      "name": "Midground",
+      "purpose": "walkable paths, trunks, counters, doors, collision-aligned features"
+    },
+    {
+      "name": "Foreground",
+      "purpose": "overlapping leaves, canopy edges, interior occluders"
+    },
+    {
+      "name": "LightingVfx",
+      "purpose": "warm lamps, portal glow, rain, fireflies, wind movement"
+    }
+  ],
+  "propPlacementHooks": [
+    {
+      "hook": "portal",
+      "source": "portal manifest x/y",
+      "requiredProps": ["portal_door", "portal_glow"]
+    },
+    {
+      "hook": "chapter_object",
+      "source": "ChapterManifest interactiveObjects.position",
+      "requiredProps": ["pastry", "exit_door"]
+    },
+    {
+      "hook": "npc",
+      "source": "ChapterManifest npcs.position",
+      "requiredProps": ["friend_a"]
+    }
+  ]
+}
