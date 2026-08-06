@@ -259,6 +259,43 @@ canvas {
   gap: 8px;
   margin-top: 12px;
 }
+.diary-editor label {
+  display: grid;
+  gap: 5px;
+  margin: 10px 0;
+  color: #5d422c;
+}
+.diary-editor input,
+.diary-editor textarea {
+  width: 100%;
+  border: 1px solid rgba(92, 61, 29, .34);
+  border-radius: 5px;
+  padding: 9px 10px;
+  background: rgba(255, 250, 239, .9);
+  color: #17120e;
+  font: inherit;
+}
+.diary-editor textarea {
+  resize: vertical;
+}
+.diary-list {
+  margin: 12px 0;
+  display: grid;
+  gap: 8px;
+}
+.diary-row {
+  display: grid;
+  grid-template-columns: 110px 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid rgba(92, 61, 29, .18);
+  border-radius: 5px;
+  background: rgba(91, 57, 26, .09);
+}
+.quiet-line {
+  color: #684b34;
+}
 .bottle-room {
   display: grid;
   grid-template-columns: minmax(180px, 300px) 1fr;
@@ -443,6 +480,9 @@ canvas {
   }
   .choices button {
     width: 100%;
+  }
+  .diary-row {
+    grid-template-columns: 1fr;
   }
   .bottle-room {
     grid-template-columns: 1fr;

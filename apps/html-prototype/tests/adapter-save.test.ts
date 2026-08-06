@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import test from "node:test";
 import { chapterPlanToHtmlScene } from "../src/adapters/chapterPlanAdapter.js";
 import { bakeryChapter, forestDoors } from "../src/fixtures/chapterPlan.js";
+import { diaryEntryToDoor, parseDiaryImport } from "../src/systems/DiaryImport.js";
 import { globalMusic, sceneMusic, sceneMusicDataUri } from "../src/systems/SceneMusic.js";
 import type { SaveState } from "../src/types.js";
 
@@ -47,11 +48,13 @@ test("save state includes a version and narrative persistence fields", () => {
     selectedChapter: "Yumido Bread",
     settings: { rain: true, muted: true, volume: 0.2, compact: false, reducedMotion: false },
     readMemories: ["bakery-day"],
+    diaryEntries: [{ id: "diary-2026-08-06", date: "2026-08-06", title: "A Quiet Test", body: "Rain on the bus window." }],
     endingProgress: []
   };
   assert.equal(save.version, 1);
   assert.deepEqual(save.completedChapters, ["bakery-day"]);
   assert.deepEqual(save.readMemories, ["bakery-day"]);
+  assert.equal(save.diaryEntries?.[0]?.date, "2026-08-06");
 });
 
 test("forest doors expose distinct memory instances for long-term progression", () => {
@@ -75,4 +78,18 @@ test("global music loops the local bakery mp3 without creating a YouTube player"
   assert.ok(existsSync(resolve("public", globalMusic.src)));
   assert.ok(sceneMusicDataUri("forest").startsWith("data:audio/wav;base64,"));
   assert.ok(sceneMusicDataUri("bakery").startsWith("data:audio/wav;base64,"));
+});
+
+test("diary import creates dated forest memory lights", () => {
+  const entries = parseDiaryImport("2026-08-06 | Rain Letter | I kept thinking about the yellow bakery light.");
+  assert.equal(entries.length, 1);
+  assert.equal(entries[0].date, "2026-08-06");
+  assert.equal(entries[0].title, "Rain Letter");
+  assert.ok(entries[0].body.includes("yellow bakery light"));
+
+  const door = diaryEntryToDoor(entries[0], 0);
+  assert.equal(door.date, "2026-08-06");
+  assert.equal(door.title, "Rain Letter");
+  assert.ok(door.chapterId.startsWith("diary-"));
+  assert.ok(door.memoryText.some((line) => line.includes("yellow bakery light")));
 });

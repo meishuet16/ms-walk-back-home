@@ -1,7 +1,8 @@
 import { bakeryChapter, forestDoors } from "./fixtures/chapterPlan.js";
-import type { Choice, SaveState, SceneId, Tendencies } from "./types.js";
+import type { Choice, DiaryEntry, SaveState, SceneId, Tendencies } from "./types.js";
 import { AudioManager } from "./systems/AudioManager.js";
 import { inAnyRect, type Point, type Rect } from "./systems/CollisionSystem.js";
+import { diaryEntryToDoor, makeDiaryEntry, parseDiaryImport, type DiaryDoor } from "./systems/DiaryImport.js";
 import { DialogueSystem } from "./systems/DialogueSystem.js";
 import { resolveEnding, type Ending } from "./systems/EndingResolver.js";
 import { InputManager } from "./systems/InputManager.js";
@@ -10,7 +11,8 @@ import { SaveManager } from "./systems/SaveManager.js";
 import type { MusicScene } from "./systems/SceneMusic.js";
 import { emptyTendencies } from "./systems/TendencySystem.js";
 
-type Door = (typeof forestDoors)[number];
+type FixtureDoor = (typeof forestDoors)[number];
+type ForestDoor = FixtureDoor | DiaryDoor;
 
 const assets = {
   forest: "assets/forest.png",
@@ -54,10 +56,11 @@ export class WalkBackHomeApp {
   private facing = 0;
   private frame = 0;
   private last = performance.now();
-  private activeDoor: Door | null = null;
-  private currentDoor: Door | null = null;
+  private activeDoor: ForestDoor | null = null;
+  private currentDoor: ForestDoor | null = null;
   private activeObject = "";
   private lastHudHtml = "";
+  private diaryEntries: DiaryEntry[] = [];
   private tendencies: Tendencies = emptyTendencies();
   private completedChapters = new Set<string>();
   private openedDoors = new Set<string>();
@@ -135,6 +138,11 @@ export class WalkBackHomeApp {
     if (action === "open-relationships") this.showRelationships();
     if (action === "open-tendency") this.showTendency();
     if (action === "open-room") this.showMujiRoom();
+    if (action === "open-diary-editor") this.showDiaryEditor();
+    if (action === "save-diary-entry") this.saveDiaryEntry(target.dataset.id);
+    if (action === "edit-diary-entry") this.showDiaryEditor(target.dataset.id);
+    if (action === "delete-diary-entry") this.deleteDiaryEntry(target.dataset.id ?? "");
+    if (action === "import-diary-lines") this.importDiaryLines();
     if (action === "room-talk") this.roomTalk();
     if (action === "room-water") this.roomWater();
     if (action === "room-warm") this.roomWarm();
@@ -159,7 +167,7 @@ export class WalkBackHomeApp {
     }
     if (action === "enter-door") {
       const doorId = target.dataset.door;
-      if (doorId) this.currentDoor = forestDoors.find((door) => door.id === doorId) ?? this.currentDoor;
+      if (doorId) this.currentDoor = this.allDoors().find((door) => door.id === doorId) ?? this.currentDoor;
       this.enterBakery();
     }
     if (action === "finish-memory") this.finishBakery();
@@ -211,7 +219,7 @@ export class WalkBackHomeApp {
 
   private updateForest(x: number, y: number, dt: number): void {
     this.move(x, y, dt, [{ x: 0, y: 0, w: 1536, h: 88 }, { x: 0, y: 0, w: 120, h: 864 }, { x: 1428, y: 0, w: 108, h: 864 }, { x: 0, y: 780, w: 1536, h: 125 }], []);
-    this.activeDoor = forestDoors.find((door) => Math.hypot(this.player.x - door.x, this.player.y - door.y) < 86) ?? null;
+    this.activeDoor = this.allDoors().find((door) => Math.hypot(this.player.x - door.x, this.player.y - door.y) < 86) ?? null;
   }
 
   private updateBakery(x: number, y: number, dt: number): void {
@@ -263,7 +271,15 @@ export class WalkBackHomeApp {
     return this.currentDoor?.chapterId ?? bakeryChapter.id;
   }
 
-  private previewDoor(door: Door): void {
+  private allDoors(): ForestDoor[] {
+    return [...forestDoors, ...this.diaryEntries.map((entry, index) => diaryEntryToDoor(entry, index))];
+  }
+
+  private escapeHtml(value: string): string {
+    return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[char]!));
+  }
+
+  private previewDoor(door: ForestDoor): void {
     this.openedDoors.add(door.id);
     this.currentDoor = door;
     this.overlay.innerHTML = `<div class="modal"><h2>${door.date} · ${door.title}</h2><p>A warm Bakery memory hums inside the branches.</p><p>Muji does not go back to fix it. Muji goes back to walk beside it.</p><button data-action="enter-door">Enter Bakery memory</button><button data-action="forest">Exit to forest</button><button data-action="close">Stay in forest</button></div>`;
@@ -293,7 +309,8 @@ export class WalkBackHomeApp {
     const door = this.currentDoor ?? forestDoors[1];
     this.readMemories.add(door.chapterId);
     this.scrapbook.add(`${door.title}: the diary on the bakery counter`);
-    const lines = (bakeryChapter.memoryText ?? []).map((line, index) => index === 0 ? `<h2>${door.date} · ${door.title}</h2>` : `<p>${line}</p>`).join("");
+    const memoryText = "memoryText" in door ? door.memoryText : (bakeryChapter.memoryText ?? []);
+    const lines = memoryText.map((line, index) => index === 0 ? `<h2>${this.escapeHtml(door.date)} · ${this.escapeHtml(door.title)}</h2>` : `<p>${this.escapeHtml(line)}</p>`).join("");
     this.overlay.innerHTML = `<div class="modal diary-memory">${lines}<button data-action="close">Close</button><button data-action="forest">Exit to forest</button></div>`;
     this.showToast("Diary memory read");
     this.focusStage();
@@ -370,7 +387,7 @@ export class WalkBackHomeApp {
     this.autosave();
   }
 
-  private completeBakeryProgress(): Door {
+  private completeBakeryProgress(): ForestDoor {
     const door = this.currentDoor ?? forestDoors[1];
     this.completedChapters.add(door.chapterId);
     this.timelineCompleted.add(door.title);
@@ -461,7 +478,7 @@ export class WalkBackHomeApp {
   }
 
   private drawDoors(cameraX: number, cameraY: number, scale: number): void {
-    for (const door of forestDoors) {
+    for (const door of this.allDoors()) {
       const x = (door.x - cameraX) * scale;
       const y = (door.y - cameraY) * scale;
       const active = this.activeDoor?.id === door.id;
@@ -507,7 +524,8 @@ export class WalkBackHomeApp {
   }
 
   private settingsContent(): string {
-    const timelineRows = forestDoors.map((door) => `${door.date} ${door.title} · ${this.timelineCompleted.has(door.title) ? "complete" : "open"}`);
+    const doors = this.allDoors();
+    const timelineRows = doors.map((door) => `${door.date} ${door.title} · ${this.timelineCompleted.has(door.title) ? "complete" : "open"}`);
     const tendencyRows = [
       ["Accept", this.tendencies.acceptance + this.tendencies.honesty],
       ["Avoid", this.tendencies.avoidance + this.tendencies.distance],
@@ -517,8 +535,9 @@ export class WalkBackHomeApp {
     return `
       <div class="module-grid">
         <button data-action="open-scrapbook">AI Scrapbook<span>${this.scrapbook.size} pages</span></button>
-        <button data-action="open-timeline">Diary Timeline<span>${timelineRows.filter((item) => item.includes("complete")).length}/${forestDoors.length} complete</span></button>
+        <button data-action="open-timeline">Diary Timeline<span>${timelineRows.filter((item) => item.includes("complete")).length}/${doors.length} complete</span></button>
         <button data-action="open-map">Memory Map<span>${this.scene}</span></button>
+        <button data-action="open-diary-editor">Diary Import / Edit<span>${this.diaryEntries.length} custom dates</span></button>
         <button data-action="open-relationships">Relationships<span>Friend A</span></button>
         <button data-action="open-tendency">Tendency<span>${tendencyRows.map(([label, score]) => `${label} ${score}`).join(" · ")}</span></button>
         <button data-action="open-room">Muji Room<span>Water ${this.room.water} · Warmth ${this.room.warmth}</span></button>
@@ -534,14 +553,14 @@ export class WalkBackHomeApp {
   }
 
   private showTimeline(): void {
-    const rows = forestDoors.map((door) => `<li>${door.date} · ${door.title} · ${this.timelineCompleted.has(door.title) ? "complete" : "open"}</li>`).join("");
+    const rows = this.allDoors().map((door) => `<li>${this.escapeHtml(door.date)} · ${this.escapeHtml(door.title)} · ${this.timelineCompleted.has(door.title) ? "complete" : "open"}</li>`).join("");
     this.overlay.innerHTML = `<div class="modal game-panel"><h2>Diary Timeline</h2><ul>${rows}</ul><button data-action="settings">Back</button><button data-action="forest">Exit to forest</button><button data-action="close">Close</button></div>`;
     this.focusStage();
   }
 
   private showMap(): void {
-    const doors = forestDoors.map((door) => `<button data-action="enter-door" data-door="${door.id}">${door.date} ${door.title}</button>`).join("");
-    this.overlay.innerHTML = `<div class="modal game-panel"><h2>Memory Map</h2><p>Four forest doors lead into Bakery-shaped memories.</p><div class="settings-row">${doors}</div><button data-action="settings">Back</button><button data-action="forest">Exit to forest</button><button data-action="close">Close</button></div>`;
+    const doors = this.allDoors().map((door) => `<button data-action="enter-door" data-door="${door.id}">${this.escapeHtml(door.date)} ${this.escapeHtml(door.title)}</button>`).join("");
+    this.overlay.innerHTML = `<div class="modal game-panel"><h2>Memory Map</h2><p>Forest lights are built from fixture memories and your imported diary dates.</p><div class="settings-row">${doors}</div><button data-action="open-diary-editor">Import / Edit Diary</button><button data-action="settings">Back</button><button data-action="forest">Exit to forest</button><button data-action="close">Close</button></div>`;
     this.focusStage();
   }
 
@@ -563,6 +582,79 @@ export class WalkBackHomeApp {
     ].map(([label, score]) => `<div class="row"><span>${label}</span><strong>${score}</strong><meter min="0" max="8" value="${score}"></meter></div>`).join("");
     this.overlay.innerHTML = `<div class="modal game-panel"><h2>Tendency</h2>${rows}<button data-action="ending">Resolve Ending</button><button data-action="settings">Back</button><button data-action="forest">Exit to forest</button></div>`;
     this.focusStage();
+  }
+
+  private showDiaryEditor(editId = ""): void {
+    const editing = this.diaryEntries.find((entry) => entry.id === editId);
+    const today = new Date().toISOString().slice(0, 10);
+    const rows = this.diaryEntries.length
+      ? this.diaryEntries.map((entry) => `<div class="diary-row"><strong>${this.escapeHtml(entry.date)}</strong><span>${this.escapeHtml(entry.title)}</span><button data-action="edit-diary-entry" data-id="${this.escapeHtml(entry.id)}">Edit</button><button data-action="delete-diary-entry" data-id="${this.escapeHtml(entry.id)}">Delete</button></div>`).join("")
+      : `<p class="quiet-line">No custom diary dates yet.</p>`;
+    this.overlay.innerHTML = `
+      <div class="modal game-panel diary-editor">
+        <h2>Diary Import / Edit</h2>
+        <label>Date<input id="diary-date" type="date" value="${this.escapeHtml(editing?.date ?? today)}"></label>
+        <label>Title<input id="diary-title" value="${this.escapeHtml(editing?.title ?? "Untitled Memory")}"></label>
+        <label>Diary<textarea id="diary-body" rows="5">${this.escapeHtml(editing?.body ?? "")}</textarea></label>
+        <button data-action="save-diary-entry" data-id="${this.escapeHtml(editing?.id ?? "")}">${editing ? "Update Date" : "Add Date"}</button>
+        <label>Bulk Import<textarea id="diary-import" rows="4" placeholder="2026-08-06 | Rain Letter | I kept thinking about the yellow bakery light."></textarea></label>
+        <button data-action="import-diary-lines">Import Lines</button>
+        <div class="diary-list">${rows}</div>
+        <button data-action="open-map">Memory Map</button><button data-action="settings">Back</button><button data-action="forest">Exit to forest</button><button data-action="close">Close</button>
+      </div>`;
+    this.focusStage();
+  }
+
+  private saveDiaryEntry(id = ""): void {
+    const dateInput = this.overlay.querySelector<HTMLInputElement>("#diary-date");
+    const titleInput = this.overlay.querySelector<HTMLInputElement>("#diary-title");
+    const bodyInput = this.overlay.querySelector<HTMLTextAreaElement>("#diary-body");
+    const date = dateInput?.value.trim() ?? "";
+    const title = titleInput?.value.trim() || "Untitled Memory";
+    const body = bodyInput?.value.trim() ?? "";
+    if (!date || !body) {
+      this.showToast("Date and diary text are required");
+      return;
+    }
+    const entry = makeDiaryEntry(date, title, body, id || undefined);
+    const index = this.diaryEntries.findIndex((item) => item.id === entry.id);
+    if (index >= 0) this.diaryEntries[index] = entry;
+    else this.diaryEntries.push(entry);
+    this.selectedChapter = entry.title;
+    this.showToast(index >= 0 ? "Diary updated" : "Diary date added");
+    this.showDiaryEditor(entry.id);
+    this.autosave();
+  }
+
+  private importDiaryLines(): void {
+    const importInput = this.overlay.querySelector<HTMLTextAreaElement>("#diary-import");
+    const imported = parseDiaryImport(importInput?.value ?? "");
+    if (!imported.length) {
+      this.showToast("Use: YYYY-MM-DD | Title | Diary text");
+      return;
+    }
+    for (const entry of imported) {
+      const existing = this.diaryEntries.findIndex((item) => item.id === entry.id);
+      if (existing >= 0) this.diaryEntries[existing] = entry;
+      else this.diaryEntries.push(entry);
+    }
+    this.showToast(`Imported ${imported.length} diary date${imported.length === 1 ? "" : "s"}`);
+    this.showDiaryEditor();
+    this.autosave();
+  }
+
+  private deleteDiaryEntry(id: string): void {
+    const entry = this.diaryEntries.find((item) => item.id === id);
+    this.diaryEntries = this.diaryEntries.filter((item) => item.id !== id);
+    if (entry) {
+      this.openedDoors.delete(entry.id);
+      this.completedChapters.delete(entry.id);
+      this.readMemories.delete(entry.id);
+      if (this.currentDoor?.id === entry.id) this.currentDoor = null;
+      this.showToast("Diary date deleted");
+    }
+    this.showDiaryEditor();
+    this.autosave();
   }
 
   private showMujiRoom(): void {
@@ -663,6 +755,7 @@ export class WalkBackHomeApp {
       choices: this.choices,
       tendencies: this.tendencies,
       readMemories: [...this.readMemories],
+      diaryEntries: this.diaryEntries,
       scrapbook: [...this.scrapbook],
       favorites: [...this.favorites],
       timelineCompleted: [...this.timelineCompleted],
@@ -676,7 +769,8 @@ export class WalkBackHomeApp {
   private applySave(state: SaveState): void {
     this.scene = state.scene;
     this.player = state.player;
-    this.currentDoor = forestDoors.find((door) => door.chapterId === state.completedChapters.at(-1)) ?? null;
+    this.diaryEntries = state.diaryEntries ?? [];
+    this.currentDoor = this.allDoors().find((door) => door.chapterId === state.completedChapters.at(-1)) ?? null;
     this.openedDoors = new Set(state.openedDoors);
     this.completedChapters = new Set(state.completedChapters);
     this.choices = state.choices;

@@ -40,6 +40,13 @@ export type HtmlChapterScene = {
   dialogue: DialogueNode[];
 };
 
+export type DiaryEntry = {
+  id: string;
+  date: string;
+  title: string;
+  body: string;
+};
+
 export type SaveState = {
   version: 1;
   slot?: number;
@@ -56,6 +63,7 @@ export type SaveState = {
   selectedChapter: string;
   settings: { rain: boolean; muted: boolean; volume: number; compact: boolean; reducedMotion: boolean; musicEnabled?: boolean; musicScene?: "forest" | "bakery" };
   readMemories?: string[];
+  diaryEntries?: DiaryEntry[];
   room?: { visits: number; gifts: number; outfit: string; diary: string[]; water?: number; warmth?: number; stickers?: number; letters?: number };
   endingProgress: string[];
 };
