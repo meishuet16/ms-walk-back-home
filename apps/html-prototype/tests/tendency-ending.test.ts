@@ -31,3 +31,53 @@ test("ending resolver supports the companionship ending", () => {
   t.acceptance = 1;
   assert.equal(resolveEnding(t).id, "stay-with-you");
 });
+
+test("single bakery chapter choices can branch into distinct ending stories", () => {
+  const honest = emptyTendencies();
+  honest.acceptance = 1;
+  honest.honesty = 1;
+
+  const avoidant = emptyTendencies();
+  avoidant.avoidance = 1;
+  avoidant.concealment = 1;
+
+  const rewrite = emptyTendencies();
+  rewrite.intervention = 1;
+  rewrite.concealment = 1;
+
+  const close = emptyTendencies();
+  close.closeness = 1;
+  close.companionship = 1;
+
+  assert.equal(resolveEnding(honest).id, "walk-home-together");
+  assert.equal(resolveEnding(avoidant).id, "unopened-door");
+  assert.equal(resolveEnding(rewrite).id, "prettier-memory");
+  assert.equal(resolveEnding(close).id, "stay-with-you");
+});
+
+test("long-term choices can resolve to at least four distinct endings", () => {
+  const acceptance = emptyTendencies();
+  acceptance.acceptance = 3;
+  acceptance.honesty = 3;
+
+  const avoidance = emptyTendencies();
+  avoidance.avoidance = 3;
+  avoidance.distance = 3;
+
+  const revision = emptyTendencies();
+  revision.intervention = 3;
+  revision.concealment = 3;
+
+  const companionship = emptyTendencies();
+  companionship.closeness = 3;
+  companionship.companionship = 3;
+
+  const endings = new Set([
+    resolveEnding(acceptance).id,
+    resolveEnding(avoidance).id,
+    resolveEnding(revision).id,
+    resolveEnding(companionship).id
+  ]);
+
+  assert.ok(endings.size >= 4);
+});

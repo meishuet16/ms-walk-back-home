@@ -36,6 +36,7 @@ export type HtmlChapterScene = {
   characters: string[];
   objects: string[];
   evidence: string[];
+  memoryText?: string[];
   dialogue: DialogueNode[];
 };
 
@@ -53,6 +54,8 @@ export type SaveState = {
   favorites: string[];
   timelineCompleted: string[];
   selectedChapter: string;
-  settings: { rain: boolean; muted: boolean; volume: number; compact: boolean; reducedMotion: boolean };
+  settings: { rain: boolean; muted: boolean; volume: number; compact: boolean; reducedMotion: boolean; musicEnabled?: boolean; musicScene?: "forest" | "bakery" };
+  readMemories?: string[];
+  room?: { visits: number; gifts: number; outfit: string; diary: string[]; water?: number; warmth?: number; stickers?: number; letters?: number };
   endingProgress: string[];
 };

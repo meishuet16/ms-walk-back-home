@@ -1,31 +1,50 @@
+import { globalMusic, sceneMusicDataUri, type MusicScene } from "./SceneMusic.js";
+
 export class AudioManager {
-  private ctx: AudioContext | null = null;
-  muted = true;
-  volume = 0.18;
+  private track: HTMLAudioElement | null = null;
+  muted = false;
+  volume = 0.45;
+
+  constructor() {
+    this.track = new Audio(globalMusic.src);
+    this.track.loop = true;
+    this.track.preload = "auto";
+    this.track.volume = this.volume;
+    this.track.muted = false;
+    this.track.addEventListener("error", () => {
+      if (!this.track) return;
+      this.track.src = sceneMusicDataUri("bakery");
+      void this.ensurePlaying();
+    }, { once: true });
+  }
 
   async enable(): Promise<void> {
-    this.ctx ??= new AudioContext();
     this.muted = false;
-    await this.ctx.resume();
+    if (this.track) this.track.muted = false;
+    await this.ensurePlaying();
+  }
+
+  async ensurePlaying(): Promise<void> {
+    if (!this.track || this.muted) return;
+    await this.track.play().catch(() => undefined);
   }
 
   setMuted(muted: boolean): void {
     this.muted = muted;
+    if (this.track) this.track.muted = muted;
+    if (!muted) void this.ensurePlaying();
   }
 
   setVolume(volume: number): void {
     this.volume = Math.max(0, Math.min(1, volume));
+    if (this.track) this.track.volume = this.volume;
   }
 
-  ping(kind: "forest" | "bakery" | "ending" = "forest"): void {
-    if (!this.ctx || this.muted) return;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = "sine";
-    osc.frequency.value = kind === "bakery" ? 392 : kind === "ending" ? 330 : 523;
-    gain.gain.value = this.volume * 0.08;
-    osc.connect(gain).connect(this.ctx.destination);
-    osc.start();
-    osc.stop(this.ctx.currentTime + 0.16);
+  setScene(_scene: MusicScene): void {
+    void this.ensurePlaying();
+  }
+
+  ping(_kind: "forest" | "bakery" | "ending" = "forest"): void {
+    void this.ensurePlaying();
   }
 }

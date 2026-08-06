@@ -1,4 +1,3 @@
-import { chapterPlanToHtmlScene } from "./adapters/chapterPlanAdapter.js";
 import { bakeryChapter, forestDoors } from "./fixtures/chapterPlan.js";
 import type { Choice, SaveState, SceneId, Tendencies } from "./types.js";
 import { AudioManager } from "./systems/AudioManager.js";
@@ -8,6 +7,7 @@ import { resolveEnding, type Ending } from "./systems/EndingResolver.js";
 import { InputManager } from "./systems/InputManager.js";
 import { ParticleSystem } from "./systems/ParticleSystem.js";
 import { SaveManager } from "./systems/SaveManager.js";
+import type { MusicScene } from "./systems/SceneMusic.js";
 import { emptyTendencies } from "./systems/TendencySystem.js";
 
 type Door = (typeof forestDoors)[number];
@@ -23,6 +23,8 @@ const assets = {
   timeline: "assets/timeline-panel.jpg"
 };
 
+const bakeryMemorySpot = { x: 735, y: 325 };
+
 function img(src: string): HTMLImageElement {
   const image = new Image();
   image.src = src;
@@ -32,8 +34,10 @@ function img(src: string): HTMLImageElement {
 export class WalkBackHomeApp {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
+  private stage: HTMLElement;
   private hud: HTMLElement;
-  private panel: HTMLElement;
+  private toast: HTMLElement;
+  private musicPlayer: HTMLElement;
   private overlay: HTMLElement;
   private input: InputManager;
   private audio = new AudioManager();
@@ -46,21 +50,25 @@ export class WalkBackHomeApp {
     friend: img(assets.friend)
   };
   private scene: SceneId = "title";
-  private player: Point = { x: 760, y: 820 };
+  private player: Point = { x: 880, y: 690 };
   private facing = 0;
   private frame = 0;
   private last = performance.now();
   private activeDoor: Door | null = null;
+  private currentDoor: Door | null = null;
   private activeObject = "";
+  private lastHudHtml = "";
   private tendencies: Tendencies = emptyTendencies();
   private completedChapters = new Set<string>();
   private openedDoors = new Set<string>();
   private choices: string[] = [];
+  private readMemories = new Set<string>();
   private scrapbook = new Set(["A warm door in the forest"]);
   private favorites = new Set<string>();
   private timelineCompleted = new Set<string>();
   private selectedChapter = "Yumido Bread";
-  private settings = { rain: true, muted: true, volume: 0.18, compact: false, reducedMotion: false };
+  private settings = { rain: true, muted: false, volume: 0.45, compact: false, reducedMotion: false, musicEnabled: true, musicScene: "bakery" as MusicScene };
+  private room = { visits: 0, gifts: 0, outfit: "raincoat", diary: ["Muji put the water bottle on a tiny table and listened to the room breathe."], water: 2, warmth: 2, stickers: 0, letters: 0 };
   private dialogue = new DialogueSystem(bakeryChapter.dialogue);
   private ending: Ending | null = null;
 
@@ -80,46 +88,80 @@ export class WalkBackHomeApp {
         <main class="stage-wrap">
           <canvas width="960" height="540" aria-label="Walk Back Home playable scene"></canvas>
           <div class="hud"></div>
+          <div class="toast" role="status" aria-live="polite"></div>
+          <div class="music-player" aria-label="Scene music player"></div>
           <div class="overlay"></div>
         </main>
-        <section class="memory-panels"></section>
       </div>`;
+    this.stage = root.querySelector(".stage-wrap")!;
     this.canvas = root.querySelector("canvas")!;
     this.ctx = this.canvas.getContext("2d")!;
     this.hud = root.querySelector(".hud")!;
-    this.panel = root.querySelector(".memory-panels")!;
+    this.toast = root.querySelector(".toast")!;
+    this.musicPlayer = root.querySelector(".music-player")!;
     this.overlay = root.querySelector(".overlay")!;
     this.input = new InputManager(root);
     this.input.mountTouchControls(() => this.interact());
     root.addEventListener("click", (event) => this.handleClick(event));
+    root.addEventListener("pointerdown", () => void this.audio.ensurePlaying(), { passive: true });
+    root.addEventListener("keydown", () => void this.audio.ensurePlaying());
+    this.audio.setVolume(this.settings.volume);
+    void this.audio.enable();
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) this.last = performance.now();
+      else void this.audio.ensurePlaying();
     });
-    this.renderPanels();
     requestAnimationFrame((time) => this.loop(time));
   }
 
   private handleClick(event: Event): void {
-    const target = event.target as HTMLElement;
+    const target = (event.target as HTMLElement).closest<HTMLElement>("[data-action]");
+    if (!target) return;
     const action = target.dataset.action;
     if (!action) return;
+    void this.audio.ensurePlaying();
     if (action === "new") this.newMemory();
     if (action === "continue") this.loadAutosave();
     if (action === "load") this.showSaveLoad();
     if (action === "settings") this.showSettings();
     if (action === "credits") this.showCredits();
-    if (action === "forest") this.scene = "forest";
-    if (action === "dashboard") this.renderPanels("scrapbook");
+    if (action === "forest") {
+      this.returnToForest();
+    }
+    if (action === "menu") this.showSettings();
+    if (action === "open-scrapbook") this.showScrapbook();
+    if (action === "open-timeline") this.showTimeline();
+    if (action === "open-map") this.showMap();
+    if (action === "open-relationships") this.showRelationships();
+    if (action === "open-tendency") this.showTendency();
+    if (action === "open-room") this.showMujiRoom();
+    if (action === "room-talk") this.roomTalk();
+    if (action === "room-water") this.roomWater();
+    if (action === "room-warm") this.roomWarm();
+    if (action === "room-sticker") this.roomSticker();
+    if (action === "room-letter") this.roomLetter();
+    if (action === "room-gift") this.roomGift();
+    if (action === "room-dress") this.roomDress();
+    if (action === "room-diary") this.roomDiary();
     if (action === "compact") this.toggleCompact();
-    if (action === "fullscreen") document.documentElement.requestFullscreen?.();
-    if (action === "rain") this.settings.rain = !this.settings.rain;
+    if (action === "fullscreen") this.toggleFullscreen();
+    if (action === "rain") this.toggleRain();
     if (action === "mute") this.toggleAudio();
+    if (action === "music") this.toggleSceneMusic();
     if (action === "save") this.saveSlot(Number(target.dataset.slot));
     if (action === "load-slot") this.loadSlot(Number(target.dataset.slot));
     if (action === "delete-slot") this.deleteSlot(Number(target.dataset.slot));
     if (action === "ending") this.resolveAndShowEnding();
-    if (action === "close") this.overlay.innerHTML = "";
-    if (action === "enter-door") this.enterBakery();
+    if (action === "close") {
+      this.overlay.innerHTML = "";
+      this.showToast("Closed");
+    }
+    if (action === "enter-door") {
+      const doorId = target.dataset.door;
+      if (doorId) this.currentDoor = forestDoors.find((door) => door.id === doorId) ?? this.currentDoor;
+      this.enterBakery();
+    }
+    if (action === "finish-memory") this.finishBakery();
     if (action === "choice") this.choose(target.dataset.choice ?? "");
   }
 
@@ -136,39 +178,55 @@ export class WalkBackHomeApp {
 
   private newMemory(): void {
     this.scene = "forest";
-    this.player = { x: 760, y: 820 };
+    this.player = { x: 880, y: 690 };
+    this.currentDoor = null;
+    this.ending = null;
+    this.tendencies = emptyTendencies();
+    this.completedChapters.clear();
+    this.openedDoors.clear();
+    this.choices = [];
+    this.readMemories.clear();
+    this.scrapbook = new Set(["A warm door in the forest"]);
+    this.timelineCompleted.clear();
     this.overlay.innerHTML = "";
+    this.focusStage();
+    this.audio.ping("forest");
+    this.playSceneMusic("forest");
     this.autosave();
   }
 
   private loadAutosave(): void {
     const saved = this.save.loadAutosave();
-    if (saved) this.applySave(saved);
-    else this.newMemory();
+    if (saved) {
+      this.applySave(saved);
+      this.showToast("Continued autosave");
+      this.focusStage();
+    } else {
+      this.newMemory();
+      this.showToast("No autosave, started new");
+    }
   }
 
   private updateForest(x: number, y: number, dt: number): void {
-    this.move(x, y, dt, [{ x: 0, y: 0, w: 1536, h: 100 }, { x: 0, y: 0, w: 180, h: 1024 }, { x: 1320, y: 0, w: 220, h: 1024 }], [
-      { x: 560, y: 280, w: 300, h: 560 },
-      { x: 250, y: 250, w: 250, h: 170 },
-      { x: 960, y: 130, w: 300, h: 280 },
-      { x: 940, y: 700, w: 280, h: 210 }
-    ]);
+    this.move(x, y, dt, [{ x: 0, y: 0, w: 1536, h: 88 }, { x: 0, y: 0, w: 120, h: 864 }, { x: 1428, y: 0, w: 108, h: 864 }, { x: 0, y: 780, w: 1536, h: 125 }], []);
     this.activeDoor = forestDoors.find((door) => Math.hypot(this.player.x - door.x, this.player.y - door.y) < 86) ?? null;
   }
 
   private updateBakery(x: number, y: number, dt: number): void {
-    this.move(x, y, dt, [{ x: 0, y: 0, w: 1536, h: 210 }, { x: 0, y: 0, w: 40, h: 510 }, { x: 1490, y: 0, w: 50, h: 510 }], [
+    this.move(x, y, dt, [{ x: 0, y: 0, w: 1536, h: 210 }, { x: 0, y: 0, w: 40, h: 560 }, { x: 1490, y: 0, w: 50, h: 560 }, { x: 0, y: 505, w: 1536, h: 80 }], [
       { x: 0, y: 0, w: 980, h: 300 },
       { x: 760, y: 168, w: 245, h: 130 },
       { x: 1000, y: 330, w: 460, h: 170 },
       { x: 70, y: 345, w: 335, h: 150 },
       { x: 640, y: 385, w: 355, h: 120 }
     ]);
-    const nearFriend = Math.hypot(this.player.x - 705, this.player.y - 330) < 75;
+    const memoryKey = this.currentMemoryKey();
+    const memoryRead = this.readMemories.has(memoryKey);
+    const nearMemory = Math.hypot(this.player.x - bakeryMemorySpot.x, this.player.y - bakeryMemorySpot.y) < 88;
+    const nearFriend = Math.hypot(this.player.x - 600, this.player.y - 430) < 90;
     const nearPastry = Math.hypot(this.player.x - 840, this.player.y - 250) < 70;
     const nearExit = this.player.x < 105 && this.player.y < 330;
-    this.activeObject = nearFriend ? "Friend A" : nearPastry ? "pastry" : nearExit ? "exit" : "";
+    this.activeObject = nearMemory && !memoryRead ? "diary memory" : nearFriend ? "Friend A" : nearPastry ? "pastry" : nearExit ? "exit" : "";
   }
 
   private move(x: number, y: number, dt: number, boundsBlockers: Rect[], objectBlockers: Rect[]): void {
@@ -187,35 +245,92 @@ export class WalkBackHomeApp {
     if (this.scene === "title") return this.newMemory();
     if (this.scene === "forest" && this.activeDoor) return this.previewDoor(this.activeDoor);
     if (this.scene === "bakery") {
-      if (this.activeObject === "exit" && this.dialogue.complete()) return this.finishBakery();
-      if (this.activeObject === "Friend A" || this.activeObject === "pastry") return this.showDialogue();
+      if (this.activeObject === "exit") return this.returnToForest();
+      if (this.activeObject === "diary memory") return this.showDiaryMemory();
+      if (this.activeObject === "Friend A") {
+        if (!this.readMemories.has(this.currentMemoryKey())) return this.showToast("Read the diary memory by the counter first");
+        if (this.dialogue.complete()) this.resetBakeryDialogue();
+        return this.showDialogue();
+      }
+      if (this.activeObject === "pastry") return this.inspectPastry();
+      return this.showToast(this.readMemories.has(this.currentMemoryKey()) ? "Walk closer to Friend A" : "Find the glowing diary memory first");
     }
-    if (this.scene === "ending") this.scene = "forest";
+    if (this.scene === "ending") this.returnToForest();
+  }
+
+  private currentMemoryKey(): string {
+    return this.currentDoor?.chapterId ?? bakeryChapter.id;
   }
 
   private previewDoor(door: Door): void {
     this.openedDoors.add(door.id);
-    this.overlay.innerHTML = `<div class="modal"><h2>${door.date} · ${door.title}</h2><p>A warm door hums inside the branches.</p><p>Muji does not go back to fix it. Muji goes back to walk beside it.</p><button data-action="enter-door">Enter memory</button><button data-action="close">Stay in forest</button></div>`;
+    this.currentDoor = door;
+    this.overlay.innerHTML = `<div class="modal"><h2>${door.date} · ${door.title}</h2><p>A warm Bakery memory hums inside the branches.</p><p>Muji does not go back to fix it. Muji goes back to walk beside it.</p><button data-action="enter-door">Enter Bakery memory</button><button data-action="forest">Exit to forest</button><button data-action="close">Stay in forest</button></div>`;
+    this.focusStage();
   }
 
   private enterBakery(): void {
+    this.currentDoor ??= this.activeDoor ?? forestDoors[1];
     this.scene = "bakery";
-    this.player = { x: 180, y: 420 };
-    this.dialogue = new DialogueSystem(chapterPlanToHtmlScene().dialogue);
+    this.player = { x: 450, y: 420 };
+    this.dialogue = new DialogueSystem(bakeryChapter.dialogue);
     this.overlay.innerHTML = "";
+    this.focusStage();
+    this.showToast("Entered Bakery memory");
     this.audio.ping("bakery");
+    this.playSceneMusic("bakery");
+    this.autosave();
+  }
+
+  private resetBakeryDialogue(): void {
+    this.dialogue = new DialogueSystem(bakeryChapter.dialogue);
+    this.showToast("Friend A is ready to talk again");
+  }
+
+  private showDiaryMemory(): void {
+    const door = this.currentDoor ?? forestDoors[1];
+    this.readMemories.add(door.chapterId);
+    this.scrapbook.add(`${door.title}: the diary on the bakery counter`);
+    const lines = (bakeryChapter.memoryText ?? []).map((line, index) => index === 0 ? `<h2>${door.date} · ${door.title}</h2>` : `<p>${line}</p>`).join("");
+    this.overlay.innerHTML = `<div class="modal diary-memory">${lines}<button data-action="close">Close</button><button data-action="forest">Exit to forest</button></div>`;
+    this.showToast("Diary memory read");
+    this.focusStage();
+    this.autosave();
+  }
+
+  private inspectPastry(): void {
+    this.scrapbook.add("Bakery counter: a pastry that stayed small");
+    this.overlay.innerHTML = `<div class="modal"><h2>Pastry</h2><p>The pastry is smaller than the story made it. It does not start a conversation by itself.</p><button data-action="close">Close</button><button data-action="forest">Exit to forest</button></div>`;
+    this.focusStage();
     this.autosave();
   }
 
   private showDialogue(): void {
     const node = this.dialogue.current();
     if (!node) return;
-    const choices = node.choices?.map((choice) => `<button data-action="choice" data-choice="${choice.id}">${choice.label}</button>`).join("") ?? `<button data-action="choice" data-choice="next">Continue</button>`;
+    const choices = node.choices?.map((choice) => `<button data-action="choice" data-choice="${choice.id}"><span>${choice.label}</span><small>${this.choiceEffectLabel(choice)}</small></button>`).join("") ?? `<button data-action="choice" data-choice="next">Continue</button>`;
     const portrait = node.portrait === "friend" ? assets.friend : node.portrait === "muji" ? assets.muji : "";
     this.overlay.innerHTML = `<div class="vn"><div class="vn-portrait">${portrait ? `<img src="${portrait}" alt="">` : ""}</div><div><h3>${node.speaker}</h3><p>${node.text}</p>${this.dialogue.lastResponse ? `<p class="memory-line">${this.dialogue.lastResponse}</p>` : ""}<div class="choices">${choices}</div></div></div>`;
+    this.focusStage();
+  }
+
+  private focusStage(): void {
+    requestAnimationFrame(() => this.stage.scrollIntoView({ block: "start", behavior: "auto" }));
+  }
+
+  private choiceEffectLabel(choice: Choice): string {
+    return Object.entries(choice.effects)
+      .filter(([, value]) => value)
+      .map(([key, value]) => `${key} ${value! > 0 ? "+" : ""}${value}`)
+      .join(" · ");
   }
 
   private choose(choiceId: string): void {
+    if (choiceId === "again") {
+      this.resetBakeryDialogue();
+      this.showDialogue();
+      return;
+    }
     const node = this.dialogue.current();
     if (!node) return;
     if (choiceId === "next" || !node.choices) {
@@ -225,26 +340,39 @@ export class WalkBackHomeApp {
       if (choice) {
         this.tendencies = this.dialogue.choose(choice, this.tendencies);
         this.choices.push(choice.id);
+        this.showToast(`Choice: ${choice.label} · ${this.choiceEffectLabel(choice)}`);
       }
     }
     if (this.dialogue.complete()) {
-      this.overlay.innerHTML = `<div class="modal"><h2>The bakery door opens.</h2><p>Friend A does not ask Muji to repair anything.</p><p>She only waits until Muji is ready to leave.</p><button data-action="close">Walk to the exit</button></div>`;
+      this.showEndingQuote();
     } else {
       this.showDialogue();
     }
     this.autosave();
   }
 
+  private showEndingQuote(): void {
+    this.completeBakeryProgress();
+    this.ending = resolveEnding(this.tendencies, this.scrapbook.size >= 4 ? 3 : 0);
+    this.overlay.innerHTML = `<div class="modal ending-quote"><h2>${this.ending.title}</h2><p>${this.ending.body}</p><blockquote>${this.ending.lines.join("<br>")}</blockquote><button data-action="close">Close</button><button data-action="forest">Exit to forest</button></div>`;
+    this.audio.ping("ending");
+  }
+
   private finishBakery(): void {
-    this.completedChapters.add("bakery-day");
-    this.timelineCompleted.add("Yumido Bread");
-    this.scrapbook.add("The small pastry that stayed small");
-    this.selectedChapter = "Yumido Bread";
+    const door = this.completeBakeryProgress();
     this.scene = "forest";
-    this.player = { x: 1120, y: 300 };
-    this.overlay.innerHTML = `<div class="modal"><h2>Memory complete</h2><p>The scrapbook has a new page. The timeline keeps the day as it was.</p><button data-action="close">Return</button><button data-action="ending">Resolve ending</button></div>`;
-    this.renderPanels();
+    this.player = { x: door.x, y: Math.min(760, door.y + 120) };
+    this.overlay.innerHTML = `<div class="modal"><h2>Memory complete</h2><p>The scrapbook has a new page. The timeline keeps the day as it was.</p><button data-action="close">Return</button><button data-action="ending">Resolve ending</button><button data-action="forest">Exit to forest</button></div>`;
     this.autosave();
+  }
+
+  private completeBakeryProgress(): Door {
+    const door = this.currentDoor ?? forestDoors[1];
+    this.completedChapters.add(door.chapterId);
+    this.timelineCompleted.add(door.title);
+    this.scrapbook.add(`${door.title}: the small pastry stayed small`);
+    this.selectedChapter = door.title;
+    return door;
   }
 
   private resolveAndShowEnding(): void {
@@ -252,6 +380,17 @@ export class WalkBackHomeApp {
     this.scene = "ending";
     this.overlay.innerHTML = "";
     this.audio.ping("ending");
+    this.autosave();
+  }
+
+  private returnToForest(): void {
+    const leavingDoor = this.scene === "bakery" ? this.completeBakeryProgress() : null;
+    this.scene = "forest";
+    this.overlay.innerHTML = "";
+    this.player = leavingDoor ? { x: leavingDoor.x, y: Math.min(760, leavingDoor.y + 120) } : { x: 880, y: 690 };
+    this.showToast("Exited to forest");
+    this.focusStage();
+    this.playSceneMusic("forest");
     this.autosave();
   }
 
@@ -289,7 +428,8 @@ export class WalkBackHomeApp {
     this.particles.draw(this.ctx, time, this.settings.rain && kind === "forest", cameraX, cameraY, scale);
     if (kind === "forest") this.drawDoors(cameraX, cameraY, scale);
     if (kind === "bakery") {
-      this.ctx.drawImage(this.images.friend, (705 - cameraX) * scale - 20, (330 - cameraY) * scale - 64, 42 * scale, 64 * scale);
+      if (!this.readMemories.has(this.currentMemoryKey())) this.drawMemorySpot(cameraX, cameraY, scale, time);
+      this.ctx.drawImage(this.images.friend, (600 - cameraX) * scale - 21 * scale, (430 - cameraY) * scale - 68 * scale, 42 * scale, 68 * scale);
     }
     this.drawMuji({ x: (this.player.x - cameraX) * scale, y: (this.player.y - cameraY) * scale }, time, scale);
     const vignette = this.ctx.createRadialGradient(this.canvas.width / 2, this.canvas.height / 2, 120, this.canvas.width / 2, this.canvas.height / 2, this.canvas.height * 0.72);
@@ -297,6 +437,22 @@ export class WalkBackHomeApp {
     vignette.addColorStop(1, "rgba(0,0,0,.52)");
     this.ctx.fillStyle = vignette;
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+  }
+
+  private drawMemorySpot(cameraX: number, cameraY: number, scale: number, time: number): void {
+    const x = (bakeryMemorySpot.x - cameraX) * scale;
+    const y = (bakeryMemorySpot.y - cameraY) * scale;
+    const radius = (34 + Math.sin(time / 260) * 5) * scale;
+    const glow = this.ctx.createRadialGradient(x, y, 4, x, y, radius);
+    glow.addColorStop(0, "rgba(255,229,156,.82)");
+    glow.addColorStop(1, "rgba(255,192,88,0)");
+    this.ctx.fillStyle = glow;
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.fillStyle = "#fff0c2";
+    this.ctx.font = `${13 * scale}px Georgia`;
+    this.ctx.fillText("Diary", x - 16 * scale, y - 34 * scale);
   }
 
   private drawDoors(cameraX: number, cameraY: number, scale: number): void {
@@ -337,19 +493,157 @@ export class WalkBackHomeApp {
 
   private drawHud(): void {
     const text = this.scene === "forest" && this.activeDoor ? `Press E · ${this.activeDoor.date} ${this.activeDoor.title}` : this.scene === "bakery" && this.activeObject ? `Press E · ${this.activeObject}` : "WASD / arrows · E / Enter";
-    this.hud.innerHTML = `<div class="prompt">${text}</div><div class="hud-actions"><button data-action="compact">${this.settings.compact ? "960×540" : "480×270"}</button><button data-action="fullscreen">Fullscreen</button><button data-action="rain">Rain</button><button data-action="mute">${this.settings.muted ? "点击开启声音" : "Mute"}</button></div>`;
+    const exit = this.scene === "forest" ? "" : `<button data-action="forest">Exit to forest</button>`;
+    const html = `<div class="prompt">${text}</div><div class="hud-actions"><button data-action="menu">Menu</button>${exit}<button data-action="music">Music: ${this.settings.musicEnabled ? "On" : "Off"}</button><button data-action="compact">${this.settings.compact ? "960x540" : "480x270"}</button><button data-action="fullscreen">Fullscreen</button><button data-action="rain">Rain: ${this.settings.rain ? "On" : "Off"}</button><button data-action="mute">${this.settings.muted ? "Sound Off" : "Sound On"}</button></div>`;
+    if (html !== this.lastHudHtml) {
+      this.hud.innerHTML = html;
+      this.lastHudHtml = html;
+    }
   }
 
-  private renderPanels(active = "scrapbook"): void {
-    const completed = this.timelineCompleted.has("Yumido Bread") ? "complete" : "open";
-    this.panel.innerHTML = `
-      <article class="panel scrapbook ${active === "scrapbook" ? "selected-panel" : ""}"><h2>AI Scrapbook</h2><div class="tabs"><button>People</button><button>Places</button><button>Objects</button><button>Moments</button><button>Quotes</button></div>${[...this.scrapbook].map((item) => `<button class="polaroid"><img src="${assets.scrapbook}" alt=""><strong>${item}</strong><span>confidence: fixture</span></button>`).join("")}</article>
-      <article class="panel"><h2>Diary Timeline</h2>${["07.31 Went to Segamat", `07.28 Yumido Bread · ${completed}`, "07.27 Night Walk", "07.26 Palapes Meeting"].map((item) => `<button class="timeline-item">${item}<span>☆</span></button>`).join("")}</article>
-      <article class="panel"><h2>Memory Map</h2><img src="${assets.map}" alt=""><button>Forest</button><button>Bakery</button><button>Home</button><button>School</button><button>City</button><button>Beach</button><button>??? locked</button></article>
-      <article class="panel"><h2>Relationships</h2>${["Friend A · quiet bakery friend", "ET · bestie", "Angela · best friend"].map((item) => `<div class="row">${item}<span>♥♥♥♡</span></div>`).join("")}</article>
-      <article class="panel"><h2>Mini Games</h2>${["Card Memories", "Cat Journey", "Mood Match", "Photo Puzzle"].map((item) => `<button>${item}</button>`).join("")}</article>
-      <article class="panel"><h2>Muji's Room</h2><img src="${assets.room}" alt=""><button>Talk</button><button>Gift</button><button>Dress</button><button>Diary</button></article>
-      <article class="panel"><h2>Save / Load</h2>${[1, 2, 3].map((slot) => `<div class="save-row"><span>Slot ${slot}</span><button data-action="save" data-slot="${slot}">Save</button><button data-action="load-slot" data-slot="${slot}">Load</button><button data-action="delete-slot" data-slot="${slot}">Delete</button></div>`).join("")}<button data-action="ending">Resolve Ending</button></article>`;
+  private settingsContent(): string {
+    const timelineRows = forestDoors.map((door) => `${door.date} ${door.title} · ${this.timelineCompleted.has(door.title) ? "complete" : "open"}`);
+    const tendencyRows = [
+      ["Accept", this.tendencies.acceptance + this.tendencies.honesty],
+      ["Avoid", this.tendencies.avoidance + this.tendencies.distance],
+      ["Revise", this.tendencies.intervention + this.tendencies.concealment],
+      ["Stay", this.tendencies.closeness + this.tendencies.companionship]
+    ];
+    return `
+      <div class="module-grid">
+        <button data-action="open-scrapbook">AI Scrapbook<span>${this.scrapbook.size} pages</span></button>
+        <button data-action="open-timeline">Diary Timeline<span>${timelineRows.filter((item) => item.includes("complete")).length}/${forestDoors.length} complete</span></button>
+        <button data-action="open-map">Memory Map<span>${this.scene}</span></button>
+        <button data-action="open-relationships">Relationships<span>Friend A</span></button>
+        <button data-action="open-tendency">Tendency<span>${tendencyRows.map(([label, score]) => `${label} ${score}`).join(" · ")}</span></button>
+        <button data-action="open-room">Muji Room<span>Water ${this.room.water} · Warmth ${this.room.warmth}</span></button>
+        <button data-action="load">Save / Load<span>3 slots</span></button>
+      </div>
+      <div class="settings-row"><button data-action="music">Music: ${this.settings.musicEnabled ? "On" : "Off"}</button><button data-action="rain">Rain: ${this.settings.rain ? "On" : "Off"}</button><button data-action="mute">${this.settings.muted ? "Sound Off" : "Sound On"}</button><button data-action="compact">${this.settings.compact ? "960x540" : "480x270"}</button><button data-action="forest">Exit to forest</button><button data-action="close">Close</button></div>`;
+  }
+
+  private showScrapbook(): void {
+    const items = [...this.scrapbook].map((item) => `<li>${item}</li>`).join("");
+    this.overlay.innerHTML = `<div class="modal game-panel"><h2>AI Scrapbook</h2><p>Fictional memory pages Muji has accepted into the book.</p><ul>${items}</ul><button data-action="settings">Back</button><button data-action="forest">Exit to forest</button><button data-action="close">Close</button></div>`;
+    this.focusStage();
+  }
+
+  private showTimeline(): void {
+    const rows = forestDoors.map((door) => `<li>${door.date} · ${door.title} · ${this.timelineCompleted.has(door.title) ? "complete" : "open"}</li>`).join("");
+    this.overlay.innerHTML = `<div class="modal game-panel"><h2>Diary Timeline</h2><ul>${rows}</ul><button data-action="settings">Back</button><button data-action="forest">Exit to forest</button><button data-action="close">Close</button></div>`;
+    this.focusStage();
+  }
+
+  private showMap(): void {
+    const doors = forestDoors.map((door) => `<button data-action="enter-door" data-door="${door.id}">${door.date} ${door.title}</button>`).join("");
+    this.overlay.innerHTML = `<div class="modal game-panel"><h2>Memory Map</h2><p>Four forest doors lead into Bakery-shaped memories.</p><div class="settings-row">${doors}</div><button data-action="settings">Back</button><button data-action="forest">Exit to forest</button><button data-action="close">Close</button></div>`;
+    this.focusStage();
+  }
+
+  private showRelationships(): void {
+    this.overlay.innerHTML = `<div class="modal game-panel"><h2>Relationships</h2><p>Friend A remembers quietly. Choices that stay, answer honestly, or rewrite the room change the long-term ending resolver.</p><button data-action="open-room">Visit Muji Room</button><button data-action="settings">Back</button><button data-action="forest">Exit to forest</button><button data-action="close">Close</button></div>`;
+    this.focusStage();
+  }
+
+  private showTendency(): void {
+    const rows = [
+      ["Acceptance", this.tendencies.acceptance],
+      ["Avoidance", this.tendencies.avoidance],
+      ["Closeness", this.tendencies.closeness],
+      ["Distance", this.tendencies.distance],
+      ["Honesty", this.tendencies.honesty],
+      ["Concealment", this.tendencies.concealment],
+      ["Companionship", this.tendencies.companionship],
+      ["Intervention", this.tendencies.intervention]
+    ].map(([label, score]) => `<div class="row"><span>${label}</span><strong>${score}</strong><meter min="0" max="8" value="${score}"></meter></div>`).join("");
+    this.overlay.innerHTML = `<div class="modal game-panel"><h2>Tendency</h2>${rows}<button data-action="ending">Resolve Ending</button><button data-action="settings">Back</button><button data-action="forest">Exit to forest</button></div>`;
+    this.focusStage();
+  }
+
+  private showMujiRoom(): void {
+    const diary = this.room.diary.slice(-4).map((line) => `<li>${line}</li>`).join("");
+    const waterLevel = Math.min(100, (this.room.water ?? 0) * 20);
+    const warmthLevel = Math.min(100, (this.room.warmth ?? 0) * 20);
+    const water = this.room.water ?? 0;
+    const warmth = this.room.warmth ?? 0;
+    const letters = this.room.letters ?? 0;
+    this.overlay.innerHTML = `<div class="modal room-module"><h2>Muji Water Bottle Room</h2><div class="bottle-room"><div class="bottle-glass"><div class="water" style="height:${waterLevel}%"></div><div class="lamp" style="opacity:${0.35 + warmthLevel / 150}"></div><div class="muji-bed">${this.room.outfit}</div><div class="stickers">${"*".repeat(this.room.stickers ?? 0)}</div></div><div class="room-meter"><span>Water ${water}</span><meter min="0" max="5" value="${water}"></meter><span>Warmth ${warmth}</span><meter min="0" max="5" value="${warmth}"></meter><span>Letters ${letters}</span></div></div><div class="settings-row"><button data-action="room-water">Fill Water</button><button data-action="room-warm">Warm Lamp</button><button data-action="room-sticker">Place Sticker</button><button data-action="room-letter">Write Letter</button><button data-action="room-dress">Change Outfit</button></div><ul>${diary}</ul><button data-action="settings">Back</button><button data-action="forest">Exit to forest</button><button data-action="close">Close</button></div>`;
+    this.focusStage();
+  }
+
+  private roomTalk(): void {
+    this.room.visits += 1;
+    this.room.diary.push(`Muji visit ${this.room.visits}: the room feels a little safer.`);
+    this.tendencies.companionship += 1;
+    this.showToast("Muji listened");
+    this.showMujiRoom();
+    this.autosave();
+  }
+
+  private roomWater(): void {
+    this.room.visits += 1;
+    this.room.water = Math.min(5, (this.room.water ?? 0) + 1);
+    this.room.diary.push("Muji filled the bottle until the room sounded like slow rain.");
+    this.tendencies.acceptance += 1;
+    this.showToast("Water filled");
+    this.showMujiRoom();
+    this.autosave();
+  }
+
+  private roomWarm(): void {
+    this.room.visits += 1;
+    this.room.warmth = Math.min(5, (this.room.warmth ?? 0) + 1);
+    this.room.diary.push("The lamp warmed the glass. Nothing hurried.");
+    this.tendencies.companionship += 1;
+    this.showToast("Lamp warmed");
+    this.showMujiRoom();
+    this.autosave();
+  }
+
+  private roomSticker(): void {
+    this.room.gifts += 1;
+    this.room.stickers = Math.min(5, (this.room.stickers ?? 0) + 1);
+    this.room.diary.push("A small sticker stayed on the bottle wall like a promise.");
+    this.tendencies.closeness += 1;
+    this.showToast("Sticker placed");
+    this.showMujiRoom();
+    this.autosave();
+  }
+
+  private roomLetter(): void {
+    this.room.letters = (this.room.letters ?? 0) + 1;
+    this.room.diary.push(`Letter ${this.room.letters}: today I will not make the past prettier before I sit with it.`);
+    this.scrapbook.add(`Bottle room letter ${this.room.letters}`);
+    this.tendencies.honesty += 1;
+    this.showToast("Letter written");
+    this.showMujiRoom();
+    this.autosave();
+  }
+
+  private roomGift(): void {
+    this.room.gifts += 1;
+    this.room.diary.push(`Gift ${this.room.gifts}: a tiny keepsake was placed near the lamp.`);
+    this.tendencies.closeness += 1;
+    this.showToast("Gift placed");
+    this.showMujiRoom();
+    this.autosave();
+  }
+
+  private roomDress(): void {
+    const outfits = ["raincoat", "bakery apron", "forest scarf"];
+    this.room.outfit = outfits[(outfits.indexOf(this.room.outfit) + 1) % outfits.length];
+    this.room.diary.push(`Muji changed into ${this.room.outfit}.`);
+    this.showToast(`Outfit: ${this.room.outfit}`);
+    this.showMujiRoom();
+    this.autosave();
+  }
+
+  private roomDiary(): void {
+    this.room.diary.push(`Diary: ${this.selectedChapter} is still here, but smaller than fear.`);
+    this.scrapbook.add(`Room note: ${this.selectedChapter}`);
+    this.showToast("Diary updated");
+    this.showMujiRoom();
+    this.autosave();
   }
 
   private makeSave(slot?: number): SaveState {
@@ -363,11 +657,13 @@ export class WalkBackHomeApp {
       completedChapters: [...this.completedChapters],
       choices: this.choices,
       tendencies: this.tendencies,
+      readMemories: [...this.readMemories],
       scrapbook: [...this.scrapbook],
       favorites: [...this.favorites],
       timelineCompleted: [...this.timelineCompleted],
       selectedChapter: this.selectedChapter,
       settings: this.settings,
+      room: this.room,
       endingProgress: this.ending ? [this.ending.id] : []
     };
   }
@@ -375,16 +671,26 @@ export class WalkBackHomeApp {
   private applySave(state: SaveState): void {
     this.scene = state.scene;
     this.player = state.player;
+    this.currentDoor = forestDoors.find((door) => door.chapterId === state.completedChapters.at(-1)) ?? null;
     this.openedDoors = new Set(state.openedDoors);
     this.completedChapters = new Set(state.completedChapters);
     this.choices = state.choices;
     this.tendencies = state.tendencies;
+    this.readMemories = new Set(state.readMemories ?? []);
     this.scrapbook = new Set(state.scrapbook);
     this.favorites = new Set(state.favorites);
     this.timelineCompleted = new Set(state.timelineCompleted);
     this.selectedChapter = state.selectedChapter;
-    this.settings = state.settings;
-    this.renderPanels();
+    this.settings = {
+      ...this.settings,
+      ...state.settings,
+      musicEnabled: state.settings.musicEnabled ?? true,
+      musicScene: "bakery"
+    };
+    this.room = { ...this.room, ...(state.room ?? {}) };
+    this.audio.setVolume(this.settings.volume);
+    this.audio.setMuted(this.settings.muted);
+    this.playSceneMusic("bakery");
   }
 
   private autosave(): void {
@@ -393,43 +699,108 @@ export class WalkBackHomeApp {
 
   private saveSlot(slot: number): void {
     this.save.save(slot, this.makeSave(slot));
+    this.showToast(`Saved Slot ${slot}`);
     this.showSaveLoad();
   }
 
   private loadSlot(slot: number): void {
     const state = this.save.load(slot);
-    if (state) this.applySave(state);
+    if (state) {
+      this.applySave(state);
+      this.showToast(`Loaded Slot ${slot}`);
+    } else {
+      this.showToast(`Slot ${slot} is empty`);
+    }
     this.overlay.innerHTML = "";
   }
 
   private deleteSlot(slot: number): void {
     this.save.delete(slot);
+    this.showToast(`Deleted Slot ${slot}`);
     this.showSaveLoad();
   }
 
   private showSaveLoad(): void {
     const rows = this.save.list().map((state, index) => `<div class="save-row"><strong>Slot ${index + 1}</strong><span>${state ? `${state.selectedChapter} · ${new Date(state.savedAt).toLocaleString()}` : "empty"}</span><button data-action="save" data-slot="${index + 1}">Save</button><button data-action="load-slot" data-slot="${index + 1}">Load</button><button data-action="delete-slot" data-slot="${index + 1}">Delete</button></div>`).join("");
-    this.overlay.innerHTML = `<div class="modal"><h2>Save / Load</h2>${rows}<button data-action="close">Close</button></div>`;
+    this.overlay.innerHTML = `<div class="modal game-panel"><h2>Save / Load</h2>${rows}<button data-action="settings">Back</button><button data-action="forest">Exit to forest</button><button data-action="close">Close</button></div>`;
+    this.focusStage();
   }
 
   private showSettings(): void {
-    this.overlay.innerHTML = `<div class="modal"><h2>Settings</h2><p>Volume ${Math.round(this.settings.volume * 100)}%</p><button data-action="mute">${this.settings.muted ? "点击开启声音" : "Mute"}</button><button data-action="rain">Toggle rain</button><button data-action="compact">Compact mode</button><button data-action="close">Close</button></div>`;
+    this.overlay.innerHTML = `<div class="modal game-panel"><h2>Menu / Settings</h2>${this.settingsContent()}</div>`;
+    this.focusStage();
   }
 
   private showCredits(): void {
-    this.overlay.innerHTML = `<div class="modal"><h2>Credits</h2><p>Fictional local-first prototype. Visual targets supplied by the project owner. No paid API required.</p><button data-action="close">Close</button></div>`;
+    this.overlay.innerHTML = `<div class="modal"><h2>Credits</h2><p>Fictional local-first prototype. Visual targets supplied by the project owner. No paid API required.</p><button data-action="forest">Exit to forest</button><button data-action="close">Close</button></div>`;
+    this.focusStage();
   }
 
   private async toggleAudio(): Promise<void> {
     if (this.settings.muted) await this.audio.enable();
     this.settings.muted = !this.settings.muted;
     this.audio.setMuted(this.settings.muted);
+    this.audio.ping("forest");
+    this.showToast(this.settings.muted ? "Sound muted" : "Sound on");
     this.autosave();
+  }
+
+  private toggleRain(): void {
+    this.settings.rain = !this.settings.rain;
+    this.audio.ping("forest");
+    this.showToast(`Rain ${this.settings.rain ? "on" : "off"}`);
+    this.autosave();
+  }
+
+  private async toggleSceneMusic(): Promise<void> {
+    this.settings.musicEnabled = !this.settings.musicEnabled;
+    if (this.settings.musicEnabled) {
+      this.audio.setVolume(this.settings.volume);
+      await this.audio.enable();
+      this.settings.muted = false;
+      this.playSceneMusic("bakery");
+      this.showToast("Music on");
+    } else {
+      this.settings.muted = true;
+      this.audio.setMuted(true);
+      this.showToast("Music off");
+    }
+    this.lastHudHtml = "";
+    this.autosave();
+  }
+
+  private playSceneMusic(scene: MusicScene): void {
+    this.settings.musicScene = "bakery";
+    this.audio.setScene(scene);
+    if (this.settings.musicEnabled && !this.settings.muted) void this.audio.ensurePlaying();
+    this.musicPlayer.innerHTML = "";
+    this.lastHudHtml = "";
+  }
+
+  private async toggleFullscreen(): Promise<void> {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen?.();
+        this.showToast("Fullscreen off");
+        return;
+      }
+      await document.documentElement.requestFullscreen?.();
+      this.showToast("Fullscreen on");
+    } catch {
+      this.showToast("Fullscreen unavailable here");
+    }
+  }
+
+  private showToast(message: string): void {
+    this.toast.textContent = message;
+    this.toast.classList.add("show");
+    window.setTimeout(() => this.toast.classList.remove("show"), 1800);
   }
 
   private toggleCompact(): void {
     this.settings.compact = !this.settings.compact;
     this.root.classList.toggle("compact", this.settings.compact);
+    this.showToast(this.settings.compact ? "Compact view" : "Large view");
     this.autosave();
   }
 }

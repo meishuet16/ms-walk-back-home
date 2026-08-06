@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import test from "node:test";
 import { chapterPlanToHtmlScene } from "../src/adapters/chapterPlanAdapter.js";
+import { forestDoors } from "../src/fixtures/chapterPlan.js";
+import { globalMusic, sceneMusic, sceneMusicDataUri } from "../src/systems/SceneMusic.js";
 import type { SaveState } from "../src/types.js";
 
 test("chapter adapter preserves fictional metadata for HTML scene data", () => {
@@ -42,8 +46,27 @@ test("save state includes a version and narrative persistence fields", () => {
     timelineCompleted: ["Yumido Bread"],
     selectedChapter: "Yumido Bread",
     settings: { rain: true, muted: true, volume: 0.2, compact: false, reducedMotion: false },
+    readMemories: ["bakery-day"],
     endingProgress: []
   };
   assert.equal(save.version, 1);
   assert.deepEqual(save.completedChapters, ["bakery-day"]);
+  assert.deepEqual(save.readMemories, ["bakery-day"]);
+});
+
+test("forest doors expose distinct memory instances for long-term progression", () => {
+  const chapterIds = new Set(forestDoors.map((door) => door.chapterId));
+  assert.equal(chapterIds.size, forestDoors.length);
+});
+
+test("global music loops the local bakery mp3 without creating a YouTube player", () => {
+  assert.equal(globalMusic.label, "Bakery loop");
+  assert.equal(globalMusic.src, "assets/audio/bakery.mp3");
+  assert.equal(sceneMusic.bakery.src, globalMusic.src);
+  assert.equal(sceneMusic.forest.src, globalMusic.src);
+  assert.ok(!("videoId" in sceneMusic.bakery));
+  assert.ok(!("list" in sceneMusic.forest));
+  assert.ok(existsSync(resolve("public", globalMusic.src)));
+  assert.ok(sceneMusicDataUri("forest").startsWith("data:audio/wav;base64,"));
+  assert.ok(sceneMusicDataUri("bakery").startsWith("data:audio/wav;base64,"));
 });

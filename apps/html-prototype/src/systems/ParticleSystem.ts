@@ -21,10 +21,11 @@ export class ParticleSystem {
       const y = (particle.y - cameraY + Math.cos(time / 1100 + particle.phase) * 3) * scale;
       if (particle.kind === "rain") {
         if (!rain) continue;
-        ctx.strokeStyle = "rgba(137, 191, 219, .28)";
+        ctx.lineWidth = Math.max(1, scale);
+        ctx.strokeStyle = "rgba(154, 211, 239, .58)";
         ctx.beginPath();
         ctx.moveTo(x, y);
-        ctx.lineTo(x - 5 * scale, y + 14 * scale);
+        ctx.lineTo(x - 8 * scale, y + 20 * scale);
         ctx.stroke();
       } else if (particle.kind === "firefly") {
         ctx.fillStyle = `rgba(255, 214, 90, ${0.28 + Math.sin(time / 260 + particle.phase) * 0.22})`;
