@@ -18,21 +18,21 @@ export const bakeryChapter: HtmlChapterScene = {
     "我把这一天记得很乱。Muji 今天回来，不是为了替过去改台词，是为了把那句没有被认真接住的话，原样放回桌上。"
   ],
   dialogue: [
-    { id: "friend-asks", speaker: "Friend A", portrait: "friend", text: "你读完了。那我可以不用从头解释了吧？那天我不是想赢，也不是想让你欠我。我只是很想知道，我说出口的东西有没有真的到达你那里。", choices: [
-      { id: "remember", label: "有。我只是那时不敢承认。", effects: { honesty: 1, acceptance: 1 }, response: "Friend A lets out a small breath. “原来你不是没听见。只是那时候也很怕。”" },
-      { id: "unimportant", label: "我希望它没有那么重要。", effects: { avoidance: 1, concealment: 1 }, response: "Friend A looks at the window. “我懂。可是不重要这句话，有时只是另一种把人放下。”" },
-      { id: "sad", label: "你那时是在问我会不会留下。", effects: { closeness: 1, companionship: 1 }, response: "Friend A's shoulders soften. “嗯。不是永远留下，只是那一刻不要转身。”" }
+    { id: "friend-asks", speaker: "Friend A", portrait: "friend", text: "你读完了那一天。奇怪吧，日记只写了几行，可人会在没写下来的地方长大。那天我不是真的要你解释，我只是想知道：如果一句话没有被接住，它会不会一辈子都在原地等。", choices: [
+      { id: "remember", label: "我接住了，只是太晚才敢承认。", effects: { honesty: 1, acceptance: 1 }, response: "Friend A低头笑了一下。她说，太晚不是没有，太晚只是青春最常用的时区。" },
+      { id: "unimportant", label: "我一直希望那句话不重要。", effects: { avoidance: 1, concealment: 1 }, response: "Friend A看着窗上的雨痕。她说，不重要有时候不是答案，是把疼痛折小以后藏进口袋。" },
+      { id: "sad", label: "你那时是在问我会不会留下。", effects: { closeness: 1, companionship: 1 }, response: "Friend A的肩膀慢慢松下来。她说，对，不是永远留下，只是那一刻不要把我交给沉默。" }
     ] },
-    { id: "what-now", speaker: "Muji", portrait: "muji", text: "Muji把水壶放在桌上。水壶没有答案，只有一点温度。你想怎样照看这段回忆？", choices: [
-      { id: "keep", label: "保留它原本不漂亮的样子。", effects: { acceptance: 1, honesty: 1 }, response: "The pastry stays small. The room stops asking to be prettier before it can be loved." },
-      { id: "pretty", label: "把它改成比较不会痛的版本。", effects: { intervention: 1, concealment: 1 }, response: "For a second the bakery becomes perfect. Friend A's voice becomes harder to hear." },
-      { id: "quiet", label: "不解释，只坐到雨停。", effects: { companionship: 2 }, response: "Friend A does not smile right away, but she stops guarding the chair beside her." }
+    { id: "what-now", speaker: "Friend A", portrait: "friend", text: "桌上的甜面包还是那么小。回忆最残忍的地方不是它会变暗，是我们后来太会修饰它。你现在可以把它讲得漂亮一点，也可以让它继续难看。你想怎么记得我？", choices: [
+      { id: "keep", label: "照原样记得你，也照原样记得我。", effects: { acceptance: 1, honesty: 1 }, response: "Friend A说，那就让甜面包继续小吧。小不是失败，小只是没有被故事胀大。" },
+      { id: "pretty", label: "我想把那天改得温柔一点。", effects: { intervention: 1, concealment: 1 }, response: "灯光忽然变好看了。Friend A却轻声说，如果一切都被改得温柔，那我当时的难过要去哪里住呢。" },
+      { id: "quiet", label: "我不急着解释，先陪你坐到雨停。", effects: { companionship: 2 }, response: "Friend A没有立刻原谅，也没有继续追问。她只是把椅子往旁边挪了一点。" }
     ] },
-    { id: "leave", speaker: "Friend A", portrait: "friend", text: "如果今天不能把过去修好，你希望我带走什么？", choices: [
-      { id: "goodbye", label: "带走真实，不带走责怪。", effects: { closeness: 1, acceptance: 1 }, response: "“那我会记得：你终于没有替我改掉那句话。”" },
-      { id: "silent-leave", label: "带走安静，我们先不用回答。", effects: { distance: 1, avoidance: 1 }, response: "Friend A nods. The silence is not cruel, but it is still silence." },
-      { id: "remember-me", label: "带走我这次没有走开。", effects: { closeness: 1, companionship: 1 }, response: "Friend A looks at Muji's water bottle. “那就坐到最后一盏灯亮起来。”" },
-      { id: "rewrite-me", label: "带走一个更温柔的我。", effects: { intervention: 1, concealment: 1 }, response: "The room brightens like a photograph. Friend A becomes almost easy to forgive, and almost gone." }
+    { id: "leave", speaker: "Friend A", portrait: "friend", text: "如果我们都不能回到十几岁的身体里重新说话，那至少可以决定：以后想起这一天时，要让哪一种自己活下来。你要带哪一个自己离开？", choices: [
+      { id: "goodbye", label: "带走真实，不带走责怪。", effects: { closeness: 1, acceptance: 1 }, response: "Friend A说，那我也把真实带走。不是为了审判你，是为了证明我曾经认真存在过。" },
+      { id: "silent-leave", label: "带走安静，答案以后再说。", effects: { distance: 1, avoidance: 1 }, response: "Friend A点头。安静没有伤人，却像一张没寄出的明信片，永远停在雨季。" },
+      { id: "remember-me", label: "带走这次没有走开的我。", effects: { closeness: 1, companionship: 1 }, response: "Friend A说，那就够了。有些陪伴不是把人救出来，只是在旁边承认：这里真的很冷。" },
+      { id: "rewrite-me", label: "带走一个比较不会痛的版本。", effects: { intervention: 1, concealment: 1 }, response: "Friend A在更亮的灯下变得模糊。她说，如果你一定要让我不痛，也请不要顺手把我删掉。" }
     ] }
   ]
 };

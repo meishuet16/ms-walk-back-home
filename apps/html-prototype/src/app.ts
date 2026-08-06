@@ -221,12 +221,11 @@ export class WalkBackHomeApp {
       { x: 640, y: 385, w: 355, h: 120 }
     ]);
     const memoryKey = this.currentMemoryKey();
-    const memoryRead = this.readMemories.has(memoryKey);
     const nearMemory = Math.hypot(this.player.x - bakeryMemorySpot.x, this.player.y - bakeryMemorySpot.y) < 88;
     const nearFriend = Math.hypot(this.player.x - 600, this.player.y - 430) < 90;
     const nearPastry = Math.hypot(this.player.x - 840, this.player.y - 250) < 70;
     const nearExit = this.player.x < 105 && this.player.y < 330;
-    this.activeObject = nearMemory && !memoryRead ? "diary memory" : nearFriend ? "Friend A" : nearPastry ? "pastry" : nearExit ? "exit" : "";
+    this.activeObject = nearMemory ? "diary memory" : nearFriend ? "Friend A" : nearPastry ? "pastry" : nearExit ? "exit" : "";
   }
 
   private move(x: number, y: number, dt: number, boundsBlockers: Rect[], objectBlockers: Rect[]): void {
@@ -354,7 +353,7 @@ export class WalkBackHomeApp {
   private showEndingQuote(): void {
     this.completeBakeryProgress();
     this.ending = resolveEnding(this.tendencies, this.scrapbook.size >= 4 ? 3 : 0);
-    this.overlay.innerHTML = `<div class="modal ending-quote"><h2>${this.ending.title}</h2><p>${this.ending.body}</p><blockquote>${this.ending.lines.join("<br>")}</blockquote><button data-action="close">Close</button><button data-action="forest">Exit to forest</button></div>`;
+    this.overlay.innerHTML = `<div class="modal ending-quote"><span class="ending-kicker">after the conversation</span><h2>${this.ending.title}</h2><p>${this.ending.body}</p><blockquote>${this.ending.lines.join("<br>")}</blockquote><button data-action="close">Close</button><button data-action="forest">Exit to forest</button></div>`;
     this.audio.ping("ending");
   }
 
@@ -428,7 +427,7 @@ export class WalkBackHomeApp {
     this.particles.draw(this.ctx, time, this.settings.rain && kind === "forest", cameraX, cameraY, scale);
     if (kind === "forest") this.drawDoors(cameraX, cameraY, scale);
     if (kind === "bakery") {
-      if (!this.readMemories.has(this.currentMemoryKey())) this.drawMemorySpot(cameraX, cameraY, scale, time);
+      this.drawMemorySpot(cameraX, cameraY, scale, time);
       this.ctx.drawImage(this.images.friend, (600 - cameraX) * scale - 21 * scale, (430 - cameraY) * scale - 68 * scale, 42 * scale, 68 * scale);
     }
     this.drawMuji({ x: (this.player.x - cameraX) * scale, y: (this.player.y - cameraY) * scale }, time, scale);
