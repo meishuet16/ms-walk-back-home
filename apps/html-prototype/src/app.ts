@@ -76,7 +76,7 @@ export class WalkBackHomeApp {
     root.innerHTML = `
       <div class="game-shell">
         <header class="top-menu">
-          <div><strong>Walk Back Home</strong><span>HTML memory prototype</span></div>
+          <div><strong>Walk Back Home</strong><span>A gentle walk through memories that still glow.</span></div>
           <nav>
             <button data-action="new">New Memory</button>
             <button data-action="continue">Continue</button>
@@ -153,6 +153,7 @@ export class WalkBackHomeApp {
     if (action === "delete-slot") this.deleteSlot(Number(target.dataset.slot));
     if (action === "ending") this.resolveAndShowEnding();
     if (action === "close") {
+      this.overlay.classList.remove("dialogue-open");
       this.overlay.innerHTML = "";
       this.showToast("Closed");
     }
@@ -188,6 +189,7 @@ export class WalkBackHomeApp {
     this.readMemories.clear();
     this.scrapbook = new Set(["A warm door in the forest"]);
     this.timelineCompleted.clear();
+    this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
     this.focusStage();
     this.audio.ping("forest");
@@ -221,12 +223,11 @@ export class WalkBackHomeApp {
       { x: 640, y: 385, w: 355, h: 120 }
     ]);
     const memoryKey = this.currentMemoryKey();
-    const memoryRead = this.readMemories.has(memoryKey);
     const nearMemory = Math.hypot(this.player.x - bakeryMemorySpot.x, this.player.y - bakeryMemorySpot.y) < 88;
     const nearFriend = Math.hypot(this.player.x - 600, this.player.y - 430) < 90;
     const nearPastry = Math.hypot(this.player.x - 840, this.player.y - 250) < 70;
     const nearExit = this.player.x < 105 && this.player.y < 330;
-    this.activeObject = nearMemory && !memoryRead ? "diary memory" : nearFriend ? "Friend A" : nearPastry ? "pastry" : nearExit ? "exit" : "";
+    this.activeObject = nearMemory ? "diary memory" : nearFriend ? "Friend A" : nearPastry ? "pastry" : nearExit ? "exit" : "";
   }
 
   private move(x: number, y: number, dt: number, boundsBlockers: Rect[], objectBlockers: Rect[]): void {
@@ -274,6 +275,7 @@ export class WalkBackHomeApp {
     this.scene = "bakery";
     this.player = { x: 450, y: 420 };
     this.dialogue = new DialogueSystem(bakeryChapter.dialogue);
+    this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
     this.focusStage();
     this.showToast("Entered Bakery memory");
@@ -310,6 +312,7 @@ export class WalkBackHomeApp {
     if (!node) return;
     const choices = node.choices?.map((choice) => `<button data-action="choice" data-choice="${choice.id}"><span>${choice.label}</span><small>${this.choiceEffectLabel(choice)}</small></button>`).join("") ?? `<button data-action="choice" data-choice="next">Continue</button>`;
     const portrait = node.portrait === "friend" ? assets.friend : node.portrait === "muji" ? assets.muji : "";
+    this.overlay.classList.add("dialogue-open");
     this.overlay.innerHTML = `<div class="vn"><div class="vn-portrait">${portrait ? `<img src="${portrait}" alt="">` : ""}</div><div><h3>${node.speaker}</h3><p>${node.text}</p>${this.dialogue.lastResponse ? `<p class="memory-line">${this.dialogue.lastResponse}</p>` : ""}<div class="choices">${choices}</div></div></div>`;
     this.focusStage();
   }
@@ -354,7 +357,8 @@ export class WalkBackHomeApp {
   private showEndingQuote(): void {
     this.completeBakeryProgress();
     this.ending = resolveEnding(this.tendencies, this.scrapbook.size >= 4 ? 3 : 0);
-    this.overlay.innerHTML = `<div class="modal ending-quote"><h2>${this.ending.title}</h2><p>${this.ending.body}</p><blockquote>${this.ending.lines.join("<br>")}</blockquote><button data-action="close">Close</button><button data-action="forest">Exit to forest</button></div>`;
+    this.overlay.classList.remove("dialogue-open");
+    this.overlay.innerHTML = `<div class="modal ending-quote"><span class="ending-kicker">after the conversation</span><h2>${this.ending.title}</h2><p>${this.ending.body}</p><blockquote>${this.ending.lines.join("<br>")}</blockquote><p class="ending-afterline">Some doors do not forgive us. They simply stop asking us to be the person we were when we left.</p><button data-action="close">Close</button><button data-action="forest">Exit to forest</button></div>`;
     this.audio.ping("ending");
   }
 
@@ -386,6 +390,7 @@ export class WalkBackHomeApp {
   private returnToForest(): void {
     const leavingDoor = this.scene === "bakery" ? this.completeBakeryProgress() : null;
     this.scene = "forest";
+    this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
     this.player = leavingDoor ? { x: leavingDoor.x, y: Math.min(760, leavingDoor.y + 120) } : { x: 880, y: 690 };
     this.showToast("Exited to forest");
@@ -428,7 +433,7 @@ export class WalkBackHomeApp {
     this.particles.draw(this.ctx, time, this.settings.rain && kind === "forest", cameraX, cameraY, scale);
     if (kind === "forest") this.drawDoors(cameraX, cameraY, scale);
     if (kind === "bakery") {
-      if (!this.readMemories.has(this.currentMemoryKey())) this.drawMemorySpot(cameraX, cameraY, scale, time);
+      this.drawMemorySpot(cameraX, cameraY, scale, time);
       this.ctx.drawImage(this.images.friend, (600 - cameraX) * scale - 21 * scale, (430 - cameraY) * scale - 68 * scale, 42 * scale, 68 * scale);
     }
     this.drawMuji({ x: (this.player.x - cameraX) * scale, y: (this.player.y - cameraY) * scale }, time, scale);

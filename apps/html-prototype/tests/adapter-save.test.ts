@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
 import { chapterPlanToHtmlScene } from "../src/adapters/chapterPlanAdapter.js";
-import { forestDoors } from "../src/fixtures/chapterPlan.js";
+import { bakeryChapter, forestDoors } from "../src/fixtures/chapterPlan.js";
 import { globalMusic, sceneMusic, sceneMusicDataUri } from "../src/systems/SceneMusic.js";
 import type { SaveState } from "../src/types.js";
 
@@ -57,6 +57,12 @@ test("save state includes a version and narrative persistence fields", () => {
 test("forest doors expose distinct memory instances for long-term progression", () => {
   const chapterIds = new Set(forestDoors.map((door) => door.chapterId));
   assert.equal(chapterIds.size, forestDoors.length);
+});
+
+test("friend dialogue keeps Friend A portrait throughout the conversation", () => {
+  assert.ok(bakeryChapter.dialogue.length >= 3);
+  assert.ok(bakeryChapter.dialogue.every((node) => node.speaker === "Friend A"));
+  assert.ok(bakeryChapter.dialogue.every((node) => node.portrait === "friend"));
 });
 
 test("global music loops the local bakery mp3 without creating a YouTube player", () => {
