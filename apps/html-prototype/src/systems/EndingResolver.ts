@@ -16,7 +16,7 @@ export function resolveEnding(t: Tendencies, hiddenObjectsFound = 0): Ending {
       lines: ["那一天没有消失。", "只是一直装在水壶里。"]
     };
   }
-  if (t.intervention + t.concealment >= t.acceptance + t.honesty + 2) {
+  if (t.intervention + t.concealment >= 2 && t.intervention > 0) {
     return {
       id: "prettier-memory",
       title: "《更漂亮的回忆》",
@@ -24,7 +24,7 @@ export function resolveEnding(t: Tendencies, hiddenObjectsFound = 0): Ending {
       lines: ["这里没有人受伤。", "也没有人真正来过。"]
     };
   }
-  if (t.avoidance + t.distance >= t.closeness + t.acceptance + 2) {
+  if (t.avoidance + t.distance + t.concealment >= 2 && t.intervention === 0) {
     return {
       id: "unopened-door",
       title: "《没有打开的门》",
@@ -32,7 +32,7 @@ export function resolveEnding(t: Tendencies, hiddenObjectsFound = 0): Ending {
       lines: ["回家的路一直都在。", "只是今天，还没有准备好。"]
     };
   }
-  if (t.closeness + t.companionship >= 4 && t.intervention <= 1) {
+  if (t.closeness + t.companionship >= 2 && t.intervention <= 1) {
     return {
       id: "stay-with-you",
       title: "《留下来陪你》",
