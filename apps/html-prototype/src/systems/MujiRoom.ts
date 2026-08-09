@@ -2,7 +2,7 @@ import type { Point, Rect } from "./CollisionSystem.js";
 import { inAnyRect } from "./CollisionSystem.js";
 import type { RoomJourneyState } from "../types.js";
 
-export type RoomInteractionId = "door" | "journal" | "bed" | "lamp" | "window" | "records" | "residue" | "reflection";
+export type RoomInteractionId = "door" | "journal" | "lamp" | "window" | "records" | "residue" | "reflection";
 
 export type RoomInteraction = {
   id: RoomInteractionId;
@@ -50,10 +50,9 @@ export const roomObstacles: Rect[] = [
 export const roomInteractions: RoomInteraction[] = [
   { id: "door", label: "Return to Forest", x: 126, y: 456, radius: 58 },
   { id: "journal", label: "Journal", x: 338, y: 234, radius: 72 },
-  { id: "bed", label: "Rest", x: 742, y: 242, radius: 70 },
   { id: "lamp", label: "Lamp", x: 218, y: 210, radius: 58 },
   { id: "window", label: "Look Outside", x: 486, y: 164, radius: 80 },
-  { id: "records", label: "Records", x: 728, y: 446, radius: 70 },
+  { id: "records", label: "Records", x: 800, y: 334, radius: 70 },
   { id: "residue", label: "Examine", x: 562, y: 316, radius: 62 },
   { id: "reflection", label: "Reflection Note", x: 504, y: 450, radius: 62 }
 ];
@@ -82,7 +81,6 @@ export function createDefaultRoomState(): RoomJourneyState {
     lampOn: true,
     musicOn: false,
     residueIds: [],
-    resting: false,
     windowFocus: false,
     selectedVinylId: vinylRecords[0].id,
     vinylPlaying: false,
@@ -127,4 +125,8 @@ export function selectVinylRecord(state: RoomJourneyState, recordId: string): Ro
 
 export function currentVinylTrack(state: RoomJourneyState): MusicTrack {
   return (vinylRecords.find((record) => record.id === state.selectedVinylId) ?? vinylRecords[0]).sideA!;
+}
+
+export function vinylPlayerActions(): Array<"toggle-play" | "close"> {
+  return ["toggle-play", "close"];
 }

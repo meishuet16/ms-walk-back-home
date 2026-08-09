@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canReachRoomInteraction, createDefaultRoomState, moveRoomPlayer, roomInteractions, roomObstacles, selectVinylRecord, toggleRoomLamp, vinylRecords } from "../src/systems/MujiRoom.js";
+import { canReachRoomInteraction, createDefaultRoomState, moveRoomPlayer, roomInteractions, roomObstacles, selectVinylRecord, toggleRoomLamp, vinylPlayerActions, vinylRecords } from "../src/systems/MujiRoom.js";
 
 test("muji room movement blocks walls and major furniture while leaving interactions reachable", () => {
   const start = { x: 126, y: 438 };
@@ -29,4 +29,17 @@ test("vinyl records use local prototype audio sources", () => {
   assert.equal(vinylRecords.length >= 2, true);
   assert.equal(vinylRecords.every((record) => record.unlockedByDefault), true);
   assert.equal(vinylRecords.every((record) => record.sideA?.src.startsWith("assets/audio/")), true);
+});
+
+test("records interaction is anchored at the radio and room no longer exposes rest as a primary prompt", () => {
+  const records = roomInteractions.find((interaction) => interaction.id === "records");
+
+  assert.ok(records);
+  assert.equal(records.x >= 760 && records.x <= 850, true);
+  assert.equal(records.y >= 280 && records.y <= 380, true);
+  assert.equal(roomInteractions.some((interaction) => interaction.label === "Rest"), false);
+});
+
+test("vinyl player actions avoid duplicate stop and play pause controls", () => {
+  assert.deepEqual(vinylPlayerActions(), ["toggle-play", "close"]);
 });

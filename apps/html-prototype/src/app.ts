@@ -31,6 +31,7 @@ import {
   roomSpawn,
   selectVinylRecord,
   toggleRoomLamp,
+  vinylPlayerActions,
   vinylRecords,
   type RoomInteraction
 } from "./systems/MujiRoom.js";
@@ -193,7 +194,6 @@ export class WalkBackHomeApp {
     if (action === "scrapbook-layer") this.layerSelectedScrapbookElement(target.dataset.direction as "front" | "back");
     if (action === "scrapbook-delete") this.deleteSelectedScrapbookElement();
     if (action === "set-memory-kind") this.setDiaryMemoryKind(target.dataset.id ?? "", target.dataset.kind as MemoryKind);
-    if (action === "room-sit") this.roomSit();
     if (action === "room-window") this.roomWindow();
     if (action === "room-lamp") this.roomLamp();
     if (action === "room-letter") this.roomLetter();
@@ -203,7 +203,6 @@ export class WalkBackHomeApp {
     if (action === "room-residue") this.inspectRoomResidue();
     if (action === "select-vinyl") this.selectVinyl(target.dataset.record ?? "");
     if (action === "vinyl-pause") this.pauseVinyl();
-    if (action === "vinyl-stop") this.stopVinyl();
     if (action === "reset-journey") this.resetJourney();
     if (action === "compact") this.toggleCompact();
     if (action === "fullscreen") this.toggleFullscreen();
@@ -313,7 +312,7 @@ export class WalkBackHomeApp {
 
   private updateMujiRoom(x: number, y: number, dt: number): void {
     const moving = Math.hypot(x, y) > 0.05;
-    if (moving && !this.room.resting) {
+    if (moving) {
       this.facing = Math.abs(x) > Math.abs(y) ? (x < 0 ? 2 : 3) : y < 0 ? 1 : 0;
       this.frame = Math.floor(performance.now() / 140) % 4;
       this.player = moveRoomPlayer(this.player, x, y, dt);
@@ -354,7 +353,6 @@ export class WalkBackHomeApp {
       if (!this.activeRoomInteraction) return this.showToast("Walk closer");
       if (this.activeRoomInteraction.id === "door") return this.returnToForest();
       if (this.activeRoomInteraction.id === "journal") return this.roomDiary();
-      if (this.activeRoomInteraction.id === "bed") return this.roomSit();
       if (this.activeRoomInteraction.id === "lamp") return this.roomLamp();
       if (this.activeRoomInteraction.id === "window") return this.roomWindow();
       if (this.activeRoomInteraction.id === "records") return this.showRecords();
@@ -543,7 +541,6 @@ export class WalkBackHomeApp {
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
     this.player = leavingDoor ? { x: leavingDoor.x, y: Math.min(760, leavingDoor.y + 120) } : { x: 880, y: 690 };
-    this.room.resting = false;
     this.room.windowFocus = false;
     this.showToast(leavingDoor ? "You can come back when you are ready." : leavingRoom ? "Returned to forest" : "Returned to forest");
     this.focusStage();
@@ -643,19 +640,13 @@ export class WalkBackHomeApp {
     const scale = this.canvas.width / 960;
     this.ctx.drawImage(this.images.room, 0, 0, this.canvas.width, this.canvas.height);
     if (!this.images.room.complete || this.images.room.naturalWidth === 0) this.drawRoomFallback(scale);
-    this.drawRoomForestWindow(time, scale);
     this.drawRoomResidue(scale);
     if (this.room.lampOn) this.drawLampGlow(scale);
-    if (this.room.resting) {
-      this.ctx.fillStyle = "rgba(6, 10, 18, .18)";
-      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    } else {
-      this.drawMuji({ x: this.player.x * scale, y: this.player.y * scale }, time, scale);
-    }
+    this.drawMuji({ x: this.player.x * scale, y: this.player.y * scale }, time, scale);
     if (this.room.windowFocus) {
       this.ctx.fillStyle = "rgba(8, 14, 24, .22)";
       this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-      this.drawRoomForestWindow(time, scale, true);
+      this.drawWindowFocus(time, scale);
     }
     for (const interaction of roomInteractions) {
       if (interaction.id === "residue" && !this.room.residueIds?.length) continue;
@@ -682,23 +673,24 @@ export class WalkBackHomeApp {
     this.ctx.fillRect(706 * scale, 314 * scale, 132 * scale, 112 * scale);
   }
 
-  private drawRoomForestWindow(time: number, scale: number, focused = false): void {
-    const x = (focused ? 250 : 398) * scale;
-    const y = (focused ? 72 : 82) * scale;
-    const w = (focused ? 460 : 180) * scale;
-    const h = (focused ? 236 : 126) * scale;
-    const gradient = this.ctx.createLinearGradient(x, y, x, y + h);
-    gradient.addColorStop(0, "#0d2433");
-    gradient.addColorStop(1, "#1c352c");
-    this.ctx.fillStyle = gradient;
-    this.ctx.fillRect(x, y, w, h);
-    this.ctx.strokeStyle = "rgba(235, 213, 168, .74)";
+  private drawWindowFocus(time: number, scale: number): void {
+    const x = 286 * scale;
+    const y = 56 * scale;
+    const w = 292 * scale;
+    const h = 176 * scale;
+    const glow = this.ctx.createRadialGradient(x + w / 2, y + h / 2, 20 * scale, x + w / 2, y + h / 2, 210 * scale);
+    glow.addColorStop(0, "rgba(171, 214, 190, .16)");
+    glow.addColorStop(1, "rgba(171, 214, 190, 0)");
+    this.ctx.fillStyle = glow;
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.strokeStyle = "rgba(246, 221, 156, .72)";
+    this.ctx.lineWidth = 2 * scale;
     this.ctx.strokeRect(x, y, w, h);
-    this.ctx.fillStyle = "rgba(178, 219, 203, .74)";
-    for (let i = 0; i < 16; i += 1) {
-      const px = x + ((i * 41 + time / 80) % Math.max(1, w));
-      const py = y + ((i * 23 + Math.sin(time / 400 + i) * 12) % Math.max(1, h));
-      this.ctx.fillRect(px, py, 2 * scale, 7 * scale);
+    this.ctx.fillStyle = "rgba(218, 239, 216, .55)";
+    for (let i = 0; i < 12; i += 1) {
+      const px = x + ((i * 37 + time / 90) % Math.max(1, w));
+      const py = y + ((i * 19 + Math.sin(time / 420 + i) * 8) % Math.max(1, h));
+      this.ctx.fillRect(px, py, 2 * scale, 6 * scale);
     }
   }
 
@@ -1132,15 +1124,6 @@ export class WalkBackHomeApp {
     this.autosave();
   }
 
-  private roomSit(): void {
-    this.room.visits += 1;
-    this.room.resting = !this.room.resting;
-    this.room.reflections.push(this.room.resting ? "Muji sits down. Nothing needs to happen." : "Muji stands again.");
-    this.showToast(this.room.resting ? "Resting" : "Standing");
-    this.overlay.innerHTML = "";
-    this.autosave();
-  }
-
   private roomWindow(): void {
     this.room.visits += 1;
     this.room.windowFocus = !this.room.windowFocus;
@@ -1184,8 +1167,29 @@ export class WalkBackHomeApp {
 
   private showRecords(): void {
     const current = this.room.selectedVinylId ?? vinylRecords[0].id;
-    const records = vinylRecords.map((record) => `<button data-action="select-vinyl" data-record="${this.escapeHtml(record.id)}"><span>${this.escapeHtml(record.title)}</span><small>${record.id === current ? "on the player" : this.escapeHtml(record.subtitle ?? "record")}</small></button>`).join("");
-    this.overlay.innerHTML = `<div class="modal game-panel records-panel"><h2>Records</h2><div class="record-list">${records}</div><div class="settings-row"><button data-action="vinyl-pause">${this.room.vinylPlaying ? "Pause" : "Play"}</button><button data-action="vinyl-stop">Stop</button><button data-action="close">Close</button></div></div>`;
+    const currentRecord = vinylRecords.find((record) => record.id === current) ?? vinylRecords[0];
+    const records = vinylRecords.map((record, index) => `<button class="${record.id === current ? "selected" : ""}" data-action="select-vinyl" data-record="${this.escapeHtml(record.id)}"><span>${index + 1}. ${this.escapeHtml(record.title)}</span><small>${record.id === current ? "Now playing" : this.escapeHtml(record.subtitle ?? "record")}</small></button>`).join("");
+    const actions = vinylPlayerActions();
+    this.overlay.innerHTML = `
+      <div class="modal game-panel records-panel">
+        <div class="vinyl-console">
+          <div class="turntable-card">
+            <div class="turntable-lid"></div>
+            <div class="record-disc ${this.room.vinylPlaying ? "playing" : ""}"><span></span></div>
+            <div class="tone-arm"></div>
+          </div>
+          <div class="now-playing">
+            <small>Now Playing</small>
+            <h2>${this.escapeHtml(currentRecord.title)}</h2>
+            <p>${this.escapeHtml(currentRecord.sideA?.title ?? "Side A")}</p>
+            <div class="vinyl-controls">
+              ${actions.includes("toggle-play") ? `<button data-action="vinyl-pause">${this.room.vinylPlaying ? "Pause" : "Play"}</button>` : ""}
+              ${actions.includes("close") ? `<button data-action="close">Close</button>` : ""}
+            </div>
+          </div>
+          <div class="record-list">${records}</div>
+        </div>
+      </div>`;
     this.focusStage();
   }
 
@@ -1201,13 +1205,6 @@ export class WalkBackHomeApp {
     this.room.vinylPlaying = !this.room.vinylPlaying;
     if (this.room.vinylPlaying) this.playVinylMusic();
     else this.audio.pause();
-    this.showRecords();
-    this.autosave();
-  }
-
-  private stopVinyl(): void {
-    this.room.vinylPlaying = false;
-    this.audio.stop();
     this.showRecords();
     this.autosave();
   }
