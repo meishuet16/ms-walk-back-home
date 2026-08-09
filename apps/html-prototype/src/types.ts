@@ -119,6 +119,41 @@ export type JourneyState = {
   finalJourney: string[];
 };
 
+export type ChapterProgress = {
+  chapterId: string;
+  state: ChapterProgressState;
+  visited: boolean;
+  memoryRead: boolean;
+  dialogueCompleted: boolean;
+  walkedThrough: boolean;
+  choices: string[];
+  tendencies: Tendencies;
+  reflectionTone?: ReflectionTone;
+  closingQuoteId?: string;
+};
+
+export type ChapterReflectionQuote = {
+  id: string;
+  tone: ReflectionTone;
+  lines: string[];
+};
+
+export type ChapterReflection = {
+  tone: ReflectionTone;
+  quoteId: string;
+  lines: string[];
+  historicalEventId: string;
+  closureLines: string[];
+};
+
+export type ChapterDefinition = HtmlChapterScene & {
+  canonicalClosure: {
+    historicalEventId: string;
+    lines: string[];
+  };
+  reflectionQuotes: ChapterReflectionQuote[];
+};
+
 export type SaveState = {
   version: 1;
   slot?: number;
