@@ -63,7 +63,7 @@ export const roomObstacles: Rect[] = [
   { x: 0, y: 494, w: 960, h: 46 },
   { x: 128, y: 88, w: 190, h: 98 },
   { x: 612, y: 86, w: 222, h: 126 },
-  { x: 706, y: 294, w: 132, h: 132 },
+  { x: 784, y: 294, w: 74, h: 104 },
   { x: 374, y: 354, w: 176, h: 88 },
   { x: 84, y: 224, w: 98, h: 142 },
   { x: 804, y: 210, w: 66, h: 96 }
@@ -74,7 +74,7 @@ export const roomInteractions: RoomInteraction[] = [
   { id: "journal", label: "Journal", x: 620, y: 250, radius: 72 },
   { id: "lamp", label: "Lamp", x: 218, y: 210, radius: 58 },
   { id: "window", label: "Look Outside", x: 486, y: 164, radius: 80 },
-  { id: "records", label: "Records", x: 820, y: 360, radius: 56 },
+  { id: "records", label: "Records", x: 748, y: 356, radius: 46 },
   { id: "residue", label: "Examine", x: 562, y: 316, radius: 62 },
   { id: "reflection", label: "Reflection Note", x: 504, y: 450, radius: 62 }
 ];

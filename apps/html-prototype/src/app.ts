@@ -15,7 +15,6 @@ import {
   addPhotoElement,
   createCutoutElement,
   deleteScrapbookElement,
-  diaryTextFrame,
   layerScrapbookElement,
   moveScrapbookElement,
   resizeScrapbookElement,
@@ -809,6 +808,9 @@ export class WalkBackHomeApp {
   private showDiaryEditor(editId = ""): void {
     const editing = this.diaryEntries.find((entry) => entry.id === editId) ?? this.diaryEntries[0];
     const today = new Date().toISOString().slice(0, 10);
+    const dateValue = editing?.date ?? today;
+    const parsedDate = new Date(`${dateValue}T00:00:00`);
+    const weekday = Number.isNaN(parsedDate.getTime()) ? "" : ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][parsedDate.getDay()];
     this.activeScrapbookEntryId = editing?.id ?? "";
     const elementIds = new Set((editing?.scrapbookLayout?.elements ?? []).map((element) => element.id));
     if (!this.selectedScrapbookElementId || !elementIds.has(this.selectedScrapbookElementId)) this.selectedScrapbookElementId = "";
@@ -829,30 +831,54 @@ export class WalkBackHomeApp {
         const photo = editing?.photos?.find((item) => item.id === photoId);
         const selected = element.id === this.selectedScrapbookElementId;
         const cutoutClass = element.type === "cutout" ? ` ${element.crop?.shape === "circle" ? "circle-cutout" : "rect-cutout"}` : "";
-        return `<div class="scrapbook-element${cutoutClass} ${selected ? "selected" : ""}" data-action="select-scrapbook-element" data-element="${this.escapeHtml(element.id)}" tabindex="0" style="left:${element.x}%;top:${element.y}%;transform:translate(-50%, -50%) rotate(${element.rotation}deg) scale(${element.scale});z-index:${element.zIndex};">${photo ? `<img src="${this.escapeHtml(photo.src)}" alt="">` : `<span>Missing photo</span>`}${selected ? `<div class="element-controls" style="transform:rotate(${-element.rotation}deg) scale(${1 / element.scale});"><button data-action="scrapbook-rotate" data-delta="-8" aria-label="Rotate left">⟲</button><button data-action="scrapbook-rotate" data-delta="8" aria-label="Rotate right">⟳</button><button data-action="scrapbook-delete" aria-label="Delete visual">×</button></div>` : ""}</div>`;
+        return `<div class="scrapbook-element${cutoutClass} ${selected ? "selected" : ""}" data-action="select-scrapbook-element" data-element="${this.escapeHtml(element.id)}" tabindex="0" style="left:${element.x}%;top:${element.y}%;transform:translate(-50%, -50%) rotate(${element.rotation}deg) scale(${element.scale});z-index:${element.zIndex};">${photo ? `<img src="${this.escapeHtml(photo.src)}" alt="">` : `<span>Missing photo</span>`}${selected ? `<div class="element-controls" style="transform:rotate(${-element.rotation}deg) scale(${1 / element.scale});"><button data-action="scrapbook-delete" aria-label="Delete visual">×</button><button data-action="scrapbook-rotate" data-delta="-8" aria-label="Rotate left">↶</button><button data-action="scrapbook-rotate" data-delta="8" aria-label="Rotate right">↷</button><button data-action="scrapbook-resize" data-delta="0.1" aria-label="Bigger">+</button><button data-action="scrapbook-resize" data-delta="-0.1" aria-label="Smaller">−</button></div>` : ""}</div>`;
       }).join("");
-    const textFrame = diaryTextFrame();
     this.overlay.innerHTML = `
-      <div class="modal game-panel diary-editor diary-page-editor" data-entry="${this.escapeHtml(editing?.id ?? "")}">
-        <div class="diary-editor-head">
-          <div><h2>Journal</h2><p class="autosave-state" id="diary-save-state">Saved</p></div>
-          <label class="attach-photo">Add Photo<input id="diary-photo-input" type="file" accept="image/*"></label>
-        </div>
-        <section class="diary-paper scrapbook-page" aria-label="Diary page">
-          <div class="paper-fields" style="left:${textFrame.x}%;top:${textFrame.y}%;width:${textFrame.w}%;height:${textFrame.h}%;">
-            <label>Date<input id="diary-date" type="date" value="${this.escapeHtml(editing?.date ?? today)}"></label>
-            <label>Title<input id="diary-title" value="${this.escapeHtml(editing?.title ?? "Untitled Memory")}"></label>
-            <label>Diary<textarea id="diary-body" rows="12">${this.escapeHtml(editing?.body ?? "")}</textarea></label>
-            <label class="memory-menu">Memory classification<select id="diary-memory-kind"><option value="diary" ${editing?.memoryKind === "diary" ? "selected" : ""}>Diary only</option><option value="fragment" ${editing?.memoryKind === "fragment" ? "selected" : ""}>Memory Fragment</option><option value="chapter" ${editing?.memoryKind === "chapter" ? "selected" : ""}>Memory Chapter</option></select></label>
+      <div class="modal game-panel diary-editor diary-page-editor journal-modal" data-entry="${this.escapeHtml(editing?.id ?? "")}">
+        <div class="journal-toolbar">
+          <button class="journal-icon-button" data-action="settings" aria-label="Back">‹</button>
+          <div class="journal-brand">
+            <span class="journal-mascot" aria-hidden="true"></span>
+            <div><h2>Walk Back Home</h2><p>Diary · Muji Edition</p></div>
           </div>
-          ${elements || `<p class="empty-page">Add a photo, then place it on this diary page.</p>`}
+          <div class="journal-actions">
+            <button class="journal-icon-button" aria-label="Undo">↶</button>
+            <button class="journal-icon-button" aria-label="Redo">↷</button>
+            <button class="journal-icon-button" data-action="open-timeline" aria-label="Timeline">⋯</button>
+            <label class="journal-upload">＋<input id="diary-photo-input" type="file" accept="image/*"></label>
+            <button class="journal-done" data-action="save-diary-entry" data-id="${this.escapeHtml(editing?.id ?? "")}">✓ 完成</button>
+          </div>
+        </div>
+        <section class="diary-paper scrapbook-page journal-sheet" aria-label="Diary page">
+          <div class="paper-rings" aria-hidden="true"></div>
+          <div class="journal-page-inner">
+            <div class="journal-sticker-title">今日记录</div>
+            <div class="journal-meta-card">
+              <label><span>▣ 日期：</span><input id="diary-date" type="date" value="${this.escapeHtml(dateValue)}"></label>
+              <div class="journal-weekday">${this.escapeHtml(weekday)}</div>
+              <label><span>▮ 标题：</span><input id="diary-title" value="${this.escapeHtml(editing?.title ?? "今天其实没发生什么特别的")}"></label>
+              <div></div>
+              <label><span>● 地点：</span><input value="宿舍 · Muji Room" readonly></label>
+              <div></div>
+              <label><span>☁ 天气：</span><input value="小雨转阴" readonly></label>
+              <div></div>
+            </div>
+            <figure class="journal-hero-photo">
+              <img src="${assets.roomFallback}" alt="">
+              <figcaption>好好记录，<br>慢慢回家。</figcaption>
+            </figure>
+            <label class="journal-body-field"><textarea id="diary-body" rows="12">${this.escapeHtml(editing?.body ?? "")}</textarea></label>
+            <div class="journal-desk-photo"><img src="${assets.timeline}" alt=""></div>
+            <div class="journal-cassette-sticker" aria-hidden="true"></div>
+            <div class="journal-plant-sticker" aria-hidden="true"></div>
+          </div>
+          ${elements}
         </section>
-        <div class="integrated-tools">
+        <div class="integrated-tools journal-photo-dock">
           <aside class="photo-tray">${photos}</aside>
         </div>
-        <div class="settings-row"><button data-action="save-diary-entry" data-id="${this.escapeHtml(editing?.id ?? "")}">Save Now</button><button data-action="open-timeline">Timeline</button><button data-action="show-import-diary">Import Existing Diary</button></div>
+        <div class="journal-lower-tools"><p class="autosave-state" id="diary-save-state">Saved</p><label class="journal-kind">Memory<select id="diary-memory-kind"><option value="diary" ${editing?.memoryKind === "diary" ? "selected" : ""}>Diary only</option><option value="fragment" ${editing?.memoryKind === "fragment" ? "selected" : ""}>Memory Fragment</option><option value="chapter" ${editing?.memoryKind === "chapter" ? "selected" : ""}>Memory Chapter</option></select></label><button data-action="show-import-diary">Import Existing Diary</button><button data-action="open-map">Walk Back Home</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>
         <div class="diary-list">${rows}</div>
-        <button data-action="open-map">Walk Back Home</button><button data-action="settings">Back</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button>
       </div>`;
     this.focusStage();
   }

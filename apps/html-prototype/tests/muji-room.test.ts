@@ -42,8 +42,8 @@ test("records interaction is visually anchored at the turntable and room no long
 
 test("room interaction prompts trigger from walkable spots near their objects", () => {
   assert.notEqual(nearestRoomInteraction({ x: 760, y: 430 })?.id, "records");
-  assert.equal(nearestRoomInteraction({ x: 820, y: 392 })?.id, "records");
-  assert.equal(nearestRoomInteraction({ x: 852, y: 368 })?.id, "records");
+  assert.equal(roomObstacles.some((rect) => 744 >= rect.x && 744 <= rect.x + rect.w && 366 >= rect.y && 366 <= rect.y + rect.h), false);
+  assert.equal(nearestRoomInteraction({ x: 744, y: 366 })?.id, "records");
   assert.equal(nearestRoomInteraction({ x: 620, y: 250 })?.id, "journal");
 });
 
