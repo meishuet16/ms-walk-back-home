@@ -45,6 +45,45 @@ export type DiaryEntry = {
   date: string;
   title: string;
   body: string;
+  memoryKind: MemoryKind;
+  chapterId?: string;
+  photos?: DiaryPhoto[];
+  scrapbookLayout?: ScrapbookLayout;
+};
+
+export type MemoryKind = "diary" | "fragment" | "chapter";
+
+export type DiaryPhoto = {
+  id: string;
+  src: string;
+  caption?: string;
+};
+
+export type ScrapbookElement =
+  | {
+      id: string;
+      type: "photo";
+      photoId: string;
+      x: number;
+      y: number;
+      scale: number;
+      rotation: number;
+      zIndex: number;
+    }
+  | {
+      id: string;
+      type: "cutout";
+      sourcePhotoId: string;
+      maskData?: unknown;
+      x: number;
+      y: number;
+      scale: number;
+      rotation: number;
+      zIndex: number;
+    };
+
+export type ScrapbookLayout = {
+  elements: ScrapbookElement[];
 };
 
 export type SaveState = {
