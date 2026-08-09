@@ -1,10 +1,11 @@
 import { bakeryChapter } from "./fixtures/chapterPlan.js";
-import type { ChapterProgress, Choice, DiaryEntry, DiaryLibraryState, DiaryMood, JourneyState, MemoryKind, RoomJourneyState, SceneId, Tendencies } from "./types.js";
+import type { ChapterProgress, Choice, DiaryEntry, DiaryLibraryState, JourneyState, MemoryKind, RoomJourneyState, SceneId, Tendencies } from "./types.js";
 import { AudioManager } from "./systems/AudioManager.js";
 import { chapterRegistry, forestEntries, routeForestEntry, type AuthoredForestEntry } from "./systems/ChapterRegistry.js";
 import { beginChapterVisit, finishChapterWalkthrough, initialChapterProgress, markChapterDialogueComplete, markChapterMemoryRead, recordChapterChoice } from "./systems/ChapterProgressManager.js";
 import { inAnyRect, type Point, type Rect } from "./systems/CollisionSystem.js";
 import { deleteDiaryEntryById, getDiaryForestMemories, getDiaryTimeline, openDiaryPageForDate, upsertDiaryEntry, upsertDiaryPageDraft } from "./systems/DiaryLibrary.js";
+import { diaryMoodOptions, isDiaryMood } from "./systems/DiaryMood.js";
 import { makeDiaryEntry, parseDiaryImport, updateDiaryMemoryKind, type DiaryForestMemory } from "./systems/DiaryImport.js";
 import { DialogueSystem } from "./systems/DialogueSystem.js";
 import { resolveChapterReflection, type Ending } from "./systems/EndingResolver.js";
@@ -56,18 +57,6 @@ const assets = {
 };
 
 const bakeryMemorySpot = { x: 735, y: 325 };
-
-const diaryMoodOptions: Array<{ value: DiaryMood; label: string }> = [
-  { value: "sad", label: "难过" },
-  { value: "calm", label: "平静" },
-  { value: "blank", label: "发呆" },
-  { value: "happy", label: "开心" },
-  { value: "excited", label: "超开心" }
-];
-
-function isDiaryMood(value: string): value is DiaryMood {
-  return diaryMoodOptions.some((mood) => mood.value === value);
-}
 
 function img(src: string): HTMLImageElement {
   const image = new Image();
@@ -889,8 +878,8 @@ export class WalkBackHomeApp {
               <div class="journal-hero-scene">
                 <img src="${assets.room}" alt="">
                 <span class="journal-photo-muji mood-${selectedMood}" aria-hidden="true"></span>
-                <figcaption>好好记录，<br>慢慢回家。</figcaption>
               </div>
+              <figcaption>好好记录，<br>慢慢回家。</figcaption>
             </figure>
             <label class="journal-body-field"><textarea id="diary-body" rows="12">${this.escapeHtml(editing?.body ?? "")}</textarea></label>
             <div class="journal-mood-picker"><input id="diary-mood" type="hidden" value="${selectedMood}">${moodButtons}</div>

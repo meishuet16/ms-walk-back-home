@@ -3,6 +3,7 @@ import test from "node:test";
 import { addPhotoAttachment, addPhotoElement, createCutoutElement, diaryTextFrame, moveScrapbookElement, removePhotoAttachment } from "../src/systems/ScrapbookComposer.js";
 import { createDiaryLibrary, openDiaryPageForDate, upsertDiaryPageDraft } from "../src/systems/DiaryLibrary.js";
 import { makeDiaryEntry, normalizeDiaryEntry } from "../src/systems/DiaryImport.js";
+import { diaryMoodOptions } from "../src/systems/DiaryMood.js";
 
 test("write today creates a diary page draft for the requested date", () => {
   const opened = openDiaryPageForDate(createDiaryLibrary(), "2026-08-10");
@@ -30,6 +31,12 @@ test("diary page mood is normalized and preserved on entries", () => {
 
   assert.equal(entry.mood, "excited");
   assert.equal(invalid.mood, "calm");
+});
+
+test("journal mood options have distinct gentle expressions", () => {
+  assert.equal(diaryMoodOptions.length, 5);
+  assert.equal(new Set(diaryMoodOptions.map((mood) => mood.expression)).size, diaryMoodOptions.length);
+  assert.equal(diaryMoodOptions.some((mood) => mood.expression === "sparkle-smile"), true);
 });
 
 test("write today reuses the existing diary page for that date", () => {
