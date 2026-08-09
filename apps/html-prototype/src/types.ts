@@ -1,4 +1,4 @@
-export type SceneId = "title" | "forest" | "bakery" | "muji-room" | "ending";
+export type SceneId = "title" | "forest" | "bakery" | "labis" | "muji-room" | "ending";
 export type TendencyKey =
   | "acceptance"
   | "avoidance"
@@ -20,8 +20,8 @@ export type Choice = {
 
 export type DialogueNode = {
   id: string;
-  speaker: "Muji" | "Friend A" | "Memory";
-  portrait: "muji" | "friend" | "none";
+  speaker: string;
+  portrait: string | "none";
   text: string;
   choices?: Choice[];
 };
@@ -162,6 +162,7 @@ export type ChapterReflection = {
 };
 
 export type ChapterDefinition = HtmlChapterScene & {
+  runtimeScene: "bakery" | "labis";
   canonicalClosure: {
     historicalEventId: string;
     lines: string[];

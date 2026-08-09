@@ -1,4 +1,5 @@
 import { bakeryChapter, forestDoors } from "../fixtures/chapterPlan.js";
+import { labisMotorChapter } from "../fixtures/labisMotorChapter.js";
 import type { ChapterDefinition } from "../types.js";
 
 export type AuthoredForestEntry = (typeof forestDoors)[number];
@@ -10,6 +11,7 @@ export type ForestRoute =
 export const chapterRegistry: Record<string, ChapterDefinition> = {
   "bakery-day": {
     ...bakeryChapter,
+    runtimeScene: "bakery",
     canonicalClosure: {
       historicalEventId: "yumido-rain-conversation-ends",
       lines: [
@@ -40,7 +42,8 @@ export const chapterRegistry: Record<string, ChapterDefinition> = {
         lines: ["我还是没有准备好回答。", "但这一次，我知道自己在逃什么。"]
       }
     ]
-  }
+  },
+  "labis-motor-day": labisMotorChapter
 };
 
 export const forestEntries = forestDoors;
