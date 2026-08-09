@@ -10,6 +10,15 @@ import { DialogueSystem } from "./systems/DialogueSystem.js";
 import { resolveChapterReflection, type Ending } from "./systems/EndingResolver.js";
 import { InputManager } from "./systems/InputManager.js";
 import { ParticleSystem } from "./systems/ParticleSystem.js";
+import {
+  addPhotoAttachment,
+  addPhotoElement,
+  deleteScrapbookElement,
+  layerScrapbookElement,
+  moveScrapbookElement,
+  resizeScrapbookElement,
+  rotateScrapbookElement
+} from "./systems/ScrapbookComposer.js";
 import { SaveManager } from "./systems/SaveManager.js";
 import type { MusicScene } from "./systems/SceneMusic.js";
 import { emptyTendencies } from "./systems/TendencySystem.js";
@@ -69,6 +78,9 @@ export class WalkBackHomeApp {
   private choices: string[] = [];
   private readMemories = new Set<string>();
   private selectedChapter = "Yumido Bread";
+  private activeScrapbookEntryId = "";
+  private selectedScrapbookElementId = "";
+  private scrapbookDrag: { elementId: string; entryId: string; offsetX: number; offsetY: number } | null = null;
   private settings = { rain: true, muted: false, volume: 0.45, compact: false, reducedMotion: false, musicEnabled: true, musicScene: "bakery" as MusicScene };
   private room = { visits: 0, reflections: ["Muji put the journal on a tiny table and listened to the room breathe."], lampOn: true, musicOn: false, residueIds: [] as string[] };
   private chapterProgress = new Map<string, ChapterProgress>();
@@ -107,6 +119,10 @@ export class WalkBackHomeApp {
     this.input = new InputManager(root);
     this.input.mountTouchControls(() => this.interact());
     root.addEventListener("click", (event) => this.handleClick(event));
+    root.addEventListener("change", (event) => void this.handleChange(event));
+    root.addEventListener("pointerdown", (event) => this.handlePointerDown(event));
+    root.addEventListener("pointermove", (event) => this.handlePointerMove(event));
+    root.addEventListener("pointerup", () => this.scrapbookDrag = null);
     root.addEventListener("pointerdown", () => void this.audio.ensurePlaying(), { passive: true });
     root.addEventListener("keydown", () => void this.audio.ensurePlaying());
     this.bootstrapDiaryLibrary();
@@ -143,6 +159,13 @@ export class WalkBackHomeApp {
     if (action === "delete-diary-entry") this.deleteDiaryEntry(target.dataset.id ?? "");
     if (action === "import-diary-lines") this.importDiaryLines();
     if (action === "open-scrapbook-entry") this.showScrapbookComposer(target.dataset.id ?? "");
+    if (action === "add-photo-to-scrapbook") this.addPhotoToScrapbook(target.dataset.photo ?? "");
+    if (action === "select-scrapbook-element") this.selectScrapbookElement(target.dataset.element ?? "");
+    if (action === "scrapbook-move") this.nudgeSelectedScrapbookElement(Number(target.dataset.dx ?? 0), Number(target.dataset.dy ?? 0));
+    if (action === "scrapbook-resize") this.scaleSelectedScrapbookElement(Number(target.dataset.delta ?? 0));
+    if (action === "scrapbook-rotate") this.rotateSelectedScrapbookElement(Number(target.dataset.delta ?? 0));
+    if (action === "scrapbook-layer") this.layerSelectedScrapbookElement(target.dataset.direction as "front" | "back");
+    if (action === "scrapbook-delete") this.deleteSelectedScrapbookElement();
     if (action === "set-memory-kind") this.setDiaryMemoryKind(target.dataset.id ?? "", target.dataset.kind as MemoryKind);
     if (action === "room-sit") this.roomSit();
     if (action === "room-window") this.roomWindow();
@@ -694,10 +717,168 @@ export class WalkBackHomeApp {
   private showScrapbookComposer(id: string): void {
     const entry = this.diaryEntries.find((item) => item.id === id);
     if (!entry) return this.showDiaryEditor();
-    const photos = entry.photos?.map((photo) => `<li>${this.escapeHtml(photo.caption ?? photo.id)}</li>`).join("") || "<li>No photos attached yet.</li>";
-    const elements = entry.scrapbookLayout?.elements.map((element) => `<li>${element.type} · x ${element.x} · y ${element.y} · rotation ${element.rotation}</li>`).join("") || "<li>No arranged elements yet.</li>";
-    this.overlay.innerHTML = `<div class="modal game-panel"><h2>Scrapbook Mode</h2><p>${this.escapeHtml(entry.date)} · ${this.escapeHtml(entry.title)}</p><p>This is the diary page composer scaffold. It stores photos and layout on this diary entry, not in Journey rewards.</p><h3>Photos</h3><ul>${photos}</ul><h3>Page layout</h3><ul>${elements}</ul><button data-action="edit-diary-entry" data-id="${this.escapeHtml(entry.id)}">Back to Entry</button><button data-action="open-timeline">Timeline</button><button data-action="close">Close</button></div>`;
+    this.activeScrapbookEntryId = entry.id;
+    const photos = entry.photos?.map((photo) => `
+      <div class="photo-chip">
+        <img src="${this.escapeHtml(photo.src)}" alt="">
+        <span>${this.escapeHtml(photo.caption ?? photo.id)}</span>
+        <button data-action="add-photo-to-scrapbook" data-photo="${this.escapeHtml(photo.id)}">Add to Page</button>
+      </div>`).join("") || `<p class="quiet-line">No photos attached yet.</p>`;
+    const elements = [...(entry.scrapbookLayout?.elements ?? [])]
+      .sort((a, b) => a.zIndex - b.zIndex)
+      .map((element) => {
+        const photoId = element.type === "photo" ? element.photoId : element.sourcePhotoId;
+        const photo = entry.photos?.find((item) => item.id === photoId);
+        const selected = element.id === this.selectedScrapbookElementId;
+        return `<button class="scrapbook-element ${selected ? "selected" : ""}" data-action="select-scrapbook-element" data-element="${this.escapeHtml(element.id)}" style="left:${element.x}%;top:${element.y}%;transform:translate(-50%, -50%) rotate(${element.rotation}deg) scale(${element.scale});z-index:${element.zIndex};">${photo ? `<img src="${this.escapeHtml(photo.src)}" alt="">` : `<span>Missing photo</span>`}</button>`;
+      }).join("");
+    this.overlay.innerHTML = `
+      <div class="modal game-panel scrapbook-composer" data-entry="${this.escapeHtml(entry.id)}">
+        <div class="composer-head">
+          <div><h2>Scrapbook Mode</h2><p>${this.escapeHtml(entry.date)} · ${this.escapeHtml(entry.title)}</p></div>
+          <label class="attach-photo">Attach Photo<input id="scrapbook-photo-input" type="file" accept="image/*"></label>
+        </div>
+        <div class="composer-shell">
+          <aside class="photo-tray">${photos}</aside>
+          <section class="scrapbook-page" aria-label="Diary scrapbook page">${elements || `<p class="empty-page">Attach a photo, then add it to the page.</p>`}</section>
+          <aside class="composer-tools">
+            <strong>Selected</strong>
+            <div class="tool-grid">
+              <button data-action="scrapbook-move" data-dx="0" data-dy="-4">Up</button>
+              <button data-action="scrapbook-move" data-dx="-4" data-dy="0">Left</button>
+              <button data-action="scrapbook-move" data-dx="4" data-dy="0">Right</button>
+              <button data-action="scrapbook-move" data-dx="0" data-dy="4">Down</button>
+              <button data-action="scrapbook-resize" data-delta="0.1">Bigger</button>
+              <button data-action="scrapbook-resize" data-delta="-0.1">Smaller</button>
+              <button data-action="scrapbook-rotate" data-delta="-8">Rotate Left</button>
+              <button data-action="scrapbook-rotate" data-delta="8">Rotate Right</button>
+              <button data-action="scrapbook-layer" data-direction="front">Front</button>
+              <button data-action="scrapbook-layer" data-direction="back">Back</button>
+              <button data-action="scrapbook-delete">Delete</button>
+            </div>
+          </aside>
+        </div>
+        <button data-action="edit-diary-entry" data-id="${this.escapeHtml(entry.id)}">Back to Entry</button><button data-action="open-timeline">Timeline</button><button data-action="close">Close</button>
+      </div>`;
     this.focusStage();
+  }
+
+  private updateDiaryEntry(entry: DiaryEntry): void {
+    this.applyDiaryLibrary(upsertDiaryEntry(this.makeDiaryLibrary(), entry));
+    this.autosave();
+  }
+
+  private activeScrapbookEntry(): DiaryEntry | null {
+    return this.diaryEntries.find((entry) => entry.id === this.activeScrapbookEntryId) ?? null;
+  }
+
+  private async handleChange(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    if (input.id !== "scrapbook-photo-input" || !input.files?.[0]) return;
+    const entry = this.activeScrapbookEntry();
+    if (!entry) return;
+    const file = input.files[0];
+    const src = await this.readFileAsDataUrl(file);
+    const photoId = `photo-${Date.now()}`;
+    this.updateDiaryEntry(addPhotoAttachment(entry, { id: photoId, src, caption: file.name }));
+    this.showScrapbookComposer(entry.id);
+    this.showToast("Photo attached");
+  }
+
+  private readFileAsDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.addEventListener("load", () => resolve(String(reader.result ?? "")));
+      reader.addEventListener("error", () => reject(reader.error));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  private addPhotoToScrapbook(photoId: string): void {
+    const entry = this.activeScrapbookEntry();
+    if (!entry || !photoId) return;
+    const elementId = `element-${Date.now()}`;
+    this.selectedScrapbookElementId = elementId;
+    this.updateDiaryEntry(addPhotoElement(entry, photoId, elementId));
+    this.showScrapbookComposer(entry.id);
+  }
+
+  private selectScrapbookElement(elementId: string): void {
+    this.selectedScrapbookElementId = elementId;
+    if (this.activeScrapbookEntryId) this.showScrapbookComposer(this.activeScrapbookEntryId);
+  }
+
+  private updateSelectedScrapbookElement(updater: (entry: DiaryEntry, elementId: string) => DiaryEntry): void {
+    const entry = this.activeScrapbookEntry();
+    if (!entry || !this.selectedScrapbookElementId) return;
+    this.updateDiaryEntry(updater(entry, this.selectedScrapbookElementId));
+    this.showScrapbookComposer(entry.id);
+  }
+
+  private nudgeSelectedScrapbookElement(dx: number, dy: number): void {
+    this.updateSelectedScrapbookElement((entry, elementId) => {
+      const element = entry.scrapbookLayout?.elements.find((item) => item.id === elementId);
+      return element ? moveScrapbookElement(entry, elementId, element.x + dx, element.y + dy) : entry;
+    });
+  }
+
+  private scaleSelectedScrapbookElement(delta: number): void {
+    this.updateSelectedScrapbookElement((entry, elementId) => {
+      const element = entry.scrapbookLayout?.elements.find((item) => item.id === elementId);
+      return element ? resizeScrapbookElement(entry, elementId, element.scale + delta) : entry;
+    });
+  }
+
+  private rotateSelectedScrapbookElement(delta: number): void {
+    this.updateSelectedScrapbookElement((entry, elementId) => {
+      const element = entry.scrapbookLayout?.elements.find((item) => item.id === elementId);
+      return element ? rotateScrapbookElement(entry, elementId, element.rotation + delta) : entry;
+    });
+  }
+
+  private layerSelectedScrapbookElement(direction: "front" | "back"): void {
+    this.updateSelectedScrapbookElement((entry, elementId) => layerScrapbookElement(entry, elementId, direction));
+  }
+
+  private deleteSelectedScrapbookElement(): void {
+    const entryId = this.activeScrapbookEntryId;
+    this.updateSelectedScrapbookElement((entry, elementId) => deleteScrapbookElement(entry, elementId));
+    this.selectedScrapbookElementId = "";
+    if (entryId) this.showScrapbookComposer(entryId);
+  }
+
+  private handlePointerDown(event: PointerEvent): void {
+    const target = (event.target as HTMLElement).closest<HTMLElement>(".scrapbook-element");
+    const page = (event.target as HTMLElement).closest<HTMLElement>(".scrapbook-page");
+    if (!target || !page || !this.activeScrapbookEntryId) return;
+    const elementId = target.dataset.element ?? "";
+    const rect = page.getBoundingClientRect();
+    const element = this.activeScrapbookEntry()?.scrapbookLayout?.elements.find((item) => item.id === elementId);
+    if (!element) return;
+    this.selectedScrapbookElementId = elementId;
+    this.scrapbookDrag = {
+      elementId,
+      entryId: this.activeScrapbookEntryId,
+      offsetX: ((event.clientX - rect.left) / rect.width) * 100 - element.x,
+      offsetY: ((event.clientY - rect.top) / rect.height) * 100 - element.y
+    };
+  }
+
+  private handlePointerMove(event: PointerEvent): void {
+    if (!this.scrapbookDrag) return;
+    const page = this.overlay.querySelector<HTMLElement>(".scrapbook-page");
+    const entry = this.activeScrapbookEntry();
+    if (!page || !entry) return;
+    const rect = page.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, ((event.clientX - rect.left) / rect.width) * 100 - this.scrapbookDrag.offsetX));
+    const y = Math.max(0, Math.min(100, ((event.clientY - rect.top) / rect.height) * 100 - this.scrapbookDrag.offsetY));
+    this.updateDiaryEntry(moveScrapbookElement(entry, this.scrapbookDrag.elementId, x, y));
+    const elementButton = this.overlay.querySelector<HTMLElement>(`.scrapbook-element[data-element="${CSS.escape(this.scrapbookDrag.elementId)}"]`);
+    if (elementButton) {
+      const element = this.activeScrapbookEntry()?.scrapbookLayout?.elements.find((item) => item.id === this.scrapbookDrag?.elementId);
+      if (element) elementButton.style.left = `${element.x}%`;
+      if (element) elementButton.style.top = `${element.y}%`;
+    }
   }
 
   private showMujiRoom(): void {

@@ -297,6 +297,108 @@ canvas {
 .quiet-line {
   color: #684b34;
 }
+.composer-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+}
+.attach-photo {
+  display: inline-grid;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid rgba(92, 61, 29, .24);
+  border-radius: 5px;
+  background: rgba(91, 57, 26, .09);
+  color: #4a3323;
+}
+.attach-photo input {
+  max-width: 210px;
+  color: #2b2118;
+}
+.composer-shell {
+  display: grid;
+  grid-template-columns: 170px minmax(280px, 1fr) 150px;
+  gap: 12px;
+  align-items: stretch;
+  margin: 12px 0;
+}
+.photo-tray,
+.composer-tools {
+  min-height: 340px;
+  padding: 10px;
+  border: 1px solid rgba(92, 61, 29, .18);
+  border-radius: 5px;
+  background: rgba(91, 57, 26, .07);
+  overflow: auto;
+}
+.photo-chip {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+.photo-chip img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border: 1px solid rgba(92, 61, 29, .24);
+  border-radius: 4px;
+}
+.photo-chip span {
+  color: #4b3828;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.scrapbook-page {
+  position: relative;
+  min-height: 420px;
+  overflow: hidden;
+  border: 1px solid rgba(92, 61, 29, .24);
+  border-radius: 5px;
+  background:
+    linear-gradient(rgba(104, 72, 42, .07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(104, 72, 42, .07) 1px, transparent 1px),
+    #f8efd9;
+  background-size: 24px 24px;
+}
+.empty-page {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  padding: 18px;
+  text-align: center;
+  color: #78583d;
+}
+.scrapbook-element {
+  position: absolute;
+  width: 130px;
+  height: 130px;
+  display: grid;
+  place-items: center;
+  padding: 5px;
+  border: 2px solid transparent;
+  background: #fff7e6;
+  box-shadow: 0 8px 18px rgba(60, 42, 24, .18);
+  touch-action: none;
+  cursor: grab;
+}
+.scrapbook-element.selected {
+  border-color: #b07234;
+  box-shadow: 0 0 0 3px rgba(176, 114, 52, .2), 0 9px 22px rgba(60, 42, 24, .24);
+}
+.scrapbook-element img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+.tool-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  margin-top: 8px;
+}
 .bottle-room {
   display: grid;
   grid-template-columns: minmax(180px, 300px) 1fr;
@@ -507,6 +609,20 @@ canvas {
   }
   .diary-row {
     grid-template-columns: 1fr;
+  }
+  .composer-head,
+  .composer-shell {
+    grid-template-columns: 1fr;
+  }
+  .composer-head {
+    display: grid;
+  }
+  .photo-tray,
+  .composer-tools {
+    min-height: auto;
+  }
+  .scrapbook-page {
+    min-height: 320px;
   }
   .bottle-room {
     grid-template-columns: 1fr;

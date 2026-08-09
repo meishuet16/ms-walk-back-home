@@ -92,3 +92,25 @@ test("legacy v1 autosave migrates diary entries as diary-only and keeps old scra
   assert.deepEqual(migrated.journey.visitedMemories, ["yumido"]);
   assert.deepEqual(migrated.journey.room.reflections, ["quiet room"]);
 });
+
+test("diary library reload preserves photo attachments and scrapbook layout", () => {
+  installStorage();
+  const manager = new SaveManager();
+  const entry: DiaryEntry = {
+    id: "diary-composer",
+    date: "2026-08-11",
+    title: "Composer",
+    body: "A fictional page.",
+    memoryKind: "diary",
+    photos: [{ id: "photo-1", src: "data:image/png;base64,abc", caption: "paper" }],
+    scrapbookLayout: {
+      elements: [{ id: "element-1", type: "photo", photoId: "photo-1", x: 25, y: 36, scale: 1.35, rotation: -12, zIndex: 2 }]
+    }
+  };
+
+  manager.saveDiaryLibrary({ version: 1, savedAt: "now", entries: [entry], legacyArtifacts: [] });
+  const reloaded = manager.loadDiaryLibrary();
+
+  assert.equal(reloaded?.entries[0].photos?.[0].src, "data:image/png;base64,abc");
+  assert.deepEqual(reloaded?.entries[0].scrapbookLayout?.elements[0], entry.scrapbookLayout?.elements[0]);
+});
