@@ -31,6 +31,12 @@ export function openDiaryPageForDate(library: DiaryLibraryState, date: string): 
   return { library: nextLibrary, entry, created: true };
 }
 
+export function createNewDiaryPage(library: DiaryLibraryState, date: string): { library: DiaryLibraryState; entry: DiaryEntry } {
+  const entry = makeDiaryEntry(date, "Untitled Memory", "", `diary-${date}-${Date.now()}-${library.entries.length + 1}`);
+  const nextLibrary = upsertDiaryEntry(library, entry);
+  return { library: nextLibrary, entry };
+}
+
 export function setDiaryEntryKind(library: DiaryLibraryState, id: string, memoryKind: MemoryKind, chapterId?: string): DiaryLibraryState {
   return {
     ...library,

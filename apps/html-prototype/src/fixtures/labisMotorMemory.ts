@@ -1,6 +1,8 @@
 import type { CutsceneAction } from "../systems/CutsceneSystem.js";
 import type { MemoryTrigger } from "../systems/MemoryTrigger.js";
 import type { Rect } from "../systems/CollisionSystem.js";
+import type { Point } from "../systems/CollisionSystem.js";
+import { activeMemoryTrigger } from "../systems/MemoryTrigger.js";
 
 export const labisSpawn = { x: 750, y: 650 };
 
@@ -27,6 +29,11 @@ export const labisMemoryTriggers: MemoryTrigger[] = [
   }
 ];
 
+export function canStartLabisMotorMemory(point: Point, readMemories: Set<string>, completedEventIds: Set<string>): boolean {
+  if (!readMemories.has("labis-motor-day")) return false;
+  return Boolean(activeMemoryTrigger(point, labisMemoryTriggers, completedEventIds));
+}
+
 export const labisMotorMemoryActions: CutsceneAction[] = [
   { type: "wait", duration: 0.42 },
   { type: "spawn", actor: "motor", kind: "compound-motor", x: 570, y: 555, facing: "right", expression: "nervous", label: "ET + motor" },
@@ -40,6 +47,7 @@ export const labisMotorMemoryActions: CutsceneAction[] = [
   { type: "face", actor: "motor", direction: "left" },
   { type: "wait", duration: 0.35 },
   { type: "dialogue", speaker: "ET", text: "单凭这一点，没有白来。" },
+  { type: "dialogue", speaker: "Memory", text: "那个下午当时没有发光，只是后来一直没有散掉。" },
   { type: "wait", duration: 0.7 },
   { type: "despawn", actor: "motor" },
   { type: "despawn", actor: "ms" }

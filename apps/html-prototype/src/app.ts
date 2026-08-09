@@ -1,18 +1,17 @@
 import { bakeryChapter } from "./fixtures/chapterPlan.js";
-import { labisBlockers, labisMemoryTriggers, labisMotorMemoryActions, labisSpawn } from "./fixtures/labisMotorMemory.js";
+import { canStartLabisMotorMemory, labisBlockers, labisMotorMemoryActions, labisSpawn } from "./fixtures/labisMotorMemory.js";
 import type { ChapterProgress, Choice, DiaryEntry, DiaryLibraryState, JourneyState, MemoryKind, RoomJourneyState, SceneId, Tendencies } from "./types.js";
 import { AudioManager } from "./systems/AudioManager.js";
 import { chapterRegistry, forestEntries, routeForestEntry, type AuthoredForestEntry } from "./systems/ChapterRegistry.js";
 import { beginChapterVisit, finishChapterWalkthrough, initialChapterProgress, markChapterDialogueComplete, markChapterMemoryRead, recordChapterChoice } from "./systems/ChapterProgressManager.js";
 import { inAnyRect, type Point, type Rect } from "./systems/CollisionSystem.js";
 import { CutsceneSystem } from "./systems/CutsceneSystem.js";
-import { deleteDiaryEntryById, getDiaryForestMemories, getDiaryTimeline, openDiaryPageForDate, upsertDiaryEntry, upsertDiaryPageDraft } from "./systems/DiaryLibrary.js";
+import { createNewDiaryPage, deleteDiaryEntryById, getDiaryForestMemories, getDiaryTimeline, openDiaryPageForDate, upsertDiaryEntry, upsertDiaryPageDraft } from "./systems/DiaryLibrary.js";
 import { diaryMoodOptions, isDiaryMood } from "./systems/DiaryMood.js";
 import { makeDiaryEntry, parseDiaryImport, updateDiaryMemoryKind, type DiaryForestMemory } from "./systems/DiaryImport.js";
 import { DialogueSystem } from "./systems/DialogueSystem.js";
 import { resolveChapterReflection, type Ending } from "./systems/EndingResolver.js";
 import { InputManager } from "./systems/InputManager.js";
-import { activeMemoryTrigger } from "./systems/MemoryTrigger.js";
 import { ParticleSystem } from "./systems/ParticleSystem.js";
 import { drawSceneActor } from "./systems/SceneActorRenderer.js";
 import {
@@ -129,7 +128,7 @@ export class WalkBackHomeApp {
           <div><strong>Walk Back Home</strong><span>A gentle walk through memories that still glow.</span></div>
           <nav>
             <button data-action="home">Today</button>
-            <button data-action="open-diary-editor">Journal</button>
+            <button data-action="open-timeline">Timeline</button>
             <button data-action="new">Begin Journey</button>
             <button data-action="continue">Continue</button>
             <button data-action="settings">Settings</button>
@@ -195,7 +194,8 @@ export class WalkBackHomeApp {
     if (action === "open-map") this.showMap();
     if (action === "open-room") this.enterMujiRoom();
     if (action === "write-today") this.openTodayDiaryPage();
-    if (action === "open-diary-editor") this.showDiaryEditor();
+    if (action === "new-diary-entry") this.openNewDiaryPage();
+    if (action === "open-diary-editor") this.showTimeline();
     if (action === "save-diary-entry") this.saveDiaryEntry(target.dataset.id);
     if (action === "edit-diary-entry") this.showDiaryEditor(target.dataset.id);
     if (action === "delete-diary-entry") this.deleteDiaryEntry(target.dataset.id ?? "");
@@ -344,15 +344,16 @@ export class WalkBackHomeApp {
       return;
     }
     this.move(x, y, dt, labisBlockers, []);
-    const trigger = activeMemoryTrigger(this.player, labisMemoryTriggers, this.completedMemoryEvents);
-    if (trigger) {
+    const canStartMemory = canStartLabisMotorMemory(this.player, this.readMemories, this.completedMemoryEvents);
+    const waitingForDiary = !this.readMemories.has("labis-motor-day") && Math.hypot(this.player.x - 740, this.player.y - 585) < 118;
+    if (canStartMemory) {
       this.startLabisMemory(false);
       return;
     }
     const nearMemory = this.completedMemoryEvents.has("july19-motor-learning") && Math.hypot(this.player.x - 740, this.player.y - 545) < 88;
     const nearExit = this.player.y > 735 || this.player.x < 135;
     const nearShop = Math.hypot(this.player.x - 1040, this.player.y - 345) < 96;
-    this.activeObject = nearMemory ? "motor memory" : nearShop ? "family shop" : nearExit ? "exit" : "";
+    this.activeObject = waitingForDiary ? "diary memory" : nearMemory ? "motor memory" : nearShop ? "family shop" : nearExit ? "exit" : "";
   }
 
   private startLabisMemory(replay: boolean): void {
@@ -384,6 +385,7 @@ export class WalkBackHomeApp {
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
     this.showToast(alreadyCompleted ? "Memory replayed" : "Memory Unlocked · 第一次学会驾 motor");
+    if (!alreadyCompleted) this.showChapterEndingQuote("after the motor lesson", "The afternoon stays ordinary");
     this.autosave();
   }
 
@@ -436,6 +438,7 @@ export class WalkBackHomeApp {
       }
       if (this.labisCutscene) return;
       if (this.activeObject === "exit") return this.returnToForest();
+      if (this.activeObject === "diary memory") return this.showDiaryMemory();
       if (this.activeObject === "motor memory") return this.showLabisMemoryPoint();
       if (this.activeObject === "family shop") return this.inspectLabisShop();
       return this.showToast("Walk through the open road");
@@ -504,7 +507,7 @@ export class WalkBackHomeApp {
     this.visitedMemories.add(door.id);
     this.currentDoor = door;
     if ("kind" in door && door.kind === "fragment") {
-      this.overlay.innerHTML = `<div class="modal"><h2>${this.escapeHtml(door.date)} · ${this.escapeHtml(door.title)}</h2><p>${this.escapeHtml(door.excerpt)}</p><p>This memory is a small light, not a full chapter.</p><button data-action="close">Stay in forest</button><button data-action="open-timeline">Open Journal</button></div>`;
+      this.overlay.innerHTML = `<div class="modal"><h2>${this.escapeHtml(door.date)} · ${this.escapeHtml(door.title)}</h2><p>${this.escapeHtml(door.excerpt)}</p><p>This memory is a small light, not a full chapter.</p><button data-action="close">Stay in forest</button><button data-action="open-timeline">Open Timeline</button></div>`;
       this.autosave();
       this.focusStage();
       return;
@@ -512,7 +515,7 @@ export class WalkBackHomeApp {
     const route = "kind" in door ? { kind: door.implemented ? "implemented-chapter" : "stub" as const } : routeForestEntry(door);
     const state = this.progressFor(this.chapterIdFor(door)).state;
     if (route.kind === "stub") {
-      this.overlay.innerHTML = `<div class="modal"><h2>${this.escapeHtml(door.date)} · ${this.escapeHtml(door.title)}</h2><p>This memory is not yet authored.</p><p>The forest keeps the door, but it will not borrow Yumido Bread's scene.</p><button data-action="open-timeline">Open Journal</button><button data-action="close">Stay in forest</button></div>`;
+      this.overlay.innerHTML = `<div class="modal"><h2>${this.escapeHtml(door.date)} · ${this.escapeHtml(door.title)}</h2><p>This memory is not yet authored.</p><p>The forest keeps the door, but it will not borrow Yumido Bread's scene.</p><button data-action="open-timeline">Open Timeline</button><button data-action="close">Stay in forest</button></div>`;
       this.autosave();
       this.focusStage();
       return;
@@ -558,7 +561,7 @@ export class WalkBackHomeApp {
     const chapterId = this.chapterIdFor(door);
     this.readMemories.add(chapterId);
     this.chapterProgress.set(chapterId, markChapterMemoryRead(this.progressFor(chapterId)));
-    const memoryText = "memoryText" in door ? door.memoryText : (bakeryChapter.memoryText ?? []);
+    const memoryText = "memoryText" in door ? door.memoryText : (chapterRegistry[chapterId]?.memoryText ?? bakeryChapter.memoryText ?? []);
     const lines = memoryText.map((line, index) => index === 0 ? `<h2>${this.escapeHtml(door.date)} · ${this.escapeHtml(door.title)}</h2>` : `<p>${this.escapeHtml(line)}</p>`).join("");
     this.overlay.innerHTML = `<div class="modal diary-memory">${lines}<button data-action="close">Close</button><button data-action="forest">Exit to forest</button></div>`;
     this.showToast("Diary memory read");
@@ -641,10 +644,24 @@ export class WalkBackHomeApp {
     this.chapterProgress.set(this.currentMemoryKey(), finishChapterWalkthrough(progress, reflection.quoteId, reflection.tone));
     this.walkedThroughMemories.add(this.currentMemoryKey());
     this.room.residueIds = [...new Set([...(this.room.residueIds ?? []), this.currentMemoryKey()])];
-    this.overlay.classList.remove("dialogue-open");
-    this.overlay.innerHTML = `<div class="modal ending-quote"><span class="ending-kicker">after the conversation</span><h2>The rain slows</h2><p>${reflection.closureLines.map((line) => this.escapeHtml(line)).join("<br>")}</p><blockquote>${reflection.lines.map((line) => this.escapeHtml(line)).join("<br>")}</blockquote><p class="ending-afterline">Some doors do not forgive us. They simply stop asking us to be the person we were when we left.</p><button data-action="close">Close</button><button data-action="forest">Return to Forest</button></div>`;
+    this.renderEndingQuote("after the conversation", "The rain slows", reflection);
     this.audio.ping("ending");
     this.autosave();
+  }
+
+  private showChapterEndingQuote(kicker: string, title: string): void {
+    const progress = markChapterDialogueComplete(this.progressFor(this.currentMemoryKey()));
+    const reflection = resolveChapterReflection(chapterRegistry[this.currentMemoryKey()], progress);
+    this.chapterProgress.set(this.currentMemoryKey(), finishChapterWalkthrough(progress, reflection.quoteId, reflection.tone));
+    this.walkedThroughMemories.add(this.currentMemoryKey());
+    this.room.residueIds = [...new Set([...(this.room.residueIds ?? []), this.currentMemoryKey()])];
+    this.renderEndingQuote(kicker, title, reflection);
+    this.audio.ping("ending");
+  }
+
+  private renderEndingQuote(kicker: string, title: string, reflection: ReturnType<typeof resolveChapterReflection>): void {
+    this.overlay.classList.remove("dialogue-open");
+    this.overlay.innerHTML = `<div class="modal ending-quote"><span class="ending-kicker">${this.escapeHtml(kicker)}</span><h2>${this.escapeHtml(title)}</h2><p>${reflection.closureLines.map((line) => this.escapeHtml(line)).join("<br>")}</p><blockquote>${reflection.lines.map((line) => this.escapeHtml(line)).join("<br>")}</blockquote><p class="ending-afterline">Some places do not ask us to make them dramatic. They simply keep the afternoon until we are ready to see it.</p><button data-action="close">Close</button><button data-action="forest">Return to Forest</button></div>`;
   }
 
   private finishBakery(): void {
@@ -948,7 +965,7 @@ export class WalkBackHomeApp {
     return `
       <div class="module-grid">
         <button data-action="home">Today / Home<span>Write today or continue gently</span></button>
-        <button data-action="open-diary-editor">Journal<span>${this.diaryEntries.length} diary entries</span></button>
+        <button data-action="open-timeline">Timeline<span>${this.diaryEntries.length} diary entries</span></button>
         <button data-action="open-map">Walk Back Home<span>${this.allDoors().length} forest memories</span></button>
         <button data-action="open-room">Muji Room<span>Present-tense rest space</span></button>
       </div>
@@ -971,9 +988,24 @@ export class WalkBackHomeApp {
     this.autosave();
   }
 
+  private openNewDiaryPage(): void {
+    const today = new Date().toISOString().slice(0, 10);
+    const opened = createNewDiaryPage(this.makeDiaryLibrary(), today);
+    this.applyDiaryLibrary(opened.library);
+    this.showDiaryEditor(opened.entry.id);
+    this.showToast("New journal created");
+    this.autosave();
+  }
+
   private showTimeline(): void {
-    const rows = getDiaryTimeline(this.makeDiaryLibrary()).map((entry) => `<li>${this.escapeHtml(entry.date)} · ${this.escapeHtml(entry.title)} · ${entry.memoryKind}${entry.hasScrapbookLayout ? " · scrapbook page" : ""}</li>`).join("");
-    this.overlay.innerHTML = `<div class="modal game-panel"><h2>Diary Timeline</h2><p>These are days that happened. The Forest only shows entries you classify as fragments or chapters.</p><ul>${rows || "<li>No diary entries yet.</li>"}</ul><button data-action="open-diary-editor">Journal</button><button data-action="settings">Back</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
+    const rows = getDiaryTimeline(this.makeDiaryLibrary()).map((entry) => `
+      <article class="timeline-entry">
+        <div><strong>${this.escapeHtml(entry.date)}</strong><h3>${this.escapeHtml(entry.title)}</h3><p>${this.escapeHtml(entry.body.slice(0, 120)) || "Empty draft"}</p></div>
+        <span>${entry.memoryKind}${entry.hasScrapbookLayout ? " · scrapbook" : ""}</span>
+        <button data-action="edit-diary-entry" data-id="${this.escapeHtml(entry.id)}">Edit</button>
+        <button data-action="delete-diary-entry" data-id="${this.escapeHtml(entry.id)}">Delete</button>
+      </article>`).join("");
+    this.overlay.innerHTML = `<div class="modal game-panel"><h2>Timeline</h2><p>All diary entries live here. Memory classification controls whether an entry also appears as a Forest fragment or chapter.</p><div class="timeline-list">${rows || "<p>No diary entries yet.</p>"}</div><button data-action="new-diary-entry">New Journal</button><button data-action="write-today">Write Today</button><button data-action="settings">Back</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
     this.focusStage();
   }
 
@@ -982,11 +1014,12 @@ export class WalkBackHomeApp {
       const state = this.isChapterNode(door) ? this.progressFor(this.chapterIdFor(door)).state : "fragment";
       return `<button data-action="enter-door" data-door="${this.escapeHtml(door.id)}">${this.escapeHtml(door.date)} ${this.escapeHtml(door.title)}<span>${state === "walkedThrough" ? "Remember" : state}</span></button>`;
     }).join("");
-    this.overlay.innerHTML = `<div class="modal game-panel"><h2>Walk Back Home</h2><p>The Forest contains only memory fragments and authored chapter doors.</p><div class="settings-row">${doors || "<p>No forest-visible diary entries yet.</p>"}</div><button data-action="open-diary-editor">Journal</button><button data-action="settings">Back</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
+    this.overlay.innerHTML = `<div class="modal game-panel"><h2>Walk Back Home</h2><p>The Forest contains only memory fragments and authored chapter doors.</p><div class="settings-row">${doors || "<p>No forest-visible diary entries yet.</p>"}</div><button data-action="open-timeline">Timeline</button><button data-action="settings">Back</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
     this.focusStage();
   }
 
   private showDiaryEditor(editId = ""): void {
+    if (!editId) return this.showTimeline();
     const editing = this.diaryEntries.find((entry) => entry.id === editId) ?? this.diaryEntries[0];
     const today = new Date().toISOString().slice(0, 10);
     const dateValue = editing?.date ?? today;
@@ -1060,7 +1093,7 @@ export class WalkBackHomeApp {
         <div class="integrated-tools journal-photo-dock">
           <aside class="photo-tray">${photos}</aside>
         </div>
-        <div class="journal-lower-tools"><p class="autosave-state" id="diary-save-state">Saved</p><label class="journal-kind">Memory<select id="diary-memory-kind"><option value="diary" ${editing?.memoryKind === "diary" ? "selected" : ""}>Diary only</option><option value="fragment" ${editing?.memoryKind === "fragment" ? "selected" : ""}>Memory Fragment</option><option value="chapter" ${editing?.memoryKind === "chapter" ? "selected" : ""}>Memory Chapter</option></select></label><button data-action="show-import-diary">Import Existing Diary</button><button data-action="open-timeline">Entries</button><button data-action="open-map">Walk Back Home</button><button data-action="close">Close</button></div>
+        <div class="journal-lower-tools"><p class="autosave-state" id="diary-save-state">Saved</p><label class="journal-kind">Memory<select id="diary-memory-kind"><option value="diary" ${editing?.memoryKind === "diary" ? "selected" : ""}>Diary only</option><option value="fragment" ${editing?.memoryKind === "fragment" ? "selected" : ""}>Memory Fragment</option><option value="chapter" ${editing?.memoryKind === "chapter" ? "selected" : ""}>Memory Chapter</option></select></label><button data-action="show-import-diary">Import Existing Diary</button><button data-action="open-timeline">Timeline</button><button data-action="open-map">Walk Back Home</button><button data-action="close">Close</button></div>
       </div>`;
     this.focusStage();
   }
@@ -1071,8 +1104,7 @@ export class WalkBackHomeApp {
     const index = this.diaryEntries.findIndex((item) => item.id === entry.id);
     this.applyDiaryLibrary(upsertDiaryPageDraft(this.makeDiaryLibrary(), entry));
     this.selectedChapter = entry.title;
-    this.showDiaryEditor(entry.id);
-    this.markDiarySaved(index >= 0 ? "Saved just now ✓" : "Added and saved ✓");
+    this.showTimeline();
     this.showToast(index >= 0 ? "Diary updated" : "Diary entry added");
     this.autosave();
   }
@@ -1142,7 +1174,7 @@ export class WalkBackHomeApp {
         <label>TXT / Markdown file<input id="diary-import-file" type="file" accept=".txt,.md,.markdown,text/plain,text/markdown"></label>
         <label>Diary lines<textarea id="diary-import" rows="8" placeholder="2026-08-06 | Rain Letter | I kept thinking about the yellow bakery light."></textarea></label>
         <button data-action="import-diary-lines">Import Lines</button>
-        <button data-action="open-diary-editor">Back to Journal</button>
+        <button data-action="open-timeline">Back to Timeline</button>
         <button data-action="close">Close</button>
       </div>`;
     this.focusStage();
@@ -1160,7 +1192,7 @@ export class WalkBackHomeApp {
       this.applyDiaryLibrary(upsertDiaryEntry(this.makeDiaryLibrary(), entry));
     }
     this.showToast(`Imported ${imported.length} diary date${imported.length === 1 ? "" : "s"}`);
-    this.showDiaryEditor();
+    this.showTimeline();
     this.autosave();
   }
 
@@ -1174,7 +1206,7 @@ export class WalkBackHomeApp {
       if (this.currentDoor?.id === entry.id) this.currentDoor = null;
       this.showToast("Diary date deleted");
     }
-    this.showDiaryEditor();
+    this.showTimeline();
     this.autosave();
   }
 
@@ -1474,7 +1506,7 @@ export class WalkBackHomeApp {
   }
 
   private roomDiary(): void {
-    this.showDiaryEditor();
+    this.showTimeline();
   }
 
   private inspectRoomResidue(): void {

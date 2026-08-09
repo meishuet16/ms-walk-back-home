@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { addPhotoAttachment, addPhotoElement, createCutoutElement, diaryTextFrame, moveScrapbookElement, removePhotoAttachment } from "../src/systems/ScrapbookComposer.js";
-import { createDiaryLibrary, openDiaryPageForDate, upsertDiaryPageDraft } from "../src/systems/DiaryLibrary.js";
+import { createDiaryLibrary, createNewDiaryPage, openDiaryPageForDate, upsertDiaryPageDraft } from "../src/systems/DiaryLibrary.js";
 import { makeDiaryEntry, normalizeDiaryEntry, parseDiaryImport } from "../src/systems/DiaryImport.js";
 import { diaryMoodOptions } from "../src/systems/DiaryMood.js";
 
@@ -68,6 +68,14 @@ test("write today reuses the existing diary page for that date", () => {
   assert.equal(opened.entry.id, existing.id);
   assert.equal(opened.created, false);
   assert.equal(opened.library.entries.length, 1);
+});
+
+test("creating new diary pages does not overwrite existing entries", () => {
+  const first = createNewDiaryPage(createDiaryLibrary(), "2026-08-10");
+  const second = createNewDiaryPage(first.library, "2026-08-10");
+
+  assert.notEqual(first.entry.id, second.entry.id);
+  assert.equal(second.library.entries.length, 2);
 });
 
 test("upserting a diary page draft preserves photos and layout on the diary entry", () => {

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { labisMotorChapter } from "../src/fixtures/labisMotorChapter.js";
-import { labisMemoryTriggers, labisMotorMemoryActions } from "../src/fixtures/labisMotorMemory.js";
+import { canStartLabisMotorMemory, labisMemoryTriggers, labisMotorMemoryActions } from "../src/fixtures/labisMotorMemory.js";
 import { chapterRegistry, forestEntries, routeForestEntry } from "../src/systems/ChapterRegistry.js";
 import { CutsceneSystem } from "../src/systems/CutsceneSystem.js";
 import { activeMemoryTrigger } from "../src/systems/MemoryTrigger.js";
@@ -46,6 +46,12 @@ test("labis memory trigger respects once-completed events", () => {
   assert.equal(activeMemoryTrigger({ x: trigger.rect.x + 20, y: trigger.rect.y + 20 }, labisMemoryTriggers, new Set(["july19-motor-learning"])), null);
 });
 
+test("labis motor trigger requires the diary memory to be read first", () => {
+  const trigger = labisMemoryTriggers[0];
+  assert.equal(canStartLabisMotorMemory({ x: trigger.rect.x + 20, y: trigger.rect.y + 20 }, new Set(), new Set()), false);
+  assert.equal(canStartLabisMotorMemory({ x: trigger.rect.x + 20, y: trigger.rect.y + 20 }, new Set(["labis-motor-day"]), new Set()), true);
+});
+
 test("labis cutscene reaches ET dialogue and completes after acknowledgement", () => {
   const cutscene = new CutsceneSystem(labisMotorMemoryActions);
   for (let i = 0; i < 600 && !cutscene.currentDialogue; i += 1) cutscene.update(1 / 30);
@@ -54,6 +60,9 @@ test("labis cutscene reaches ET dialogue and completes after acknowledgement", (
   assert.equal(cutscene.currentDialogue?.text, "单凭这一点，没有白来。");
   assert.equal(cutscene.actors.has("motor"), true);
 
+  cutscene.advanceDialogue();
+  cutscene.update(1 / 30);
+  assert.equal(cutscene.currentDialogue?.speaker, "Memory");
   cutscene.advanceDialogue();
   for (let i = 0; i < 120 && !cutscene.completed; i += 1) cutscene.update(1 / 30);
 
