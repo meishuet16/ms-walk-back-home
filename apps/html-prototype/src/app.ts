@@ -109,6 +109,7 @@ export class WalkBackHomeApp {
     root.addEventListener("click", (event) => this.handleClick(event));
     root.addEventListener("pointerdown", () => void this.audio.ensurePlaying(), { passive: true });
     root.addEventListener("keydown", () => void this.audio.ensurePlaying());
+    this.bootstrapDiaryLibrary();
     this.audio.setVolume(this.settings.volume);
     void this.audio.enable();
     document.addEventListener("visibilitychange", () => {
@@ -219,6 +220,18 @@ export class WalkBackHomeApp {
       this.newMemory();
       this.showToast("Begin Journey");
     }
+  }
+
+  private bootstrapDiaryLibrary(): void {
+    const saved = this.save.loadDiaryLibrary();
+    if (saved) {
+      this.applyDiaryLibrary(saved);
+      return;
+    }
+    const legacy = this.save.loadAutosave();
+    if (!legacy?.diaryEntries?.length) return;
+    const migrated = this.save.migrateLegacyAutosave();
+    this.applyDiaryLibrary(migrated.diary);
   }
 
   private updateForest(x: number, y: number, dt: number): void {
