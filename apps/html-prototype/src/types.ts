@@ -45,6 +45,113 @@ export type DiaryEntry = {
   date: string;
   title: string;
   body: string;
+  memoryKind: MemoryKind;
+  chapterId?: string;
+  photos?: DiaryPhoto[];
+  scrapbookLayout?: ScrapbookLayout;
+};
+
+export type MemoryKind = "diary" | "fragment" | "chapter";
+
+export type DiaryPhoto = {
+  id: string;
+  src: string;
+  caption?: string;
+};
+
+export type ScrapbookElement =
+  | {
+      id: string;
+      type: "photo";
+      photoId: string;
+      x: number;
+      y: number;
+      scale: number;
+      rotation: number;
+      zIndex: number;
+    }
+  | {
+      id: string;
+      type: "cutout";
+      sourcePhotoId: string;
+      maskData?: unknown;
+      x: number;
+      y: number;
+      scale: number;
+      rotation: number;
+      zIndex: number;
+    };
+
+export type ScrapbookLayout = {
+  elements: ScrapbookElement[];
+};
+
+export type ReflectionTone = "accepting" | "holding" | "not-ready" | "rewriting";
+
+export type ChapterProgressState = "unseen" | "visited" | "walkedThrough";
+
+export type RoomJourneyState = {
+  visits: number;
+  reflections: string[];
+  lampOn?: boolean;
+  musicOn?: boolean;
+  residueIds?: string[];
+};
+
+export type DiaryLibraryState = {
+  version: 1;
+  savedAt: string;
+  entries: DiaryEntry[];
+  legacyArtifacts: string[];
+};
+
+export type JourneyState = {
+  version: 1;
+  savedAt: string;
+  scene: SceneId;
+  player: { x: number; y: number };
+  visitedMemories: string[];
+  walkedThroughMemories: string[];
+  choices: string[];
+  tendencies: Tendencies;
+  readMemories: string[];
+  room: RoomJourneyState;
+  finalJourney: string[];
+};
+
+export type ChapterProgress = {
+  chapterId: string;
+  state: ChapterProgressState;
+  visited: boolean;
+  memoryRead: boolean;
+  dialogueCompleted: boolean;
+  walkedThrough: boolean;
+  choices: string[];
+  tendencies: Tendencies;
+  reflectionTone?: ReflectionTone;
+  closingQuoteId?: string;
+};
+
+export type ChapterReflectionQuote = {
+  id: string;
+  tone: ReflectionTone;
+  lines: string[];
+};
+
+export type ChapterReflection = {
+  tone: ReflectionTone;
+  quoteId: string;
+  lines: string[];
+  historicalEventId: string;
+  closureLines: string[];
+};
+
+export type ChapterDefinition = HtmlChapterScene & {
+  canonicalClosure: {
+    historicalEventId: string;
+    lines: string[];
+  };
+  reflectionQuotes: ChapterReflectionQuote[];
 };
 
 export type SaveState = {

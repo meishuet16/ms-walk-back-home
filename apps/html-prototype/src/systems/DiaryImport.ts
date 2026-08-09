@@ -1,15 +1,42 @@
-import type { DiaryEntry } from "../types.js";
+import type { DiaryEntry, MemoryKind } from "../types.js";
 
-export type DiaryDoor = {
+export type DiaryTimelineItem = {
   id: string;
   date: string;
   title: string;
-  x: number;
-  y: number;
-  chapterId: string;
-  memoryText: string[];
-  userEntryId: string;
+  body: string;
+  memoryKind: MemoryKind;
+  chapterId?: string;
+  hasScrapbookLayout: boolean;
 };
+
+export type DiaryForestMemory =
+  | {
+      id: string;
+      kind: "fragment";
+      date: string;
+      title: string;
+      x: number;
+      y: number;
+      excerpt: string;
+      userEntryId: string;
+    }
+  | {
+      id: string;
+      kind: "chapter";
+      date: string;
+      title: string;
+      x: number;
+      y: number;
+      chapterId: string;
+      implemented: boolean;
+      memoryText: string[];
+      userEntryId: string;
+    };
+
+export type DiaryDoor = Extract<DiaryForestMemory, { kind: "chapter" }>;
+
+const authoredChapterIds = new Set(["bakery-day"]);
 
 const datePositionPool = [
   { x: 530, y: 205 },
@@ -21,6 +48,107 @@ const datePositionPool = [
   { x: 280, y: 650 },
   { x: 1290, y: 250 }
 ];
+
+export function diaryEntryToTimelineItem(entry: DiaryEntry): DiaryTimelineItem {
+  return {
+    id: entry.id,
+    date: entry.date,
+    title: entry.title,
+    body: entry.body,
+    memoryKind: entry.memoryKind,
+    chapterId: entry.chapterId,
+    hasScrapbookLayout: Boolean(entry.scrapbookLayout?.elements.length)
+  };
+}
+
+export function diaryEntriesToTimeline(entries: DiaryEntry[]): DiaryTimelineItem[] {
+  return [...entries]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .map(diaryEntryToTimelineItem);
+}
+
+export function diaryEntryToForestMemory(entry: DiaryEntry, index: number): DiaryForestMemory | null {
+  if (entry.memoryKind === "diary") return null;
+  const position = datePositionPool[index % datePositionPool.length];
+  if (entry.memoryKind === "fragment") {
+    return {
+      id: entry.id,
+      kind: "fragment",
+      date: entry.date,
+      title: entry.title,
+      x: position.x,
+      y: position.y,
+      excerpt: entry.body,
+      userEntryId: entry.id
+    };
+  }
+  const chapterId = entry.chapterId || entry.id;
+  return {
+    id: entry.id,
+    kind: "chapter",
+    date: entry.date,
+    title: entry.title,
+    x: position.x,
+    y: position.y,
+    chapterId,
+    implemented: authoredChapterIds.has(chapterId),
+    userEntryId: entry.id,
+    memoryText: [
+      `${entry.date} · ${entry.title}`,
+      entry.body,
+      authoredChapterIds.has(chapterId)
+        ? "This diary entry is linked to an authored chapter."
+        : "This memory has not been authored as a full chapter yet."
+    ]
+  };
+}
+
+export function diaryEntriesToForestMemories(entries: DiaryEntry[]): DiaryForestMemory[] {
+  return entries
+    .map((entry, index) => diaryEntryToForestMemory(entry, index))
+    .filter((entry): entry is DiaryForestMemory => Boolean(entry));
+}
+
+export function updateDiaryMemoryKind(entry: DiaryEntry, memoryKind: MemoryKind, chapterId = entry.chapterId): DiaryEntry {
+  return {
+    ...entry,
+    memoryKind,
+    chapterId: memoryKind === "chapter" ? chapterId || entry.id : undefined
+  };
+}
+
+function normalizeMemoryKind(value: unknown): MemoryKind {
+  return value === "fragment" || value === "chapter" || value === "diary" ? value : "diary";
+}
+
+export function normalizeDiaryEntry(entry: Partial<DiaryEntry> & Pick<DiaryEntry, "date" | "title" | "body">): DiaryEntry {
+  return {
+    id: entry.id || makeDiaryId(entry.date, entry.title),
+    date: entry.date.trim(),
+    title: entry.title.trim() || "Untitled Memory",
+    body: entry.body.trim(),
+    memoryKind: normalizeMemoryKind(entry.memoryKind),
+    chapterId: entry.memoryKind === "chapter" ? entry.chapterId || entry.id : undefined,
+    photos: entry.photos ?? [],
+    scrapbookLayout: entry.scrapbookLayout ?? { elements: [] }
+  };
+}
+
+export function makeDiaryEntry(
+  date: string,
+  title: string,
+  body: string,
+  id = makeDiaryId(date, title),
+  memoryKind: MemoryKind = "diary"
+): DiaryEntry {
+  return normalizeDiaryEntry({
+    id,
+    date,
+    title,
+    body,
+    memoryKind
+  });
+}
 
 export function makeDiaryId(date: string, title: string): string {
   const slug = `${date}-${title}`
@@ -44,29 +172,8 @@ export function parseDiaryImport(text: string): DiaryEntry[] {
     .filter((entry) => entry.date.length > 0 && entry.body.length > 0);
 }
 
-export function makeDiaryEntry(date: string, title: string, body: string, id = makeDiaryId(date, title)): DiaryEntry {
-  return {
-    id,
-    date: date.trim(),
-    title: title.trim() || "Untitled Memory",
-    body: body.trim()
-  };
-}
-
 export function diaryEntryToDoor(entry: DiaryEntry, index: number): DiaryDoor {
-  const position = datePositionPool[index % datePositionPool.length];
-  return {
-    id: entry.id,
-    date: entry.date,
-    title: entry.title,
-    x: position.x,
-    y: position.y,
-    chapterId: entry.id,
-    userEntryId: entry.id,
-    memoryText: [
-      `${entry.date} · ${entry.title}`,
-      entry.body,
-      "Muji does not know whether this day wants to become a chapter yet. For now, the forest gives it a small light."
-    ]
-  };
+  const memory = diaryEntryToForestMemory(updateDiaryMemoryKind(entry, "chapter"), index);
+  if (!memory || memory.kind !== "chapter") throw new Error("Expected chapter diary entry");
+  return memory;
 }

@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import test from "node:test";
 import { chapterPlanToHtmlScene } from "../src/adapters/chapterPlanAdapter.js";
 import { bakeryChapter, forestDoors } from "../src/fixtures/chapterPlan.js";
-import { diaryEntryToDoor, parseDiaryImport } from "../src/systems/DiaryImport.js";
+import { diaryEntriesToForestMemories, diaryEntriesToTimeline, parseDiaryImport, updateDiaryMemoryKind } from "../src/systems/DiaryImport.js";
 import { globalMusic, sceneMusic, sceneMusicDataUri } from "../src/systems/SceneMusic.js";
 import type { SaveState } from "../src/types.js";
 
@@ -48,7 +48,7 @@ test("save state includes a version and narrative persistence fields", () => {
     selectedChapter: "Yumido Bread",
     settings: { rain: true, muted: true, volume: 0.2, compact: false, reducedMotion: false },
     readMemories: ["bakery-day"],
-    diaryEntries: [{ id: "diary-2026-08-06", date: "2026-08-06", title: "A Quiet Test", body: "Rain on the bus window." }],
+    diaryEntries: [{ id: "diary-2026-08-06", date: "2026-08-06", title: "A Quiet Test", body: "Rain on the bus window.", memoryKind: "diary" }],
     endingProgress: []
   };
   assert.equal(save.version, 1);
@@ -80,16 +80,51 @@ test("global music loops the local bakery mp3 without creating a YouTube player"
   assert.ok(sceneMusicDataUri("bakery").startsWith("data:audio/wav;base64,"));
 });
 
-test("diary import creates dated forest memory lights", () => {
+test("diary import creates timeline entries that default to diary-only", () => {
   const entries = parseDiaryImport("2026-08-06 | Rain Letter | I kept thinking about the yellow bakery light.");
   assert.equal(entries.length, 1);
   assert.equal(entries[0].date, "2026-08-06");
   assert.equal(entries[0].title, "Rain Letter");
+  assert.equal(entries[0].memoryKind, "diary");
   assert.ok(entries[0].body.includes("yellow bakery light"));
 
-  const door = diaryEntryToDoor(entries[0], 0);
-  assert.equal(door.date, "2026-08-06");
-  assert.equal(door.title, "Rain Letter");
-  assert.ok(door.chapterId.startsWith("diary-"));
-  assert.ok(door.memoryText.some((line) => line.includes("yellow bakery light")));
+  const timeline = diaryEntriesToTimeline(entries);
+  assert.equal(timeline.length, 1);
+  assert.equal(timeline[0].title, "Rain Letter");
+  assert.equal(diaryEntriesToForestMemories(entries).length, 0);
+});
+
+test("classification controls derived forest representation without changing the diary entry", () => {
+  const [entry] = parseDiaryImport("2026-08-06 | Rain Letter | I kept thinking about the yellow bakery light.");
+  const fragment = updateDiaryMemoryKind(entry, "fragment");
+  const chapter = updateDiaryMemoryKind(entry, "chapter", "rain-letter");
+
+  const fragmentMemory = diaryEntriesToForestMemories([fragment])[0];
+  assert.equal(fragmentMemory.kind, "fragment");
+  assert.equal(fragmentMemory.title, "Rain Letter");
+
+  const chapterMemory = diaryEntriesToForestMemories([chapter])[0];
+  assert.equal(chapterMemory.kind, "chapter");
+  assert.equal(chapterMemory.chapterId, "rain-letter");
+  assert.equal(chapterMemory.implemented, false);
+});
+
+test("scrapbook layout belongs to diary entries and survives timeline projection", () => {
+  const [entry] = parseDiaryImport("2026-08-07 | Page With Photo | A photo stayed on the left side.");
+  entry.photos = [{ id: "photo-1", src: "data:image/png;base64,fixture", caption: "window" }];
+  entry.scrapbookLayout = {
+    elements: [{ id: "layout-1", type: "photo", photoId: "photo-1", x: 12, y: 18, scale: 1.2, rotation: -4, zIndex: 1 }]
+  };
+
+  assert.equal(diaryEntriesToTimeline([entry])[0].hasScrapbookLayout, true);
+  assert.deepEqual(entry.scrapbookLayout.elements[0], {
+    id: "layout-1",
+    type: "photo",
+    photoId: "photo-1",
+    x: 12,
+    y: 18,
+    scale: 1.2,
+    rotation: -4,
+    zIndex: 1
+  });
 });

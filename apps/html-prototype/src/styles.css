@@ -266,6 +266,7 @@ canvas {
   color: #5d422c;
 }
 .diary-editor input,
+.diary-editor select,
 .diary-editor textarea {
   width: 100%;
   border: 1px solid rgba(92, 61, 29, .34);
@@ -285,7 +286,7 @@ canvas {
 }
 .diary-row {
   display: grid;
-  grid-template-columns: 110px 1fr auto auto;
+  grid-template-columns: 110px minmax(0, 1fr) 86px auto auto auto;
   gap: 8px;
   align-items: center;
   padding: 8px;
@@ -328,6 +329,10 @@ canvas {
   transform: translateX(-50%);
   border-radius: 50%;
   background: radial-gradient(circle, rgba(255,218,126,.92), rgba(255,170,73,.18) 60%, transparent 72%);
+  opacity: .28;
+}
+.bottle-glass .lamp.on {
+  opacity: .78;
 }
 .muji-bed {
   position: absolute;
@@ -349,10 +354,29 @@ canvas {
   font-size: 28px;
   letter-spacing: 2px;
 }
-.room-meter {
-  display: grid;
-  align-content: center;
-  gap: 8px;
+.present-room {
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.34), rgba(177,211,218,.12)),
+    linear-gradient(135deg, rgba(56, 81, 93, .24), rgba(121, 85, 52, .16));
+}
+.room-residue {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 78px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  z-index: 3;
+}
+.room-residue span {
+  padding: 5px 7px;
+  border: 1px solid rgba(66, 52, 35, .22);
+  border-radius: 5px;
+  background: rgba(255, 241, 207, .76);
+  color: #352417;
+  font-size: 12px;
 }
 .room-stats {
   display: flex;
