@@ -1,5 +1,6 @@
 import type { DiaryEntry, DiaryLibraryState, MemoryKind } from "../types.js";
 import { diaryEntriesToForestMemories, diaryEntriesToTimeline, updateDiaryMemoryKind, type DiaryForestMemory, type DiaryTimelineItem } from "./DiaryImport.js";
+import { makeDiaryEntry, normalizeDiaryEntry } from "./DiaryImport.js";
 
 export function createDiaryLibrary(entries: DiaryEntry[] = [], legacyArtifacts: string[] = []): DiaryLibraryState {
   return {
@@ -16,6 +17,18 @@ export function upsertDiaryEntry(library: DiaryLibraryState, entry: DiaryEntry):
   if (index >= 0) entries[index] = entry;
   else entries.push(entry);
   return { ...library, entries, savedAt: new Date().toISOString() };
+}
+
+export function upsertDiaryPageDraft(library: DiaryLibraryState, entry: DiaryEntry): DiaryLibraryState {
+  return upsertDiaryEntry(library, normalizeDiaryEntry(entry));
+}
+
+export function openDiaryPageForDate(library: DiaryLibraryState, date: string): { library: DiaryLibraryState; entry: DiaryEntry; created: boolean } {
+  const existing = library.entries.find((entry) => entry.date === date);
+  if (existing) return { library, entry: existing, created: false };
+  const entry = makeDiaryEntry(date, "Untitled Memory", "");
+  const nextLibrary = upsertDiaryEntry(library, entry);
+  return { library: nextLibrary, entry, created: true };
 }
 
 export function setDiaryEntryKind(library: DiaryLibraryState, id: string, memoryKind: MemoryKind, chapterId?: string): DiaryLibraryState {

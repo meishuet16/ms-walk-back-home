@@ -1,4 +1,4 @@
-export type SceneId = "title" | "forest" | "bakery" | "ending";
+export type SceneId = "title" | "forest" | "bakery" | "muji-room" | "ending";
 export type TendencyKey =
   | "acceptance"
   | "avoidance"
@@ -55,8 +55,13 @@ export type MemoryKind = "diary" | "fragment" | "chapter";
 
 export type DiaryPhoto = {
   id: string;
+  storageKey?: string;
   src: string;
   caption?: string;
+};
+
+export type CropData = {
+  shape: "rectangle" | "circle";
 };
 
 export type ScrapbookElement =
@@ -74,6 +79,7 @@ export type ScrapbookElement =
       id: string;
       type: "cutout";
       sourcePhotoId: string;
+      crop?: CropData;
       maskData?: unknown;
       x: number;
       y: number;
@@ -96,6 +102,11 @@ export type RoomJourneyState = {
   lampOn?: boolean;
   musicOn?: boolean;
   residueIds?: string[];
+  resting?: boolean;
+  windowFocus?: boolean;
+  selectedVinylId?: string;
+  vinylPlaying?: boolean;
+  reflectionNote?: string;
 };
 
 export type DiaryLibraryState = {

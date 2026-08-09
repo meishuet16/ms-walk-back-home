@@ -11,7 +11,11 @@ export const globalMusic = {
 export const sceneMusic = {
   forest: {
     ...globalMusic,
-    label: "Bakery loop"
+    label: "Forest rain",
+    src: "assets/audio/forest.mp3",
+    root: 146.83,
+    fifth: 220,
+    pulse: 0.24
   },
   bakery: {
     ...globalMusic

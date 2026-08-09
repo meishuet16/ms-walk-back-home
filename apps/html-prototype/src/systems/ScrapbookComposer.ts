@@ -2,6 +2,10 @@ import type { DiaryEntry, DiaryPhoto, ScrapbookElement, ScrapbookLayout } from "
 
 const defaultLayout = (): ScrapbookLayout => ({ elements: [] });
 
+export function diaryTextFrame(): { x: number; y: number; w: number; h: number } {
+  return { x: 5, y: 6, w: 48, h: 82 };
+}
+
 function withLayout(entry: DiaryEntry): DiaryEntry {
   return {
     ...entry,
@@ -18,6 +22,10 @@ function updateElement(entry: DiaryEntry, elementId: string, updater: (element: 
       elements: base.scrapbookLayout!.elements.map((element) => element.id === elementId ? updater(element) : element)
     }
   };
+}
+
+function clampPercent(value: number): number {
+  return Math.max(0, Math.min(100, value));
 }
 
 export function addPhotoAttachment(entry: DiaryEntry, photo: DiaryPhoto): DiaryEntry {
@@ -51,8 +59,32 @@ export function addPhotoElement(entry: DiaryEntry, photoId: string, elementId: s
   };
 }
 
+export function createCutoutElement(entry: DiaryEntry, sourcePhotoId: string, elementId: string, shape: "rectangle" | "circle" = "rectangle"): DiaryEntry {
+  const base = withLayout(entry);
+  const maxZ = Math.max(0, ...base.scrapbookLayout!.elements.map((element) => element.zIndex));
+  return {
+    ...base,
+    scrapbookLayout: {
+      elements: [
+        ...base.scrapbookLayout!.elements,
+        {
+          id: elementId,
+          type: "cutout",
+          sourcePhotoId,
+          crop: { shape },
+          x: 52,
+          y: 46,
+          scale: 1,
+          rotation: -4,
+          zIndex: maxZ + 1
+        }
+      ]
+    }
+  };
+}
+
 export function moveScrapbookElement(entry: DiaryEntry, elementId: string, x: number, y: number): DiaryEntry {
-  return updateElement(entry, elementId, (element) => ({ ...element, x, y }));
+  return updateElement(entry, elementId, (element) => ({ ...element, x: clampPercent(x), y: clampPercent(y) }));
 }
 
 export function resizeScrapbookElement(entry: DiaryEntry, elementId: string, scale: number): DiaryEntry {

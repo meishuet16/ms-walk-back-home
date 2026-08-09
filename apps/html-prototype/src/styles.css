@@ -231,7 +231,7 @@ canvas {
   font-size: 11px;
 }
 .game-panel {
-  width: min(860px, calc(100vw - 28px));
+  width: min(960px, calc(100vw - 28px));
   max-height: calc(100% - 28px);
   overflow: auto;
 }
@@ -259,7 +259,8 @@ canvas {
   gap: 8px;
   margin-top: 12px;
 }
-.diary-editor label {
+.diary-editor label,
+.reflection-note {
   display: grid;
   gap: 5px;
   margin: 10px 0;
@@ -267,7 +268,8 @@ canvas {
 }
 .diary-editor input,
 .diary-editor select,
-.diary-editor textarea {
+.diary-editor textarea,
+.reflection-note textarea {
   width: 100%;
   border: 1px solid rgba(92, 61, 29, .34);
   border-radius: 5px;
@@ -278,6 +280,65 @@ canvas {
 }
 .diary-editor textarea {
   resize: vertical;
+}
+.diary-editor-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+}
+.diary-editor-head h2 {
+  margin-bottom: 2px;
+}
+.autosave-state {
+  margin: 0;
+  color: #70533a;
+  font-size: 12px;
+}
+.diary-paper {
+  position: relative;
+  min-height: 620px;
+  margin: 12px 0;
+  padding: 0;
+  border: 1px solid rgba(92, 61, 29, .24);
+  border-radius: 6px;
+  background:
+    linear-gradient(rgba(104, 72, 42, .07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(104, 72, 42, .07) 1px, transparent 1px),
+    #f8efd9;
+  background-size: 24px 24px;
+  box-shadow: inset 0 0 34px rgba(104, 72, 42, .08);
+}
+.paper-fields {
+  position: absolute;
+  z-index: 2;
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 8px;
+}
+.paper-fields label {
+  margin: 0;
+}
+.paper-fields input,
+.paper-fields select,
+.paper-fields textarea {
+  border-color: rgba(92, 61, 29, .22);
+  background: rgba(255, 250, 239, .54);
+}
+.paper-fields textarea {
+  height: 100%;
+  min-height: 260px;
+  background: rgba(255, 250, 239, .42);
+}
+.memory-menu {
+  max-width: 260px;
+}
+.integrated-tools {
+  display: block;
+}
+.integrated-tools .photo-tray {
+  min-height: 120px;
 }
 .diary-list {
   margin: 12px 0;
@@ -332,6 +393,14 @@ canvas {
   background: rgba(91, 57, 26, .07);
   overflow: auto;
 }
+.integrated-tools .photo-tray {
+  display: flex;
+  gap: 10px;
+}
+.integrated-tools .photo-chip {
+  width: 132px;
+  flex: 0 0 132px;
+}
 .photo-chip {
   display: grid;
   gap: 7px;
@@ -351,7 +420,6 @@ canvas {
 }
 .scrapbook-page {
   position: relative;
-  min-height: 420px;
   overflow: hidden;
   border: 1px solid rgba(92, 61, 29, .24);
   border-radius: 5px;
@@ -374,8 +442,7 @@ canvas {
   position: absolute;
   width: 130px;
   height: 130px;
-  display: grid;
-  place-items: center;
+  display: block;
   padding: 5px;
   border: 2px solid transparent;
   background: #fff7e6;
@@ -392,6 +459,32 @@ canvas {
   height: 100%;
   object-fit: cover;
   pointer-events: none;
+}
+.element-controls {
+  position: absolute;
+  right: -14px;
+  top: -18px;
+  display: flex;
+  gap: 4px;
+  transform-origin: top right;
+}
+.element-controls button {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 16px;
+  line-height: 1;
+}
+.scrapbook-element.circle-cutout {
+  border-radius: 50%;
+  background: transparent;
+  overflow: visible;
+}
+.scrapbook-element.circle-cutout img {
+  border-radius: 50%;
 }
 .tool-grid {
   display: grid;
@@ -490,6 +583,22 @@ canvas {
   padding: 5px 8px;
   border-radius: 5px;
   background: rgba(91, 57, 26, .15);
+}
+.records-panel {
+  width: min(560px, calc(100vw - 28px));
+}
+.record-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.record-list button {
+  display: grid;
+  min-height: 74px;
+  text-align: left;
+}
+.record-list small {
+  color: #f6d79d;
 }
 .panel {
   min-height: 220px;
@@ -611,7 +720,10 @@ canvas {
     grid-template-columns: 1fr;
   }
   .composer-head,
-  .composer-shell {
+  .composer-shell,
+  .diary-paper,
+  .integrated-tools,
+  .record-list {
     grid-template-columns: 1fr;
   }
   .composer-head {
