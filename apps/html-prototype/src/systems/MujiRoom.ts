@@ -71,10 +71,10 @@ export const roomObstacles: Rect[] = [
 
 export const roomInteractions: RoomInteraction[] = [
   { id: "door", label: "Return to Forest", x: 126, y: 456, radius: 58 },
-  { id: "journal", label: "Journal", x: 338, y: 234, radius: 72 },
+  { id: "journal", label: "Journal", x: 620, y: 250, radius: 72 },
   { id: "lamp", label: "Lamp", x: 218, y: 210, radius: 58 },
   { id: "window", label: "Look Outside", x: 486, y: 164, radius: 80 },
-  { id: "records", label: "Records", x: 800, y: 334, radius: 70 },
+  { id: "records", label: "Records", x: 760, y: 430, radius: 86 },
   { id: "residue", label: "Examine", x: 562, y: 316, radius: 62 },
   { id: "reflection", label: "Reflection Note", x: 504, y: 450, radius: 62 }
 ];

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canReachRoomInteraction, createDefaultRoomState, moveRoomPlayer, roomInteractions, roomObstacles, selectVinylRecord, toggleRoomLamp, vinylPlayerActions, vinylRecords, vinylRecordsFromAudioFiles, withCustomVinylCover } from "../src/systems/MujiRoom.js";
+import { canReachRoomInteraction, createDefaultRoomState, moveRoomPlayer, nearestRoomInteraction, roomInteractions, roomObstacles, selectVinylRecord, toggleRoomLamp, vinylPlayerActions, vinylRecords, vinylRecordsFromAudioFiles, withCustomVinylCover } from "../src/systems/MujiRoom.js";
 
 test("muji room movement blocks walls and major furniture while leaving interactions reachable", () => {
   const start = { x: 126, y: 438 };
@@ -35,9 +35,14 @@ test("records interaction is anchored at the radio and room no longer exposes re
   const records = roomInteractions.find((interaction) => interaction.id === "records");
 
   assert.ok(records);
-  assert.equal(records.x >= 760 && records.x <= 850, true);
-  assert.equal(records.y >= 280 && records.y <= 380, true);
+  assert.equal(records.x >= 720 && records.x <= 820, true);
+  assert.equal(records.y >= 400 && records.y <= 455, true);
   assert.equal(roomInteractions.some((interaction) => interaction.label === "Rest"), false);
+});
+
+test("room interaction prompts trigger from walkable spots near their objects", () => {
+  assert.equal(nearestRoomInteraction({ x: 760, y: 430 })?.id, "records");
+  assert.equal(nearestRoomInteraction({ x: 620, y: 250 })?.id, "journal");
 });
 
 test("vinyl player actions avoid duplicate stop and play pause controls", () => {
