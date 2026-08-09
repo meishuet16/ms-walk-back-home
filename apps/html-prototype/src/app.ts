@@ -17,6 +17,7 @@ import {
   deleteScrapbookElement,
   layerScrapbookElement,
   moveScrapbookElement,
+  removePhotoAttachment,
   resizeScrapbookElement,
   rotateScrapbookElement
 } from "./systems/ScrapbookComposer.js";
@@ -203,6 +204,7 @@ export class WalkBackHomeApp {
     if (action === "import-diary-lines") this.importDiaryLines();
     if (action === "add-photo-to-scrapbook") this.addPhotoToScrapbook(target.dataset.photo ?? "");
     if (action === "cutout-photo") this.cutoutPhotoOnPage(target.dataset.photo ?? "");
+    if (action === "remove-photo-attachment") this.removePhotoFromPage(target.dataset.photo ?? "");
     if (action === "select-scrapbook-element") this.selectScrapbookElement(target.dataset.element ?? "");
     if (action === "scrapbook-move") this.nudgeSelectedScrapbookElement(Number(target.dataset.dx ?? 0), Number(target.dataset.dy ?? 0));
     if (action === "scrapbook-resize") this.scaleSelectedScrapbookElement(Number(target.dataset.delta ?? 0));
@@ -842,6 +844,7 @@ export class WalkBackHomeApp {
         <span>${this.escapeHtml(photo.caption ?? photo.id)}</span>
         <button data-action="add-photo-to-scrapbook" data-photo="${this.escapeHtml(photo.id)}">Place</button>
         <button data-action="cutout-photo" data-photo="${this.escapeHtml(photo.id)}">Circle cutout</button>
+        <button data-action="remove-photo-attachment" data-photo="${this.escapeHtml(photo.id)}">Clear</button>
       </div>`).join("") || `<p class="quiet-line">No photos attached yet.</p>`;
     const elements = [...(editing?.scrapbookLayout?.elements ?? [])]
       .sort((a, b) => a.zIndex - b.zIndex)
@@ -1136,6 +1139,15 @@ export class WalkBackHomeApp {
     this.selectedScrapbookElementId = elementId;
     this.updateDiaryEntry(createCutoutElement(entry, photoId, elementId, "circle"));
     this.showDiaryEditor(entry.id);
+  }
+
+  private removePhotoFromPage(photoId: string): void {
+    const entry = this.activeScrapbookEntry();
+    if (!entry || !photoId) return;
+    this.selectedScrapbookElementId = "";
+    this.updateDiaryEntry(removePhotoAttachment(entry, photoId));
+    this.showDiaryEditor(entry.id);
+    this.showToast("Attachment cleared");
   }
 
   private selectScrapbookElement(elementId: string): void {

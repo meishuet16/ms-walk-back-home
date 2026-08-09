@@ -36,6 +36,19 @@ export function addPhotoAttachment(entry: DiaryEntry, photo: DiaryPhoto): DiaryE
   return { ...base, photos };
 }
 
+export function removePhotoAttachment(entry: DiaryEntry, photoId: string): DiaryEntry {
+  const base = withLayout(entry);
+  return {
+    ...base,
+    photos: base.photos!.filter((photo) => photo.id !== photoId),
+    scrapbookLayout: {
+      elements: base.scrapbookLayout!.elements.filter((element) =>
+        element.type === "photo" ? element.photoId !== photoId : element.sourcePhotoId !== photoId
+      )
+    }
+  };
+}
+
 export function addPhotoElement(entry: DiaryEntry, photoId: string, elementId: string): DiaryEntry {
   const base = withLayout(entry);
   const maxZ = Math.max(0, ...base.scrapbookLayout!.elements.map((element) => element.zIndex));

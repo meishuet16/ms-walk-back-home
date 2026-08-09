@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { addPhotoAttachment, addPhotoElement, createCutoutElement, diaryTextFrame, moveScrapbookElement } from "../src/systems/ScrapbookComposer.js";
+import { addPhotoAttachment, addPhotoElement, createCutoutElement, diaryTextFrame, moveScrapbookElement, removePhotoAttachment } from "../src/systems/ScrapbookComposer.js";
 import { createDiaryLibrary, openDiaryPageForDate, upsertDiaryPageDraft } from "../src/systems/DiaryLibrary.js";
 import { makeDiaryEntry, normalizeDiaryEntry } from "../src/systems/DiaryImport.js";
 
@@ -59,6 +59,28 @@ test("upserting a diary page draft preserves photos and layout on the diary entr
   assert.equal(saved.entries[0].photos?.[0].storageKey, "diary-images/photo-1");
   assert.equal(element?.x, 100);
   assert.equal(element?.y, 0);
+});
+
+test("removing an attached photo clears its placed page elements", () => {
+  const entry = addPhotoElement(
+    createCutoutElement(
+      addPhotoAttachment(makeDiaryEntry("2026-08-10", "Clear", "Fictional text."), {
+        id: "photo-1",
+        storageKey: "diary-images/photo-1",
+        src: "blob://photo-1",
+        caption: "desk"
+      }),
+      "photo-1",
+      "cutout-1",
+      "circle"
+    ),
+    "photo-1",
+    "element-1"
+  );
+  const cleared = removePhotoAttachment(entry, "photo-1");
+
+  assert.equal(cleared.photos?.length, 0);
+  assert.deepEqual(cleared.scrapbookLayout?.elements, []);
 });
 
 test("cutout elements stay attached to the current diary page", () => {
