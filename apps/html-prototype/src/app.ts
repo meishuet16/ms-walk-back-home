@@ -1,16 +1,20 @@
 import { bakeryChapter } from "./fixtures/chapterPlan.js";
+import { labisBlockers, labisMemoryTriggers, labisMotorMemoryActions, labisSpawn } from "./fixtures/labisMotorMemory.js";
 import type { ChapterProgress, Choice, DiaryEntry, DiaryLibraryState, JourneyState, MemoryKind, RoomJourneyState, SceneId, Tendencies } from "./types.js";
 import { AudioManager } from "./systems/AudioManager.js";
 import { chapterRegistry, forestEntries, routeForestEntry, type AuthoredForestEntry } from "./systems/ChapterRegistry.js";
 import { beginChapterVisit, finishChapterWalkthrough, initialChapterProgress, markChapterDialogueComplete, markChapterMemoryRead, recordChapterChoice } from "./systems/ChapterProgressManager.js";
 import { inAnyRect, type Point, type Rect } from "./systems/CollisionSystem.js";
+import { CutsceneSystem } from "./systems/CutsceneSystem.js";
 import { deleteDiaryEntryById, getDiaryForestMemories, getDiaryTimeline, openDiaryPageForDate, upsertDiaryEntry, upsertDiaryPageDraft } from "./systems/DiaryLibrary.js";
 import { diaryMoodOptions, isDiaryMood } from "./systems/DiaryMood.js";
 import { makeDiaryEntry, parseDiaryImport, updateDiaryMemoryKind, type DiaryForestMemory } from "./systems/DiaryImport.js";
 import { DialogueSystem } from "./systems/DialogueSystem.js";
 import { resolveChapterReflection, type Ending } from "./systems/EndingResolver.js";
 import { InputManager } from "./systems/InputManager.js";
+import { activeMemoryTrigger } from "./systems/MemoryTrigger.js";
 import { ParticleSystem } from "./systems/ParticleSystem.js";
+import { drawSceneActor } from "./systems/SceneActorRenderer.js";
 import {
   addPhotoAttachment,
   addPhotoElement,
@@ -48,6 +52,7 @@ type ForestNode = AuthoredForestEntry | DiaryForestMemory;
 const assets = {
   forest: "assets/forest.png",
   bakery: "assets/bakery.png",
+  labis: "assets/labis-july19.png",
   muji: "assets/muji-sheet.png",
   friend: "assets/friend-a.png",
   room: "assets/muji-room.png",
@@ -79,6 +84,7 @@ export class WalkBackHomeApp {
   private images = {
     forest: img(assets.forest),
     bakery: img(assets.bakery),
+    labis: img(assets.labis),
     muji: img(assets.muji),
     friend: img(assets.friend),
     room: img(assets.roomFallback)
@@ -110,6 +116,9 @@ export class WalkBackHomeApp {
   private room: RoomJourneyState = createDefaultRoomState();
   private chapterProgress = new Map<string, ChapterProgress>();
   private dialogue = new DialogueSystem(bakeryChapter.dialogue);
+  private labisCutscene: CutsceneSystem | null = null;
+  private labisDialogueOpen = false;
+  private completedMemoryEvents = new Set<string>();
   private ending: Ending | null = null;
 
   constructor(private root: HTMLElement) {
@@ -227,6 +236,7 @@ export class WalkBackHomeApp {
       if (doorId) this.currentDoor = this.allDoors().find((door) => door.id === doorId) ?? this.currentDoor;
       this.enterCurrentMemory();
     }
+    if (action === "labis-replay") this.startLabisMemory(true);
     if (action === "finish-memory") this.finishBakery();
     if (action === "choice") this.choose(target.dataset.choice ?? "");
   }
@@ -238,6 +248,7 @@ export class WalkBackHomeApp {
     if (input.interact) this.interact();
     if (this.scene === "forest") this.updateForest(input.x, input.y, dt);
     if (this.scene === "bakery") this.updateBakery(input.x, input.y, dt);
+    if (this.scene === "labis") this.updateLabis(input.x, input.y, dt);
     if (this.scene === "muji-room") this.updateMujiRoom(input.x, input.y, dt);
     this.draw(time);
     requestAnimationFrame((next) => this.loop(next));
@@ -318,6 +329,59 @@ export class WalkBackHomeApp {
     this.activeObject = nearMemory ? "diary memory" : nearFriend ? "Friend A" : nearPastry ? "pastry" : nearExit ? "exit" : "";
   }
 
+  private updateLabis(x: number, y: number, dt: number): void {
+    if (this.labisCutscene) {
+      this.labisCutscene.update(dt);
+      if (this.labisCutscene.currentDialogue) {
+        this.showLabisCutsceneDialogue();
+      }
+      if (this.labisCutscene.completed) {
+        this.finishLabisMemoryEvent();
+      }
+      this.activeObject = "";
+      return;
+    }
+    this.move(x, y, dt, labisBlockers, []);
+    const trigger = activeMemoryTrigger(this.player, labisMemoryTriggers, this.completedMemoryEvents);
+    if (trigger) {
+      this.startLabisMemory(false);
+      return;
+    }
+    const nearMemory = this.completedMemoryEvents.has("july19-motor-learning") && Math.hypot(this.player.x - 740, this.player.y - 545) < 88;
+    const nearExit = this.player.y > 735 || this.player.x < 135;
+    const nearShop = Math.hypot(this.player.x - 1040, this.player.y - 345) < 96;
+    this.activeObject = nearMemory ? "motor memory" : nearShop ? "family shop" : nearExit ? "exit" : "";
+  }
+
+  private startLabisMemory(replay: boolean): void {
+    this.labisCutscene = new CutsceneSystem(labisMotorMemoryActions);
+    this.labisDialogueOpen = false;
+    this.overlay.classList.remove("dialogue-open");
+    this.overlay.innerHTML = "";
+    this.showToast(replay ? "Replaying memory" : "The past appears");
+  }
+
+  private showLabisCutsceneDialogue(): void {
+    const dialogue = this.labisCutscene?.currentDialogue;
+    if (!dialogue || this.labisDialogueOpen) return;
+    this.labisDialogueOpen = true;
+    this.overlay.classList.add("dialogue-open");
+    this.overlay.innerHTML = `<div class="vn"><div class="vn-portrait"></div><div><h3>${this.escapeHtml(dialogue.speaker)}</h3><p>${this.escapeHtml(dialogue.text)}</p><div class="choices"><button data-action="choice" data-choice="labis-next">Continue</button></div></div></div>`;
+    this.focusStage();
+  }
+
+  private finishLabisMemoryEvent(): void {
+    this.completedMemoryEvents.add("july19-motor-learning");
+    this.readMemories.add("july19-motor-learning");
+    this.chapterProgress.set("labis-motor-day", markChapterMemoryRead(this.progressFor("labis-motor-day")));
+    this.labisCutscene = null;
+    this.labisDialogueOpen = false;
+    this.overlay.classList.remove("dialogue-open");
+    this.overlay.innerHTML = "";
+    this.showToast("Memory Unlocked · 第一次学会驾 motor");
+    this.autosave();
+  }
+
   private updateMujiRoom(x: number, y: number, dt: number): void {
     const moving = Math.hypot(x, y) > 0.05;
     if (moving) {
@@ -356,6 +420,20 @@ export class WalkBackHomeApp {
       }
       if (this.activeObject === "pastry") return this.inspectPastry();
       return this.showToast(this.readMemories.has(this.currentMemoryKey()) ? "Walk closer to Friend A" : "Find the glowing diary memory first");
+    }
+    if (this.scene === "labis") {
+      if (this.labisCutscene?.currentDialogue) {
+        this.labisCutscene.advanceDialogue();
+        this.labisDialogueOpen = false;
+        this.overlay.classList.remove("dialogue-open");
+        this.overlay.innerHTML = "";
+        return;
+      }
+      if (this.labisCutscene) return;
+      if (this.activeObject === "exit") return this.returnToForest();
+      if (this.activeObject === "motor memory") return this.showLabisMemoryPoint();
+      if (this.activeObject === "family shop") return this.inspectLabisShop();
+      return this.showToast("Walk through the open road");
     }
     if (this.scene === "muji-room") {
       if (!this.activeRoomInteraction) return this.showToast("Walk closer");
@@ -429,15 +507,18 @@ export class WalkBackHomeApp {
     const chapterId = this.chapterIdFor(this.currentDoor);
     this.chapterProgress.set(chapterId, beginChapterVisit(this.progressFor(chapterId)));
     this.visitedMemories.add(this.currentDoor.id);
-    this.scene = "bakery";
-    this.player = { x: 450, y: 420 };
-    this.dialogue = new DialogueSystem(chapterRegistry[chapterId].dialogue);
+    const chapter = chapterRegistry[chapterId];
+    this.scene = chapter.runtimeScene;
+    this.player = chapter.runtimeScene === "labis" ? { ...labisSpawn } : { x: 450, y: 420 };
+    this.dialogue = new DialogueSystem(chapter.dialogue);
+    this.labisCutscene = null;
+    this.labisDialogueOpen = false;
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
     this.focusStage();
     this.showToast("Entered memory");
-    this.audio.ping("bakery");
-    this.playSceneMusic("bakery");
+    this.audio.ping(chapter.runtimeScene === "labis" ? "forest" : "bakery");
+    this.playSceneMusic(chapter.runtimeScene === "labis" ? "forest" : "bakery");
     this.autosave();
   }
 
@@ -484,6 +565,13 @@ export class WalkBackHomeApp {
   }
 
   private choose(choiceId: string): void {
+    if (choiceId === "labis-next" && this.labisCutscene?.currentDialogue) {
+      this.labisCutscene.advanceDialogue();
+      this.labisDialogueOpen = false;
+      this.overlay.classList.remove("dialogue-open");
+      this.overlay.innerHTML = "";
+      return;
+    }
     if (choiceId === "again") {
       this.resetBakeryDialogue();
       this.showDialogue();
@@ -509,6 +597,16 @@ export class WalkBackHomeApp {
       this.showDialogue();
     }
     this.autosave();
+  }
+
+  private showLabisMemoryPoint(): void {
+    this.overlay.innerHTML = `<div class="modal"><h2>第一次学会驾 motor</h2><p>这里就是她第一次学会驾 motor 的地方。</p><button data-action="labis-replay">Replay Memory</button><button data-action="close">Close</button></div>`;
+    this.focusStage();
+  }
+
+  private inspectLabisShop(): void {
+    this.overlay.innerHTML = `<div class="modal"><h2>Labis</h2><p>家里的店就在马路对面。</p><p>这个下午本来没有什么特别。</p><button data-action="close">Close</button></div>`;
+    this.focusStage();
   }
 
   private showEndingQuote(): void {
@@ -543,8 +641,10 @@ export class WalkBackHomeApp {
   }
 
   private returnToForest(): void {
-    const leavingDoor = this.scene === "bakery" ? this.currentDoor : null;
+    const leavingDoor = this.scene === "bakery" || this.scene === "labis" ? this.currentDoor : null;
     const leavingRoom = this.scene === "muji-room";
+    this.labisCutscene = null;
+    this.labisDialogueOpen = false;
     this.scene = "forest";
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
@@ -564,6 +664,7 @@ export class WalkBackHomeApp {
     if (this.scene === "title") this.drawTitle(time);
     if (this.scene === "forest") this.drawScene(this.images.forest, time, "forest");
     if (this.scene === "bakery") this.drawScene(this.images.bakery, time, "bakery");
+    if (this.scene === "labis") this.drawLabisScene(time);
     if (this.scene === "muji-room") this.drawMujiRoomScene(time);
     if (this.scene === "ending") this.drawEnding();
     this.drawHud();
@@ -600,6 +701,53 @@ export class WalkBackHomeApp {
     vignette.addColorStop(1, "rgba(0,0,0,.52)");
     this.ctx.fillStyle = vignette;
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+  }
+
+  private drawLabisScene(time: number): void {
+    const scale = this.canvas.width / 960;
+    const sourceW = 1536;
+    const sourceH = 864;
+    const cameraX = Math.max(0, Math.min(sourceW - 960, this.player.x - 480));
+    const cameraY = Math.max(0, Math.min(sourceH - 540, this.player.y - 360));
+    this.ctx.drawImage(this.images.labis, cameraX, cameraY, 960, 540, 0, 0, this.canvas.width, this.canvas.height);
+    if (!this.images.labis.complete || this.images.labis.naturalWidth === 0) this.drawLabisFallback(scale);
+
+    if (this.completedMemoryEvents.has("july19-motor-learning") && !this.labisCutscene) {
+      const x = (740 - cameraX) * scale;
+      const y = (545 - cameraY) * scale;
+      const glow = this.ctx.createRadialGradient(x, y, 2, x, y, 32 * scale);
+      glow.addColorStop(0, "rgba(255, 226, 160, .38)");
+      glow.addColorStop(1, "rgba(255, 226, 160, 0)");
+      this.ctx.fillStyle = glow;
+      this.ctx.beginPath();
+      this.ctx.arc(x, y, 32 * scale, 0, Math.PI * 2);
+      this.ctx.fill();
+    }
+
+    const actorList = this.labisCutscene ? [...this.labisCutscene.actors.values()] : [];
+    const mujiScreen = { x: (this.player.x - cameraX) * scale, y: (this.player.y - cameraY) * scale };
+    const drawables = [
+      ...actorList.map((actor) => ({ y: actor.y, draw: () => drawSceneActor(this.ctx, actor, cameraX, cameraY, scale) })),
+      { y: this.player.y, draw: () => this.drawMuji(mujiScreen, time, scale) }
+    ].sort((a, b) => a.y - b.y);
+    drawables.forEach((item) => item.draw());
+
+    const vignette = this.ctx.createRadialGradient(this.canvas.width / 2, this.canvas.height / 2, 160, this.canvas.width / 2, this.canvas.height / 2, this.canvas.height * 0.82);
+    vignette.addColorStop(0, "rgba(0,0,0,0)");
+    vignette.addColorStop(1, "rgba(0,0,0,.24)");
+    this.ctx.fillStyle = vignette;
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+  }
+
+  private drawLabisFallback(scale: number): void {
+    this.ctx.fillStyle = "#d0b07b";
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.fillStyle = "#7d6f5e";
+    this.ctx.fillRect(0, 310 * scale, this.canvas.width, 230 * scale);
+    this.ctx.fillStyle = "#8f6447";
+    this.ctx.fillRect(90 * scale, 70 * scale, 760 * scale, 210 * scale);
+    this.ctx.fillStyle = "#4c6b48";
+    this.ctx.fillRect(790 * scale, 65 * scale, 90 * scale, 170 * scale);
   }
 
   private drawMemorySpot(cameraX: number, cameraY: number, scale: number, time: number): void {
@@ -758,7 +906,8 @@ export class WalkBackHomeApp {
   }
 
   private drawHud(): void {
-    const text = this.scene === "forest" && this.activeDoor ? `Press E · ${this.activeDoor.date} ${this.activeDoor.title}` : this.scene === "bakery" && this.activeObject ? `Press E · ${this.activeObject}` : this.scene === "muji-room" && this.activeRoomInteraction ? `Press E · ${this.activeRoomInteraction.label}` : "WASD / arrows · E / Enter";
+    const labisPrompt = this.scene === "labis" && this.labisCutscene ? "Memory is playing" : this.scene === "labis" && this.activeObject === "exit" ? "Press E · 回到 Memory Forest" : this.scene === "labis" && this.activeObject ? `Press E · ${this.activeObject}` : "";
+    const text = this.scene === "forest" && this.activeDoor ? `Press E · ${this.activeDoor.date} ${this.activeDoor.title}` : this.scene === "bakery" && this.activeObject ? `Press E · ${this.activeObject}` : labisPrompt || (this.scene === "muji-room" && this.activeRoomInteraction ? `Press E · ${this.activeRoomInteraction.label}` : "WASD / arrows · E / Enter");
     const exit = this.scene === "forest" ? "" : `<button data-action="forest">Exit to forest</button>`;
     const html = `<div class="prompt">${text}</div><div class="hud-actions"><button data-action="menu">Menu</button>${exit}<button data-action="music">Music: ${this.settings.musicEnabled ? "On" : "Off"}</button><button data-action="compact">${this.settings.compact ? "960x540" : "480x270"}</button><button data-action="fullscreen">Fullscreen</button><button data-action="rain">Rain: ${this.settings.rain ? "On" : "Off"}</button><button data-action="mute">${this.settings.muted ? "Sound Off" : "Sound On"}</button></div>`;
     if (html !== this.lastHudHtml) {
