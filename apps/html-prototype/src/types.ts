@@ -86,6 +86,39 @@ export type ScrapbookLayout = {
   elements: ScrapbookElement[];
 };
 
+export type ReflectionTone = "accepting" | "holding" | "not-ready" | "rewriting";
+
+export type ChapterProgressState = "unseen" | "visited" | "walkedThrough";
+
+export type RoomJourneyState = {
+  visits: number;
+  reflections: string[];
+  lampOn?: boolean;
+  musicOn?: boolean;
+  residueIds?: string[];
+};
+
+export type DiaryLibraryState = {
+  version: 1;
+  savedAt: string;
+  entries: DiaryEntry[];
+  legacyArtifacts: string[];
+};
+
+export type JourneyState = {
+  version: 1;
+  savedAt: string;
+  scene: SceneId;
+  player: { x: number; y: number };
+  visitedMemories: string[];
+  walkedThroughMemories: string[];
+  choices: string[];
+  tendencies: Tendencies;
+  readMemories: string[];
+  room: RoomJourneyState;
+  finalJourney: string[];
+};
+
 export type SaveState = {
   version: 1;
   slot?: number;
