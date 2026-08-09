@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { addPhotoAttachment, addPhotoElement, createCutoutElement, diaryTextFrame, moveScrapbookElement, removePhotoAttachment } from "../src/systems/ScrapbookComposer.js";
 import { createDiaryLibrary, openDiaryPageForDate, upsertDiaryPageDraft } from "../src/systems/DiaryLibrary.js";
-import { makeDiaryEntry, normalizeDiaryEntry } from "../src/systems/DiaryImport.js";
+import { makeDiaryEntry, normalizeDiaryEntry, parseDiaryImport } from "../src/systems/DiaryImport.js";
 import { diaryMoodOptions } from "../src/systems/DiaryMood.js";
 
 test("write today creates a diary page draft for the requested date", () => {
@@ -20,7 +20,9 @@ test("diary page mood is normalized and preserved on entries", () => {
     date: "2026-08-10",
     title: "Mood",
     body: "A fictional page.",
-    mood: "excited"
+    mood: "excited",
+    location: "Desk",
+    weather: "Clear rain"
   });
   const invalid = normalizeDiaryEntry({
     date: "2026-08-11",
@@ -30,6 +32,8 @@ test("diary page mood is normalized and preserved on entries", () => {
   });
 
   assert.equal(entry.mood, "excited");
+  assert.equal(entry.location, "Desk");
+  assert.equal(entry.weather, "Clear rain");
   assert.equal(invalid.mood, "calm");
 });
 
@@ -37,6 +41,24 @@ test("journal mood options have distinct gentle expressions", () => {
   assert.equal(diaryMoodOptions.length, 5);
   assert.equal(new Set(diaryMoodOptions.map((mood) => mood.expression)).size, diaryMoodOptions.length);
   assert.equal(diaryMoodOptions.some((mood) => mood.expression === "sparkle-smile"), true);
+});
+
+test("markdown diary imports support metadata and body text", () => {
+  const [entry] = parseDiaryImport([
+    "# 2026-08-09",
+    "Title: Window Rain",
+    "Location: Desk",
+    "Weather: Rain turning clear",
+    "",
+    "A small fictional note.",
+    "Second line."
+  ].join("\n"));
+
+  assert.equal(entry.date, "2026-08-09");
+  assert.equal(entry.title, "Window Rain");
+  assert.equal(entry.location, "Desk");
+  assert.equal(entry.weather, "Rain turning clear");
+  assert.equal(entry.body, "A small fictional note.\nSecond line.");
 });
 
 test("write today reuses the existing diary page for that date", () => {

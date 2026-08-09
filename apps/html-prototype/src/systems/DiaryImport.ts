@@ -128,6 +128,8 @@ export function normalizeDiaryEntry(entry: Partial<DiaryEntry> & Pick<DiaryEntry
     date: entry.date.trim(),
     title: entry.title.trim() || "Untitled Memory",
     body: entry.body.trim(),
+    location: entry.location?.trim(),
+    weather: entry.weather?.trim(),
     memoryKind: normalizeMemoryKind(entry.memoryKind),
     mood: normalizeDiaryMood(entry.mood),
     chapterId: entry.memoryKind === "chapter" ? entry.chapterId || entry.id : undefined,
@@ -162,6 +164,8 @@ export function makeDiaryId(date: string, title: string): string {
 }
 
 export function parseDiaryImport(text: string): DiaryEntry[] {
+  const markdownEntry = parseMarkdownDiaryImport(text);
+  if (markdownEntry) return [markdownEntry];
   return text
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -172,6 +176,39 @@ export function parseDiaryImport(text: string): DiaryEntry[] {
       return makeDiaryEntry(date, title || "Untitled Memory", body || line);
     })
     .filter((entry) => entry.date.length > 0 && entry.body.length > 0);
+}
+
+function parseMarkdownDiaryImport(text: string): DiaryEntry | null {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const headingIndex = lines.findIndex((line) => /^#{1,3}\s+\d{4}-\d{2}-\d{2}/.test(line.trim()));
+  if (headingIndex < 0) return null;
+  const heading = lines[headingIndex].trim().replace(/^#{1,3}\s+/, "");
+  const headingMatch = heading.match(/^(\d{4}-\d{2}-\d{2})(?:\s+[-:]\s+(.+))?$/);
+  if (!headingMatch) return null;
+  const metadata: Partial<Pick<DiaryEntry, "title" | "location" | "weather">> = {};
+  const bodyLines: string[] = [];
+  for (const rawLine of lines.slice(headingIndex + 1)) {
+    const line = rawLine.trim();
+    const field = line.match(/^(title|location|weather|标题|地点|天气)\s*[:：]\s*(.+)$/i);
+    if (field) {
+      const key = field[1].toLowerCase();
+      const value = field[2].trim();
+      if (key === "title" || key === "标题") metadata.title = value;
+      if (key === "location" || key === "地点") metadata.location = value;
+      if (key === "weather" || key === "天气") metadata.weather = value;
+      continue;
+    }
+    bodyLines.push(rawLine);
+  }
+  const body = bodyLines.join("\n").trim();
+  if (!body) return null;
+  return normalizeDiaryEntry({
+    date: headingMatch[1],
+    title: metadata.title ?? headingMatch[2] ?? "Untitled Memory",
+    body,
+    location: metadata.location,
+    weather: metadata.weather
+  });
 }
 
 export function diaryEntryToDoor(entry: DiaryEntry, index: number): DiaryDoor {

@@ -824,9 +824,6 @@ export class WalkBackHomeApp {
     this.activeScrapbookEntryId = editing?.id ?? "";
     const elementIds = new Set((editing?.scrapbookLayout?.elements ?? []).map((element) => element.id));
     if (!this.selectedScrapbookElementId || !elementIds.has(this.selectedScrapbookElementId)) this.selectedScrapbookElementId = "";
-    const rows = this.diaryEntries.length
-      ? this.diaryEntries.map((entry) => `<div class="diary-row"><strong>${this.escapeHtml(entry.date)}</strong><span>${this.escapeHtml(entry.title)}</span><span>${entry.memoryKind}</span><button data-action="edit-diary-entry" data-id="${this.escapeHtml(entry.id)}">Open / Edit</button><button data-action="delete-diary-entry" data-id="${this.escapeHtml(entry.id)}">Delete</button></div>`).join("")
-      : `<p class="quiet-line">No custom diary dates yet.</p>`;
     const photos = editing?.photos?.map((photo) => `
       <div class="photo-chip">
         <img src="${this.escapeHtml(photo.src)}" alt="">
@@ -853,9 +850,6 @@ export class WalkBackHomeApp {
             <div><h2>Walk Back Home</h2><p>Diary · Muji Edition</p></div>
           </div>
           <div class="journal-actions">
-            <button class="journal-icon-button" aria-label="Undo">↶</button>
-            <button class="journal-icon-button" aria-label="Redo">↷</button>
-            <button class="journal-icon-button" data-action="open-timeline" aria-label="Timeline">⋯</button>
             <label class="journal-upload">＋<input id="diary-photo-input" type="file" accept="image/*"></label>
             <button class="journal-done" data-action="save-diary-entry" data-id="${this.escapeHtml(editing?.id ?? "")}">✓ 完成</button>
           </div>
@@ -869,9 +863,9 @@ export class WalkBackHomeApp {
               <div class="journal-weekday">${this.escapeHtml(weekday)}</div>
               <label><span>▮ 标题：</span><input id="diary-title" value="${this.escapeHtml(editing?.title ?? "今天其实没发生什么特别的")}"></label>
               <div></div>
-              <label><span>● 地点：</span><input value="宿舍 · Muji Room" readonly></label>
+              <label><span>● 地点：</span><input id="diary-location" value="${this.escapeHtml(editing?.location ?? "")}" placeholder="地点"></label>
               <div></div>
-              <label><span>☁ 天气：</span><input value="小雨转阴" readonly></label>
+              <label><span>☁ 天气：</span><input id="diary-weather" value="${this.escapeHtml(editing?.weather ?? "")}" placeholder="天气"></label>
               <div></div>
             </div>
             <figure class="journal-hero-photo">
@@ -889,8 +883,7 @@ export class WalkBackHomeApp {
         <div class="integrated-tools journal-photo-dock">
           <aside class="photo-tray">${photos}</aside>
         </div>
-        <div class="journal-lower-tools"><p class="autosave-state" id="diary-save-state">Saved</p><label class="journal-kind">Memory<select id="diary-memory-kind"><option value="diary" ${editing?.memoryKind === "diary" ? "selected" : ""}>Diary only</option><option value="fragment" ${editing?.memoryKind === "fragment" ? "selected" : ""}>Memory Fragment</option><option value="chapter" ${editing?.memoryKind === "chapter" ? "selected" : ""}>Memory Chapter</option></select></label><button data-action="show-import-diary">Import Existing Diary</button><button data-action="open-map">Walk Back Home</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>
-        <div class="diary-list">${rows}</div>
+        <div class="journal-lower-tools"><p class="autosave-state" id="diary-save-state">Saved</p><label class="journal-kind">Memory<select id="diary-memory-kind"><option value="diary" ${editing?.memoryKind === "diary" ? "selected" : ""}>Diary only</option><option value="fragment" ${editing?.memoryKind === "fragment" ? "selected" : ""}>Memory Fragment</option><option value="chapter" ${editing?.memoryKind === "chapter" ? "selected" : ""}>Memory Chapter</option></select></label><button data-action="show-import-diary">Import Existing Diary</button><button data-action="open-timeline">Entries</button><button data-action="open-map">Walk Back Home</button><button data-action="close">Close</button></div>
       </div>`;
     this.focusStage();
   }
@@ -901,14 +894,17 @@ export class WalkBackHomeApp {
     const index = this.diaryEntries.findIndex((item) => item.id === entry.id);
     this.applyDiaryLibrary(upsertDiaryPageDraft(this.makeDiaryLibrary(), entry));
     this.selectedChapter = entry.title;
-    this.showToast(index >= 0 ? "Diary updated" : "Diary entry added");
     this.showDiaryEditor(entry.id);
+    this.markDiarySaved(index >= 0 ? "Saved just now ✓" : "Added and saved ✓");
+    this.showToast(index >= 0 ? "Diary updated" : "Diary entry added");
     this.autosave();
   }
 
   private readDiaryDraftFromOverlay(id = ""): DiaryEntry | null {
     const dateInput = this.overlay.querySelector<HTMLInputElement>("#diary-date");
     const titleInput = this.overlay.querySelector<HTMLInputElement>("#diary-title");
+    const locationInput = this.overlay.querySelector<HTMLInputElement>("#diary-location");
+    const weatherInput = this.overlay.querySelector<HTMLInputElement>("#diary-weather");
     const bodyInput = this.overlay.querySelector<HTMLTextAreaElement>("#diary-body");
     const kindInput = this.overlay.querySelector<HTMLSelectElement>("#diary-memory-kind");
     const moodInput = this.overlay.querySelector<HTMLInputElement>("#diary-mood");
@@ -925,6 +921,8 @@ export class WalkBackHomeApp {
     const mood = isDiaryMood(moodValue) ? moodValue : existing?.mood ?? "calm";
     return {
       ...makeDiaryEntry(date, title, body, id || existing?.id, memoryKind),
+      location: locationInput?.value.trim(),
+      weather: weatherInput?.value.trim(),
       mood,
       photos: existing?.photos ?? [],
       scrapbookLayout: existing?.scrapbookLayout ?? { elements: [] }
@@ -949,11 +947,22 @@ export class WalkBackHomeApp {
     }, 360);
   }
 
+  private markDiarySaved(message: string): void {
+    const state = this.overlay.querySelector<HTMLElement>("#diary-save-state");
+    const button = this.overlay.querySelector<HTMLButtonElement>(".journal-done");
+    if (state) state.textContent = message;
+    if (button) {
+      button.textContent = "✓ 已保存";
+      button.classList.add("saved");
+    }
+  }
+
   private showImportDiary(): void {
     this.overlay.innerHTML = `
       <div class="modal game-panel diary-editor">
         <h2>Import Existing Diary</h2>
         <p class="quiet-line">Use fictional or personal runtime text only. Imported entries default to Diary only.</p>
+        <label>TXT / Markdown file<input id="diary-import-file" type="file" accept=".txt,.md,.markdown,text/plain,text/markdown"></label>
         <label>Diary lines<textarea id="diary-import" rows="8" placeholder="2026-08-06 | Rain Letter | I kept thinking about the yellow bakery light."></textarea></label>
         <button data-action="import-diary-lines">Import Lines</button>
         <button data-action="open-diary-editor">Back to Journal</button>
@@ -1075,6 +1084,10 @@ export class WalkBackHomeApp {
       await this.handleVinylCoverInput(input);
       return;
     }
+    if (input.id === "diary-import-file") {
+      await this.handleDiaryImportFile(input);
+      return;
+    }
     if (input.id !== "scrapbook-photo-input" && input.id !== "diary-photo-input") return;
     if (!input.files?.[0]) return;
     const entry = this.activeScrapbookEntry();
@@ -1092,12 +1105,29 @@ export class WalkBackHomeApp {
     this.showToast("Photo attached");
   }
 
+  private async handleDiaryImportFile(input: HTMLInputElement): Promise<void> {
+    const file = input.files?.[0];
+    const importInput = this.overlay.querySelector<HTMLTextAreaElement>("#diary-import");
+    if (!file || !importInput) return;
+    importInput.value = await this.readFileAsText(file);
+    this.showToast(`${file.name} loaded`);
+  }
+
   private readFileAsDataUrl(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.addEventListener("load", () => resolve(String(reader.result ?? "")));
       reader.addEventListener("error", () => reject(reader.error));
       reader.readAsDataURL(file);
+    });
+  }
+
+  private readFileAsText(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.addEventListener("load", () => resolve(String(reader.result ?? "")));
+      reader.addEventListener("error", () => reject(reader.error));
+      reader.readAsText(file);
     });
   }
 
