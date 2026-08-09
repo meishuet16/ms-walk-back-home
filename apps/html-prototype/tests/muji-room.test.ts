@@ -31,17 +31,19 @@ test("vinyl records use local prototype audio sources", () => {
   assert.equal(vinylRecords.every((record) => record.sideA?.src.startsWith("assets/audio/")), true);
 });
 
-test("records interaction is anchored at the radio and room no longer exposes rest as a primary prompt", () => {
+test("records interaction is visually anchored at the turntable and room no longer exposes rest as a primary prompt", () => {
   const records = roomInteractions.find((interaction) => interaction.id === "records");
 
   assert.ok(records);
   assert.equal(records.x >= 720 && records.x <= 820, true);
-  assert.equal(records.y >= 400 && records.y <= 455, true);
+  assert.equal(records.y >= 330 && records.y <= 390, true);
   assert.equal(roomInteractions.some((interaction) => interaction.label === "Rest"), false);
 });
 
 test("room interaction prompts trigger from walkable spots near their objects", () => {
-  assert.equal(nearestRoomInteraction({ x: 760, y: 430 })?.id, "records");
+  assert.notEqual(nearestRoomInteraction({ x: 760, y: 430 })?.id, "records");
+  assert.equal(nearestRoomInteraction({ x: 820, y: 392 })?.id, "records");
+  assert.equal(nearestRoomInteraction({ x: 852, y: 368 })?.id, "records");
   assert.equal(nearestRoomInteraction({ x: 620, y: 250 })?.id, "journal");
 });
 

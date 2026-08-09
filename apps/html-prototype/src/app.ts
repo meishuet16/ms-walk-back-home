@@ -655,13 +655,42 @@ export class WalkBackHomeApp {
     }
     for (const interaction of roomInteractions) {
       if (interaction.id === "residue" && !this.room.residueIds?.length) continue;
-      const active = this.activeRoomInteraction?.id === interaction.id;
-      this.ctx.strokeStyle = active ? "rgba(255, 231, 172, .9)" : "rgba(255, 231, 172, .16)";
-      this.ctx.lineWidth = active ? 2 : 1;
+      this.drawRoomInteractionHint(interaction, this.activeRoomInteraction?.id === interaction.id, time, scale);
+    }
+  }
+
+  private drawRoomInteractionHint(interaction: RoomInteraction, active: boolean, time: number, scale: number): void {
+    const x = interaction.x * scale;
+    const y = interaction.y * scale;
+    const pulse = Math.sin(time / 360) * 0.5 + 0.5;
+    const baseRadius = active ? (22 + pulse * 4) * scale : 4 * scale;
+    const glowRadius = active ? 44 * scale : 12 * scale;
+    const glow = this.ctx.createRadialGradient(x, y, 1, x, y, glowRadius);
+    glow.addColorStop(0, active ? "rgba(255, 229, 166, .52)" : "rgba(255, 226, 154, .18)");
+    glow.addColorStop(0.55, active ? "rgba(213, 166, 87, .18)" : "rgba(213, 166, 87, .05)");
+    glow.addColorStop(1, "rgba(213, 166, 87, 0)");
+    this.ctx.fillStyle = glow;
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, glowRadius, 0, Math.PI * 2);
+    this.ctx.fill();
+
+    this.ctx.save();
+    this.ctx.globalAlpha = active ? 0.86 : 0.18;
+    this.ctx.strokeStyle = active ? "rgba(255, 231, 172, .92)" : "rgba(255, 231, 172, .42)";
+    this.ctx.lineWidth = active ? 1.4 * scale : 1 * scale;
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, baseRadius, 0, Math.PI * 2);
+    this.ctx.stroke();
+    if (active) {
+      this.ctx.strokeStyle = "rgba(255, 249, 216, .46)";
       this.ctx.beginPath();
-      this.ctx.arc(interaction.x * scale, interaction.y * scale, interaction.radius * scale, 0, Math.PI * 2);
+      this.ctx.arc(x, y, (baseRadius + 7 * scale), -0.6, 0.9);
+      this.ctx.stroke();
+      this.ctx.beginPath();
+      this.ctx.arc(x, y, (baseRadius + 7 * scale), Math.PI + 0.55, Math.PI + 1.95);
       this.ctx.stroke();
     }
+    this.ctx.restore();
   }
 
   private drawRoomFallback(scale: number): void {

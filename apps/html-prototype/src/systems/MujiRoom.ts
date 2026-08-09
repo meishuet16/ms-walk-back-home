@@ -74,7 +74,7 @@ export const roomInteractions: RoomInteraction[] = [
   { id: "journal", label: "Journal", x: 620, y: 250, radius: 72 },
   { id: "lamp", label: "Lamp", x: 218, y: 210, radius: 58 },
   { id: "window", label: "Look Outside", x: 486, y: 164, radius: 80 },
-  { id: "records", label: "Records", x: 760, y: 430, radius: 86 },
+  { id: "records", label: "Records", x: 820, y: 360, radius: 56 },
   { id: "residue", label: "Examine", x: 562, y: 316, radius: 62 },
   { id: "reflection", label: "Reflection Note", x: 504, y: 450, radius: 62 }
 ];
