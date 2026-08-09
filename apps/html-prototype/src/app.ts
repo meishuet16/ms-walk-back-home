@@ -520,12 +520,15 @@ export class WalkBackHomeApp {
       const x = (door.x - cameraX) * scale;
       const y = (door.y - cameraY) * scale;
       const active = this.activeDoor?.id === door.id;
-      const glow = this.ctx.createRadialGradient(x, y, 4, x, y, (active ? 68 : 44) * scale);
-      glow.addColorStop(0, active ? "rgba(255,213,113,.82)" : "rgba(255,184,72,.46)");
+      const state = this.isChapterNode(door) ? this.progressFor(this.chapterIdFor(door)).state : "fragment";
+      const baseRadius = state === "fragment" ? 24 : state === "walkedThrough" ? 34 : state === "visited" ? 44 : 50;
+      const radius = (active ? baseRadius + 18 : baseRadius) * scale;
+      const glow = this.ctx.createRadialGradient(x, y, 4, x, y, radius);
+      glow.addColorStop(0, state === "walkedThrough" ? "rgba(255,210,145,.32)" : active ? "rgba(255,213,113,.82)" : "rgba(255,184,72,.46)");
       glow.addColorStop(1, "rgba(255,149,44,0)");
       this.ctx.fillStyle = glow;
       this.ctx.beginPath();
-      this.ctx.arc(x, y, (active ? 68 : 44) * scale, 0, Math.PI * 2);
+      this.ctx.arc(x, y, radius, 0, Math.PI * 2);
       this.ctx.fill();
       this.ctx.fillStyle = "#fff0be";
       this.ctx.font = `${14 * scale}px Georgia`;
@@ -585,7 +588,7 @@ export class WalkBackHomeApp {
   private showMap(): void {
     const doors = this.allDoors().map((door) => {
       const state = this.isChapterNode(door) ? this.progressFor(this.chapterIdFor(door)).state : "fragment";
-      return `<button data-action="${"kind" in door && door.kind === "fragment" ? "close" : "enter-door"}" data-door="${this.escapeHtml(door.id)}">${this.escapeHtml(door.date)} ${this.escapeHtml(door.title)}<span>${state === "walkedThrough" ? "Remember" : state}</span></button>`;
+      return `<button data-action="enter-door" data-door="${this.escapeHtml(door.id)}">${this.escapeHtml(door.date)} ${this.escapeHtml(door.title)}<span>${state === "walkedThrough" ? "Remember" : state}</span></button>`;
     }).join("");
     this.overlay.innerHTML = `<div class="modal game-panel"><h2>Walk Back Home</h2><p>The Forest contains only memory fragments and authored chapter doors.</p><div class="settings-row">${doors || "<p>No forest-visible diary entries yet.</p>"}</div><button data-action="open-diary-editor">Journal</button><button data-action="settings">Back</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
     this.focusStage();
