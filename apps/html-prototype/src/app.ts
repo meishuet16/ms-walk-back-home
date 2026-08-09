@@ -4,7 +4,8 @@ import { AudioManager } from "./systems/AudioManager.js";
 import { chapterRegistry, forestEntries, routeForestEntry, type AuthoredForestEntry } from "./systems/ChapterRegistry.js";
 import { beginChapterVisit, finishChapterWalkthrough, initialChapterProgress, markChapterDialogueComplete, markChapterMemoryRead, recordChapterChoice } from "./systems/ChapterProgressManager.js";
 import { inAnyRect, type Point, type Rect } from "./systems/CollisionSystem.js";
-import { diaryEntriesToForestMemories, diaryEntriesToTimeline, makeDiaryEntry, parseDiaryImport, updateDiaryMemoryKind, type DiaryForestMemory } from "./systems/DiaryImport.js";
+import { deleteDiaryEntryById, getDiaryForestMemories, getDiaryTimeline, upsertDiaryEntry } from "./systems/DiaryLibrary.js";
+import { makeDiaryEntry, parseDiaryImport, updateDiaryMemoryKind, type DiaryForestMemory } from "./systems/DiaryImport.js";
 import { DialogueSystem } from "./systems/DialogueSystem.js";
 import { resolveChapterReflection, type Ending } from "./systems/EndingResolver.js";
 import { InputManager } from "./systems/InputManager.js";
@@ -275,7 +276,7 @@ export class WalkBackHomeApp {
   }
 
   private allDoors(): ForestNode[] {
-    return [...forestEntries, ...diaryEntriesToForestMemories(this.diaryEntries)];
+    return [...forestEntries, ...getDiaryForestMemories(this.makeDiaryLibrary())];
   }
 
   private isChapterNode(node: ForestNode): node is AuthoredForestEntry | Extract<DiaryForestMemory, { kind: "chapter" }> {
@@ -574,13 +575,13 @@ export class WalkBackHomeApp {
 
   private showHome(): void {
     const today = new Date().toISOString().slice(0, 10);
-    const recent = diaryEntriesToTimeline(this.diaryEntries).slice(0, 3).map((entry) => `<li>${this.escapeHtml(entry.date)} · ${this.escapeHtml(entry.title)}</li>`).join("");
+    const recent = getDiaryTimeline(this.makeDiaryLibrary()).slice(0, 3).map((entry) => `<li>${this.escapeHtml(entry.date)} · ${this.escapeHtml(entry.title)}</li>`).join("");
     this.overlay.innerHTML = `<div class="modal game-panel"><h2>Today / Home</h2><p>${today}</p><div class="settings-row"><button data-action="open-diary-editor">Write Today</button><button data-action="continue">Continue</button><button data-action="open-map">Walk Back Home</button></div><h3>Recent diary</h3><ul>${recent || "<li>No diary entries yet.</li>"}</ul><button data-action="close">Close</button></div>`;
     this.focusStage();
   }
 
   private showTimeline(): void {
-    const rows = diaryEntriesToTimeline(this.diaryEntries).map((entry) => `<li>${this.escapeHtml(entry.date)} · ${this.escapeHtml(entry.title)} · ${entry.memoryKind}${entry.hasScrapbookLayout ? " · scrapbook page" : ""}</li>`).join("");
+    const rows = getDiaryTimeline(this.makeDiaryLibrary()).map((entry) => `<li>${this.escapeHtml(entry.date)} · ${this.escapeHtml(entry.title)} · ${entry.memoryKind}${entry.hasScrapbookLayout ? " · scrapbook page" : ""}</li>`).join("");
     this.overlay.innerHTML = `<div class="modal game-panel"><h2>Diary Timeline</h2><p>These are days that happened. The Forest only shows entries you classify as fragments or chapters.</p><ul>${rows || "<li>No diary entries yet.</li>"}</ul><button data-action="open-diary-editor">Journal</button><button data-action="settings">Back</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
     this.focusStage();
   }
@@ -632,8 +633,7 @@ export class WalkBackHomeApp {
     const memoryKind = (kindInput?.value as MemoryKind | undefined) ?? "diary";
     const entry = makeDiaryEntry(date, title, body, id || undefined, memoryKind);
     const index = this.diaryEntries.findIndex((item) => item.id === entry.id);
-    if (index >= 0) this.diaryEntries[index] = entry;
-    else this.diaryEntries.push(entry);
+    this.applyDiaryLibrary(upsertDiaryEntry(this.makeDiaryLibrary(), entry));
     this.selectedChapter = entry.title;
     this.showToast(index >= 0 ? "Diary updated" : "Diary entry added");
     this.showDiaryEditor(entry.id);
@@ -649,8 +649,7 @@ export class WalkBackHomeApp {
     }
     for (const entry of imported) {
       const existing = this.diaryEntries.findIndex((item) => item.id === entry.id);
-      if (existing >= 0) this.diaryEntries[existing] = entry;
-      else this.diaryEntries.push(entry);
+      this.applyDiaryLibrary(upsertDiaryEntry(this.makeDiaryLibrary(), entry));
     }
     this.showToast(`Imported ${imported.length} diary date${imported.length === 1 ? "" : "s"}`);
     this.showDiaryEditor();
@@ -659,7 +658,7 @@ export class WalkBackHomeApp {
 
   private deleteDiaryEntry(id: string): void {
     const entry = this.diaryEntries.find((item) => item.id === id);
-    this.diaryEntries = this.diaryEntries.filter((item) => item.id !== id);
+    this.applyDiaryLibrary(deleteDiaryEntryById(this.makeDiaryLibrary(), id));
     if (entry) {
       this.visitedMemories.delete(entry.id);
       this.walkedThroughMemories.delete(entry.id);
