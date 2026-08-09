@@ -1,5 +1,5 @@
 import { bakeryChapter } from "./fixtures/chapterPlan.js";
-import type { ChapterProgress, Choice, DiaryEntry, DiaryLibraryState, JourneyState, MemoryKind, RoomJourneyState, SceneId, Tendencies } from "./types.js";
+import type { ChapterProgress, Choice, DiaryEntry, DiaryLibraryState, DiaryMood, JourneyState, MemoryKind, RoomJourneyState, SceneId, Tendencies } from "./types.js";
 import { AudioManager } from "./systems/AudioManager.js";
 import { chapterRegistry, forestEntries, routeForestEntry, type AuthoredForestEntry } from "./systems/ChapterRegistry.js";
 import { beginChapterVisit, finishChapterWalkthrough, initialChapterProgress, markChapterDialogueComplete, markChapterMemoryRead, recordChapterChoice } from "./systems/ChapterProgressManager.js";
@@ -55,6 +55,18 @@ const assets = {
 };
 
 const bakeryMemorySpot = { x: 735, y: 325 };
+
+const diaryMoodOptions: Array<{ value: DiaryMood; label: string }> = [
+  { value: "sad", label: "难过" },
+  { value: "calm", label: "平静" },
+  { value: "blank", label: "发呆" },
+  { value: "happy", label: "开心" },
+  { value: "excited", label: "超开心" }
+];
+
+function isDiaryMood(value: string): value is DiaryMood {
+  return diaryMoodOptions.some((mood) => mood.value === value);
+}
 
 function img(src: string): HTMLImageElement {
   const image = new Image();
@@ -197,6 +209,7 @@ export class WalkBackHomeApp {
     if (action === "scrapbook-rotate") this.rotateSelectedScrapbookElement(Number(target.dataset.delta ?? 0));
     if (action === "scrapbook-layer") this.layerSelectedScrapbookElement(target.dataset.direction as "front" | "back");
     if (action === "scrapbook-delete") this.deleteSelectedScrapbookElement();
+    if (action === "set-diary-mood") this.setDiaryMood(target.dataset.mood ?? "");
     if (action === "set-memory-kind") this.setDiaryMemoryKind(target.dataset.id ?? "", target.dataset.kind as MemoryKind);
     if (action === "room-window") this.roomWindow();
     if (action === "room-lamp") this.roomLamp();
@@ -811,6 +824,12 @@ export class WalkBackHomeApp {
     const dateValue = editing?.date ?? today;
     const parsedDate = new Date(`${dateValue}T00:00:00`);
     const weekday = Number.isNaN(parsedDate.getTime()) ? "" : ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][parsedDate.getDay()];
+    const selectedMood = editing?.mood ?? "calm";
+    const moodButtons = diaryMoodOptions.map((mood) => `
+      <button class="journal-mood-option ${selectedMood === mood.value ? "selected" : ""}" data-action="set-diary-mood" data-mood="${mood.value}" aria-label="${this.escapeHtml(mood.label)}">
+        <span class="mood-muji mood-${mood.value}" aria-hidden="true"></span>
+        <small>${this.escapeHtml(mood.label)}</small>
+      </button>`).join("");
     this.activeScrapbookEntryId = editing?.id ?? "";
     const elementIds = new Set((editing?.scrapbookLayout?.elements ?? []).map((element) => element.id));
     if (!this.selectedScrapbookElementId || !elementIds.has(this.selectedScrapbookElementId)) this.selectedScrapbookElementId = "";
@@ -838,7 +857,7 @@ export class WalkBackHomeApp {
         <div class="journal-toolbar">
           <button class="journal-icon-button" data-action="settings" aria-label="Back">‹</button>
           <div class="journal-brand">
-            <span class="journal-mascot" aria-hidden="true"></span>
+            <span class="journal-mascot mood-${selectedMood}" aria-hidden="true"></span>
             <div><h2>Walk Back Home</h2><p>Diary · Muji Edition</p></div>
           </div>
           <div class="journal-actions">
@@ -864,13 +883,14 @@ export class WalkBackHomeApp {
               <div></div>
             </div>
             <figure class="journal-hero-photo">
-              <img src="${assets.roomFallback}" alt="">
-              <figcaption>好好记录，<br>慢慢回家。</figcaption>
+              <div class="journal-hero-scene">
+                <img src="${assets.room}" alt="">
+                <span class="journal-photo-muji mood-${selectedMood}" aria-hidden="true"></span>
+                <figcaption>好好记录，<br>慢慢回家。</figcaption>
+              </div>
             </figure>
             <label class="journal-body-field"><textarea id="diary-body" rows="12">${this.escapeHtml(editing?.body ?? "")}</textarea></label>
-            <div class="journal-desk-photo"><img src="${assets.timeline}" alt=""></div>
-            <div class="journal-cassette-sticker" aria-hidden="true"></div>
-            <div class="journal-plant-sticker" aria-hidden="true"></div>
+            <div class="journal-mood-picker"><input id="diary-mood" type="hidden" value="${selectedMood}">${moodButtons}</div>
           </div>
           ${elements}
         </section>
@@ -899,6 +919,7 @@ export class WalkBackHomeApp {
     const titleInput = this.overlay.querySelector<HTMLInputElement>("#diary-title");
     const bodyInput = this.overlay.querySelector<HTMLTextAreaElement>("#diary-body");
     const kindInput = this.overlay.querySelector<HTMLSelectElement>("#diary-memory-kind");
+    const moodInput = this.overlay.querySelector<HTMLInputElement>("#diary-mood");
     const date = dateInput?.value.trim() ?? "";
     const title = titleInput?.value.trim() || "Untitled Memory";
     const body = bodyInput?.value.trim() ?? "";
@@ -908,8 +929,11 @@ export class WalkBackHomeApp {
     }
     const existing = this.diaryEntries.find((item) => item.id === id);
     const memoryKind = (kindInput?.value as MemoryKind | undefined) ?? "diary";
+    const moodValue = moodInput?.value ?? "";
+    const mood = isDiaryMood(moodValue) ? moodValue : existing?.mood ?? "calm";
     return {
       ...makeDiaryEntry(date, title, body, id || existing?.id, memoryKind),
+      mood,
       photos: existing?.photos ?? [],
       scrapbookLayout: existing?.scrapbookLayout ?? { elements: [] }
     };
@@ -981,6 +1005,17 @@ export class WalkBackHomeApp {
     if (index < 0) return;
     this.diaryEntries[index] = updateDiaryMemoryKind(this.diaryEntries[index], memoryKind);
     this.showDiaryEditor(id);
+    this.autosave();
+  }
+
+  private setDiaryMood(mood: string): void {
+    if (!isDiaryMood(mood)) return;
+    const editor = this.overlay.querySelector<HTMLElement>(".diary-page-editor");
+    const entryId = editor?.dataset.entry ?? "";
+    const draft = this.readDiaryDraftFromOverlay(entryId);
+    if (!draft) return;
+    this.applyDiaryLibrary(upsertDiaryPageDraft(this.makeDiaryLibrary(), { ...draft, mood }));
+    this.showDiaryEditor(draft.id);
     this.autosave();
   }
 

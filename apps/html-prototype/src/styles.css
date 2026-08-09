@@ -332,14 +332,32 @@ canvas {
   align-items: center;
   gap: 14px;
 }
-.journal-mascot {
+.journal-mascot,
+.mood-muji,
+.journal-photo-muji {
   display: block;
-  width: 56px;
-  height: 62px;
-  flex: 0 0 56px;
+  width: 48px;
+  height: 56px;
   background: url("assets/muji-sheet.png") 0 0 / auto no-repeat;
+  background-size: 192px 224px;
   image-rendering: pixelated;
+}
+.journal-mascot {
+  flex: 0 0 48px;
   transform: scale(1.05);
+}
+.mood-sad {
+  background-position: 0 0;
+}
+.mood-blank {
+  background-position: -48px 0;
+}
+.mood-calm,
+.mood-happy {
+  background-position: -96px 0;
+}
+.mood-excited {
+  background-position: -144px 0;
 }
 .journal-brand h2 {
   margin: 0;
@@ -503,6 +521,7 @@ canvas {
   right: 70px;
   top: 90px;
   width: 340px;
+  z-index: 3;
   transform: rotate(.6deg);
 }
 .journal-hero-photo::before,
@@ -517,28 +536,51 @@ canvas {
   background: rgba(205, 171, 112, .52);
   box-shadow: 0 2px 5px rgba(71, 48, 25, .1);
 }
-.journal-hero-photo img,
-.journal-desk-photo img {
+.journal-hero-scene {
+  position: relative;
+  overflow: visible;
+}
+.journal-hero-photo img {
   display: block;
   width: 100%;
   height: 210px;
   object-fit: cover;
   filter: saturate(.78) contrast(.95);
 }
+.journal-photo-muji {
+  position: absolute;
+  left: 116px;
+  bottom: 20px;
+  transform: scale(1.95);
+  transform-origin: center bottom;
+  filter: drop-shadow(0 7px 2px rgba(40, 30, 21, .18));
+}
 .journal-hero-photo figcaption {
   position: absolute;
-  left: -42px;
-  top: -4px;
-  width: 140px;
-  min-height: 92px;
+  left: -46px;
+  top: 10px;
+  z-index: 3;
+  width: 150px;
+  min-height: 96px;
   display: grid;
   place-items: center;
-  padding: 14px;
-  border-radius: 46% 54% 47% 53%;
+  padding: 18px 20px;
+  border-radius: 46% 54% 51% 49% / 42% 43% 57% 58%;
   background: #f4e7c9;
   color: #352619;
   line-height: 1.55;
-  box-shadow: 0 4px 11px rgba(72, 50, 27, .12);
+  box-shadow: 0 4px 11px rgba(72, 50, 27, .12), inset 0 0 0 1px rgba(123, 92, 54, .08);
+}
+.journal-hero-photo figcaption::after {
+  content: "";
+  position: absolute;
+  right: -14px;
+  top: 56px;
+  width: 30px;
+  height: 22px;
+  background: #f4e7c9;
+  border-radius: 0 80% 40% 80%;
+  transform: rotate(-18deg);
 }
 .journal-body-field {
   position: absolute;
@@ -561,45 +603,45 @@ canvas {
   line-height: 1.65;
   resize: none;
 }
-.journal-desk-photo {
-  left: 168px;
-  bottom: 64px;
-  width: 300px;
-  transform: rotate(-9deg);
-}
-.journal-desk-photo img {
-  height: 160px;
-}
-.journal-cassette-sticker,
-.journal-plant-sticker {
+.journal-mood-picker {
   position: absolute;
-  right: 118px;
-  bottom: 78px;
-  width: 185px;
-  height: 104px;
-  transform: rotate(5deg);
+  right: 86px;
+  top: 344px;
+  z-index: 24;
+  display: flex;
+  gap: 8px;
+  align-items: end;
+  padding: 8px 10px;
+  border: 1px solid rgba(125, 92, 53, .18);
   border-radius: 18px;
-  background:
-    radial-gradient(circle at 27% 54%, #24211e 0 19px, transparent 20px),
-    radial-gradient(circle at 72% 54%, #24211e 0 19px, transparent 20px),
-    linear-gradient(90deg, transparent 26%, #d8c298 27% 72%, transparent 73%),
-    #4a463e;
-  box-shadow: 0 0 0 8px #fbf3df, 0 8px 14px rgba(65, 44, 22, .14);
+  background: rgba(255, 248, 231, .72);
+  box-shadow: 0 8px 18px rgba(70, 48, 25, .1);
 }
-.journal-plant-sticker {
-  right: 360px;
-  bottom: 145px;
-  width: 104px;
-  height: 140px;
-  transform: rotate(-8deg);
-  border-radius: 0;
-  background:
-    radial-gradient(ellipse at 45% 32%, #6f8554 0 11px, transparent 12px),
-    radial-gradient(ellipse at 58% 46%, #617948 0 12px, transparent 13px),
-    radial-gradient(ellipse at 38% 52%, #78935e 0 11px, transparent 12px),
-    linear-gradient(#7a583d 0 0) 39px 84px / 28px 38px no-repeat,
-    linear-gradient(#cbb898 0 0) 24px 100px / 58px 28px no-repeat;
-  box-shadow: 0 0 0 7px #fbf3df, 0 8px 14px rgba(65, 44, 22, .14);
+.journal-mood-option {
+  width: 56px;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 4px 2px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: #7a6245;
+  box-shadow: none;
+}
+.journal-mood-option .mood-muji {
+  transform: scale(.68);
+  transform-origin: center bottom;
+  margin: -9px 0 -8px;
+}
+.journal-mood-option small {
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+}
+.journal-mood-option.selected {
+  background: rgba(223, 202, 161, .68);
+  color: #3f2d1d;
+  outline: 1px solid rgba(120, 88, 48, .18);
 }
 .journal-photo-dock {
   padding: 10px 24px 0;
@@ -1276,9 +1318,14 @@ canvas {
   }
   .journal-mascot {
     width: 42px;
-    height: 50px;
+    height: 49px;
     flex-basis: 42px;
+    background-size: 168px 196px;
   }
+  .journal-mascot.mood-blank { background-position: -42px 0; }
+  .journal-mascot.mood-calm,
+  .journal-mascot.mood-happy { background-position: -84px 0; }
+  .journal-mascot.mood-excited { background-position: -126px 0; }
   .journal-brand h2 {
     font-size: 18px;
   }
@@ -1316,19 +1363,26 @@ canvas {
   }
   .journal-hero-photo {
     right: 24px;
-    top: 360px;
+    top: 430px;
     width: min(290px, calc(100% - 104px));
   }
   .journal-body-field {
     left: 74px;
-    top: 552px;
+    top: 642px;
     width: calc(100% - 102px);
     height: 250px;
   }
-  .journal-desk-photo,
-  .journal-cassette-sticker,
-  .journal-plant-sticker {
-    display: none;
+  .journal-photo-muji {
+    left: 102px;
+    transform: scale(1.55);
+  }
+  .journal-mood-picker {
+    left: 74px;
+    right: auto;
+    top: 322px;
+    bottom: auto;
+    max-width: calc(100% - 102px);
+    overflow-x: auto;
   }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -1,4 +1,4 @@
-import type { DiaryEntry, MemoryKind } from "../types.js";
+import type { DiaryEntry, DiaryMood, MemoryKind } from "../types.js";
 
 export type DiaryTimelineItem = {
   id: string;
@@ -121,6 +121,10 @@ function normalizeMemoryKind(value: unknown): MemoryKind {
   return value === "fragment" || value === "chapter" || value === "diary" ? value : "diary";
 }
 
+function normalizeDiaryMood(value: unknown): DiaryMood {
+  return value === "sad" || value === "blank" || value === "happy" || value === "excited" || value === "calm" ? value : "calm";
+}
+
 export function normalizeDiaryEntry(entry: Partial<DiaryEntry> & Pick<DiaryEntry, "date" | "title" | "body">): DiaryEntry {
   return {
     id: entry.id || makeDiaryId(entry.date, entry.title),
@@ -128,6 +132,7 @@ export function normalizeDiaryEntry(entry: Partial<DiaryEntry> & Pick<DiaryEntry
     title: entry.title.trim() || "Untitled Memory",
     body: entry.body.trim(),
     memoryKind: normalizeMemoryKind(entry.memoryKind),
+    mood: normalizeDiaryMood(entry.mood),
     chapterId: entry.memoryKind === "chapter" ? entry.chapterId || entry.id : undefined,
     photos: entry.photos ?? [],
     scrapbookLayout: entry.scrapbookLayout ?? { elements: [] }
