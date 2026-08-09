@@ -45,6 +45,8 @@ export type DiaryEntry = {
   date: string;
   title: string;
   body: string;
+  location?: string;
+  weather?: string;
   memoryKind: MemoryKind;
   mood?: DiaryMood;
   chapterId?: string;
