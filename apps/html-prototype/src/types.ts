@@ -105,6 +105,7 @@ export type RoomJourneyState = {
   windowFocus?: boolean;
   selectedVinylId?: string;
   vinylPlaying?: boolean;
+  vinylCovers?: Record<string, string>;
   reflectionNote?: string;
 };
 

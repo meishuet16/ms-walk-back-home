@@ -33,6 +33,9 @@ import {
   toggleRoomLamp,
   vinylPlayerActions,
   vinylRecords,
+  vinylRecordsFromAudioFiles,
+  withCustomVinylCover,
+  type VinylRecord,
   type RoomInteraction
 } from "./systems/MujiRoom.js";
 import { SaveManager } from "./systems/SaveManager.js";
@@ -101,6 +104,7 @@ export class WalkBackHomeApp {
   private selectedScrapbookElementId = "";
   private scrapbookDrag: { elementId: string; entryId: string; offsetX: number; offsetY: number } | null = null;
   private diaryAutosaveTimer = 0;
+  private availableVinylRecords: VinylRecord[] = vinylRecords;
   private settings = { rain: true, muted: false, volume: 0.45, compact: false, reducedMotion: false, musicEnabled: true, musicScene: "bakery" as MusicScene };
   private room: RoomJourneyState = createDefaultRoomState();
   private chapterProgress = new Map<string, ChapterProgress>();
@@ -147,6 +151,7 @@ export class WalkBackHomeApp {
     root.addEventListener("pointerdown", () => void this.audio.ensurePlaying(), { passive: true });
     root.addEventListener("keydown", () => void this.audio.ensurePlaying());
     this.bootstrapDiaryLibrary();
+    void this.loadVinylManifest();
     this.images.room.addEventListener("error", () => {
       this.images.room.src = assets.roomFallback;
     }, { once: true });
@@ -984,6 +989,10 @@ export class WalkBackHomeApp {
 
   private async handleChange(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
+    if (input.id === "vinyl-cover-input") {
+      await this.handleVinylCoverInput(input);
+      return;
+    }
     if (input.id !== "scrapbook-photo-input" && input.id !== "diary-photo-input") return;
     if (!input.files?.[0]) return;
     const entry = this.activeScrapbookEntry();
@@ -1008,6 +1017,17 @@ export class WalkBackHomeApp {
       reader.addEventListener("error", () => reject(reader.error));
       reader.readAsDataURL(file);
     });
+  }
+
+  private async handleVinylCoverInput(input: HTMLInputElement): Promise<void> {
+    const file = input.files?.[0];
+    const recordId = this.room.selectedVinylId ?? this.availableVinylRecords[0]?.id;
+    if (!file || !recordId) return;
+    const src = await this.readFileAsDataUrl(file);
+    this.room = withCustomVinylCover(this.room, recordId, src);
+    this.showRecords();
+    this.showToast("Cover changed");
+    this.autosave();
   }
 
   private addPhotoToScrapbook(photoId: string): void {
@@ -1166,17 +1186,19 @@ export class WalkBackHomeApp {
   }
 
   private showRecords(): void {
-    const current = this.room.selectedVinylId ?? vinylRecords[0].id;
-    const currentRecord = vinylRecords.find((record) => record.id === current) ?? vinylRecords[0];
-    const records = vinylRecords.map((record, index) => `<button class="${record.id === current ? "selected" : ""}" data-action="select-vinyl" data-record="${this.escapeHtml(record.id)}"><span>${index + 1}. ${this.escapeHtml(record.title)}</span><small>${record.id === current ? "Now playing" : this.escapeHtml(record.subtitle ?? "record")}</small></button>`).join("");
+    const current = this.room.selectedVinylId ?? this.availableVinylRecords[0].id;
+    const currentRecord = this.availableVinylRecords.find((record) => record.id === current) ?? this.availableVinylRecords[0];
+    const cover = this.room.vinylCovers?.[currentRecord.id] ?? "";
+    const records = this.availableVinylRecords.map((record, index) => `<button class="${record.id === current ? "selected" : ""}" data-action="select-vinyl" data-record="${this.escapeHtml(record.id)}"><span>${index + 1}. ${this.escapeHtml(record.title)}</span><small>${record.id === current ? "Now playing" : this.escapeHtml(record.subtitle ?? "record")}</small></button>`).join("");
     const actions = vinylPlayerActions();
     this.overlay.innerHTML = `
       <div class="modal game-panel records-panel">
         <div class="vinyl-console">
           <div class="turntable-card">
             <div class="turntable-lid"></div>
-            <div class="record-disc ${this.room.vinylPlaying ? "playing" : ""}"><span></span></div>
+            <div class="record-disc ${this.room.vinylPlaying ? "playing" : ""}" style="${cover ? `--cover:url('${this.escapeHtml(cover)}')` : ""}"><span></span></div>
             <div class="tone-arm"></div>
+            <label class="cover-upload">Custom Cover<input id="vinyl-cover-input" type="file" accept="image/*"></label>
           </div>
           <div class="now-playing">
             <small>Now Playing</small>
@@ -1194,7 +1216,7 @@ export class WalkBackHomeApp {
   }
 
   private selectVinyl(recordId: string): void {
-    this.room = selectVinylRecord(this.room, recordId);
+    this.room = this.selectAvailableVinylRecord(recordId);
     this.playVinylMusic();
     this.showRecords();
     this.showToast("Record changed");
@@ -1207,6 +1229,11 @@ export class WalkBackHomeApp {
     else this.audio.pause();
     this.showRecords();
     this.autosave();
+  }
+
+  private selectAvailableVinylRecord(recordId: string): typeof this.room {
+    const record = this.availableVinylRecords.find((item) => item.id === recordId) ?? this.availableVinylRecords[0];
+    return selectVinylRecord({ ...this.room, selectedVinylId: record.id }, record.id, this.availableVinylRecords);
   }
 
   private makeDiaryLibrary(): DiaryLibraryState {
@@ -1329,8 +1356,25 @@ export class WalkBackHomeApp {
     this.lastHudHtml = "";
   }
 
+  private async loadVinylManifest(): Promise<void> {
+    try {
+      const response = await fetch("assets/audio-manifest.json");
+      if (!response.ok) return;
+      const manifest = await response.json() as { files?: string[] };
+      const generated = vinylRecordsFromAudioFiles(manifest.files ?? []);
+      if (generated.length) {
+        this.availableVinylRecords = generated;
+        if (!this.availableVinylRecords.some((record) => record.id === this.room.selectedVinylId)) {
+          this.room.selectedVinylId = this.availableVinylRecords[0].id;
+        }
+      }
+    } catch {
+      this.availableVinylRecords = vinylRecords;
+    }
+  }
+
   private playVinylMusic(): void {
-    const track = currentVinylTrack(this.room);
+    const track = currentVinylTrack(this.room, this.availableVinylRecords);
     this.audio.setTrack(track.src);
     if (this.settings.musicEnabled && !this.settings.muted) void this.audio.ensurePlaying();
     this.musicPlayer.innerHTML = "";

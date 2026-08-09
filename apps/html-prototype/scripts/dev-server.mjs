@@ -17,7 +17,7 @@ const mime = {
 
 createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://localhost:${port}`);
-  const cleanPath = url.pathname === "/" ? "/index.html" : url.pathname;
+  const cleanPath = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
   const candidates = [
     join(root, "dist", cleanPath),
     join(root, "dist/public", cleanPath.replace(/^\/assets\//, "assets/"))

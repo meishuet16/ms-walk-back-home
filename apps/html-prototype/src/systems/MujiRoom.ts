@@ -30,6 +30,28 @@ export type VinylRecord = {
   unlockedByDefault?: boolean;
 };
 
+function slugifyAudioName(value: string): string {
+  const ascii = value
+    .normalize("NFKD")
+    .replace(/[^\x00-\x7F]/g, "")
+    .toLowerCase()
+    .replace(/\.mp3$/i, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 42);
+  return ascii || `track-${Math.abs([...value].reduce((sum, char) => sum + char.charCodeAt(0), 0))}`;
+}
+
+function titleFromAudioName(fileName: string): { title: string; subtitle: string } {
+  const base = fileName.replace(/\.mp3$/i, "");
+  const cleaned = base.replace(/\s*\([^)]*\)\s*/g, " ").trim();
+  const [title = cleaned, ...subtitleParts] = cleaned.split("-").map((part) => part.trim()).filter(Boolean);
+  return {
+    title: title || base,
+    subtitle: subtitleParts.join(" / ") || "local audio"
+  };
+}
+
 export const roomSize = { w: 960, h: 540 };
 
 export const roomSpawn: Point = { x: 126, y: 438 };
@@ -84,6 +106,7 @@ export function createDefaultRoomState(): RoomJourneyState {
     windowFocus: false,
     selectedVinylId: vinylRecords[0].id,
     vinylPlaying: false,
+    vinylCovers: {},
     reflectionNote: ""
   };
 }
@@ -118,15 +141,46 @@ export function toggleRoomLamp(state: RoomJourneyState): RoomJourneyState {
   return { ...state, visits: state.visits + 1, lampOn: !state.lampOn };
 }
 
-export function selectVinylRecord(state: RoomJourneyState, recordId: string): RoomJourneyState {
-  const record = vinylRecords.find((item) => item.id === recordId) ?? vinylRecords[0];
+export function selectVinylRecord(state: RoomJourneyState, recordId: string, records: VinylRecord[] = vinylRecords): RoomJourneyState {
+  const record = records.find((item) => item.id === recordId) ?? records[0] ?? vinylRecords[0];
   return { ...state, selectedVinylId: record.id, vinylPlaying: true, musicOn: true };
 }
 
-export function currentVinylTrack(state: RoomJourneyState): MusicTrack {
-  return (vinylRecords.find((record) => record.id === state.selectedVinylId) ?? vinylRecords[0]).sideA!;
+export function currentVinylTrack(state: RoomJourneyState, records: VinylRecord[] = vinylRecords): MusicTrack {
+  return (records.find((record) => record.id === state.selectedVinylId) ?? records[0] ?? vinylRecords[0]).sideA!;
 }
 
 export function vinylPlayerActions(): Array<"toggle-play" | "close"> {
   return ["toggle-play", "close"];
+}
+
+export function vinylRecordsFromAudioFiles(fileNames: string[]): VinylRecord[] {
+  return fileNames
+    .filter((fileName) => fileName.toLowerCase().endsWith(".mp3"))
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
+    .map((fileName) => {
+      const metadata = titleFromAudioName(fileName);
+      const id = `audio-${slugifyAudioName(fileName)}`;
+      return {
+        id,
+        title: metadata.title,
+        subtitle: metadata.subtitle,
+        sideA: {
+          id: `${id}-a`,
+          title: "Side A",
+          src: `assets/audio/${encodeURIComponent(fileName)}`
+        },
+        unlockedByDefault: true
+      };
+    });
+}
+
+export function withCustomVinylCover(state: RoomJourneyState, recordId: string, coverSrc: string): RoomJourneyState {
+  return {
+    ...state,
+    vinylCovers: {
+      ...(state.vinylCovers ?? {}),
+      [recordId]: coverSrc
+    }
+  };
 }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canReachRoomInteraction, createDefaultRoomState, moveRoomPlayer, roomInteractions, roomObstacles, selectVinylRecord, toggleRoomLamp, vinylPlayerActions, vinylRecords } from "../src/systems/MujiRoom.js";
+import { canReachRoomInteraction, createDefaultRoomState, moveRoomPlayer, roomInteractions, roomObstacles, selectVinylRecord, toggleRoomLamp, vinylPlayerActions, vinylRecords, vinylRecordsFromAudioFiles, withCustomVinylCover } from "../src/systems/MujiRoom.js";
 
 test("muji room movement blocks walls and major furniture while leaving interactions reachable", () => {
   const start = { x: 126, y: 438 };
@@ -42,4 +42,28 @@ test("records interaction is anchored at the radio and room no longer exposes re
 
 test("vinyl player actions avoid duplicate stop and play pause controls", () => {
   assert.deepEqual(vinylPlayerActions(), ["toggle-play", "close"]);
+});
+
+test("vinyl records can be generated from every local audio folder mp3", () => {
+  const records = vinylRecordsFromAudioFiles([
+    "bakery.mp3",
+    "forest.mp3",
+    "Dear D (亲爱的告诉你)-项睿娴.mp3"
+  ]);
+
+  assert.equal(records.length, 3);
+  assert.deepEqual(records.map((record) => record.id), [
+    "audio-bakery",
+    "audio-dear-d",
+    "audio-forest"
+  ]);
+  assert.equal(records[1].title, "Dear D");
+  assert.equal(records[1].subtitle, "项睿娴");
+  assert.equal(records[1].sideA?.src, "assets/audio/Dear%20D%20(%E4%BA%B2%E7%88%B1%E7%9A%84%E5%91%8A%E8%AF%89%E4%BD%A0)-%E9%A1%B9%E7%9D%BF%E5%A8%B4.mp3");
+});
+
+test("custom vinyl covers are stored on room journey state by record id", () => {
+  const state = withCustomVinylCover(createDefaultRoomState(), "audio-forest", "data:image/png;base64,cover");
+
+  assert.equal(state.vinylCovers?.["audio-forest"], "data:image/png;base64,cover");
 });
