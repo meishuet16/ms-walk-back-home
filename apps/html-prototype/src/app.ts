@@ -118,6 +118,7 @@ export class WalkBackHomeApp {
   private dialogue = new DialogueSystem(bakeryChapter.dialogue);
   private labisCutscene: CutsceneSystem | null = null;
   private labisDialogueOpen = false;
+  private labisReplayMode = false;
   private completedMemoryEvents = new Set<string>();
   private ending: Ending | null = null;
 
@@ -264,6 +265,7 @@ export class WalkBackHomeApp {
     this.visitedMemories.clear();
     this.choices = [];
     this.readMemories.clear();
+    this.completedMemoryEvents.clear();
     this.chapterProgress.clear();
     this.room = createDefaultRoomState();
     this.overlay.classList.remove("dialogue-open");
@@ -356,6 +358,7 @@ export class WalkBackHomeApp {
   private startLabisMemory(replay: boolean): void {
     this.labisCutscene = new CutsceneSystem(labisMotorMemoryActions);
     this.labisDialogueOpen = false;
+    this.labisReplayMode = replay;
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
     this.showToast(replay ? "Replaying memory" : "The past appears");
@@ -371,14 +374,16 @@ export class WalkBackHomeApp {
   }
 
   private finishLabisMemoryEvent(): void {
+    const alreadyCompleted = this.labisReplayMode || this.completedMemoryEvents.has("july19-motor-learning");
     this.completedMemoryEvents.add("july19-motor-learning");
     this.readMemories.add("july19-motor-learning");
     this.chapterProgress.set("labis-motor-day", markChapterMemoryRead(this.progressFor("labis-motor-day")));
     this.labisCutscene = null;
     this.labisDialogueOpen = false;
+    this.labisReplayMode = false;
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
-    this.showToast("Memory Unlocked · 第一次学会驾 motor");
+    this.showToast(alreadyCompleted ? "Memory replayed" : "Memory Unlocked · 第一次学会驾 motor");
     this.autosave();
   }
 
@@ -465,9 +470,30 @@ export class WalkBackHomeApp {
   }
 
   private progressFor(chapterId: string): ChapterProgress {
-    const progress = this.chapterProgress.get(chapterId) ?? initialChapterProgress(chapterId);
+    let progress = this.chapterProgress.get(chapterId) ?? initialChapterProgress(chapterId);
+    const chapterDoorVisited = this.allDoors().some((door) => this.isChapterNode(door) && door.chapterId === chapterId && this.visitedMemories.has(door.id));
+    if (this.walkedThroughMemories.has(chapterId)) {
+      progress = { ...progress, state: "walkedThrough", visited: true, dialogueCompleted: true, walkedThrough: true };
+    } else if (chapterDoorVisited) {
+      progress = beginChapterVisit(progress);
+    }
+    const eventId = chapterRegistry[chapterId]?.canonicalClosure.historicalEventId ?? "";
+    if (this.readMemories.has(chapterId) || this.completedMemoryEvents.has(eventId)) progress = markChapterMemoryRead(progress);
     this.chapterProgress.set(chapterId, progress);
     return progress;
+  }
+
+  private finishCurrentChapterWalkthrough(): void {
+    const door = this.currentDoor;
+    if (!door || !this.isChapterNode(door)) return;
+    const chapterId = this.chapterIdFor(door);
+    const chapter = chapterRegistry[chapterId];
+    if (!chapter) return;
+    const progress = this.progressFor(chapterId);
+    const reflection = resolveChapterReflection(chapter, progress);
+    this.chapterProgress.set(chapterId, finishChapterWalkthrough(progress, reflection.quoteId, reflection.tone));
+    this.walkedThroughMemories.add(chapterId);
+    this.room.residueIds = [...new Set([...(this.room.residueIds ?? []), chapterId])];
   }
 
   private escapeHtml(value: string): string {
@@ -643,8 +669,10 @@ export class WalkBackHomeApp {
   private returnToForest(): void {
     const leavingDoor = this.scene === "bakery" || this.scene === "labis" ? this.currentDoor : null;
     const leavingRoom = this.scene === "muji-room";
+    if (this.scene === "labis" && this.completedMemoryEvents.has("july19-motor-learning")) this.finishCurrentChapterWalkthrough();
     this.labisCutscene = null;
     this.labisDialogueOpen = false;
+    this.labisReplayMode = false;
     this.scene = "forest";
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
@@ -1526,6 +1554,7 @@ export class WalkBackHomeApp {
       choices: this.choices,
       tendencies: this.tendencies,
       readMemories: [...this.readMemories],
+      completedMemoryEvents: [...this.completedMemoryEvents],
       room: this.room,
       finalJourney: []
     };
@@ -1545,11 +1574,18 @@ export class WalkBackHomeApp {
     this.choices = state.choices;
     this.tendencies = state.tendencies;
     this.readMemories = new Set(state.readMemories);
+    this.completedMemoryEvents = new Set(state.completedMemoryEvents ?? []);
     this.room = { ...this.room, ...state.room };
+    if (this.scene === "labis") {
+      this.currentDoor = this.allDoors().find((door) => this.isChapterNode(door) && chapterRegistry[door.chapterId]?.runtimeScene === "labis") ?? this.currentDoor;
+      this.labisCutscene = null;
+      this.labisDialogueOpen = false;
+      this.labisReplayMode = false;
+    }
     this.audio.setVolume(this.settings.volume);
     this.audio.setMuted(this.settings.muted);
     if (this.scene === "muji-room" && this.room.vinylPlaying) this.playVinylMusic();
-    else this.playSceneMusic(this.scene === "forest" || this.scene === "muji-room" ? "forest" : "bakery");
+    else this.playSceneMusic(this.scene === "forest" || this.scene === "muji-room" || this.scene === "labis" ? "forest" : "bakery");
   }
 
   private autosave(): void {
@@ -1566,6 +1602,7 @@ export class WalkBackHomeApp {
     this.visitedMemories.clear();
     this.choices = [];
     this.readMemories.clear();
+    this.completedMemoryEvents.clear();
     this.chapterProgress.clear();
     this.room = createDefaultRoomState();
     this.save.resetJourney();

@@ -130,6 +130,7 @@ export type JourneyState = {
   choices: string[];
   tendencies: Tendencies;
   readMemories: string[];
+  completedMemoryEvents?: string[];
   room: RoomJourneyState;
   finalJourney: string[];
 };

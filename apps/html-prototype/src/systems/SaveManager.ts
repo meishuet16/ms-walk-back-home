@@ -55,6 +55,7 @@ export class SaveManager {
         intervention: 0
       },
       readMemories: legacy?.readMemories ?? [],
+      completedMemoryEvents: [],
       room: {
         visits: legacy?.room?.visits ?? 0,
         reflections: legacy?.room?.diary ?? [],
