@@ -68,14 +68,15 @@ test("friend dialogue keeps Friend A portrait throughout the conversation", () =
   assert.ok(bakeryChapter.dialogue.every((node) => node.portrait === "friend"));
 });
 
-test("global music loops the local bakery mp3 without creating a YouTube player", () => {
+test("scene music loops local mp3 files without creating a YouTube player", () => {
   assert.equal(globalMusic.label, "Bakery loop");
   assert.equal(globalMusic.src, "assets/audio/bakery.mp3");
   assert.equal(sceneMusic.bakery.src, globalMusic.src);
-  assert.equal(sceneMusic.forest.src, globalMusic.src);
+  assert.equal(sceneMusic.forest.src, "assets/audio/forest.mp3");
   assert.ok(!("videoId" in sceneMusic.bakery));
   assert.ok(!("list" in sceneMusic.forest));
   assert.ok(existsSync(resolve("public", globalMusic.src)));
+  assert.ok(existsSync(resolve("public", sceneMusic.forest.src)));
   assert.ok(sceneMusicDataUri("forest").startsWith("data:audio/wav;base64,"));
   assert.ok(sceneMusicDataUri("bakery").startsWith("data:audio/wav;base64,"));
 });

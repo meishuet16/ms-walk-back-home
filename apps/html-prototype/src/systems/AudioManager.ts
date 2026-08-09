@@ -1,4 +1,4 @@
-import { globalMusic, sceneMusicDataUri, type MusicScene } from "./SceneMusic.js";
+import { globalMusic, sceneMusic, sceneMusicDataUri, type MusicScene } from "./SceneMusic.js";
 
 export class AudioManager {
   private track: HTMLAudioElement | null = null;
@@ -40,8 +40,30 @@ export class AudioManager {
     if (this.track) this.track.volume = this.volume;
   }
 
-  setScene(_scene: MusicScene): void {
+  setTrack(src: string): void {
+    if (!this.track) return;
+    if (this.track.src.endsWith(src)) return;
+    const wasPaused = this.track.paused;
+    this.track.pause();
+    this.track.src = src;
+    this.track.loop = true;
+    this.track.volume = this.volume;
+    if (!wasPaused && !this.muted) void this.ensurePlaying();
+  }
+
+  setScene(scene: MusicScene): void {
+    this.setTrack(sceneMusic[scene].src);
     void this.ensurePlaying();
+  }
+
+  pause(): void {
+    this.track?.pause();
+  }
+
+  stop(): void {
+    if (!this.track) return;
+    this.track.pause();
+    this.track.currentTime = 0;
   }
 
   ping(_kind: "forest" | "bakery" | "ending" = "forest"): void {
