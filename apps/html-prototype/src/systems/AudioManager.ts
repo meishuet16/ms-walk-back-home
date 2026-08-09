@@ -1,5 +1,17 @@
 import { globalMusic, sceneMusic, sceneMusicDataUri, type MusicScene } from "./SceneMusic.js";
 
+function defaultAudioBase(): string {
+  return globalThis.document?.baseURI ?? globalThis.location?.href ?? "http://localhost/";
+}
+
+export function resolveAudioSource(src: string, baseHref = defaultAudioBase()): string {
+  return new URL(src, baseHref).href;
+}
+
+export function sameAudioSource(currentSrc: string, nextSrc: string, baseHref = defaultAudioBase()): boolean {
+  return resolveAudioSource(currentSrc, baseHref) === resolveAudioSource(nextSrc, baseHref);
+}
+
 export class AudioManager {
   private track: HTMLAudioElement | null = null;
   muted = false;
@@ -13,9 +25,10 @@ export class AudioManager {
     this.track.muted = false;
     this.track.addEventListener("error", () => {
       if (!this.track) return;
+      if (this.track.src.startsWith("data:audio/")) return;
       this.track.src = sceneMusicDataUri("bakery");
       void this.ensurePlaying();
-    }, { once: true });
+    });
   }
 
   async enable(): Promise<void> {
@@ -42,12 +55,20 @@ export class AudioManager {
 
   setTrack(src: string): void {
     if (!this.track) return;
-    if (this.track.src.endsWith(src)) return;
+    const nextSrc = resolveAudioSource(src);
+    if (sameAudioSource(this.track.src, nextSrc)) {
+      if (!this.track.paused && !this.muted) void this.ensurePlaying();
+      return;
+    }
     const wasPaused = this.track.paused;
     this.track.pause();
-    this.track.src = src;
+    this.track.src = nextSrc;
     this.track.loop = true;
+    this.track.preload = "auto";
     this.track.volume = this.volume;
+    this.track.muted = this.muted;
+    this.track.currentTime = 0;
+    this.track.load();
     if (!wasPaused && !this.muted) void this.ensurePlaying();
   }
 

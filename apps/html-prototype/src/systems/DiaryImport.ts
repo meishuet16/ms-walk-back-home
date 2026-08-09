@@ -1,4 +1,5 @@
 import type { DiaryEntry, MemoryKind } from "../types.js";
+import { normalizeDiaryMood } from "./DiaryMood.js";
 
 export type DiaryTimelineItem = {
   id: string;
@@ -128,6 +129,7 @@ export function normalizeDiaryEntry(entry: Partial<DiaryEntry> & Pick<DiaryEntry
     title: entry.title.trim() || "Untitled Memory",
     body: entry.body.trim(),
     memoryKind: normalizeMemoryKind(entry.memoryKind),
+    mood: normalizeDiaryMood(entry.mood),
     chapterId: entry.memoryKind === "chapter" ? entry.chapterId || entry.id : undefined,
     photos: entry.photos ?? [],
     scrapbookLayout: entry.scrapbookLayout ?? { elements: [] }

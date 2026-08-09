@@ -46,12 +46,14 @@ export type DiaryEntry = {
   title: string;
   body: string;
   memoryKind: MemoryKind;
+  mood?: DiaryMood;
   chapterId?: string;
   photos?: DiaryPhoto[];
   scrapbookLayout?: ScrapbookLayout;
 };
 
 export type MemoryKind = "diary" | "fragment" | "chapter";
+export type DiaryMood = "calm" | "sad" | "blank" | "happy" | "excited";
 
 export type DiaryPhoto = {
   id: string;
@@ -105,6 +107,7 @@ export type RoomJourneyState = {
   windowFocus?: boolean;
   selectedVinylId?: string;
   vinylPlaying?: boolean;
+  vinylCovers?: Record<string, string>;
   reflectionNote?: string;
 };
 

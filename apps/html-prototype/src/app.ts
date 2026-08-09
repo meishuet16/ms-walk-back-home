@@ -5,6 +5,7 @@ import { chapterRegistry, forestEntries, routeForestEntry, type AuthoredForestEn
 import { beginChapterVisit, finishChapterWalkthrough, initialChapterProgress, markChapterDialogueComplete, markChapterMemoryRead, recordChapterChoice } from "./systems/ChapterProgressManager.js";
 import { inAnyRect, type Point, type Rect } from "./systems/CollisionSystem.js";
 import { deleteDiaryEntryById, getDiaryForestMemories, getDiaryTimeline, openDiaryPageForDate, upsertDiaryEntry, upsertDiaryPageDraft } from "./systems/DiaryLibrary.js";
+import { diaryMoodOptions, isDiaryMood } from "./systems/DiaryMood.js";
 import { makeDiaryEntry, parseDiaryImport, updateDiaryMemoryKind, type DiaryForestMemory } from "./systems/DiaryImport.js";
 import { DialogueSystem } from "./systems/DialogueSystem.js";
 import { resolveChapterReflection, type Ending } from "./systems/EndingResolver.js";
@@ -15,9 +16,9 @@ import {
   addPhotoElement,
   createCutoutElement,
   deleteScrapbookElement,
-  diaryTextFrame,
   layerScrapbookElement,
   moveScrapbookElement,
+  removePhotoAttachment,
   resizeScrapbookElement,
   rotateScrapbookElement
 } from "./systems/ScrapbookComposer.js";
@@ -33,6 +34,9 @@ import {
   toggleRoomLamp,
   vinylPlayerActions,
   vinylRecords,
+  vinylRecordsFromAudioFiles,
+  withCustomVinylCover,
+  type VinylRecord,
   type RoomInteraction
 } from "./systems/MujiRoom.js";
 import { SaveManager } from "./systems/SaveManager.js";
@@ -101,6 +105,7 @@ export class WalkBackHomeApp {
   private selectedScrapbookElementId = "";
   private scrapbookDrag: { elementId: string; entryId: string; offsetX: number; offsetY: number } | null = null;
   private diaryAutosaveTimer = 0;
+  private availableVinylRecords: VinylRecord[] = vinylRecords;
   private settings = { rain: true, muted: false, volume: 0.45, compact: false, reducedMotion: false, musicEnabled: true, musicScene: "bakery" as MusicScene };
   private room: RoomJourneyState = createDefaultRoomState();
   private chapterProgress = new Map<string, ChapterProgress>();
@@ -147,6 +152,7 @@ export class WalkBackHomeApp {
     root.addEventListener("pointerdown", () => void this.audio.ensurePlaying(), { passive: true });
     root.addEventListener("keydown", () => void this.audio.ensurePlaying());
     this.bootstrapDiaryLibrary();
+    void this.loadVinylManifest();
     this.images.room.addEventListener("error", () => {
       this.images.room.src = assets.roomFallback;
     }, { once: true });
@@ -187,12 +193,14 @@ export class WalkBackHomeApp {
     if (action === "import-diary-lines") this.importDiaryLines();
     if (action === "add-photo-to-scrapbook") this.addPhotoToScrapbook(target.dataset.photo ?? "");
     if (action === "cutout-photo") this.cutoutPhotoOnPage(target.dataset.photo ?? "");
+    if (action === "remove-photo-attachment") this.removePhotoFromPage(target.dataset.photo ?? "");
     if (action === "select-scrapbook-element") this.selectScrapbookElement(target.dataset.element ?? "");
     if (action === "scrapbook-move") this.nudgeSelectedScrapbookElement(Number(target.dataset.dx ?? 0), Number(target.dataset.dy ?? 0));
     if (action === "scrapbook-resize") this.scaleSelectedScrapbookElement(Number(target.dataset.delta ?? 0));
     if (action === "scrapbook-rotate") this.rotateSelectedScrapbookElement(Number(target.dataset.delta ?? 0));
     if (action === "scrapbook-layer") this.layerSelectedScrapbookElement(target.dataset.direction as "front" | "back");
     if (action === "scrapbook-delete") this.deleteSelectedScrapbookElement();
+    if (action === "set-diary-mood") this.setDiaryMood(target.dataset.mood ?? "");
     if (action === "set-memory-kind") this.setDiaryMemoryKind(target.dataset.id ?? "", target.dataset.kind as MemoryKind);
     if (action === "room-window") this.roomWindow();
     if (action === "room-lamp") this.roomLamp();
@@ -650,13 +658,42 @@ export class WalkBackHomeApp {
     }
     for (const interaction of roomInteractions) {
       if (interaction.id === "residue" && !this.room.residueIds?.length) continue;
-      const active = this.activeRoomInteraction?.id === interaction.id;
-      this.ctx.strokeStyle = active ? "rgba(255, 231, 172, .9)" : "rgba(255, 231, 172, .16)";
-      this.ctx.lineWidth = active ? 2 : 1;
+      this.drawRoomInteractionHint(interaction, this.activeRoomInteraction?.id === interaction.id, time, scale);
+    }
+  }
+
+  private drawRoomInteractionHint(interaction: RoomInteraction, active: boolean, time: number, scale: number): void {
+    const x = interaction.x * scale;
+    const y = interaction.y * scale;
+    const pulse = Math.sin(time / 360) * 0.5 + 0.5;
+    const baseRadius = active ? (22 + pulse * 4) * scale : 4 * scale;
+    const glowRadius = active ? 44 * scale : 12 * scale;
+    const glow = this.ctx.createRadialGradient(x, y, 1, x, y, glowRadius);
+    glow.addColorStop(0, active ? "rgba(255, 229, 166, .52)" : "rgba(255, 226, 154, .18)");
+    glow.addColorStop(0.55, active ? "rgba(213, 166, 87, .18)" : "rgba(213, 166, 87, .05)");
+    glow.addColorStop(1, "rgba(213, 166, 87, 0)");
+    this.ctx.fillStyle = glow;
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, glowRadius, 0, Math.PI * 2);
+    this.ctx.fill();
+
+    this.ctx.save();
+    this.ctx.globalAlpha = active ? 0.86 : 0.18;
+    this.ctx.strokeStyle = active ? "rgba(255, 231, 172, .92)" : "rgba(255, 231, 172, .42)";
+    this.ctx.lineWidth = active ? 1.4 * scale : 1 * scale;
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, baseRadius, 0, Math.PI * 2);
+    this.ctx.stroke();
+    if (active) {
+      this.ctx.strokeStyle = "rgba(255, 249, 216, .46)";
       this.ctx.beginPath();
-      this.ctx.arc(interaction.x * scale, interaction.y * scale, interaction.radius * scale, 0, Math.PI * 2);
+      this.ctx.arc(x, y, (baseRadius + 7 * scale), -0.6, 0.9);
+      this.ctx.stroke();
+      this.ctx.beginPath();
+      this.ctx.arc(x, y, (baseRadius + 7 * scale), Math.PI + 0.55, Math.PI + 1.95);
       this.ctx.stroke();
     }
+    this.ctx.restore();
   }
 
   private drawRoomFallback(scale: number): void {
@@ -775,6 +812,15 @@ export class WalkBackHomeApp {
   private showDiaryEditor(editId = ""): void {
     const editing = this.diaryEntries.find((entry) => entry.id === editId) ?? this.diaryEntries[0];
     const today = new Date().toISOString().slice(0, 10);
+    const dateValue = editing?.date ?? today;
+    const parsedDate = new Date(`${dateValue}T00:00:00`);
+    const weekday = Number.isNaN(parsedDate.getTime()) ? "" : ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][parsedDate.getDay()];
+    const selectedMood = editing?.mood ?? "calm";
+    const moodButtons = diaryMoodOptions.map((mood) => `
+      <button class="journal-mood-option ${selectedMood === mood.value ? "selected" : ""}" data-action="set-diary-mood" data-mood="${mood.value}" aria-label="${this.escapeHtml(mood.label)}">
+        <span class="mood-muji mood-${mood.value}" aria-hidden="true"></span>
+        <small>${this.escapeHtml(mood.label)}</small>
+      </button>`).join("");
     this.activeScrapbookEntryId = editing?.id ?? "";
     const elementIds = new Set((editing?.scrapbookLayout?.elements ?? []).map((element) => element.id));
     if (!this.selectedScrapbookElementId || !elementIds.has(this.selectedScrapbookElementId)) this.selectedScrapbookElementId = "";
@@ -787,6 +833,7 @@ export class WalkBackHomeApp {
         <span>${this.escapeHtml(photo.caption ?? photo.id)}</span>
         <button data-action="add-photo-to-scrapbook" data-photo="${this.escapeHtml(photo.id)}">Place</button>
         <button data-action="cutout-photo" data-photo="${this.escapeHtml(photo.id)}">Circle cutout</button>
+        <button data-action="remove-photo-attachment" data-photo="${this.escapeHtml(photo.id)}">Clear</button>
       </div>`).join("") || `<p class="quiet-line">No photos attached yet.</p>`;
     const elements = [...(editing?.scrapbookLayout?.elements ?? [])]
       .sort((a, b) => a.zIndex - b.zIndex)
@@ -795,30 +842,55 @@ export class WalkBackHomeApp {
         const photo = editing?.photos?.find((item) => item.id === photoId);
         const selected = element.id === this.selectedScrapbookElementId;
         const cutoutClass = element.type === "cutout" ? ` ${element.crop?.shape === "circle" ? "circle-cutout" : "rect-cutout"}` : "";
-        return `<div class="scrapbook-element${cutoutClass} ${selected ? "selected" : ""}" data-action="select-scrapbook-element" data-element="${this.escapeHtml(element.id)}" tabindex="0" style="left:${element.x}%;top:${element.y}%;transform:translate(-50%, -50%) rotate(${element.rotation}deg) scale(${element.scale});z-index:${element.zIndex};">${photo ? `<img src="${this.escapeHtml(photo.src)}" alt="">` : `<span>Missing photo</span>`}${selected ? `<div class="element-controls" style="transform:rotate(${-element.rotation}deg) scale(${1 / element.scale});"><button data-action="scrapbook-rotate" data-delta="-8" aria-label="Rotate left">⟲</button><button data-action="scrapbook-rotate" data-delta="8" aria-label="Rotate right">⟳</button><button data-action="scrapbook-delete" aria-label="Delete visual">×</button></div>` : ""}</div>`;
+        return `<div class="scrapbook-element${cutoutClass} ${selected ? "selected" : ""}" data-action="select-scrapbook-element" data-element="${this.escapeHtml(element.id)}" tabindex="0" style="left:${element.x}%;top:${element.y}%;transform:translate(-50%, -50%) rotate(${element.rotation}deg) scale(${element.scale});z-index:${element.zIndex};">${photo ? `<img src="${this.escapeHtml(photo.src)}" alt="">` : `<span>Missing photo</span>`}${selected ? `<div class="element-controls" style="transform:rotate(${-element.rotation}deg) scale(${1 / element.scale});"><button data-action="scrapbook-delete" aria-label="Delete visual">×</button><button data-action="scrapbook-rotate" data-delta="-8" aria-label="Rotate left">↶</button><button data-action="scrapbook-rotate" data-delta="8" aria-label="Rotate right">↷</button><button data-action="scrapbook-resize" data-delta="0.1" aria-label="Bigger">+</button><button data-action="scrapbook-resize" data-delta="-0.1" aria-label="Smaller">−</button></div>` : ""}</div>`;
       }).join("");
-    const textFrame = diaryTextFrame();
     this.overlay.innerHTML = `
-      <div class="modal game-panel diary-editor diary-page-editor" data-entry="${this.escapeHtml(editing?.id ?? "")}">
-        <div class="diary-editor-head">
-          <div><h2>Journal</h2><p class="autosave-state" id="diary-save-state">Saved</p></div>
-          <label class="attach-photo">Add Photo<input id="diary-photo-input" type="file" accept="image/*"></label>
-        </div>
-        <section class="diary-paper scrapbook-page" aria-label="Diary page">
-          <div class="paper-fields" style="left:${textFrame.x}%;top:${textFrame.y}%;width:${textFrame.w}%;height:${textFrame.h}%;">
-            <label>Date<input id="diary-date" type="date" value="${this.escapeHtml(editing?.date ?? today)}"></label>
-            <label>Title<input id="diary-title" value="${this.escapeHtml(editing?.title ?? "Untitled Memory")}"></label>
-            <label>Diary<textarea id="diary-body" rows="12">${this.escapeHtml(editing?.body ?? "")}</textarea></label>
-            <label class="memory-menu">Memory classification<select id="diary-memory-kind"><option value="diary" ${editing?.memoryKind === "diary" ? "selected" : ""}>Diary only</option><option value="fragment" ${editing?.memoryKind === "fragment" ? "selected" : ""}>Memory Fragment</option><option value="chapter" ${editing?.memoryKind === "chapter" ? "selected" : ""}>Memory Chapter</option></select></label>
+      <div class="modal game-panel diary-editor diary-page-editor journal-modal" data-entry="${this.escapeHtml(editing?.id ?? "")}">
+        <div class="journal-toolbar">
+          <button class="journal-icon-button" data-action="settings" aria-label="Back">‹</button>
+          <div class="journal-brand">
+            <span class="journal-mascot mood-${selectedMood}" aria-hidden="true"></span>
+            <div><h2>Walk Back Home</h2><p>Diary · Muji Edition</p></div>
           </div>
-          ${elements || `<p class="empty-page">Add a photo, then place it on this diary page.</p>`}
+          <div class="journal-actions">
+            <button class="journal-icon-button" aria-label="Undo">↶</button>
+            <button class="journal-icon-button" aria-label="Redo">↷</button>
+            <button class="journal-icon-button" data-action="open-timeline" aria-label="Timeline">⋯</button>
+            <label class="journal-upload">＋<input id="diary-photo-input" type="file" accept="image/*"></label>
+            <button class="journal-done" data-action="save-diary-entry" data-id="${this.escapeHtml(editing?.id ?? "")}">✓ 完成</button>
+          </div>
+        </div>
+        <section class="diary-paper scrapbook-page journal-sheet" aria-label="Diary page">
+          <div class="paper-rings" aria-hidden="true"></div>
+          <div class="journal-page-inner">
+            <div class="journal-sticker-title">今日记录</div>
+            <div class="journal-meta-card">
+              <label><span>▣ 日期：</span><input id="diary-date" type="date" value="${this.escapeHtml(dateValue)}"></label>
+              <div class="journal-weekday">${this.escapeHtml(weekday)}</div>
+              <label><span>▮ 标题：</span><input id="diary-title" value="${this.escapeHtml(editing?.title ?? "今天其实没发生什么特别的")}"></label>
+              <div></div>
+              <label><span>● 地点：</span><input value="宿舍 · Muji Room" readonly></label>
+              <div></div>
+              <label><span>☁ 天气：</span><input value="小雨转阴" readonly></label>
+              <div></div>
+            </div>
+            <figure class="journal-hero-photo">
+              <div class="journal-hero-scene">
+                <img src="${assets.room}" alt="">
+                <span class="journal-photo-muji mood-${selectedMood}" aria-hidden="true"></span>
+              </div>
+              <figcaption>好好记录，<br>慢慢回家。</figcaption>
+            </figure>
+            <label class="journal-body-field"><textarea id="diary-body" rows="12">${this.escapeHtml(editing?.body ?? "")}</textarea></label>
+            <div class="journal-mood-picker"><input id="diary-mood" type="hidden" value="${selectedMood}">${moodButtons}</div>
+          </div>
+          ${elements}
         </section>
-        <div class="integrated-tools">
+        <div class="integrated-tools journal-photo-dock">
           <aside class="photo-tray">${photos}</aside>
         </div>
-        <div class="settings-row"><button data-action="save-diary-entry" data-id="${this.escapeHtml(editing?.id ?? "")}">Save Now</button><button data-action="open-timeline">Timeline</button><button data-action="show-import-diary">Import Existing Diary</button></div>
+        <div class="journal-lower-tools"><p class="autosave-state" id="diary-save-state">Saved</p><label class="journal-kind">Memory<select id="diary-memory-kind"><option value="diary" ${editing?.memoryKind === "diary" ? "selected" : ""}>Diary only</option><option value="fragment" ${editing?.memoryKind === "fragment" ? "selected" : ""}>Memory Fragment</option><option value="chapter" ${editing?.memoryKind === "chapter" ? "selected" : ""}>Memory Chapter</option></select></label><button data-action="show-import-diary">Import Existing Diary</button><button data-action="open-map">Walk Back Home</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>
         <div class="diary-list">${rows}</div>
-        <button data-action="open-map">Walk Back Home</button><button data-action="settings">Back</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button>
       </div>`;
     this.focusStage();
   }
@@ -839,6 +911,7 @@ export class WalkBackHomeApp {
     const titleInput = this.overlay.querySelector<HTMLInputElement>("#diary-title");
     const bodyInput = this.overlay.querySelector<HTMLTextAreaElement>("#diary-body");
     const kindInput = this.overlay.querySelector<HTMLSelectElement>("#diary-memory-kind");
+    const moodInput = this.overlay.querySelector<HTMLInputElement>("#diary-mood");
     const date = dateInput?.value.trim() ?? "";
     const title = titleInput?.value.trim() || "Untitled Memory";
     const body = bodyInput?.value.trim() ?? "";
@@ -848,8 +921,11 @@ export class WalkBackHomeApp {
     }
     const existing = this.diaryEntries.find((item) => item.id === id);
     const memoryKind = (kindInput?.value as MemoryKind | undefined) ?? "diary";
+    const moodValue = moodInput?.value ?? "";
+    const mood = isDiaryMood(moodValue) ? moodValue : existing?.mood ?? "calm";
     return {
       ...makeDiaryEntry(date, title, body, id || existing?.id, memoryKind),
+      mood,
       photos: existing?.photos ?? [],
       scrapbookLayout: existing?.scrapbookLayout ?? { elements: [] }
     };
@@ -924,6 +1000,17 @@ export class WalkBackHomeApp {
     this.autosave();
   }
 
+  private setDiaryMood(mood: string): void {
+    if (!isDiaryMood(mood)) return;
+    const editor = this.overlay.querySelector<HTMLElement>(".diary-page-editor");
+    const entryId = editor?.dataset.entry ?? "";
+    const draft = this.readDiaryDraftFromOverlay(entryId);
+    if (!draft) return;
+    this.applyDiaryLibrary(upsertDiaryPageDraft(this.makeDiaryLibrary(), { ...draft, mood }));
+    this.showDiaryEditor(draft.id);
+    this.autosave();
+  }
+
   private showScrapbookComposer(id: string): void {
     const entry = this.diaryEntries.find((item) => item.id === id);
     if (!entry) return this.showDiaryEditor();
@@ -984,6 +1071,10 @@ export class WalkBackHomeApp {
 
   private async handleChange(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
+    if (input.id === "vinyl-cover-input") {
+      await this.handleVinylCoverInput(input);
+      return;
+    }
     if (input.id !== "scrapbook-photo-input" && input.id !== "diary-photo-input") return;
     if (!input.files?.[0]) return;
     const entry = this.activeScrapbookEntry();
@@ -1010,6 +1101,17 @@ export class WalkBackHomeApp {
     });
   }
 
+  private async handleVinylCoverInput(input: HTMLInputElement): Promise<void> {
+    const file = input.files?.[0];
+    const recordId = this.room.selectedVinylId ?? this.availableVinylRecords[0]?.id;
+    if (!file || !recordId) return;
+    const src = await this.readFileAsDataUrl(file);
+    this.room = withCustomVinylCover(this.room, recordId, src);
+    this.showRecords();
+    this.showToast("Cover changed");
+    this.autosave();
+  }
+
   private addPhotoToScrapbook(photoId: string): void {
     const entry = this.activeScrapbookEntry();
     if (!entry || !photoId) return;
@@ -1026,6 +1128,15 @@ export class WalkBackHomeApp {
     this.selectedScrapbookElementId = elementId;
     this.updateDiaryEntry(createCutoutElement(entry, photoId, elementId, "circle"));
     this.showDiaryEditor(entry.id);
+  }
+
+  private removePhotoFromPage(photoId: string): void {
+    const entry = this.activeScrapbookEntry();
+    if (!entry || !photoId) return;
+    this.selectedScrapbookElementId = "";
+    this.updateDiaryEntry(removePhotoAttachment(entry, photoId));
+    this.showDiaryEditor(entry.id);
+    this.showToast("Attachment cleared");
   }
 
   private selectScrapbookElement(elementId: string): void {
@@ -1166,17 +1277,19 @@ export class WalkBackHomeApp {
   }
 
   private showRecords(): void {
-    const current = this.room.selectedVinylId ?? vinylRecords[0].id;
-    const currentRecord = vinylRecords.find((record) => record.id === current) ?? vinylRecords[0];
-    const records = vinylRecords.map((record, index) => `<button class="${record.id === current ? "selected" : ""}" data-action="select-vinyl" data-record="${this.escapeHtml(record.id)}"><span>${index + 1}. ${this.escapeHtml(record.title)}</span><small>${record.id === current ? "Now playing" : this.escapeHtml(record.subtitle ?? "record")}</small></button>`).join("");
+    const current = this.room.selectedVinylId ?? this.availableVinylRecords[0].id;
+    const currentRecord = this.availableVinylRecords.find((record) => record.id === current) ?? this.availableVinylRecords[0];
+    const cover = this.room.vinylCovers?.[currentRecord.id] ?? "";
+    const records = this.availableVinylRecords.map((record, index) => `<button class="${record.id === current ? "selected" : ""}" data-action="select-vinyl" data-record="${this.escapeHtml(record.id)}"><span>${index + 1}. ${this.escapeHtml(record.title)}</span><small>${record.id === current ? "Now playing" : this.escapeHtml(record.subtitle ?? "record")}</small></button>`).join("");
     const actions = vinylPlayerActions();
     this.overlay.innerHTML = `
       <div class="modal game-panel records-panel">
         <div class="vinyl-console">
           <div class="turntable-card">
             <div class="turntable-lid"></div>
-            <div class="record-disc ${this.room.vinylPlaying ? "playing" : ""}"><span></span></div>
+            <div class="record-disc ${this.room.vinylPlaying ? "playing" : ""}" style="${cover ? `--cover:url('${this.escapeHtml(cover)}')` : ""}"><span></span></div>
             <div class="tone-arm"></div>
+            <label class="cover-upload">Custom Cover<input id="vinyl-cover-input" type="file" accept="image/*"></label>
           </div>
           <div class="now-playing">
             <small>Now Playing</small>
@@ -1194,7 +1307,7 @@ export class WalkBackHomeApp {
   }
 
   private selectVinyl(recordId: string): void {
-    this.room = selectVinylRecord(this.room, recordId);
+    this.room = this.selectAvailableVinylRecord(recordId);
     this.playVinylMusic();
     this.showRecords();
     this.showToast("Record changed");
@@ -1207,6 +1320,11 @@ export class WalkBackHomeApp {
     else this.audio.pause();
     this.showRecords();
     this.autosave();
+  }
+
+  private selectAvailableVinylRecord(recordId: string): typeof this.room {
+    const record = this.availableVinylRecords.find((item) => item.id === recordId) ?? this.availableVinylRecords[0];
+    return selectVinylRecord({ ...this.room, selectedVinylId: record.id }, record.id, this.availableVinylRecords);
   }
 
   private makeDiaryLibrary(): DiaryLibraryState {
@@ -1329,8 +1447,25 @@ export class WalkBackHomeApp {
     this.lastHudHtml = "";
   }
 
+  private async loadVinylManifest(): Promise<void> {
+    try {
+      const response = await fetch("assets/audio-manifest.json");
+      if (!response.ok) return;
+      const manifest = await response.json() as { files?: string[] };
+      const generated = vinylRecordsFromAudioFiles(manifest.files ?? []);
+      if (generated.length) {
+        this.availableVinylRecords = generated;
+        if (!this.availableVinylRecords.some((record) => record.id === this.room.selectedVinylId)) {
+          this.room.selectedVinylId = this.availableVinylRecords[0].id;
+        }
+      }
+    } catch {
+      this.availableVinylRecords = vinylRecords;
+    }
+  }
+
   private playVinylMusic(): void {
-    const track = currentVinylTrack(this.room);
+    const track = currentVinylTrack(this.room, this.availableVinylRecords);
     this.audio.setTrack(track.src);
     if (this.settings.musicEnabled && !this.settings.muted) void this.audio.ensurePlaying();
     this.musicPlayer.innerHTML = "";

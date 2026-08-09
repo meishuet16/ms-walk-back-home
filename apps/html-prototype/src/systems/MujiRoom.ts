@@ -30,6 +30,28 @@ export type VinylRecord = {
   unlockedByDefault?: boolean;
 };
 
+function slugifyAudioName(value: string): string {
+  const ascii = value
+    .normalize("NFKD")
+    .replace(/[^\x00-\x7F]/g, "")
+    .toLowerCase()
+    .replace(/\.mp3$/i, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 42);
+  return ascii || `track-${Math.abs([...value].reduce((sum, char) => sum + char.charCodeAt(0), 0))}`;
+}
+
+function titleFromAudioName(fileName: string): { title: string; subtitle: string } {
+  const base = fileName.replace(/\.mp3$/i, "");
+  const cleaned = base.replace(/\s*\([^)]*\)\s*/g, " ").trim();
+  const [title = cleaned, ...subtitleParts] = cleaned.split("-").map((part) => part.trim()).filter(Boolean);
+  return {
+    title: title || base,
+    subtitle: subtitleParts.join(" / ") || "local audio"
+  };
+}
+
 export const roomSize = { w: 960, h: 540 };
 
 export const roomSpawn: Point = { x: 126, y: 438 };
@@ -41,7 +63,7 @@ export const roomObstacles: Rect[] = [
   { x: 0, y: 494, w: 960, h: 46 },
   { x: 128, y: 88, w: 190, h: 98 },
   { x: 612, y: 86, w: 222, h: 126 },
-  { x: 706, y: 294, w: 132, h: 132 },
+  { x: 784, y: 294, w: 74, h: 104 },
   { x: 374, y: 354, w: 176, h: 88 },
   { x: 84, y: 224, w: 98, h: 142 },
   { x: 804, y: 210, w: 66, h: 96 }
@@ -49,10 +71,10 @@ export const roomObstacles: Rect[] = [
 
 export const roomInteractions: RoomInteraction[] = [
   { id: "door", label: "Return to Forest", x: 126, y: 456, radius: 58 },
-  { id: "journal", label: "Journal", x: 338, y: 234, radius: 72 },
+  { id: "journal", label: "Journal", x: 620, y: 250, radius: 72 },
   { id: "lamp", label: "Lamp", x: 218, y: 210, radius: 58 },
   { id: "window", label: "Look Outside", x: 486, y: 164, radius: 80 },
-  { id: "records", label: "Records", x: 800, y: 334, radius: 70 },
+  { id: "records", label: "Records", x: 748, y: 356, radius: 46 },
   { id: "residue", label: "Examine", x: 562, y: 316, radius: 62 },
   { id: "reflection", label: "Reflection Note", x: 504, y: 450, radius: 62 }
 ];
@@ -84,6 +106,7 @@ export function createDefaultRoomState(): RoomJourneyState {
     windowFocus: false,
     selectedVinylId: vinylRecords[0].id,
     vinylPlaying: false,
+    vinylCovers: {},
     reflectionNote: ""
   };
 }
@@ -118,15 +141,46 @@ export function toggleRoomLamp(state: RoomJourneyState): RoomJourneyState {
   return { ...state, visits: state.visits + 1, lampOn: !state.lampOn };
 }
 
-export function selectVinylRecord(state: RoomJourneyState, recordId: string): RoomJourneyState {
-  const record = vinylRecords.find((item) => item.id === recordId) ?? vinylRecords[0];
+export function selectVinylRecord(state: RoomJourneyState, recordId: string, records: VinylRecord[] = vinylRecords): RoomJourneyState {
+  const record = records.find((item) => item.id === recordId) ?? records[0] ?? vinylRecords[0];
   return { ...state, selectedVinylId: record.id, vinylPlaying: true, musicOn: true };
 }
 
-export function currentVinylTrack(state: RoomJourneyState): MusicTrack {
-  return (vinylRecords.find((record) => record.id === state.selectedVinylId) ?? vinylRecords[0]).sideA!;
+export function currentVinylTrack(state: RoomJourneyState, records: VinylRecord[] = vinylRecords): MusicTrack {
+  return (records.find((record) => record.id === state.selectedVinylId) ?? records[0] ?? vinylRecords[0]).sideA!;
 }
 
 export function vinylPlayerActions(): Array<"toggle-play" | "close"> {
   return ["toggle-play", "close"];
+}
+
+export function vinylRecordsFromAudioFiles(fileNames: string[]): VinylRecord[] {
+  return fileNames
+    .filter((fileName) => fileName.toLowerCase().endsWith(".mp3"))
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
+    .map((fileName) => {
+      const metadata = titleFromAudioName(fileName);
+      const id = `audio-${slugifyAudioName(fileName)}`;
+      return {
+        id,
+        title: metadata.title,
+        subtitle: metadata.subtitle,
+        sideA: {
+          id: `${id}-a`,
+          title: "Side A",
+          src: `assets/audio/${encodeURIComponent(fileName)}`
+        },
+        unlockedByDefault: true
+      };
+    });
+}
+
+export function withCustomVinylCover(state: RoomJourneyState, recordId: string, coverSrc: string): RoomJourneyState {
+  return {
+    ...state,
+    vinylCovers: {
+      ...(state.vinylCovers ?? {}),
+      [recordId]: coverSrc
+    }
+  };
 }
