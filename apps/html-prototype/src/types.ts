@@ -151,13 +151,17 @@ export type ChapterProgress = {
 export type ChapterReflectionQuote = {
   id: string;
   tone: ReflectionTone;
+  title?: string;
   lines: string[];
+  afterline?: string;
 };
 
 export type ChapterReflection = {
   tone: ReflectionTone;
   quoteId: string;
+  title?: string;
   lines: string[];
+  afterline?: string;
   historicalEventId: string;
   closureLines: string[];
 };

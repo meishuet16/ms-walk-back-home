@@ -1,5 +1,5 @@
 import type { DiaryEntry, DiaryLibraryState, MemoryKind } from "../types.js";
-import { diaryEntriesToForestMemories, diaryEntriesToTimeline, updateDiaryMemoryKind, type DiaryForestMemory, type DiaryTimelineItem } from "./DiaryImport.js";
+import { diaryEntriesToForestMemories, diaryEntriesToTimeline, updateDiaryMemoryKind, type DiaryForestMemory, type DiaryTimelineItem, type DiaryTimelineSort } from "./DiaryImport.js";
 import { makeDiaryEntry, normalizeDiaryEntry } from "./DiaryImport.js";
 
 export function createDiaryLibrary(entries: DiaryEntry[] = [], legacyArtifacts: string[] = []): DiaryLibraryState {
@@ -58,8 +58,16 @@ export function deleteDiaryEntryById(library: DiaryLibraryState, id: string): Di
   };
 }
 
-export function getDiaryTimeline(library: DiaryLibraryState): DiaryTimelineItem[] {
-  return diaryEntriesToTimeline(library.entries);
+export function deleteDiaryEntriesByIds(library: DiaryLibraryState, ids: Set<string>): DiaryLibraryState {
+  return {
+    ...library,
+    savedAt: new Date().toISOString(),
+    entries: library.entries.filter((entry) => !ids.has(entry.id))
+  };
+}
+
+export function getDiaryTimeline(library: DiaryLibraryState, sort: DiaryTimelineSort = "date-desc"): DiaryTimelineItem[] {
+  return diaryEntriesToTimeline(library.entries, sort);
 }
 
 export function getDiaryForestMemories(library: DiaryLibraryState): DiaryForestMemory[] {

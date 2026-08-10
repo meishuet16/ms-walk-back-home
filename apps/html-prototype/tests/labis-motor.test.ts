@@ -7,6 +7,8 @@ import { CutsceneSystem } from "../src/systems/CutsceneSystem.js";
 import { activeMemoryTrigger } from "../src/systems/MemoryTrigger.js";
 import { SaveManager } from "../src/systems/SaveManager.js";
 import { emptyTendencies } from "../src/systems/TendencySystem.js";
+import { initialChapterProgress, recordChapterChoice } from "../src/systems/ChapterProgressManager.js";
+import { resolveChapterReflection } from "../src/systems/EndingResolver.js";
 
 class MemoryStorage {
   private values = new Map<string, string>();
@@ -60,9 +62,21 @@ test("labis diary memory remains repeatable and is not covered by the motor trig
   assert.equal(canStartLabisMotorMemory(point, new Set(["labis-motor-day"]), new Set()), false);
 });
 
-test("labis chapter offers multiple philosophical reflection endings", () => {
-  assert.ok(labisMotorChapter.dialogue.some((node) => (node.choices?.length ?? 0) >= 3));
-  assert.ok(labisMotorChapter.reflectionQuotes.length >= 3);
+test("labis chapter offers three motor choices and four reflection endings", () => {
+  assert.deepEqual(labisMotorChapter.dialogue.map((node) => node.id), ["labis-teach", "labis-release", "labis-remember"]);
+  assert.deepEqual(labisMotorChapter.dialogue.map((node) => node.choices?.length), [3, 3, 4]);
+  assert.deepEqual(labisMotorChapter.reflectionQuotes.map((quote) => quote.tone), ["accepting", "holding", "rewriting", "not-ready"]);
+  assert.ok(labisMotorChapter.reflectionQuotes.every((quote) => quote.title && quote.afterline));
+});
+
+test("labis final reflection choice controls the closing quote tone", () => {
+  const base = initialChapterProgress("labis-motor-day");
+  const picked = recordChapterChoice(base, "labis-final-photo", emptyTendencies());
+  const reflection = resolveChapterReflection(labisMotorChapter, picked);
+
+  assert.equal(reflection.tone, "rewriting");
+  assert.equal(reflection.title, "以后再驾");
+  assert.equal(reflection.afterline, "后来是真的。那天下午也是真的。");
 });
 
 test("labis cutscene reaches ET dialogue and completes after acknowledgement", () => {

@@ -21,66 +21,125 @@ export const labisMotorChapter: ChapterDefinition = {
   ],
   dialogue: [
     {
-      id: "labis-after-ride",
+      id: "labis-teach",
       speaker: "MS",
       portrait: "none",
-      text: "后来我一直在想，为什么这种小到几乎不值得宣布的事，会在记忆里留下这么清楚的位置。",
+      text: "你不是讲要教我驾 motor 咩",
       choices: [
         {
-          id: "quiet",
-          label: "因为普通没有防备",
-          effects: { acceptance: 1, honesty: 1 },
-          response: "对。普通的下午不会要求我们记得它，所以它留下来的时候，反而更像是真的。"
+          id: "labis-teach-hold",
+          label: "我扶着，你慢慢来。",
+          effects: { companionship: 1 },
+          response: "MS：我扶着，你慢慢来。<br>ET：你不要突然放手啊。<br>MS：知道啦。真的真的。"
         },
         {
-          id: "unimportant",
-          label: "也许只是刚好记得",
-          effects: { distance: 1, avoidance: 1 },
-          response: "也可以。不是每个记忆都需要意义，有些只是没有离开。"
+          id: "labis-teach-simple",
+          label: "很简单罢了，走走走。",
+          effects: { acceptance: 1 },
+          response: "MS：很简单罢了，走走走。<br>ET：等下等下。<br>MS：慢慢放。<br>ET：我在放了啦。"
         },
         {
-          id: "pretty",
-          label: "我想把它写得更亮一点",
+          id: "labis-teach-tease",
+          label: "你不是很厉害？自己来。",
           effects: { closeness: 1, intervention: 1 },
-          response: "可以，但不要把它写成别的东西。让光落在原来的灰尘上，就已经够了。"
+          response: "MS：你不是很厉害，自己来咯。<br>ET：蛤？？ms，你至少扶一下啦。<br>MS：哈哈哈哈好啦。"
         }
       ]
     },
     {
-      id: "labis-keeps-distance",
+      id: "labis-release",
+      speaker: "MS",
+      portrait: "none",
+      text: "第二次，她又说再来。MS 跟在旁边。看前面，不要一直看下面。",
+      choices: [
+        {
+          id: "labis-release-hold",
+          label: "继续扶着。",
+          effects: { companionship: 1 },
+          response: "ET：你是不是还扶着。<br>MS：嗯。<br>ET：可以放了啦。"
+        },
+        {
+          id: "labis-release-slow",
+          label: "慢慢松手。",
+          effects: { acceptance: 1 },
+          response: "ET：你没有扶了？！<br>MS：你不是会了吗。<br>ET：walao。"
+        },
+        {
+          id: "labis-release-tell",
+          label: "可以了，你自己来。",
+          effects: { acceptance: 1, honesty: 1 },
+          response: "ET：可以咩。<br>MS：可以。"
+        }
+      ]
+    },
+    {
+      id: "labis-remember",
       speaker: "ET",
       portrait: "none",
-      text: "如果那天没有学会，也许也不会怎样。可是学会了以后，好像回去的路就多了一点点勇气。"
+      text: "单凭这一点，没有白来。",
+      choices: [
+        {
+          id: "labis-final-accept",
+          label: "嗯，没有白来。",
+          effects: { acceptance: 1 },
+          response: "MS：嗯，没有白来。<br>ET：是不是。<br>MS：是啦。"
+        },
+        {
+          id: "labis-final-happy",
+          label: "你开心就好。",
+          effects: { companionship: 1 },
+          response: "MS：你开心就好。<br>ET：我很开心啊。<br>MS：看得出。"
+        },
+        {
+          id: "labis-final-photo",
+          label: "早知道就拍下来。",
+          effects: { intervention: 1 },
+          response: "MS：早知道刚才拍下来。<br>ET：拍来做么。<br>MS：不知道，留着咯。<br>ET：以后再驾啦。"
+        },
+        {
+          id: "labis-final-silent",
+          label: "……",
+          effects: { distance: 1 },
+          response: "ET：做么。<br>MS：没有啊。<br>ET：奇怪的人。"
+        }
+      ]
     }
   ],
   canonicalClosure: {
     historicalEventId: "july19-motor-learning",
     lines: [
-      "The afternoon stays ordinary.",
-      "ET learns to keep the motor moving.",
-      "Muji leaves Labis without making the memory louder than it was."
+      "ET 学会了驾 motor。",
+      "那天下午，她说单凭这一点，没有白来。"
     ]
   },
   reflectionQuotes: [
     {
       id: "labis-motor-ordinary",
       tone: "accepting",
-      lines: ["那天下午没有变成电影。", "只是后来才知道，普通也会发光。"]
+      title: "没有白来",
+      lines: ["那时候我没有想过，", "一个人学会往前走，也会成为我的记忆。"],
+      afterline: "她学会了。那就已经足够。"
     },
     {
       id: "labis-motor-holding",
       tone: "holding",
-      lines: ["马路还是那条马路。", "有些记忆，是因为没有预告才珍贵。"]
-    },
-    {
-      id: "labis-motor-not-ready",
-      tone: "not-ready",
-      lines: ["如果今天还看不出意义，也没有关系。", "记忆有时只是先替我们保存，还不急着解释。"]
+      title: "她很开心",
+      lines: ["我记不得那天下午说过多少话。", "但我还记得，她骑回来的时候在笑。"],
+      afterline: "有些东西留下来，不是因为重要，只是因为舍不得忘。"
     },
     {
       id: "labis-motor-rewriting",
       tone: "rewriting",
-      lines: ["可以把下午写得亮一点。", "但真正亮的地方，是它原本没有想证明什么。"]
+      title: "以后再驾",
+      lines: ["当时说“以后”的时候，", "谁都没有觉得那是一个需要兑现的约定。", "所以我不想用后来发生的事，", "去责怪那时候相信这句话的自己。"],
+      afterline: "后来是真的。那天下午也是真的。"
+    },
+    {
+      id: "labis-motor-not-ready",
+      tone: "not-ready",
+      title: "单凭这一点",
+      lines: ["她说，单凭这一点，没有白来。", "那我今天，就先记到这里。"],
+      afterline: "不是每一次回来，都必须带走一个答案。"
     }
   ]
 };

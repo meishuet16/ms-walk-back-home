@@ -6,9 +6,9 @@ import { chapterRegistry, forestEntries, routeForestEntry, type AuthoredForestEn
 import { beginChapterVisit, finishChapterWalkthrough, initialChapterProgress, markChapterDialogueComplete, markChapterMemoryRead, recordChapterChoice } from "./systems/ChapterProgressManager.js";
 import { inAnyRect, type Point, type Rect } from "./systems/CollisionSystem.js";
 import { CutsceneSystem } from "./systems/CutsceneSystem.js";
-import { createNewDiaryPage, deleteDiaryEntryById, formatDiaryWeekday, getDiaryForestMemories, getDiaryTimeline, openDiaryPageForDate, upsertDiaryEntry, upsertDiaryPageDraft } from "./systems/DiaryLibrary.js";
+import { createNewDiaryPage, deleteDiaryEntriesByIds, deleteDiaryEntryById, formatDiaryWeekday, getDiaryForestMemories, getDiaryTimeline, openDiaryPageForDate, upsertDiaryEntry, upsertDiaryPageDraft } from "./systems/DiaryLibrary.js";
 import { diaryMoodOptions, isDiaryMood } from "./systems/DiaryMood.js";
-import { makeDiaryEntry, parseDiaryImport, updateDiaryMemoryKind, type DiaryForestMemory } from "./systems/DiaryImport.js";
+import { makeDiaryEntry, parseDiaryImport, updateDiaryMemoryKind, type DiaryForestMemory, type DiaryTimelineSort } from "./systems/DiaryImport.js";
 import { DialogueSystem } from "./systems/DialogueSystem.js";
 import { resolveChapterReflection, type Ending } from "./systems/EndingResolver.js";
 import { InputManager } from "./systems/InputManager.js";
@@ -110,6 +110,8 @@ export class WalkBackHomeApp {
   private selectedChapter = "Yumido Bread";
   private activeScrapbookEntryId = "";
   private selectedScrapbookElementId = "";
+  private selectedTimelineEntryIds = new Set<string>();
+  private timelineSort: DiaryTimelineSort = "date-desc";
   private scrapbookDrag: { elementId: string; entryId: string; offsetX: number; offsetY: number } | null = null;
   private diaryAutosaveTimer = 0;
   private availableVinylRecords: VinylRecord[] = vinylRecords;
@@ -120,6 +122,8 @@ export class WalkBackHomeApp {
   private labisCutscene: CutsceneSystem | null = null;
   private labisDialogueOpen = false;
   private labisReplayMode = false;
+  private labisLessonChoiceIndex = -1;
+  private labisLessonLeadLines: string[] = [];
   private completedMemoryEvents = new Set<string>();
   private ending: Ending | null = null;
 
@@ -201,6 +205,9 @@ export class WalkBackHomeApp {
     if (action === "save-diary-entry") this.saveDiaryEntry(target.dataset.id);
     if (action === "edit-diary-entry") this.showDiaryEditor(target.dataset.id);
     if (action === "delete-diary-entry") this.deleteDiaryEntry(target.dataset.id ?? "");
+    if (action === "timeline-select-all") this.selectAllTimelineEntries();
+    if (action === "timeline-clear-selected") this.clearTimelineSelection();
+    if (action === "timeline-delete-selected") this.deleteSelectedTimelineEntries();
     if (action === "show-import-diary") this.showImportDiary();
     if (action === "import-diary-lines") this.importDiaryLines();
     if (action === "add-photo-to-scrapbook") this.addPhotoToScrapbook(target.dataset.photo ?? "");
@@ -232,6 +239,8 @@ export class WalkBackHomeApp {
     if (action === "close") {
       this.overlay.classList.remove("dialogue-open");
       this.overlay.innerHTML = "";
+      this.labisLessonChoiceIndex = -1;
+      this.labisLessonLeadLines = [];
       this.showToast("Closed");
     }
     if (action === "enter-door") {
@@ -240,6 +249,7 @@ export class WalkBackHomeApp {
       this.enterCurrentMemory();
     }
     if (action === "labis-replay") this.startLabisMemory(true);
+    if (action === "labis-lesson-choice") this.chooseLabisLessonChoice(target.dataset.choice ?? "", Number(target.dataset.node ?? 0));
     if (action === "labis-reflection-choice") this.chooseLabisReflection(target.dataset.choice ?? "");
     if (action === "finish-memory") this.finishBakery();
     if (action === "choice") this.choose(target.dataset.choice ?? "");
@@ -346,6 +356,10 @@ export class WalkBackHomeApp {
       this.activeObject = "";
       return;
     }
+    if (this.labisLessonChoiceIndex >= 0) {
+      this.activeObject = "";
+      return;
+    }
     this.move(x, y, dt, labisBlockers, []);
     const canStartMemory = canStartLabisMotorMemory(this.player, this.readMemories, this.completedMemoryEvents);
     if (canStartMemory) {
@@ -359,9 +373,27 @@ export class WalkBackHomeApp {
   }
 
   private startLabisMemory(replay: boolean): void {
+    if (!replay) {
+      this.labisReplayMode = false;
+      this.labisLessonLeadLines = [
+        "ET：你不是讲要教我驾 motor 咩",
+        "MS：你真的要驾啊",
+        "ET：要啊。我都讲几次了。",
+        "MS：等下跌倒不要赖我。",
+        "ET：不会的啦，快点。",
+        "MS：先不要乱转油。",
+        "ET：这个是油？",
+        "MS：……不然勒。",
+        "ET：哦。",
+        "ET：然后怎样。"
+      ];
+      this.showLabisLessonChoice(0);
+      return;
+    }
     this.labisCutscene = new CutsceneSystem(labisMotorMemoryActions);
     this.labisDialogueOpen = false;
     this.labisReplayMode = replay;
+    this.labisLessonChoiceIndex = -1;
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
     this.showToast(replay ? "Replaying memory" : "The past appears");
@@ -636,31 +668,78 @@ export class WalkBackHomeApp {
   }
 
   private showLabisReflectionDialogue(): void {
+    this.showLabisLessonChoice(2);
+  }
+
+  private showLabisLessonChoice(index: number): void {
     const chapter = chapterRegistry["labis-motor-day"];
-    const node = chapter?.dialogue[0];
+    const node = chapter?.dialogue[index];
     if (!node) return this.showChapterEndingQuote("after the motor lesson", "The afternoon stays ordinary");
-    const choices = node.choices?.map((choice) => `<button data-action="labis-reflection-choice" data-choice="${this.escapeHtml(choice.id)}"><span>${this.escapeHtml(choice.label)}</span><small>reflection</small></button>`).join("") ?? "";
+    this.labisLessonChoiceIndex = index;
+    const setup = this.labisLessonLeadLines.length ? `<p class="memory-line">${this.labisLessonLeadLines.map((line) => this.escapeHtml(line)).join("<br>")}</p>` : "";
+    const action = index === 2 ? "labis-reflection-choice" : "labis-lesson-choice";
+    const small = index === 2 ? "reflection" : "motor";
+    const choices = node.choices?.map((choice) => `<button data-action="${action}" data-node="${index}" data-choice="${this.escapeHtml(choice.id)}"><span>${this.escapeHtml(choice.label)}</span><small>${small}</small></button>`).join("") ?? "";
     this.overlay.classList.add("dialogue-open");
-    this.overlay.innerHTML = `<div class="vn labis-vn"><div class="vn-portrait labis-portrait et-ms"></div><div><h3>${this.escapeHtml(node.speaker)}</h3><p>${this.escapeHtml(node.text)}</p><div class="choices">${choices}</div></div></div>`;
+    this.overlay.innerHTML = `<div class="vn labis-vn"><div class="vn-portrait labis-portrait et-ms"></div><div><h3>${this.escapeHtml(node.speaker)}</h3>${setup}<p>${this.escapeHtml(node.text)}</p><div class="choices">${choices}</div></div></div>`;
     this.focusStage();
+  }
+
+  private chooseLabisLessonChoice(choiceId: string, nodeIndex: number): void {
+    const chapter = chapterRegistry["labis-motor-day"];
+    const node = chapter?.dialogue[nodeIndex];
+    const choice = node?.choices?.find((item) => item.id === choiceId);
+    if (!choice) return;
+    this.recordLabisChoice(choice);
+    this.labisLessonLeadLines = this.responseLines(choice.response);
+    if (nodeIndex === 0) {
+      this.labisLessonLeadLines.push("ET 慢慢开出去。");
+      this.showLabisLessonChoice(1);
+      return;
+    }
+    this.labisLessonLeadLines.push(
+      "ET 骑到另一边，转回来，停下。",
+      "ET：欸。",
+      "MS：做么。",
+      "ET：我会了。",
+      "MS：会了咯。",
+      "ET：嘿嘿。",
+      "ET：我觉得这个是我来这里最大的收获。",
+      "MS：驾 motor？",
+      "ET：嗯。"
+    );
+    this.labisLessonChoiceIndex = -1;
+    this.labisCutscene = new CutsceneSystem(labisMotorMemoryActions);
+    this.labisDialogueOpen = false;
+    this.overlay.classList.remove("dialogue-open");
+    this.overlay.innerHTML = "";
+    this.showToast("Motor starts moving");
+    this.autosave();
   }
 
   private chooseLabisReflection(choiceId: string): void {
     const chapter = chapterRegistry["labis-motor-day"];
-    const node = chapter?.dialogue[0];
+    const node = chapter?.dialogue[2];
     const choice = node?.choices?.find((item) => item.id === choiceId);
     const leadLines: string[] = [];
     if (choice) {
-      this.tendencies = applyChoice(this.tendencies, choice);
-      const progress = recordChapterChoice(this.progressFor("labis-motor-day"), choice.id, this.tendencies);
-      this.chapterProgress.set("labis-motor-day", progress);
-      this.choices.push(choice.id);
-      leadLines.push(choice.response);
+      this.recordLabisChoice(choice);
+      leadLines.push(...this.responseLines(choice.response));
     }
-    const afterLine = chapter?.dialogue[1]?.text;
-    if (afterLine) leadLines.push(afterLine);
+    this.labisLessonChoiceIndex = -1;
     this.showChapterEndingQuote("after the motor lesson", "The afternoon stays ordinary", leadLines);
     this.autosave();
+  }
+
+  private recordLabisChoice(choice: Choice): void {
+    this.tendencies = applyChoice(this.tendencies, choice);
+    const progress = recordChapterChoice(this.progressFor("labis-motor-day"), choice.id, this.tendencies);
+    this.chapterProgress.set("labis-motor-day", progress);
+    this.choices.push(choice.id);
+  }
+
+  private responseLines(response: string): string[] {
+    return response.split(/<br\s*\/?>/i).map((line) => line.trim()).filter(Boolean);
   }
 
   private inspectLabisShop(): void {
@@ -691,8 +770,10 @@ export class WalkBackHomeApp {
 
   private renderEndingQuote(kicker: string, title: string, reflection: ReturnType<typeof resolveChapterReflection>, leadLines: string[] = []): void {
     const lead = leadLines.length ? `<p class="memory-line">${leadLines.map((line) => this.escapeHtml(line)).join("<br>")}</p>` : "";
+    const quoteTitle = reflection.title ?? title;
+    const afterline = reflection.afterline ?? "Some places do not ask us to make them dramatic. They simply keep the afternoon until we are ready to see it.";
     this.overlay.classList.remove("dialogue-open");
-    this.overlay.innerHTML = `<div class="modal ending-quote"><span class="ending-kicker">${this.escapeHtml(kicker)}</span><h2>${this.escapeHtml(title)}</h2>${lead}<p>${reflection.closureLines.map((line) => this.escapeHtml(line)).join("<br>")}</p><blockquote>${reflection.lines.map((line) => this.escapeHtml(line)).join("<br>")}</blockquote><p class="ending-afterline">Some places do not ask us to make them dramatic. They simply keep the afternoon until we are ready to see it.</p><button data-action="close">Close</button><button data-action="forest">Return to Forest</button></div>`;
+    this.overlay.innerHTML = `<div class="modal ending-quote"><span class="ending-kicker">${this.escapeHtml(kicker)}</span><h2>${this.escapeHtml(quoteTitle)}</h2>${lead}<p>${reflection.closureLines.map((line) => this.escapeHtml(line)).join("<br>")}</p><blockquote>${reflection.lines.map((line) => this.escapeHtml(line)).join("<br>")}</blockquote><p class="ending-afterline">${this.escapeHtml(afterline)}</p><button data-action="close">Close</button><button data-action="forest">Return to Forest</button></div>`;
   }
 
   private finishBakery(): void {
@@ -721,6 +802,8 @@ export class WalkBackHomeApp {
     this.labisCutscene = null;
     this.labisDialogueOpen = false;
     this.labisReplayMode = false;
+    this.labisLessonChoiceIndex = -1;
+    this.labisLessonLeadLines = [];
     this.scene = "forest";
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
@@ -1029,14 +1112,19 @@ export class WalkBackHomeApp {
   }
 
   private showTimeline(): void {
-    const rows = getDiaryTimeline(this.makeDiaryLibrary()).map((entry) => `
-      <article class="timeline-entry">
+    const timeline = getDiaryTimeline(this.makeDiaryLibrary(), this.timelineSort);
+    const rows = timeline.map((entry) => {
+      const checked = this.selectedTimelineEntryIds.has(entry.id) ? "checked" : "";
+      return `
+      <article class="timeline-entry ${checked ? "selected" : ""}">
+        <label class="timeline-check"><input type="checkbox" data-timeline-select="${this.escapeHtml(entry.id)}" ${checked} aria-label="Select diary"></label>
         <div><strong>${this.escapeHtml(entry.date)}</strong><h3>${this.escapeHtml(entry.title)}</h3><p>${this.escapeHtml(entry.body.slice(0, 120)) || "Empty draft"}</p></div>
-        <span>${entry.memoryKind}${entry.hasScrapbookLayout ? " · scrapbook" : ""}</span>
+        <label class="timeline-kind"><span>${entry.hasScrapbookLayout ? "scrapbook" : "memory"}</span><select data-timeline-kind="${this.escapeHtml(entry.id)}"><option value="diary" ${entry.memoryKind === "diary" ? "selected" : ""}>Diary only</option><option value="fragment" ${entry.memoryKind === "fragment" ? "selected" : ""}>Memory Fragment</option><option value="chapter" ${entry.memoryKind === "chapter" ? "selected" : ""}>Memory Chapter</option></select></label>
         <button data-action="edit-diary-entry" data-id="${this.escapeHtml(entry.id)}">Edit</button>
         <button data-action="delete-diary-entry" data-id="${this.escapeHtml(entry.id)}">Delete</button>
-      </article>`).join("");
-    this.overlay.innerHTML = `<div class="modal game-panel"><h2>Timeline</h2><p>All diary entries live here. Memory classification controls whether an entry also appears as a Forest fragment or chapter.</p><div class="timeline-list">${rows || "<p>No diary entries yet.</p>"}</div><button data-action="new-diary-entry">Create New Journal</button><button data-action="write-today">Open Today's Page</button><button data-action="settings">Back</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
+      </article>`;
+    }).join("");
+    this.overlay.innerHTML = `<div class="modal game-panel timeline-panel"><h2>Timeline</h2><p>All diary entries live here. Imported TXT/MD entries save here as Diary only first; change classification when you want them to enter the Forest.</p><div class="timeline-toolbar"><label>Sort<select id="timeline-sort"><option value="date-desc" ${this.timelineSort === "date-desc" ? "selected" : ""}>Newest first</option><option value="date-asc" ${this.timelineSort === "date-asc" ? "selected" : ""}>Oldest first</option><option value="title-asc" ${this.timelineSort === "title-asc" ? "selected" : ""}>Title A-Z</option></select></label><span>${this.selectedTimelineEntryIds.size} selected</span><button data-action="timeline-select-all">Select All</button><button data-action="timeline-clear-selected">Clear Selection</button><button data-action="timeline-delete-selected">Delete Selected</button></div><div class="timeline-list">${rows || "<p>No diary entries yet.</p>"}</div><button data-action="new-diary-entry">Create New Journal</button><button data-action="write-today">Open Today's Page</button><button data-action="settings">Back</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
     this.focusStage();
   }
 
@@ -1240,6 +1328,7 @@ export class WalkBackHomeApp {
       this.visitedMemories.delete(entry.id);
       this.walkedThroughMemories.delete(entry.id);
       this.readMemories.delete(entry.id);
+      this.selectedTimelineEntryIds.delete(entry.id);
       if (this.currentDoor?.id === entry.id) this.currentDoor = null;
       this.showToast("Diary date deleted");
     }
@@ -1252,6 +1341,44 @@ export class WalkBackHomeApp {
     if (index < 0) return;
     this.diaryEntries[index] = updateDiaryMemoryKind(this.diaryEntries[index], memoryKind);
     this.showDiaryEditor(id);
+    this.autosave();
+  }
+
+  private setTimelineMemoryKind(id: string, memoryKind: MemoryKind): void {
+    const index = this.diaryEntries.findIndex((entry) => entry.id === id);
+    if (index < 0) return;
+    this.diaryEntries[index] = updateDiaryMemoryKind(this.diaryEntries[index], memoryKind);
+    this.showTimeline();
+    this.showToast("Memory classification updated");
+    this.autosave();
+  }
+
+  private selectAllTimelineEntries(): void {
+    this.selectedTimelineEntryIds = new Set(getDiaryTimeline(this.makeDiaryLibrary(), this.timelineSort).map((entry) => entry.id));
+    this.showTimeline();
+  }
+
+  private clearTimelineSelection(): void {
+    this.selectedTimelineEntryIds.clear();
+    this.showTimeline();
+  }
+
+  private deleteSelectedTimelineEntries(): void {
+    if (!this.selectedTimelineEntryIds.size) {
+      this.showToast("No diary selected");
+      return;
+    }
+    const selected = new Set(this.selectedTimelineEntryIds);
+    this.applyDiaryLibrary(deleteDiaryEntriesByIds(this.makeDiaryLibrary(), selected));
+    for (const id of selected) {
+      this.visitedMemories.delete(id);
+      this.walkedThroughMemories.delete(id);
+      this.readMemories.delete(id);
+      if (this.currentDoor?.id === id) this.currentDoor = null;
+    }
+    this.selectedTimelineEntryIds.clear();
+    this.showTimeline();
+    this.showToast(`Deleted ${selected.size} diary entries`);
     this.autosave();
   }
 
@@ -1326,6 +1453,24 @@ export class WalkBackHomeApp {
 
   private async handleChange(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
+    const timelineSort = input.id === "timeline-sort" ? (input as unknown as HTMLSelectElement).value as DiaryTimelineSort : "";
+    if (timelineSort) {
+      this.timelineSort = timelineSort;
+      this.showTimeline();
+      return;
+    }
+    const timelineKindId = input.dataset.timelineKind;
+    if (timelineKindId) {
+      this.setTimelineMemoryKind(timelineKindId, input.value as MemoryKind);
+      return;
+    }
+    const timelineSelectId = input.dataset.timelineSelect;
+    if (timelineSelectId) {
+      if (input.checked) this.selectedTimelineEntryIds.add(timelineSelectId);
+      else this.selectedTimelineEntryIds.delete(timelineSelectId);
+      this.showTimeline();
+      return;
+    }
     if (input.id === "diary-date" || input.id === "diary-memory-kind") {
       this.handleInput(event);
       return;
@@ -1685,6 +1830,8 @@ export class WalkBackHomeApp {
       this.labisCutscene = null;
       this.labisDialogueOpen = false;
       this.labisReplayMode = false;
+      this.labisLessonChoiceIndex = -1;
+      this.labisLessonLeadLines = [];
     }
     this.audio.setVolume(this.settings.volume);
     this.audio.setMuted(this.settings.muted);

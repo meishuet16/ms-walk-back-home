@@ -9,8 +9,12 @@ export type Ending = {
 
 function toneFromProgress(progress: ChapterProgress): ReflectionTone {
   const picked = new Set(progress.choices);
+  if (picked.has("labis-final-photo")) return "rewriting";
+  if (picked.has("labis-final-happy")) return "holding";
+  if (picked.has("labis-final-silent")) return "not-ready";
+  if (picked.has("labis-final-accept")) return "accepting";
   if (picked.has("pretty") || picked.has("rewrite-me")) return "rewriting";
-  if (picked.has("quiet") || picked.has("remember-me") || picked.has("sad")) return "holding";
+  if (picked.has("quiet") || picked.has("remember-me") || picked.has("sad") || picked.has("labis-teach-hold") || picked.has("labis-release-hold")) return "holding";
   if (picked.has("unimportant") || picked.has("silent-leave")) return "not-ready";
   return "accepting";
 }
@@ -21,7 +25,9 @@ export function resolveChapterReflection(chapter: ChapterDefinition, progress: C
   return {
     tone: quote.tone,
     quoteId: quote.id,
+    title: quote.title,
     lines: quote.lines,
+    afterline: quote.afterline,
     historicalEventId: chapter.canonicalClosure.historicalEventId,
     closureLines: chapter.canonicalClosure.lines
   };

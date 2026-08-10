@@ -61,6 +61,29 @@ test("markdown diary imports support metadata and body text", () => {
   assert.equal(entry.body, "A small fictional note.\nSecond line.");
 });
 
+test("markdown diary imports can split clean heading blocks into multiple diary entries", () => {
+  const imported = parseDiaryImport([
+    "# **2026-08-09 小雨转晴**",
+    "## 今天其实没发生什么特别的",
+    "",
+    "今天下午下了很久的雨。",
+    "",
+    "# **2026-08-10 晴**",
+    "Title: 走回房间",
+    "",
+    "把灯打开以后，房间安静下来。"
+  ].join("\n"));
+
+  assert.equal(imported.length, 2);
+  assert.equal(imported[0].date, "2026-08-09");
+  assert.equal(imported[0].weather, "小雨转晴");
+  assert.equal(imported[0].title, "今天其实没发生什么特别的");
+  assert.equal(imported[0].body, "今天下午下了很久的雨。");
+  assert.equal(imported[1].date, "2026-08-10");
+  assert.equal(imported[1].weather, "晴");
+  assert.equal(imported[1].memoryKind, "diary");
+});
+
 test("write today reuses the existing diary page for that date", () => {
   const existing = makeDiaryEntry("2026-08-10", "Rain Desk", "Fictional text.");
   const opened = openDiaryPageForDate(createDiaryLibrary([existing]), "2026-08-10");

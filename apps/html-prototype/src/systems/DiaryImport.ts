@@ -11,6 +11,8 @@ export type DiaryTimelineItem = {
   hasScrapbookLayout: boolean;
 };
 
+export type DiaryTimelineSort = "date-desc" | "date-asc" | "title-asc";
+
 export type DiaryForestMemory =
   | {
       id: string;
@@ -62,9 +64,13 @@ export function diaryEntryToTimelineItem(entry: DiaryEntry): DiaryTimelineItem {
   };
 }
 
-export function diaryEntriesToTimeline(entries: DiaryEntry[]): DiaryTimelineItem[] {
+export function diaryEntriesToTimeline(entries: DiaryEntry[], sort: DiaryTimelineSort = "date-desc"): DiaryTimelineItem[] {
   return [...entries]
-    .sort((a, b) => b.date.localeCompare(a.date))
+    .sort((a, b) => {
+      if (sort === "date-asc") return a.date.localeCompare(b.date);
+      if (sort === "title-asc") return a.title.localeCompare(b.title);
+      return b.date.localeCompare(a.date);
+    })
     .map(diaryEntryToTimelineItem);
 }
 
@@ -164,8 +170,8 @@ export function makeDiaryId(date: string, title: string): string {
 }
 
 export function parseDiaryImport(text: string): DiaryEntry[] {
-  const markdownEntry = parseMarkdownDiaryImport(text);
-  if (markdownEntry) return [markdownEntry];
+  const markdownEntries = parseMarkdownDiaryImport(text);
+  if (markdownEntries.length) return markdownEntries;
   return text
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -178,21 +184,56 @@ export function parseDiaryImport(text: string): DiaryEntry[] {
     .filter((entry) => entry.date.length > 0 && entry.body.length > 0);
 }
 
-function parseMarkdownDiaryImport(text: string): DiaryEntry | null {
+function cleanMarkdownInline(value: string): string {
+  return value
+    .replace(/\*\*/g, "")
+    .replace(/__+/g, "")
+    .replace(/`/g, "")
+    .trim();
+}
+
+function isDiaryHeading(line: string): boolean {
+  return /^#{1,3}\s+/.test(line.trim()) && /\d{4}-\d{2}-\d{2}/.test(line);
+}
+
+function parseHeadingDateWeather(heading: string): { date: string; title?: string; weather?: string } | null {
+  const cleaned = cleanMarkdownInline(heading.replace(/^#{1,3}\s+/, ""));
+  const match = cleaned.match(/^(\d{4}-\d{2}-\d{2})(?:\s*[-:｜|]\s*(.+)|\s+(.+))?$/);
+  if (!match) return null;
+  const tail = (match[2] ?? match[3] ?? "").trim();
+  const weatherWords = /雨|晴|阴|云|风|雪|storm|rain|sunny|cloud|clear/i;
+  return {
+    date: match[1],
+    weather: tail && weatherWords.test(tail) ? tail : undefined,
+    title: tail && !weatherWords.test(tail) ? tail : undefined
+  };
+}
+
+function parseMarkdownDiaryImport(text: string): DiaryEntry[] {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const headingIndex = lines.findIndex((line) => /^#{1,3}\s+\d{4}-\d{2}-\d{2}/.test(line.trim()));
-  if (headingIndex < 0) return null;
-  const heading = lines[headingIndex].trim().replace(/^#{1,3}\s+/, "");
-  const headingMatch = heading.match(/^(\d{4}-\d{2}-\d{2})(?:\s+[-:]\s+(.+))?$/);
-  if (!headingMatch) return null;
-  const metadata: Partial<Pick<DiaryEntry, "title" | "location" | "weather">> = {};
+  const headingIndexes = lines.map((line, index) => isDiaryHeading(line) ? index : -1).filter((index) => index >= 0);
+  if (!headingIndexes.length) return [];
+  return headingIndexes
+    .map((start, index) => parseMarkdownDiaryBlock(lines.slice(start, headingIndexes[index + 1] ?? lines.length)))
+    .filter((entry): entry is DiaryEntry => Boolean(entry));
+}
+
+function parseMarkdownDiaryBlock(lines: string[]): DiaryEntry | null {
+  const headingMeta = parseHeadingDateWeather(lines[0] ?? "");
+  if (!headingMeta) return null;
+  const metadata: Partial<Pick<DiaryEntry, "title" | "location" | "weather">> = { weather: headingMeta.weather };
   const bodyLines: string[] = [];
-  for (const rawLine of lines.slice(headingIndex + 1)) {
+  for (const rawLine of lines.slice(1)) {
     const line = rawLine.trim();
+    const titleHeading = line.match(/^#{2,4}\s+(.+)$/);
+    if (titleHeading && !metadata.title) {
+      metadata.title = cleanMarkdownInline(titleHeading[1]);
+      continue;
+    }
     const field = line.match(/^(title|location|weather|标题|地点|天气)\s*[:：]\s*(.+)$/i);
     if (field) {
       const key = field[1].toLowerCase();
-      const value = field[2].trim();
+      const value = cleanMarkdownInline(field[2]);
       if (key === "title" || key === "标题") metadata.title = value;
       if (key === "location" || key === "地点") metadata.location = value;
       if (key === "weather" || key === "天气") metadata.weather = value;
@@ -201,10 +242,9 @@ function parseMarkdownDiaryImport(text: string): DiaryEntry | null {
     bodyLines.push(rawLine);
   }
   const body = bodyLines.join("\n").trim();
-  if (!body) return null;
   return normalizeDiaryEntry({
-    date: headingMatch[1],
-    title: metadata.title ?? headingMatch[2] ?? "Untitled Memory",
+    date: headingMeta.date,
+    title: metadata.title ?? headingMeta.title ?? "Untitled Memory",
     body,
     location: metadata.location,
     weather: metadata.weather
