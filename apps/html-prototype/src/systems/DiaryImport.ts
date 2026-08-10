@@ -200,15 +200,23 @@ function isDiaryHeading(line: string): boolean {
 
 function parseHeadingDateWeather(heading: string): { date: string; title?: string; weather?: string } | null {
   const cleaned = cleanMarkdownInline(heading.replace(/^#{1,3}\s*/, ""));
-  const match = cleaned.match(/^(\d{4}-\d{2}-\d{2})(?:\s*[-:｜|]\s*(.+)|\s+(.+))?$/);
+  const match = cleaned.match(/^(\d{4}-\d{2}-\d{2}|\d{4}年\d{1,2}月\d{1,2}日)(?:\s*[-:｜|]\s*(.+)|\s+(.+))?$/);
   if (!match) return null;
+  const date = normalizeImportDate(match[1]);
   const tail = (match[2] ?? match[3] ?? "").trim();
   const weatherWords = /雨|晴|阴|云|风|雪|storm|rain|sunny|cloud|clear/i;
   return {
-    date: match[1],
+    date,
     weather: tail && weatherWords.test(tail) ? tail : undefined,
     title: tail && !weatherWords.test(tail) ? tail : undefined
   };
+}
+
+function normalizeImportDate(value: string): string {
+  const chinese = value.match(/^(\d{4})年(\d{1,2})月(\d{1,2})日$/);
+  if (!chinese) return value;
+  const [, year, month, day] = chinese;
+  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
 }
 
 function isIsoDate(value: string): boolean {
@@ -248,9 +256,10 @@ function parseMarkdownDiaryBlock(lines: string[]): DiaryEntry | null {
     bodyLines.push(rawLine);
   }
   const body = bodyLines.join("\n").trim();
+  const derivedTitle = bodyLines.map((line) => line.trim()).find(Boolean)?.slice(0, 32);
   return normalizeDiaryEntry({
     date: headingMeta.date,
-    title: metadata.title ?? headingMeta.title ?? "Untitled Memory",
+    title: metadata.title ?? headingMeta.title ?? derivedTitle ?? "Untitled Memory",
     body,
     location: metadata.location,
     weather: metadata.weather

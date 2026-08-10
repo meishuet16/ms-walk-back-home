@@ -102,6 +102,21 @@ test("markdown diary imports accept compact bold date-weather headings without f
   assert.equal(imported[0].body.includes("这一行只是正文"), true);
 });
 
+test("markdown diary imports accept Chinese date headings from personal markdown exports", () => {
+  const imported = parseDiaryImport([
+    "# **2026年8月2日 大晴天**",
+    "",
+    "早上醒来的时候，太阳已经很亮。",
+    "后来把这一天整理成日记。"
+  ].join("\n"));
+
+  assert.equal(imported.length, 1);
+  assert.equal(imported[0].date, "2026-08-02");
+  assert.equal(imported[0].weather, "大晴天");
+  assert.equal(imported[0].title, "早上醒来的时候，太阳已经很亮。");
+  assert.equal(imported[0].body, "早上醒来的时候，太阳已经很亮。\n后来把这一天整理成日记。");
+});
+
 test("plain import ignores non-diary markdown lines instead of creating one entry per line", () => {
   const imported = parseDiaryImport([
     "# Prompt",

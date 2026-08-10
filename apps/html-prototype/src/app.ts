@@ -1297,7 +1297,7 @@ export class WalkBackHomeApp {
         <h2>Import Existing Diary</h2>
         <p class="quiet-line">Use fictional or personal runtime text only. Imported entries default to Diary only.</p>
         <label>TXT / Markdown file<input id="diary-import-file" type="file" accept=".txt,.md,.markdown,text/plain,text/markdown"></label>
-        <label>Diary lines<textarea id="diary-import" rows="8" placeholder="2026-08-06 | Rain Letter | I kept thinking about the yellow bakery light."></textarea></label>
+        <label>Diary lines<textarea id="diary-import" rows="8" placeholder="# **2026年8月2日 大晴天**&#10;今天的日记正文...&#10;&#10;or: 2026-08-06 | Rain Letter | Diary text"></textarea></label>
         <button data-action="import-diary-lines">Import Lines</button>
         <button data-action="open-timeline">Back to Timeline</button>
         <button data-action="close">Close</button>
@@ -1309,7 +1309,7 @@ export class WalkBackHomeApp {
     const importInput = this.overlay.querySelector<HTMLTextAreaElement>("#diary-import");
     const imported = parseDiaryImport(importInput?.value ?? "");
     if (!imported.length) {
-      this.showToast("Use: YYYY-MM-DD | Title | Diary text");
+      this.showToast("Use a dated Markdown heading or YYYY-MM-DD | Title | Diary text");
       return;
     }
     for (const entry of imported) {
