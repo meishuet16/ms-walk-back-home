@@ -84,6 +84,34 @@ test("markdown diary imports can split clean heading blocks into multiple diary 
   assert.equal(imported[1].memoryKind, "diary");
 });
 
+test("markdown diary imports accept compact bold date-weather headings without falling back to every line", () => {
+  const imported = parseDiaryImport([
+    "#**2026-08-09 小雨转晴**",
+    "## 今天其实没发生什么特别的",
+    "今天下午下了很久的雨。",
+    "- 这一行只是正文，不是一篇新的日记。",
+    "",
+    "#**2026-08-10 晴**",
+    "## 走回房间",
+    "把灯打开以后，房间安静下来。"
+  ].join("\n"));
+
+  assert.equal(imported.length, 2);
+  assert.equal(imported[0].date, "2026-08-09");
+  assert.equal(imported[0].weather, "小雨转晴");
+  assert.equal(imported[0].body.includes("这一行只是正文"), true);
+});
+
+test("plain import ignores non-diary markdown lines instead of creating one entry per line", () => {
+  const imported = parseDiaryImport([
+    "# Prompt",
+    "- format every diary nicely",
+    "not a diary line"
+  ].join("\n"));
+
+  assert.equal(imported.length, 0);
+});
+
 test("write today reuses the existing diary page for that date", () => {
   const existing = makeDiaryEntry("2026-08-10", "Rain Desk", "Fictional text.");
   const opened = openDiaryPageForDate(createDiaryLibrary([existing]), "2026-08-10");

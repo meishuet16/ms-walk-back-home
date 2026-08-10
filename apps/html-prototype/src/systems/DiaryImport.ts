@@ -179,9 +179,11 @@ export function parseDiaryImport(text: string): DiaryEntry[] {
     .map((line) => {
       const [date = "", title = "", ...bodyParts] = line.split("|").map((part) => part.trim());
       const body = bodyParts.join(" | ").trim();
+      if (!isIsoDate(date)) return null;
       return makeDiaryEntry(date, title || "Untitled Memory", body || line);
     })
-    .filter((entry) => entry.date.length > 0 && entry.body.length > 0);
+    .filter((entry): entry is DiaryEntry => Boolean(entry))
+    .filter((entry) => entry.body.length > 0);
 }
 
 function cleanMarkdownInline(value: string): string {
@@ -193,11 +195,11 @@ function cleanMarkdownInline(value: string): string {
 }
 
 function isDiaryHeading(line: string): boolean {
-  return /^#{1,3}\s+/.test(line.trim()) && /\d{4}-\d{2}-\d{2}/.test(line);
+  return /^#{1,3}/.test(line.trim()) && parseHeadingDateWeather(line.trim()) !== null;
 }
 
 function parseHeadingDateWeather(heading: string): { date: string; title?: string; weather?: string } | null {
-  const cleaned = cleanMarkdownInline(heading.replace(/^#{1,3}\s+/, ""));
+  const cleaned = cleanMarkdownInline(heading.replace(/^#{1,3}\s*/, ""));
   const match = cleaned.match(/^(\d{4}-\d{2}-\d{2})(?:\s*[-:｜|]\s*(.+)|\s+(.+))?$/);
   if (!match) return null;
   const tail = (match[2] ?? match[3] ?? "").trim();
@@ -207,6 +209,10 @@ function parseHeadingDateWeather(heading: string): { date: string; title?: strin
     weather: tail && weatherWords.test(tail) ? tail : undefined,
     title: tail && !weatherWords.test(tail) ? tail : undefined
   };
+}
+
+function isIsoDate(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value.trim());
 }
 
 function parseMarkdownDiaryImport(text: string): DiaryEntry[] {
