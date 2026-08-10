@@ -21,10 +21,36 @@ export const labisMotorChapter: ChapterDefinition = {
   ],
   dialogue: [
     {
-      id: "et-learns-motor",
+      id: "labis-after-ride",
+      speaker: "MS",
+      portrait: "none",
+      text: "后来我一直在想，为什么这种小到几乎不值得宣布的事，会在记忆里留下这么清楚的位置。",
+      choices: [
+        {
+          id: "quiet",
+          label: "因为普通没有防备",
+          effects: { acceptance: 1, honesty: 1 },
+          response: "对。普通的下午不会要求我们记得它，所以它留下来的时候，反而更像是真的。"
+        },
+        {
+          id: "unimportant",
+          label: "也许只是刚好记得",
+          effects: { distance: 1, avoidance: 1 },
+          response: "也可以。不是每个记忆都需要意义，有些只是没有离开。"
+        },
+        {
+          id: "pretty",
+          label: "我想把它写得更亮一点",
+          effects: { closeness: 1, intervention: 1 },
+          response: "可以，但不要把它写成别的东西。让光落在原来的灰尘上，就已经够了。"
+        }
+      ]
+    },
+    {
+      id: "labis-keeps-distance",
       speaker: "ET",
       portrait: "none",
-      text: "单凭这一点，没有白来。"
+      text: "如果那天没有学会，也许也不会怎样。可是学会了以后，好像回去的路就多了一点点勇气。"
     }
   ],
   canonicalClosure: {
@@ -45,6 +71,16 @@ export const labisMotorChapter: ChapterDefinition = {
       id: "labis-motor-holding",
       tone: "holding",
       lines: ["马路还是那条马路。", "有些记忆，是因为没有预告才珍贵。"]
+    },
+    {
+      id: "labis-motor-not-ready",
+      tone: "not-ready",
+      lines: ["如果今天还看不出意义，也没有关系。", "记忆有时只是先替我们保存，还不急着解释。"]
+    },
+    {
+      id: "labis-motor-rewriting",
+      tone: "rewriting",
+      lines: ["可以把下午写得亮一点。", "但真正亮的地方，是它原本没有想证明什么。"]
     }
   ]
 };

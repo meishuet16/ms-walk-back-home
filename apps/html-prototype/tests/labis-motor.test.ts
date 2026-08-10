@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { labisMotorChapter } from "../src/fixtures/labisMotorChapter.js";
-import { canStartLabisMotorMemory, labisMemoryTriggers, labisMotorMemoryActions } from "../src/fixtures/labisMotorMemory.js";
+import { canStartLabisMotorMemory, labisDiaryMemorySpot, labisInteractionForPoint, labisMemoryTriggers, labisMotorMemoryActions } from "../src/fixtures/labisMotorMemory.js";
 import { chapterRegistry, forestEntries, routeForestEntry } from "../src/systems/ChapterRegistry.js";
 import { CutsceneSystem } from "../src/systems/CutsceneSystem.js";
 import { activeMemoryTrigger } from "../src/systems/MemoryTrigger.js";
@@ -50,6 +50,19 @@ test("labis motor trigger requires the diary memory to be read first", () => {
   const trigger = labisMemoryTriggers[0];
   assert.equal(canStartLabisMotorMemory({ x: trigger.rect.x + 20, y: trigger.rect.y + 20 }, new Set(), new Set()), false);
   assert.equal(canStartLabisMotorMemory({ x: trigger.rect.x + 20, y: trigger.rect.y + 20 }, new Set(["labis-motor-day"]), new Set()), true);
+});
+
+test("labis diary memory remains repeatable and is not covered by the motor trigger", () => {
+  const point = { x: labisDiaryMemorySpot.x, y: labisDiaryMemorySpot.y };
+
+  assert.equal(labisInteractionForPoint(point, new Set(), new Set()), "diary memory");
+  assert.equal(labisInteractionForPoint(point, new Set(["labis-motor-day"]), new Set()), "diary memory");
+  assert.equal(canStartLabisMotorMemory(point, new Set(["labis-motor-day"]), new Set()), false);
+});
+
+test("labis chapter offers multiple philosophical reflection endings", () => {
+  assert.ok(labisMotorChapter.dialogue.some((node) => (node.choices?.length ?? 0) >= 3));
+  assert.ok(labisMotorChapter.reflectionQuotes.length >= 3);
 });
 
 test("labis cutscene reaches ET dialogue and completes after acknowledgement", () => {

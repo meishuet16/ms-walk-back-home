@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { addPhotoAttachment, addPhotoElement, createCutoutElement, diaryTextFrame, moveScrapbookElement, removePhotoAttachment } from "../src/systems/ScrapbookComposer.js";
-import { createDiaryLibrary, createNewDiaryPage, openDiaryPageForDate, upsertDiaryPageDraft } from "../src/systems/DiaryLibrary.js";
+import { addPhotoAttachment, addPhotoElement, attachPhotoAndPlaceOnPage, createCutoutElement, diaryTextFrame, moveScrapbookElement, removePhotoAttachment } from "../src/systems/ScrapbookComposer.js";
+import { createDiaryLibrary, createNewDiaryPage, formatDiaryWeekday, openDiaryPageForDate, upsertDiaryPageDraft } from "../src/systems/DiaryLibrary.js";
 import { makeDiaryEntry, normalizeDiaryEntry, parseDiaryImport } from "../src/systems/DiaryImport.js";
 import { diaryMoodOptions } from "../src/systems/DiaryMood.js";
 
@@ -76,6 +76,24 @@ test("creating new diary pages does not overwrite existing entries", () => {
 
   assert.notEqual(first.entry.id, second.entry.id);
   assert.equal(second.library.entries.length, 2);
+});
+
+test("diary weekday follows the selected date immediately", () => {
+  assert.equal(formatDiaryWeekday("2026-08-09"), "周日");
+  assert.equal(formatDiaryWeekday("2026-08-10"), "周一");
+  assert.equal(formatDiaryWeekday("not-a-date"), "");
+});
+
+test("journal plus attaches and places a selected photo on the current page", () => {
+  const entry = makeDiaryEntry("2026-08-10", "Current Draft", "Still being edited.");
+  const updated = attachPhotoAndPlaceOnPage(
+    entry,
+    { id: "photo-1", storageKey: "diary-images/current/photo-1", src: "blob://photo-1", caption: "desk" },
+    "element-1"
+  );
+
+  assert.equal(updated.photos?.[0].id, "photo-1");
+  assert.equal(updated.scrapbookLayout?.elements[0]?.id, "element-1");
 });
 
 test("upserting a diary page draft preserves photos and layout on the diary entry", () => {

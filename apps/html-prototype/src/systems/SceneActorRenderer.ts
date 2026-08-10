@@ -39,15 +39,21 @@ function drawHuman(ctx: CanvasRenderingContext2D, x: number, y: number, scale: n
   ctx.fill();
   ctx.translate(lean, 0);
   ctx.fillStyle = color;
-  ctx.fillRect(-7 * scale, -29 * scale, 14 * scale, 23 * scale);
+  ctx.fillRect(-8 * scale, -29 * scale, 16 * scale, 20 * scale);
+  ctx.fillStyle = "#486077";
+  ctx.fillRect(-8 * scale, -10 * scale, 7 * scale, 15 * scale);
+  ctx.fillRect(1 * scale, -10 * scale, 7 * scale, 15 * scale);
   ctx.fillStyle = "#ead6bb";
   ctx.fillRect(-6 * scale, -43 * scale, 12 * scale, 12 * scale);
   ctx.fillStyle = "#2a211a";
   ctx.fillRect(-7 * scale, -45 * scale, 14 * scale, 4 * scale);
+  ctx.fillRect(-8 * scale, -41 * scale, 3 * scale, 12 * scale);
+  ctx.fillRect(5 * scale, -41 * scale, 3 * scale, 12 * scale);
   ctx.fillRect(-8 * scale, -30 * scale, 3 * scale, 16 * scale);
   ctx.fillRect(5 * scale, -30 * scale, 3 * scale, 16 * scale);
-  ctx.fillRect(-6 * scale, -7 * scale, 5 * scale, 12 * scale);
-  ctx.fillRect(1 * scale, -7 * scale, 5 * scale, 12 * scale);
+  ctx.fillStyle = "#2a211a";
+  ctx.fillRect(-7 * scale, 3 * scale, 6 * scale, 3 * scale);
+  ctx.fillRect(2 * scale, 3 * scale, 6 * scale, 3 * scale);
   ctx.fillStyle = actor.expression === "happy" ? "#3f2a1c" : actor.expression === "nervous" ? "#70412f" : "#33251c";
   ctx.fillRect(-3 * scale, -37 * scale, 2 * scale, 2 * scale);
   ctx.fillRect(3 * scale, -37 * scale, 2 * scale, 2 * scale);
@@ -91,7 +97,7 @@ function drawMotor(ctx: CanvasRenderingContext2D, x: number, y: number, scale: n
     expression: expression ?? "nervous",
     visible: true,
     kind: "human",
-    color: "#7b4b65"
+    color: "#f4eee6"
   });
   ctx.restore();
 }

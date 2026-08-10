@@ -37,6 +37,11 @@ export function createNewDiaryPage(library: DiaryLibraryState, date: string): { 
   return { library: nextLibrary, entry };
 }
 
+export function formatDiaryWeekday(date: string): string {
+  const parsedDate = new Date(`${date}T00:00:00`);
+  return Number.isNaN(parsedDate.getTime()) ? "" : ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][parsedDate.getDay()];
+}
+
 export function setDiaryEntryKind(library: DiaryLibraryState, id: string, memoryKind: MemoryKind, chapterId?: string): DiaryLibraryState {
   return {
     ...library,

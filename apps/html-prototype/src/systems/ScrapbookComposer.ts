@@ -72,6 +72,10 @@ export function addPhotoElement(entry: DiaryEntry, photoId: string, elementId: s
   };
 }
 
+export function attachPhotoAndPlaceOnPage(entry: DiaryEntry, photo: DiaryPhoto, elementId: string): DiaryEntry {
+  return addPhotoElement(addPhotoAttachment(entry, photo), photo.id, elementId);
+}
+
 export function createCutoutElement(entry: DiaryEntry, sourcePhotoId: string, elementId: string, shape: "rectangle" | "circle" = "rectangle"): DiaryEntry {
   const base = withLayout(entry);
   const maxZ = Math.max(0, ...base.scrapbookLayout!.elements.map((element) => element.zIndex));

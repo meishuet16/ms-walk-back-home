@@ -5,6 +5,7 @@ import type { Point } from "../systems/CollisionSystem.js";
 import { activeMemoryTrigger } from "../systems/MemoryTrigger.js";
 
 export const labisSpawn = { x: 750, y: 650 };
+export const labisDiaryMemorySpot = { x: 760, y: 604, radius: 76 };
 
 export const labisBlockers: Rect[] = [
   { x: 0, y: 0, w: 1536, h: 145 },
@@ -22,22 +23,34 @@ export const labisBlockers: Rect[] = [
 export const labisMemoryTriggers: MemoryTrigger[] = [
   {
     id: "labis-motor-learning-zone",
-    rect: { x: 520, y: 465, w: 430, h: 170 },
+    rect: { x: 540, y: 455, w: 380, h: 78 },
     chapterId: "labis-motor-day",
     eventId: "july19-motor-learning",
     once: true
   }
 ];
 
+function inDiaryMemorySpot(point: Point): boolean {
+  return Math.hypot(point.x - labisDiaryMemorySpot.x, point.y - labisDiaryMemorySpot.y) < labisDiaryMemorySpot.radius;
+}
+
 export function canStartLabisMotorMemory(point: Point, readMemories: Set<string>, completedEventIds: Set<string>): boolean {
   if (!readMemories.has("labis-motor-day")) return false;
+  if (inDiaryMemorySpot(point)) return false;
   return Boolean(activeMemoryTrigger(point, labisMemoryTriggers, completedEventIds));
+}
+
+export function labisInteractionForPoint(point: Point, readMemories: Set<string>, completedEventIds: Set<string>): "diary memory" | "motor memory" | "" {
+  if (inDiaryMemorySpot(point)) return "diary memory";
+  if (completedEventIds.has("july19-motor-learning") && Math.hypot(point.x - 740, point.y - 545) < 88) return "motor memory";
+  if (!readMemories.has("labis-motor-day") && activeMemoryTrigger(point, labisMemoryTriggers, completedEventIds)) return "diary memory";
+  return "";
 }
 
 export const labisMotorMemoryActions: CutsceneAction[] = [
   { type: "wait", duration: 0.42 },
   { type: "spawn", actor: "motor", kind: "compound-motor", x: 570, y: 555, facing: "right", expression: "nervous", label: "ET + motor" },
-  { type: "spawn", actor: "ms", kind: "human", x: 528, y: 558, facing: "right", expression: "attentive", color: "#45614d", label: "MS" },
+  { type: "spawn", actor: "ms", kind: "human", x: 528, y: 558, facing: "right", expression: "attentive", color: "#24211f", label: "MS" },
   { type: "wait", duration: 0.45 },
   { type: "move", actor: "motor", x: 710, y: 548, duration: 1.7, expression: "nervous" },
   { type: "move", actor: "ms", x: 650, y: 552, duration: 1.0, expression: "attentive" },

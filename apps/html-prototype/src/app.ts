@@ -1,12 +1,12 @@
 import { bakeryChapter } from "./fixtures/chapterPlan.js";
-import { canStartLabisMotorMemory, labisBlockers, labisMotorMemoryActions, labisSpawn } from "./fixtures/labisMotorMemory.js";
+import { canStartLabisMotorMemory, labisBlockers, labisInteractionForPoint, labisMotorMemoryActions, labisSpawn } from "./fixtures/labisMotorMemory.js";
 import type { ChapterProgress, Choice, DiaryEntry, DiaryLibraryState, JourneyState, MemoryKind, RoomJourneyState, SceneId, Tendencies } from "./types.js";
 import { AudioManager } from "./systems/AudioManager.js";
 import { chapterRegistry, forestEntries, routeForestEntry, type AuthoredForestEntry } from "./systems/ChapterRegistry.js";
 import { beginChapterVisit, finishChapterWalkthrough, initialChapterProgress, markChapterDialogueComplete, markChapterMemoryRead, recordChapterChoice } from "./systems/ChapterProgressManager.js";
 import { inAnyRect, type Point, type Rect } from "./systems/CollisionSystem.js";
 import { CutsceneSystem } from "./systems/CutsceneSystem.js";
-import { createNewDiaryPage, deleteDiaryEntryById, getDiaryForestMemories, getDiaryTimeline, openDiaryPageForDate, upsertDiaryEntry, upsertDiaryPageDraft } from "./systems/DiaryLibrary.js";
+import { createNewDiaryPage, deleteDiaryEntryById, formatDiaryWeekday, getDiaryForestMemories, getDiaryTimeline, openDiaryPageForDate, upsertDiaryEntry, upsertDiaryPageDraft } from "./systems/DiaryLibrary.js";
 import { diaryMoodOptions, isDiaryMood } from "./systems/DiaryMood.js";
 import { makeDiaryEntry, parseDiaryImport, updateDiaryMemoryKind, type DiaryForestMemory } from "./systems/DiaryImport.js";
 import { DialogueSystem } from "./systems/DialogueSystem.js";
@@ -14,9 +14,11 @@ import { resolveChapterReflection, type Ending } from "./systems/EndingResolver.
 import { InputManager } from "./systems/InputManager.js";
 import { ParticleSystem } from "./systems/ParticleSystem.js";
 import { drawSceneActor } from "./systems/SceneActorRenderer.js";
+import { applyChoice } from "./systems/TendencySystem.js";
 import {
   addPhotoAttachment,
   addPhotoElement,
+  attachPhotoAndPlaceOnPage,
   createCutoutElement,
   deleteScrapbookElement,
   layerScrapbookElement,
@@ -238,6 +240,7 @@ export class WalkBackHomeApp {
       this.enterCurrentMemory();
     }
     if (action === "labis-replay") this.startLabisMemory(true);
+    if (action === "labis-reflection-choice") this.chooseLabisReflection(target.dataset.choice ?? "");
     if (action === "finish-memory") this.finishBakery();
     if (action === "choice") this.choose(target.dataset.choice ?? "");
   }
@@ -345,15 +348,14 @@ export class WalkBackHomeApp {
     }
     this.move(x, y, dt, labisBlockers, []);
     const canStartMemory = canStartLabisMotorMemory(this.player, this.readMemories, this.completedMemoryEvents);
-    const waitingForDiary = !this.readMemories.has("labis-motor-day") && Math.hypot(this.player.x - 740, this.player.y - 585) < 118;
     if (canStartMemory) {
       this.startLabisMemory(false);
       return;
     }
-    const nearMemory = this.completedMemoryEvents.has("july19-motor-learning") && Math.hypot(this.player.x - 740, this.player.y - 545) < 88;
+    const labisInteraction = labisInteractionForPoint(this.player, this.readMemories, this.completedMemoryEvents);
     const nearExit = this.player.y > 735 || this.player.x < 135;
     const nearShop = Math.hypot(this.player.x - 1040, this.player.y - 345) < 96;
-    this.activeObject = waitingForDiary ? "diary memory" : nearMemory ? "motor memory" : nearShop ? "family shop" : nearExit ? "exit" : "";
+    this.activeObject = labisInteraction || (nearShop ? "family shop" : nearExit ? "exit" : "");
   }
 
   private startLabisMemory(replay: boolean): void {
@@ -385,7 +387,7 @@ export class WalkBackHomeApp {
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
     this.showToast(alreadyCompleted ? "Memory replayed" : "Memory Unlocked · 第一次学会驾 motor");
-    if (!alreadyCompleted) this.showChapterEndingQuote("after the motor lesson", "The afternoon stays ordinary");
+    if (!alreadyCompleted) this.showLabisReflectionDialogue();
     this.autosave();
   }
 
@@ -633,6 +635,34 @@ export class WalkBackHomeApp {
     this.focusStage();
   }
 
+  private showLabisReflectionDialogue(): void {
+    const chapter = chapterRegistry["labis-motor-day"];
+    const node = chapter?.dialogue[0];
+    if (!node) return this.showChapterEndingQuote("after the motor lesson", "The afternoon stays ordinary");
+    const choices = node.choices?.map((choice) => `<button data-action="labis-reflection-choice" data-choice="${this.escapeHtml(choice.id)}"><span>${this.escapeHtml(choice.label)}</span><small>reflection</small></button>`).join("") ?? "";
+    this.overlay.classList.add("dialogue-open");
+    this.overlay.innerHTML = `<div class="vn labis-vn"><div class="vn-portrait labis-portrait et-ms"></div><div><h3>${this.escapeHtml(node.speaker)}</h3><p>${this.escapeHtml(node.text)}</p><div class="choices">${choices}</div></div></div>`;
+    this.focusStage();
+  }
+
+  private chooseLabisReflection(choiceId: string): void {
+    const chapter = chapterRegistry["labis-motor-day"];
+    const node = chapter?.dialogue[0];
+    const choice = node?.choices?.find((item) => item.id === choiceId);
+    const leadLines: string[] = [];
+    if (choice) {
+      this.tendencies = applyChoice(this.tendencies, choice);
+      const progress = recordChapterChoice(this.progressFor("labis-motor-day"), choice.id, this.tendencies);
+      this.chapterProgress.set("labis-motor-day", progress);
+      this.choices.push(choice.id);
+      leadLines.push(choice.response);
+    }
+    const afterLine = chapter?.dialogue[1]?.text;
+    if (afterLine) leadLines.push(afterLine);
+    this.showChapterEndingQuote("after the motor lesson", "The afternoon stays ordinary", leadLines);
+    this.autosave();
+  }
+
   private inspectLabisShop(): void {
     this.overlay.innerHTML = `<div class="modal"><h2>Labis</h2><p>家里的店就在马路对面。</p><p>这个下午本来没有什么特别。</p><button data-action="close">Close</button></div>`;
     this.focusStage();
@@ -649,19 +679,20 @@ export class WalkBackHomeApp {
     this.autosave();
   }
 
-  private showChapterEndingQuote(kicker: string, title: string): void {
+  private showChapterEndingQuote(kicker: string, title: string, leadLines: string[] = []): void {
     const progress = markChapterDialogueComplete(this.progressFor(this.currentMemoryKey()));
     const reflection = resolveChapterReflection(chapterRegistry[this.currentMemoryKey()], progress);
     this.chapterProgress.set(this.currentMemoryKey(), finishChapterWalkthrough(progress, reflection.quoteId, reflection.tone));
     this.walkedThroughMemories.add(this.currentMemoryKey());
     this.room.residueIds = [...new Set([...(this.room.residueIds ?? []), this.currentMemoryKey()])];
-    this.renderEndingQuote(kicker, title, reflection);
+    this.renderEndingQuote(kicker, title, reflection, leadLines);
     this.audio.ping("ending");
   }
 
-  private renderEndingQuote(kicker: string, title: string, reflection: ReturnType<typeof resolveChapterReflection>): void {
+  private renderEndingQuote(kicker: string, title: string, reflection: ReturnType<typeof resolveChapterReflection>, leadLines: string[] = []): void {
+    const lead = leadLines.length ? `<p class="memory-line">${leadLines.map((line) => this.escapeHtml(line)).join("<br>")}</p>` : "";
     this.overlay.classList.remove("dialogue-open");
-    this.overlay.innerHTML = `<div class="modal ending-quote"><span class="ending-kicker">${this.escapeHtml(kicker)}</span><h2>${this.escapeHtml(title)}</h2><p>${reflection.closureLines.map((line) => this.escapeHtml(line)).join("<br>")}</p><blockquote>${reflection.lines.map((line) => this.escapeHtml(line)).join("<br>")}</blockquote><p class="ending-afterline">Some places do not ask us to make them dramatic. They simply keep the afternoon until we are ready to see it.</p><button data-action="close">Close</button><button data-action="forest">Return to Forest</button></div>`;
+    this.overlay.innerHTML = `<div class="modal ending-quote"><span class="ending-kicker">${this.escapeHtml(kicker)}</span><h2>${this.escapeHtml(title)}</h2>${lead}<p>${reflection.closureLines.map((line) => this.escapeHtml(line)).join("<br>")}</p><blockquote>${reflection.lines.map((line) => this.escapeHtml(line)).join("<br>")}</blockquote><p class="ending-afterline">Some places do not ask us to make them dramatic. They simply keep the afternoon until we are ready to see it.</p><button data-action="close">Close</button><button data-action="forest">Return to Forest</button></div>`;
   }
 
   private finishBakery(): void {
@@ -1005,7 +1036,7 @@ export class WalkBackHomeApp {
         <button data-action="edit-diary-entry" data-id="${this.escapeHtml(entry.id)}">Edit</button>
         <button data-action="delete-diary-entry" data-id="${this.escapeHtml(entry.id)}">Delete</button>
       </article>`).join("");
-    this.overlay.innerHTML = `<div class="modal game-panel"><h2>Timeline</h2><p>All diary entries live here. Memory classification controls whether an entry also appears as a Forest fragment or chapter.</p><div class="timeline-list">${rows || "<p>No diary entries yet.</p>"}</div><button data-action="new-diary-entry">New Journal</button><button data-action="write-today">Write Today</button><button data-action="settings">Back</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
+    this.overlay.innerHTML = `<div class="modal game-panel"><h2>Timeline</h2><p>All diary entries live here. Memory classification controls whether an entry also appears as a Forest fragment or chapter.</p><div class="timeline-list">${rows || "<p>No diary entries yet.</p>"}</div><button data-action="new-diary-entry">Create New Journal</button><button data-action="write-today">Open Today's Page</button><button data-action="settings">Back</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
     this.focusStage();
   }
 
@@ -1023,8 +1054,7 @@ export class WalkBackHomeApp {
     const editing = this.diaryEntries.find((entry) => entry.id === editId) ?? this.diaryEntries[0];
     const today = new Date().toISOString().slice(0, 10);
     const dateValue = editing?.date ?? today;
-    const parsedDate = new Date(`${dateValue}T00:00:00`);
-    const weekday = Number.isNaN(parsedDate.getTime()) ? "" : ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][parsedDate.getDay()];
+    const weekday = formatDiaryWeekday(dateValue);
     const selectedMood = editing?.mood ?? "calm";
     const moodButtons = diaryMoodOptions.map((mood) => `
       <button class="journal-mood-option ${selectedMood === mood.value ? "selected" : ""}" data-action="set-diary-mood" data-mood="${mood.value}" aria-label="${this.escapeHtml(mood.label)}">
@@ -1141,6 +1171,8 @@ export class WalkBackHomeApp {
   private handleInput(event: Event): void {
     const target = event.target as HTMLElement;
     if (!target.closest(".diary-page-editor")) return;
+    if (target instanceof HTMLInputElement && target.type === "file") return;
+    if (target instanceof HTMLInputElement && target.id === "diary-date") this.updateVisibleDiaryWeekday(target.value);
     const editor = target.closest<HTMLElement>(".diary-page-editor");
     const entryId = editor?.dataset.entry ?? "";
     window.clearTimeout(this.diaryAutosaveTimer);
@@ -1154,6 +1186,11 @@ export class WalkBackHomeApp {
       const savedState = this.overlay.querySelector<HTMLElement>("#diary-save-state");
       if (savedState) savedState.textContent = "Saved";
     }, 360);
+  }
+
+  private updateVisibleDiaryWeekday(date: string): void {
+    const weekday = this.overlay.querySelector<HTMLElement>(".journal-weekday");
+    if (weekday) weekday.textContent = formatDiaryWeekday(date);
   }
 
   private markDiarySaved(message: string): void {
@@ -1289,6 +1326,10 @@ export class WalkBackHomeApp {
 
   private async handleChange(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
+    if (input.id === "diary-date" || input.id === "diary-memory-kind") {
+      this.handleInput(event);
+      return;
+    }
     if (input.id === "vinyl-cover-input") {
       await this.handleVinylCoverInput(input);
       return;
@@ -1301,12 +1342,18 @@ export class WalkBackHomeApp {
     if (!input.files?.[0]) return;
     const entry = this.activeScrapbookEntry();
     if (!entry) return;
+    window.clearTimeout(this.diaryAutosaveTimer);
+    const draft = input.closest(".diary-page-editor") ? (this.readDiaryDraftFromOverlay(entry.id) ?? entry) : entry;
+    const state = this.overlay.querySelector<HTMLElement>("#diary-save-state");
+    if (state) state.textContent = "Adding photo...";
     const file = input.files[0];
-    const src = await this.readFileAsDataUrl(file);
+    const src = await this.readDiaryImageAsDataUrl(file);
     const photoId = `photo-${Date.now()}`;
     const storageKey = `diary-images/${entry.id}/${photoId}`;
-    const attached = addPhotoAttachment(entry, { id: photoId, storageKey, src, caption: file.name });
-    const withPlacedPhoto = input.id === "diary-photo-input" ? addPhotoElement(attached, photoId, `element-${Date.now()}`) : attached;
+    const photo = { id: photoId, storageKey, src, caption: file.name };
+    const withPlacedPhoto = input.id === "diary-photo-input"
+      ? attachPhotoAndPlaceOnPage(draft, photo, `element-${Date.now()}`)
+      : addPhotoAttachment(draft, photo);
     this.selectedScrapbookElementId = withPlacedPhoto.scrapbookLayout?.elements.at(-1)?.id ?? this.selectedScrapbookElementId;
     this.updateDiaryEntry(withPlacedPhoto);
     if (input.id === "diary-photo-input") this.showDiaryEditor(entry.id);
@@ -1329,6 +1376,31 @@ export class WalkBackHomeApp {
       reader.addEventListener("error", () => reject(reader.error));
       reader.readAsDataURL(file);
     });
+  }
+
+  private async readDiaryImageAsDataUrl(file: File): Promise<string> {
+    const original = await this.readFileAsDataUrl(file);
+    if (!file.type.startsWith("image/")) return original;
+    try {
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.addEventListener("load", () => resolve(img));
+        img.addEventListener("error", () => reject(new Error("Image preview failed")));
+        img.src = original;
+      });
+      const maxSide = 900;
+      const ratio = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+      if (ratio >= 1) return original;
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * ratio));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * ratio));
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return original;
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL("image/jpeg", 0.84);
+    } catch {
+      return original;
+    }
   }
 
   private readFileAsText(file: File): Promise<string> {
