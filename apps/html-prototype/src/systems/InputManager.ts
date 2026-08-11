@@ -8,7 +8,7 @@ export class InputManager {
   private keys = new Set<string>();
   private touch = { x: 0, y: 0 };
   private interactionQueued = false;
-  private touchActionLabel: HTMLElement | null = null;
+  private touchActionButton: HTMLButtonElement | null = null;
 
   constructor(private root: HTMLElement) {
     window.addEventListener("keydown", (event) => {
@@ -21,16 +21,18 @@ export class InputManager {
   mountTouchControls(onInteract: () => void): HTMLElement {
     const wrap = document.createElement("div");
     wrap.className = "touch-controls";
-    wrap.innerHTML = `<div class="touch-stick" aria-label="Virtual joystick"></div><button class="touch-action"><span class="touch-action-label">Interact</span></button>`;
+    wrap.innerHTML = `<div class="touch-stick" aria-label="Virtual joystick"></div><button class="touch-action" aria-label="Interact"><span class="touch-action-label">A</span></button>`;
     const stick = wrap.querySelector<HTMLElement>(".touch-stick")!;
-    this.touchActionLabel = wrap.querySelector<HTMLElement>(".touch-action-label");
-    stick.addEventListener("pointermove", (event) => {
-      const rect = stick.getBoundingClientRect();
-      this.touch = {
-        x: ((event.clientX - rect.left) / rect.width - 0.5) * 2,
-        y: ((event.clientY - rect.top) / rect.height - 0.5) * 2
-      };
+    this.touchActionButton = wrap.querySelector<HTMLButtonElement>(".touch-action");
+    stick.addEventListener("pointerdown", (event) => {
+      stick.setPointerCapture?.(event.pointerId);
+      this.updateTouchStick(stick, event);
     });
+    stick.addEventListener("pointermove", (event) => {
+      this.updateTouchStick(stick, event);
+    });
+    stick.addEventListener("pointerup", () => (this.touch = { x: 0, y: 0 }));
+    stick.addEventListener("pointercancel", () => (this.touch = { x: 0, y: 0 }));
     stick.addEventListener("pointerleave", () => (this.touch = { x: 0, y: 0 }));
     wrap.querySelector("button")!.addEventListener("click", onInteract);
     this.root.append(wrap);
@@ -38,7 +40,15 @@ export class InputManager {
   }
 
   setTouchInteractionLabel(label: string): void {
-    if (this.touchActionLabel) this.touchActionLabel.textContent = label;
+    if (this.touchActionButton) this.touchActionButton.setAttribute("aria-label", label);
+  }
+
+  private updateTouchStick(stick: HTMLElement, event: PointerEvent): void {
+    const rect = stick.getBoundingClientRect();
+    this.touch = {
+      x: ((event.clientX - rect.left) / rect.width - 0.5) * 2,
+      y: ((event.clientY - rect.top) / rect.height - 0.5) * 2
+    };
   }
 
   read(): InputState {

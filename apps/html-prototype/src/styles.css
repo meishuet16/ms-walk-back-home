@@ -49,6 +49,23 @@ button:hover, button:focus-visible { outline: 1px solid #ffd184; filter: brightn
   background: #020712;
   box-shadow: 0 16px 60px rgba(0,0,0,.55);
 }
+.rotate-hint {
+  display: none;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 34;
+  transform: translate(-50%, -50%);
+  width: min(300px, calc(100% - 36px));
+  padding: 13px 16px;
+  border: 1px solid rgba(246, 205, 133, .52);
+  border-radius: 7px;
+  background: rgba(11, 18, 26, .82);
+  color: #ffe9bb;
+  text-align: center;
+  box-shadow: 0 12px 36px rgba(0,0,0,.38), 0 0 28px rgba(225, 181, 102, .18);
+  pointer-events: none;
+}
 canvas {
   display: block;
   width: 100%;
@@ -78,8 +95,8 @@ canvas {
 }
 .forest-month-hud {
   position: absolute;
-  right: clamp(28px, 10vw, 136px);
-  bottom: clamp(72px, 17vw, 152px);
+  right: 18px;
+  bottom: 18px;
   z-index: 4;
   display: inline-flex;
   align-items: center;
@@ -119,7 +136,6 @@ canvas {
   background: rgba(42, 31, 23, .6);
   touch-action: manipulation;
 }
-.hud-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; pointer-events: auto; }
 .toast {
   position: absolute;
   top: 14px;
@@ -191,7 +207,7 @@ canvas {
 }
 .floating-controls-bar {
   position: relative;
-  z-index: 5;
+  z-index: 8;
   pointer-events: auto;
   touch-action: manipulation;
 }
@@ -227,6 +243,8 @@ canvas {
   place-content: initial;
 }
 .floating-lyric-shortcut {
+  position: relative;
+  z-index: 2;
   display: grid;
   gap: 2px;
   width: 100%;
@@ -2560,28 +2578,39 @@ canvas {
 .touch-controls {
   position: fixed;
   left: 16px;
+  right: 16px;
   bottom: 16px;
-  z-index: 21;
+  z-index: 31;
   display: none;
-  gap: 16px;
+  justify-content: space-between;
   align-items: center;
+  pointer-events: none;
 }
 .touch-stick {
+  pointer-events: auto;
   width: 88px;
   height: 88px;
   border-radius: 50%;
   border: 1px solid rgba(255,255,255,.28);
   background: rgba(8,21,34,.45);
 }
-.touch-action { width: 62px; height: 62px; border-radius: 50%; }
+.touch-action {
+  pointer-events: auto;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
 .touch-action-label {
   display: block;
   max-width: 54px;
   margin: 0 auto;
   overflow: hidden;
   color: #ffe6b0;
-  font-size: 11px;
-  line-height: 1.05;
+  font-size: 23px;
+  line-height: 1;
+  font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2596,16 +2625,10 @@ canvas {
     flex-direction: column;
     padding: 8px;
   }
-  .hud-actions {
-    justify-content: flex-start;
-    max-height: 86px;
-    overflow: auto;
-  }
-  .hud-actions button { padding: 6px 8px; }
   .prompt { width: fit-content; max-width: 100%; }
   .forest-month-hud {
-    right: clamp(10px, 5vw, 54px);
-    bottom: clamp(92px, 25vw, 132px);
+    right: 10px;
+    bottom: 10px;
     transform: scale(.92);
     transform-origin: right bottom;
   }
@@ -2775,6 +2798,17 @@ canvas {
     overflow-x: auto;
   }
 }
+@media (max-width: 860px) and (orientation: portrait) {
+  #app[data-scene="forest"] .rotate-hint,
+  #app[data-scene="muji-room"] .rotate-hint,
+  #app[data-scene="bakery"] .rotate-hint,
+  #app[data-scene="labis"] .rotate-hint {
+    display: block;
+  }
+  #app.overlay-open .rotate-hint {
+    display: none;
+  }
+}
 @media (orientation: landscape) and (max-height: 520px) {
   .game-shell {
     padding: 4px;
@@ -2794,8 +2828,7 @@ canvas {
   .top-menu nav {
     gap: 4px;
   }
-  .top-menu nav button,
-  .hud-actions button {
+  .top-menu nav button {
     padding: 4px 7px;
     font-size: 12px;
   }
@@ -2806,26 +2839,22 @@ canvas {
   .hud {
     padding: 6px;
   }
-  .hud .prompt,
-  .hud .hud-actions {
+  .hud .prompt {
     margin-left: 148px;
-  }
-  .hud-actions {
-    max-height: 58px;
   }
   .prompt {
     padding: 6px 8px;
     font-size: 12px;
   }
   .forest-month-hud {
-    right: clamp(16px, 10vw, 92px);
-    bottom: clamp(52px, 15vw, 108px);
+    right: 10px;
+    bottom: 10px;
     transform: scale(.84);
   }
   .touch-controls {
     left: 10px;
+    right: 10px;
     bottom: 10px;
-    gap: 10px;
   }
   .touch-stick {
     width: 72px;

@@ -86,6 +86,7 @@ export class WalkBackHomeApp {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private stage: HTMLElement;
+  private topNav: HTMLElement;
   private hud: HTMLElement;
   private toast: HTMLElement;
   private musicPlayer: HTMLElement;
@@ -177,17 +178,11 @@ export class WalkBackHomeApp {
       <div class="game-shell">
         <header class="top-menu">
           <div><strong>Walk Back Home</strong><span>A gentle walk through memories that still glow.</span></div>
-          <nav>
-            <button data-action="home">Today</button>
-            <button data-action="open-timeline">Timeline</button>
-            <button data-action="new">Begin Journey</button>
-            <button data-action="continue">Continue</button>
-            <button data-action="settings">Settings</button>
-            <button data-action="credits">Credits</button>
-          </nav>
+          <nav class="top-actions"></nav>
         </header>
         <main class="stage-wrap">
           <canvas width="960" height="540" aria-label="Walk Back Home playable scene"></canvas>
+          <div class="rotate-hint">Rotate screen to landscape</div>
           <div class="hud"></div>
           <div class="toast" role="status" aria-live="polite"></div>
           <div class="music-player" aria-label="Scene music player"></div>
@@ -195,6 +190,7 @@ export class WalkBackHomeApp {
         </main>
       </div>`;
     this.stage = root.querySelector(".stage-wrap")!;
+    this.topNav = root.querySelector(".top-actions")!;
     this.canvas = root.querySelector("canvas")!;
     this.ctx = this.canvas.getContext("2d")!;
     this.hud = root.querySelector(".hud")!;
@@ -203,6 +199,12 @@ export class WalkBackHomeApp {
     this.overlay = root.querySelector(".overlay")!;
     this.input = new InputManager(root);
     this.input.mountTouchControls(() => this.interact());
+    this.renderTopNav();
+    this.canvas.addEventListener("click", (event) => this.handleCanvasClick(event));
+    this.musicPlayer.addEventListener("click", (event) => {
+      event.stopPropagation();
+      this.handleClick(event);
+    });
     root.addEventListener("click", (event) => this.handleClick(event));
     root.addEventListener("change", (event) => void this.handleChange(event));
     root.addEventListener("input", (event) => this.handleInput(event));
@@ -330,7 +332,6 @@ export class WalkBackHomeApp {
     if (action === "compact") this.toggleCompact();
     if (action === "fullscreen") this.toggleFullscreen();
     if (action === "rain") this.toggleRain();
-    if (action === "mute") this.toggleAudio();
     if (action === "music") this.toggleSceneMusic();
     if (action === "close") {
       this.overlay.classList.remove("dialogue-open");
@@ -353,6 +354,50 @@ export class WalkBackHomeApp {
     if (action === "labis-reflection-close") this.closeLabisReflection();
     if (action === "finish-memory") this.finishBakery();
     if (action === "choice") this.choose(target.dataset.choice ?? "");
+  }
+
+  private handleCanvasClick(event: MouseEvent): void {
+    if (this.overlay.innerHTML.trim()) return;
+    const rect = this.canvas.getBoundingClientRect();
+    const point = this.canvasPointToScenePoint(event.clientX - rect.left, event.clientY - rect.top);
+    if (this.scene === "muji-room") {
+      const interaction = this.roomInteractionAtPoint(point);
+      if (interaction) {
+        this.activateRoomInteraction(interaction);
+        return;
+      }
+    }
+  }
+
+  private canvasPointToScenePoint(x: number, y: number): Point {
+    const sx = (x / this.canvas.getBoundingClientRect().width) * this.canvas.width;
+    const sy = (y / this.canvas.getBoundingClientRect().height) * this.canvas.height;
+    if (this.scene === "muji-room" || this.scene === "title") return { x: sx, y: sy };
+    const sourceW = 1536;
+    const sourceH = 864;
+    const cameraX = Math.max(0, Math.min(sourceW - 960, this.player.x - 480));
+    const cameraY = Math.max(0, Math.min(sourceH - 540, this.player.y - (this.scene === "forest" ? 390 : 360)));
+    return { x: cameraX + sx, y: cameraY + sy };
+  }
+
+  private roomInteractionAtPoint(point: Point): RoomInteraction | null {
+    return roomInteractions
+      .map((interaction) => ({ interaction, distance: Math.hypot(point.x - interaction.x, point.y - interaction.y) }))
+      .filter(({ interaction, distance }) => distance <= Math.max(76, interaction.radius))
+      .sort((a, b) => a.distance - b.distance)[0]?.interaction ?? null;
+  }
+
+  private activateRoomInteraction(interaction: RoomInteraction): void {
+    if (interaction.id === "door") return this.returnToForest();
+    if (interaction.id === "journal") return this.roomDiary();
+    if (interaction.id === "lamp") return this.roomLamp();
+    if (interaction.id === "window") return this.roomWindow();
+    if (interaction.id === "records") {
+      void this.showRecords();
+      return;
+    }
+    if (interaction.id === "residue") return this.inspectRoomResidue();
+    if (interaction.id === "reflection") return this.openReflectionWall();
   }
 
   private preloadLabisAssets(): void {
@@ -620,16 +665,7 @@ export class WalkBackHomeApp {
     }
     if (this.scene === "muji-room") {
       if (!this.activeRoomInteraction) return this.showToast("Walk closer");
-      if (this.activeRoomInteraction.id === "door") return this.returnToForest();
-      if (this.activeRoomInteraction.id === "journal") return this.roomDiary();
-      if (this.activeRoomInteraction.id === "lamp") return this.roomLamp();
-      if (this.activeRoomInteraction.id === "window") return this.roomWindow();
-      if (this.activeRoomInteraction.id === "records") {
-        void this.showRecords();
-        return;
-      }
-      if (this.activeRoomInteraction.id === "residue") return this.inspectRoomResidue();
-      if (this.activeRoomInteraction.id === "reflection") return this.openReflectionWall();
+      return this.activateRoomInteraction(this.activeRoomInteraction);
     }
     if (this.scene === "ending") this.returnToForest();
   }
@@ -1171,7 +1207,6 @@ export class WalkBackHomeApp {
     vignette.addColorStop(1, "rgba(0,0,0,.52)");
     this.ctx.fillStyle = vignette;
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    if (kind === "forest") this.drawForestMonthSign(cameraX, cameraY, scale);
   }
 
   private drawLabisScene(time: number): void {
@@ -1391,31 +1426,6 @@ export class WalkBackHomeApp {
     this.ctx.fillText("Diary", x - 16 * scale, y - 34 * scale);
   }
 
-  private drawForestMonthSign(cameraX: number, cameraY: number, scale: number): void {
-    const month = this.currentForestMonth();
-    const label = month.label;
-    const x = (1182 - cameraX) * scale;
-    const y = (738 - cameraY) * scale;
-    if (x < -160 || y < -80 || x > this.canvas.width + 160 || y > this.canvas.height + 80) return;
-    this.ctx.save();
-    this.ctx.textAlign = "center";
-    this.ctx.textBaseline = "middle";
-    this.ctx.font = `600 ${13 * scale}px Georgia`;
-    const glow = this.ctx.createRadialGradient(x, y, 3 * scale, x, y, 76 * scale);
-    glow.addColorStop(0, "rgba(255, 224, 150, .26)");
-    glow.addColorStop(0.5, "rgba(255, 210, 122, .12)");
-    glow.addColorStop(1, "rgba(255, 184, 72, 0)");
-    this.ctx.fillStyle = glow;
-    this.ctx.beginPath();
-    this.ctx.ellipse(x, y + 4 * scale, 86 * scale, 24 * scale, 0, 0, Math.PI * 2);
-    this.ctx.fill();
-    this.ctx.shadowColor = "rgba(255, 226, 157, .68)";
-    this.ctx.shadowBlur = 6 * scale;
-    this.ctx.fillStyle = "rgba(255, 231, 176, .72)";
-    this.ctx.fillText(label, x, y);
-    this.ctx.restore();
-  }
-
   private roundRect(x: number, y: number, width: number, height: number, radius: number): void {
     this.ctx.beginPath();
     this.ctx.moveTo(x + radius, y);
@@ -1570,17 +1580,30 @@ export class WalkBackHomeApp {
   }
 
   private drawHud(): void {
+    this.root.dataset.scene = this.scene;
+    this.root.classList.toggle("overlay-open", Boolean(this.overlay.innerHTML.trim()));
     const labisPrompt = this.scene === "labis" && this.labisCutscene ? "Memory is playing" : this.scene === "labis" && this.activeObject === "exit" ? "Press E · 回到 Memory Forest" : this.scene === "labis" && this.activeObject ? `Press E · ${this.activeObject}` : "";
     const rawText = this.scene === "forest" && this.activeDoor ? `Press E · ${this.activeDoor.date} ${this.activeDoor.title}` : this.scene === "bakery" && this.activeObject ? `Press E · ${this.activeObject}` : labisPrompt || (this.scene === "muji-room" && this.activeRoomInteraction ? `Press E · ${this.activeRoomInteraction.label}` : "WASD / arrows · E / Enter");
     const text = this.mobileHudPrompt(rawText);
     this.input.setTouchInteractionLabel(this.touchActionText(rawText));
-    const exit = this.scene === "forest" ? "" : `<button data-action="forest">Exit to forest</button>`;
     const forestMonth = this.scene === "forest" ? `<div class="forest-month-hud" aria-label="Forest month"><button data-action="forest-month-prev" aria-label="Previous forest month">‹</button><strong>${this.escapeHtml(this.currentForestMonth().label)}</strong><button data-action="forest-month-next" aria-label="Next forest month">›</button></div>` : "";
-    const html = `<div class="prompt">${text}</div>${forestMonth}<div class="hud-actions"><button data-action="menu">Menu</button>${exit}<button data-action="music">Music: ${this.settings.musicEnabled ? "On" : "Off"}</button><button data-action="compact">${this.settings.compact ? "960x540" : "480x270"}</button><button data-action="fullscreen">Fullscreen</button><button data-action="rain">Rain: ${this.settings.rain ? "On" : "Off"}</button><button data-action="mute">${this.settings.muted ? "Sound Off" : "Sound On"}</button></div>`;
+    const html = `<div class="prompt">${text}</div>${forestMonth}`;
     if (html !== this.lastHudHtml) {
       this.hud.innerHTML = html;
       this.lastHudHtml = html;
     }
+  }
+
+  private renderTopNav(): void {
+    const html = `
+      <button data-action="home">Today</button>
+      <button data-action="open-timeline">Timeline</button>
+      <button data-action="forest">Forest</button>
+      <button data-action="open-room">Muji Room</button>
+      <button data-action="reflection-wall">Reflection Wall</button>
+      <button data-action="music">Music: ${this.settings.musicEnabled ? "On" : "Off"}</button>
+      <button data-action="settings">Settings</button>`;
+    if (this.topNav.innerHTML !== html) this.topNav.innerHTML = html;
   }
 
   private touchActionText(prompt: string): string {
@@ -1591,8 +1614,8 @@ export class WalkBackHomeApp {
   private mobileHudPrompt(prompt: string): string {
     if (!window.matchMedia("(max-width: 860px)").matches) return prompt;
     const match = /Press E ·\s*(.+)$/.exec(prompt);
-    if (match) return `Tap Interact · ${match[1]}`;
-    if (prompt.includes("WASD") || prompt.includes("E / Enter")) return "Virtual joystick · Interact";
+    if (match) return `Tap A · ${match[1]}`;
+    if (prompt.includes("WASD") || prompt.includes("E / Enter")) return "Virtual joystick · A";
     return prompt;
   }
 
@@ -1601,12 +1624,14 @@ export class WalkBackHomeApp {
       <div class="module-grid">
         <button data-action="home">Today / Home<span>Write today or continue gently</span></button>
         <button data-action="open-timeline">Timeline<span>${this.diaryEntries.length} diary entries</span></button>
+        <button data-action="new">Begin Journey<span>Start the walk from the beginning</span></button>
         <button data-action="open-map">Walk Back Home<span>${this.allDoors().length} forest memories</span></button>
-        <button data-action="open-room">Muji Room<span>Present-tense rest space</span></button>
-        <button data-action="reflection-wall">Reflection Wall<span>${this.reflectionWall.notes.length} paper notes</span></button>
         <button data-action="room-records">Records<span>Play personal music and floating lyrics</span></button>
+        <button data-action="continue">Continue<span>Load the latest local journey</span></button>
+        <button data-action="credits">Credits<span>Project notes and credits</span></button>
+        <button data-action="backup-sync">Backup / Sync<span>Portable backup and cloud account</span></button>
       </div>
-      <div class="settings-row"><button data-action="music">Music: ${this.settings.musicEnabled ? "On" : "Off"}</button><button data-action="rain">Rain: ${this.settings.rain ? "On" : "Off"}</button><button data-action="mute">${this.settings.muted ? "Sound Off" : "Sound On"}</button><button data-action="compact">${this.settings.compact ? "960x540" : "480x270"}</button><button data-action="backup-sync">Backup / Sync</button><button data-action="reset-journey">Begin Again</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
+      <div class="settings-row"><button data-action="rain">Rain: ${this.settings.rain ? "On" : "Off"}</button><button data-action="compact">${this.settings.compact ? "960x540" : "480x270"}</button><button data-action="fullscreen">Fullscreen</button><button data-action="reset-journey">Begin Again</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
   }
 
   private showHome(): void {
@@ -2982,10 +3007,11 @@ export class WalkBackHomeApp {
   }
 
   private enterMujiRoom(): void {
+    const alreadyInRoom = this.scene === "muji-room";
     const keepPersonalMusic = personalMusicShouldPlayInScene(this.scene) && this.personalPlayer.playing && Boolean(this.personalPlayer.selectedTrackId);
     this.syncPersonalPlaybackState();
     this.scene = "muji-room";
-    this.player = { ...roomSpawn };
+    this.player = alreadyInRoom ? this.player : { ...roomSpawn };
     this.activeDoor = null;
     this.activeObject = "";
     this.activeRoomInteraction = null;
@@ -3524,10 +3550,15 @@ export class WalkBackHomeApp {
     const active = activeLyricIndexAt(lyrics, currentTime);
     const rows = Array.from(this.overlay.querySelectorAll<HTMLElement>(".lyrics-pane p"));
     if (!rows.length || !lyrics.length) return;
+    const activeRow = active >= 0 ? rows[active] : null;
+    const shouldScroll = activeRow ? !activeRow.classList.contains("active") : false;
     rows.forEach((row, index) => {
       row.classList.toggle("active", index === active);
       row.classList.toggle("near", index !== active && Math.abs(index - active) <= 2);
     });
+    if (activeRow && shouldScroll) {
+      activeRow.scrollIntoView({ block: "center", behavior: this.settings.reducedMotion ? "auto" : "smooth" });
+    }
   }
 
   private updatePersonalMusicOverlay(): void {
@@ -3893,6 +3924,7 @@ export class WalkBackHomeApp {
       this.showToast("Music off");
     }
     this.lastHudHtml = "";
+    this.renderTopNav();
     this.autosave();
   }
 

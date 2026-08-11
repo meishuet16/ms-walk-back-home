@@ -76,6 +76,23 @@ test("active lyric follows seek time in both directions", () => {
   assert.equal(activeLyricIndexAt(lines, 0), -1);
 });
 
+test("those bygone years lrc excerpt aligns active lyric to playback time", () => {
+  const lines = parseLrc([
+    "[00:18.32]又回到最初的起点",
+    "[00:21.33]记忆中你青涩的脸",
+    "[00:24.50]我们终於来到了这一天",
+    "[01:34.31]那些年错过的大雨",
+    "[01:37.28]那些年错过的爱情",
+    "[01:40.08]好想拥抱你 拥抱错过的勇气"
+  ].join("\n"));
+
+  assert.equal(lines.length, 6);
+  assert.equal(lines[3].time, 94.31);
+  assert.equal(lines[3].text, "那些年错过的大雨");
+  assert.equal(activeLyricIndexAt(lines, 95), 3);
+  assert.equal(lines[activeLyricIndexAt(lines, 140.1)].text, "好想拥抱你 拥抱错过的勇气");
+});
+
 test("floating lyrics clamp within the stage", () => {
   assert.deepEqual(clampLyricsOverlay({ x: -50, y: 999, width: 900 }, 960, 540), { x: 0, y: 456, width: 360 });
 });

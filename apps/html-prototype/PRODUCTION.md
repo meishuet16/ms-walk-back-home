@@ -33,16 +33,26 @@ Reflection Wall data is stored separately from Journey in `walk-back-home:html-p
 
 Updated 2026-08-11.
 
+- Primary navigation is consolidated in the top bar: Today, Timeline, Forest, Muji Room, Reflection Wall, Music, and Settings.
+- The in-scene HUD no longer renders the old bottom button row.
+- Settings now owns secondary controls: Begin Journey, Continue, Credits, Rain, compact size, Fullscreen, Backup / Sync, Begin Again, and Return to Forest.
+- Sound mute is no longer exposed as a separate visible control; Music On/Off is the only main audio toggle.
+- Re-entering Muji Room from the top navigation preserves the current room position instead of resetting to the room spawn.
+- Forest renders only the clickable month switcher; the duplicate canvas-drawn month label has been removed.
+- The clickable forest month switcher is anchored at the lower-right corner of the stage.
 - Forest exposes an in-scene month switcher under the Memory Forest sign; the Walk Back Home modal and forest scene share the same month key.
 - Forest month filtering is applied to authored chapter doors and private Memory Fragment lights before the scene nodes are built.
-- Mobile HUD copy uses virtual joystick / contextual Interact wording instead of keyboard-only E prompts.
-- Touch controls include a virtual joystick and a contextual interaction button label.
+- Muji Room supports direct click/tap activation on reachable objects including lamp, window, journal, records, residue, reflection notes, and the door.
+- Mobile HUD copy uses virtual joystick / A-button wording instead of keyboard-only E prompts.
+- Touch controls include a left virtual joystick and a right-side A interaction button.
+- Mobile portrait game scenes (Forest, Muji Room, and chapter scenes) show a rotate-to-landscape prompt; portrait content screens remain responsive and scrollable.
 - Portrait Journal uses a single-column, scrollable editor layout with static paper fields.
 - Portrait Reflection Wall preserves tap targets, note drag gestures, and empty-wall pan behavior through explicit touch-action rules.
 - Landscape Muji Room and Forest use compact top navigation, HUD, joystick, and interaction controls for short mobile viewports.
-- Floating lyrics separates draggable lyrics from the Records / previous / play / next control bar so transport buttons remain clickable.
-- Verification run: `npm test -- ui-policy` from `apps/html-prototype`, which builds and runs 111 tests.
-- Browser visual check: Codex in-app browser viewport `390x844` confirmed the mobile HUD renders `Virtual joystick · Interact`; this in-app backend does not support scripted click/drag automation, so interaction coverage is enforced by tests and source-level event target checks.
+- Floating lyrics separates draggable lyrics from the Records / previous / play / next control bar so transport buttons remain clickable; the floating Records button opens the Records page.
+- Records lyrics now keep the active synced line centered as playback time changes.
+- Verification run: `npm run typecheck`, `npm run build`, and `npm test -- ui-policy personal-music` from `apps/html-prototype`, which builds and runs 119 tests including a Those Bygone Years / 那些年 LRC timing excerpt.
+- Browser visual check update: the Codex in-app browser blocked access to `http://localhost:4173/` during this pass by policy, so current viewport verification is covered by source-level responsive tests plus build/typecheck/test output rather than a fresh browser screenshot.
 
 ## Backup / Restore
 
