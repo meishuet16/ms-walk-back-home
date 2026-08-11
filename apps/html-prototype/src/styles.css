@@ -1260,6 +1260,17 @@ canvas {
   margin: 8px 0 16px;
   color: #ffe2ab;
 }
+.game-panel .month-nav strong {
+  min-width: 132px;
+  padding: 6px 12px;
+  color: #5a3516;
+  text-align: center;
+  text-shadow: 0 0 12px rgba(255, 196, 74, .78), 0 1px 0 rgba(255, 248, 224, .9);
+  background: rgba(255, 226, 158, .38);
+  border: 1px solid rgba(111, 68, 24, .22);
+  border-radius: 6px;
+  box-shadow: 0 0 18px rgba(255, 191, 80, .28);
+}
 .timeline-list {
   position: relative;
   display: grid;

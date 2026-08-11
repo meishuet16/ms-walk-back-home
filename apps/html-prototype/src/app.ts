@@ -9,7 +9,7 @@ import { chapterRegistry, forestEntries, routeForestEntry, type AuthoredForestEn
 import { beginChapterVisit, finishChapterWalkthrough, initialChapterProgress, markChapterDialogueComplete, markChapterMemoryRead, recordChapterChoice } from "./systems/ChapterProgressManager.js";
 import { inAnyRect, type Point, type Rect } from "./systems/CollisionSystem.js";
 import { CutsceneSystem } from "./systems/CutsceneSystem.js";
-import { createNewDiaryPage, deleteDiaryEntriesByIds, deleteDiaryEntryById, formatDiaryWeekday, getDiaryForestMemories, getDiaryTimeline, openDiaryPageForDate, seedAuthoredChapterDiaryEntries, upsertDiaryEntry, upsertDiaryPageDraft } from "./systems/DiaryLibrary.js";
+import { createNewDiaryPage, deleteDiaryEntriesByIds, deleteDiaryEntryById, forestNodesForMonth, formatDiaryWeekday, getDiaryTimeline, openDiaryPageForDate, seedAuthoredChapterDiaryEntries, upsertDiaryEntry, upsertDiaryPageDraft } from "./systems/DiaryLibrary.js";
 import { diaryMoodOptions, isDiaryMood } from "./systems/DiaryMood.js";
 import { makeDiaryEntry, parseDiaryImport, updateDiaryMemoryKind, type DiaryForestMemory, type DiaryTimelineSort } from "./systems/DiaryImport.js";
 import { DialogueSystem } from "./systems/DialogueSystem.js";
@@ -602,8 +602,7 @@ export class WalkBackHomeApp {
 
   private allDoors(): ForestNode[] {
     const selectedMonth = this.currentForestMonth();
-    const privateFragments = getDiaryForestMemories(this.makeDiaryLibrary()).filter((memory) => memory.date.startsWith(selectedMonth.key));
-    return [...forestEntries, ...privateFragments];
+    return forestNodesForMonth(forestEntries, this.makeDiaryLibrary(), selectedMonth.key);
   }
 
   private isChapterNode(node: ForestNode): node is AuthoredForestEntry | Extract<DiaryForestMemory, { kind: "chapter" }> {
@@ -1121,7 +1120,9 @@ export class WalkBackHomeApp {
     const cameraY = kind === "forest" ? Math.max(0, Math.min(sourceH - 540, this.player.y - 390)) : 0;
     this.ctx.drawImage(image, cameraX, cameraY, 960, 540, 0, 0, this.canvas.width, this.canvas.height);
     this.particles.draw(this.ctx, time, this.settings.rain && kind === "forest", cameraX, cameraY, scale);
-    if (kind === "forest") this.drawDoors(cameraX, cameraY, scale);
+    if (kind === "forest") {
+      this.drawDoors(cameraX, cameraY, scale);
+    }
     if (kind === "bakery") {
       this.drawMemorySpot(cameraX, cameraY, scale, time);
       this.ctx.drawImage(this.images.friend, (600 - cameraX) * scale - 21 * scale, (430 - cameraY) * scale - 68 * scale, 42 * scale, 68 * scale);
@@ -1132,6 +1133,7 @@ export class WalkBackHomeApp {
     vignette.addColorStop(1, "rgba(0,0,0,.52)");
     this.ctx.fillStyle = vignette;
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    if (kind === "forest") this.drawForestMonthSign(cameraX, cameraY, scale);
   }
 
   private drawLabisScene(time: number): void {
@@ -1349,6 +1351,52 @@ export class WalkBackHomeApp {
     this.ctx.fillStyle = "#fff0c2";
     this.ctx.font = `${13 * scale}px Georgia`;
     this.ctx.fillText("Diary", x - 16 * scale, y - 34 * scale);
+  }
+
+  private drawForestMonthSign(cameraX: number, cameraY: number, scale: number): void {
+    const month = this.currentForestMonth();
+    const label = month.label.toUpperCase();
+    const x = (1182 - cameraX) * scale;
+    const y = (748 - cameraY) * scale;
+    if (x < -160 || y < -80 || x > this.canvas.width + 160 || y > this.canvas.height + 80) return;
+    this.ctx.save();
+    this.ctx.textAlign = "center";
+    this.ctx.textBaseline = "middle";
+    this.ctx.font = `700 ${20 * scale}px Georgia`;
+    const width = Math.max(162 * scale, this.ctx.measureText(label).width + 38 * scale);
+    const height = 40 * scale;
+    const glow = this.ctx.createRadialGradient(x, y, 6 * scale, x, y, 98 * scale);
+    glow.addColorStop(0, "rgba(255, 224, 135, .64)");
+    glow.addColorStop(1, "rgba(255, 184, 72, 0)");
+    this.ctx.fillStyle = glow;
+    this.ctx.beginPath();
+    this.ctx.ellipse(x, y, 106 * scale, 42 * scale, 0, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.fillStyle = "rgba(50, 31, 14, .72)";
+    this.ctx.strokeStyle = "rgba(255, 219, 129, .72)";
+    this.ctx.lineWidth = 1.4 * scale;
+    this.roundRect(x - width / 2, y - height / 2, width, height, 8 * scale);
+    this.ctx.fill();
+    this.ctx.stroke();
+    this.ctx.shadowColor = "rgba(255, 219, 129, .95)";
+    this.ctx.shadowBlur = 10 * scale;
+    this.ctx.fillStyle = "#ffe4a0";
+    this.ctx.fillText(label, x, y + 1 * scale);
+    this.ctx.restore();
+  }
+
+  private roundRect(x: number, y: number, width: number, height: number, radius: number): void {
+    this.ctx.beginPath();
+    this.ctx.moveTo(x + radius, y);
+    this.ctx.lineTo(x + width - radius, y);
+    this.ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    this.ctx.lineTo(x + width, y + height - radius);
+    this.ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    this.ctx.lineTo(x + radius, y + height);
+    this.ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    this.ctx.lineTo(x, y + radius);
+    this.ctx.quadraticCurveTo(x, y, x + radius, y);
+    this.ctx.closePath();
   }
 
   private drawDoors(cameraX: number, cameraY: number, scale: number): void {

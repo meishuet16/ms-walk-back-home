@@ -1,5 +1,6 @@
 import type { DiaryEntry, DiaryLibraryState, MemoryKind } from "../types.js";
 import { authoredChapterDiaryEntries } from "../fixtures/authoredDiaryEntries.js";
+import type { AuthoredForestEntry } from "./ChapterRegistry.js";
 import { diaryEntriesToForestMemories, diaryEntriesToTimeline, updateDiaryMemoryKind, type DiaryForestMemory, type DiaryTimelineItem, type DiaryTimelineSort } from "./DiaryImport.js";
 import { makeDiaryEntry, normalizeDiaryEntry } from "./DiaryImport.js";
 
@@ -80,4 +81,19 @@ export function getDiaryTimeline(library: DiaryLibraryState, sort: DiaryTimeline
 
 export function getDiaryForestMemories(library: DiaryLibraryState): DiaryForestMemory[] {
   return diaryEntriesToForestMemories(library.entries);
+}
+
+export function forestNodesForMonth(publicEntries: AuthoredForestEntry[], library: DiaryLibraryState, monthKey: string): Array<AuthoredForestEntry | DiaryForestMemory> {
+  const visiblePublicEntries = publicEntries.filter((entry) => forestEntryMatchesMonth(entry.date, monthKey));
+  const publicChapterIds = new Set(visiblePublicEntries.map((entry) => entry.chapterId));
+  const privateMemories = getDiaryForestMemories(library)
+    .filter((entry) => entry.date.startsWith(monthKey))
+    .filter((entry) => entry.kind !== "chapter" || !publicChapterIds.has(entry.chapterId));
+  return [...visiblePublicEntries, ...privateMemories];
+}
+
+function forestEntryMatchesMonth(date: string, monthKey: string): boolean {
+  if (/^\d{4}-\d{2}/.test(date)) return date.startsWith(monthKey);
+  const [, monthText] = monthKey.split("-");
+  return date.startsWith(`${monthText}.`) || date.startsWith(`${monthText}/`);
 }
