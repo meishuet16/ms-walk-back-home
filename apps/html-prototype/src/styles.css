@@ -388,9 +388,27 @@ canvas {
 }
 .diary-memory {
   background: #f1e1c4;
+  width: min(760px, calc(100vw - 28px));
+  height: min(76vh, 640px);
+  max-height: calc(100vh - 56px);
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  padding: 0;
+  overflow: hidden;
+}
+.diary-memory-scroll {
+  min-height: 0;
+  padding: 18px;
+  overflow: auto;
 }
 .diary-memory p {
   margin: 10px 0;
+}
+.diary-memory .memory-actions {
+  margin: 0;
+  padding: 10px 18px 12px;
+  background: #f1e1c4;
+  border-top: 1px solid rgba(128, 87, 45, .22);
 }
 .ending-quote blockquote {
   margin: 14px 0;
@@ -1042,27 +1060,34 @@ canvas {
   gap: 8px;
 }
 .journal-panel {
-  width: min(940px, calc(100vw - 28px));
-  max-height: min(88vh, 840px);
-  overflow: auto;
-  background: linear-gradient(180deg, rgba(57, 48, 36, .96), rgba(36, 31, 27, .96));
+  width: min(1040px, calc(100vw - 52px));
+  max-height: min(90vh, 880px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: linear-gradient(180deg, rgba(64, 54, 40, .99), rgba(38, 33, 28, .99));
+  color: #f2dcae;
+  border: 2px solid #9e6a34;
+  padding: 18px 20px;
+  box-shadow: 0 22px 60px rgba(0,0,0,.42);
 }
 .journal-archive-header {
   position: sticky;
-  top: -18px;
+  top: 0;
   z-index: 8;
   display: grid;
   grid-template-columns: 1fr auto auto;
   gap: 14px;
   align-items: center;
   padding: 12px;
-  margin: -8px -8px 12px;
+  margin: -18px -20px 14px;
   border-bottom: 1px solid rgba(232, 202, 148, .26);
-  background: rgba(46, 39, 31, .98);
+  background: #342c22;
 }
 .journal-archive-header h2,
 .journal-archive-header p {
   margin: 0;
+  color: #f5dfad;
+  text-shadow: 0 1px 2px rgba(0,0,0,.46);
 }
 .journal-tabs,
 .journal-header-actions,
@@ -1087,7 +1112,9 @@ canvas {
   position: relative;
   display: grid;
   gap: 12px;
-  margin: 14px 0;
+  margin: 14px 0 0;
+  padding: 0;
+  min-width: 0;
 }
 .timeline-list::before {
   content: "";
@@ -1100,12 +1127,14 @@ canvas {
 }
 .timeline-toolbar {
   margin: 12px 0;
+  color: #f1d7a2;
 }
 .timeline-toolbar label,
 .timeline-kind {
   display: inline-flex;
   gap: 6px;
   align-items: center;
+  color: #f1d7a2;
 }
 .timeline-toolbar select,
 .timeline-kind select {
@@ -1118,13 +1147,14 @@ canvas {
 .timeline-entry {
   position: relative;
   display: grid;
-  grid-template-columns: auto auto minmax(220px, 1fr) auto auto auto;
+  grid-template-columns: 18px 32px minmax(0, 1fr);
   gap: 12px;
-  align-items: center;
+  align-items: start;
   padding: 10px;
   border: 1px solid rgba(232, 202, 148, .18);
   border-radius: 6px;
-  background: rgba(255, 248, 232, .18);
+  background: rgba(255, 248, 232, .12);
+  min-width: 0;
 }
 .timeline-entry::before {
   content: "";
@@ -1141,20 +1171,33 @@ canvas {
 .timeline-check {
   display: grid;
   place-items: center;
+  padding-top: 242px;
+}
+.timeline-card {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+.timeline-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
 }
 .timeline-entry h3,
 .timeline-entry p {
   margin: 3px 0 0;
 }
 .timeline-entry span {
-  color: #6f563a;
+  color: #f0d49c;
   font-family: "Courier New", monospace;
   font-size: 13px;
 }
 .diary-page-preview {
   position: relative;
-  min-height: 172px;
-  padding: 18px 18px 18px 22px;
+  width: 100%;
+  min-height: 262px;
+  padding: 18px 18px 144px 22px;
   overflow: hidden;
   text-align: left;
   color: #3d2c1e;
@@ -1170,40 +1213,39 @@ canvas {
   position: relative;
   z-index: 2;
   display: block;
+  color: #3d2c1e;
 }
 .preview-date {
   font-size: 12px;
   color: #81613b;
 }
 .preview-body {
-  max-width: 72%;
+  max-width: 100%;
+  max-height: 88px;
   margin-top: 8px;
   font-size: 13px;
   line-height: 1.45;
+  overflow: hidden;
   white-space: pre-wrap;
 }
-.preview-photo,
-.preview-scrap {
+.diary-page-preview .preview-photo-grid {
   position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 16px;
+  z-index: 3;
+  display: grid !important;
+  grid-template-columns: repeat(3, 50px);
+  gap: 6px;
+  color: transparent;
+}
+.diary-page-preview .preview-photo-square {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
   object-fit: cover;
-  border: 5px solid rgba(255, 246, 222, .95);
-  box-shadow: 0 5px 14px rgba(64, 42, 20, .26);
-}
-.preview-photo {
-  right: 16px;
-  top: 28px;
-  width: 78px;
-  height: 58px;
-  transform: rotate(3deg);
-}
-.preview-photo.p1 { top: 92px; transform: rotate(-4deg); }
-.preview-photo.p2 { right: 74px; top: 72px; transform: rotate(6deg); }
-.preview-scrap {
-  width: 92px;
-  height: 72px;
-}
-.preview-scrap.cutout {
-  border-radius: 999px;
+  border: 3px solid rgba(255, 246, 222, .96);
+  box-shadow: 0 3px 8px rgba(64, 42, 20, .22);
 }
 .show-more {
   justify-self: center;
@@ -1254,7 +1296,7 @@ canvas {
   border: 1px solid rgba(235, 205, 145, .24);
 }
 .book-page .diary-page-preview {
-  min-height: 260px;
+  min-height: 282px;
 }
 .diary-row {
   display: grid;

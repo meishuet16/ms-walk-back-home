@@ -21,7 +21,6 @@ import { applyChoice } from "./systems/TendencySystem.js";
 import {
   addPhotoAttachment,
   addPhotoElement,
-  attachPhotoAndPlaceOnPage,
   createCutoutElement,
   deleteScrapbookElement,
   layerScrapbookElement,
@@ -631,7 +630,7 @@ export class WalkBackHomeApp {
     this.chapterProgress.set(chapterId, markChapterMemoryRead(this.progressFor(chapterId)));
     const memoryText = "memoryText" in door ? door.memoryText : (chapterRegistry[chapterId]?.memoryText ?? bakeryChapter.memoryText ?? []);
     const lines = memoryText.map((line, index) => index === 0 ? `<h2>${this.escapeHtml(door.date)} · ${this.escapeHtml(door.title)}</h2>` : `<p>${this.escapeHtml(line)}</p>`).join("");
-    this.overlay.innerHTML = `<div class="modal diary-memory">${lines}<button data-action="close">Close</button><button data-action="forest">Exit to forest</button></div>`;
+    this.overlay.innerHTML = `<div class="modal diary-memory"><div class="diary-memory-scroll">${lines}</div><div class="memory-actions"><button data-action="close">Close</button><button data-action="forest">Exit to forest</button></div></div>`;
     this.showToast("Diary memory read");
     this.focusStage();
     this.autosave();
@@ -1487,10 +1486,14 @@ export class WalkBackHomeApp {
       return `
       <article class="timeline-entry ${checked ? "selected" : ""}">
         <label class="timeline-check"><input type="checkbox" data-timeline-select="${this.escapeHtml(entry.id)}" ${checked} aria-label="Select diary"></label>
-        <button class="diary-page-preview" data-action="edit-diary-entry" data-id="${this.escapeHtml(entry.id)}">${this.renderDiaryPreview(entry)}</button>
-        <label class="timeline-kind"><span>${entry.scrapbookLayout?.elements.length ? "scrapbook" : "memory"}</span><select data-timeline-kind="${this.escapeHtml(entry.id)}"><option value="diary" ${entry.memoryKind === "diary" ? "selected" : ""}>Diary only</option><option value="fragment" ${entry.memoryKind === "fragment" ? "selected" : ""}>Memory Fragment</option><option value="chapter" ${entry.memoryKind === "chapter" ? "selected" : ""}>Memory Chapter</option></select></label>
-        <button data-action="edit-diary-entry" data-id="${this.escapeHtml(entry.id)}">Edit</button>
-        <button data-action="delete-diary-entry" data-id="${this.escapeHtml(entry.id)}">Delete</button>
+        <div class="timeline-card">
+          <button class="diary-page-preview" data-action="edit-diary-entry" data-id="${this.escapeHtml(entry.id)}">${this.renderDiaryPreview(entry)}</button>
+          <div class="timeline-card-actions">
+            <label class="timeline-kind"><span>${entry.scrapbookLayout?.elements.length ? "scrapbook" : "memory"}</span><select data-timeline-kind="${this.escapeHtml(entry.id)}"><option value="diary" ${entry.memoryKind === "diary" ? "selected" : ""}>Diary only</option><option value="fragment" ${entry.memoryKind === "fragment" ? "selected" : ""}>Memory Fragment</option><option value="chapter" ${entry.memoryKind === "chapter" ? "selected" : ""}>Memory Chapter</option></select></label>
+            <button data-action="edit-diary-entry" data-id="${this.escapeHtml(entry.id)}">Edit</button>
+            <button data-action="delete-diary-entry" data-id="${this.escapeHtml(entry.id)}">Delete</button>
+          </div>
+        </div>
       </article>`;
     }).join("");
     const showMore = hasMoreTimelineEntries(month, this.timelineVisibleCount) ? `<button class="show-more" data-action="journal-show-more">Show More</button>` : "";
@@ -1510,14 +1513,9 @@ export class WalkBackHomeApp {
   }
 
   private renderDiaryPreview(entry: DiaryEntry): string {
-    const elements = [...(entry.scrapbookLayout?.elements ?? [])].sort((a, b) => a.zIndex - b.zIndex).slice(0, 8).map((element) => {
-      const photoId = element.type === "photo" ? element.photoId : element.sourcePhotoId;
-      const photo = entry.photos?.find((item) => item.id === photoId);
-      const cutout = element.type === "cutout" ? " cutout" : "";
-      return photo ? `<img class="preview-scrap${cutout}" src="${this.escapeHtml(photo.src)}" alt="" style="left:${element.x}%;top:${element.y}%;transform:translate(-50%,-50%) rotate(${element.rotation}deg) scale(${Math.max(0.25, element.scale * 0.42)});z-index:${element.zIndex};">` : "";
-    }).join("");
-    const photos = elements ? "" : (entry.photos ?? []).slice(0, 3).map((photo, index) => `<img class="preview-photo p${index}" src="${this.escapeHtml(photo.src)}" alt="">`).join("");
-    return `<span class="preview-date">${this.escapeHtml(entry.date)}</span><strong>${this.escapeHtml(entry.title)}</strong><span class="preview-body">${this.escapeHtml(entry.body.slice(0, 180)) || "Empty draft"}</span>${photos}${elements}<small>${entry.memoryKind}</small>`;
+    const photos = (entry.photos ?? []).slice(0, 9).map((photo) => `<img class="preview-photo-square" src="${this.escapeHtml(photo.src)}" alt="">`).join("");
+    const photoGrid = photos ? `<span class="preview-photo-grid">${photos}</span>` : "";
+    return `<span class="preview-date">${this.escapeHtml(entry.date)}</span><strong>${this.escapeHtml(entry.title)}</strong><span class="preview-body">${this.escapeHtml(entry.body.slice(0, 150)) || "Empty draft"}</span>${photoGrid}<small>${entry.memoryKind}</small>`;
   }
 
   private showMoreTimelineEntries(): void {
@@ -1558,29 +1556,37 @@ export class WalkBackHomeApp {
   }
 
   private wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number, maxLines = 18): number {
-    let lineCount = 0;
+    const lines = this.canvasTextLines(ctx, text, maxWidth, maxLines);
+    lines.forEach((line, index) => ctx.fillText(line, x, y + index * lineHeight));
+    return y + lines.length * lineHeight;
+  }
+
+  private canvasTextLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, maxLines = Number.POSITIVE_INFINITY): string[] {
+    const lines: string[] = [];
     for (const paragraph of text.split(/\r?\n/)) {
+      if (!paragraph.trim()) continue;
       const words = paragraph.match(/[A-Za-z0-9_./:+-]+|\s+|./gu)?.filter((token) => token.trim()) ?? [""];
       let line = "";
       for (const word of words.length ? words : [""]) {
         const joinsWithoutSpace = /^[\u4e00-\u9fff，。？！、；：“”‘’（）]/u.test(word);
         const next = line ? `${line}${joinsWithoutSpace ? "" : " "}${word}` : word;
         if (ctx.measureText(next).width > maxWidth && line) {
-          ctx.fillText(line, x, y);
+          lines.push(line);
           line = word;
-          y += lineHeight;
-          lineCount += 1;
-          if (lineCount >= maxLines) return y;
+          if (lines.length >= maxLines) return lines;
         } else {
           line = next;
         }
       }
-      if (lineCount >= maxLines) return y;
-      ctx.fillText(line, x, y);
-      y += lineHeight;
-      lineCount += 1;
+      lines.push(line);
+      if (lines.length >= maxLines) return lines;
     }
-    return y;
+    return lines;
+  }
+
+  private drawCanvasTextLines(ctx: CanvasRenderingContext2D, lines: string[], x: number, y: number, lineHeight: number): number {
+    lines.forEach((line, index) => ctx.fillText(line, x, y + index * lineHeight));
+    return y + lines.length * lineHeight;
   }
 
   private async loadCanvasImage(src: string): Promise<HTMLImageElement | null> {
@@ -1691,9 +1697,37 @@ export class WalkBackHomeApp {
     return page;
   }
 
-  private async renderDiaryEntryPdfPage(entry: DiaryEntry): Promise<MonthlyJournalPdfPage> {
+  private async renderDiaryEntryPdfPages(entry: DiaryEntry): Promise<MonthlyJournalPdfPage[]> {
     const canvas = this.makePdfCanvas();
     const ctx = canvas.getContext("2d")!;
+    ctx.font = "400 30px sans-serif";
+    const hasPhotoSpread = (entry.photos?.length ?? 0) > 0;
+    const compactBody = (entry.body || "Empty draft").replace(/\n{2,}/g, "\n").trim();
+    const bodyLines = this.canvasTextLines(ctx, compactBody, hasPhotoSpread ? 600 : 900);
+    const pages: MonthlyJournalPdfPage[] = [];
+    let consumedLines = 0;
+    let pageIndex = 0;
+    while (consumedLines < bodyLines.length || pageIndex === 0) {
+      canvas.width = 1240;
+      canvas.height = 1754;
+      const pageCtx = canvas.getContext("2d")!;
+      const firstPage = pageIndex === 0;
+      const textWidth = firstPage && hasPhotoSpread ? 600 : 900;
+      const maxLines = firstPage ? 22 : 29;
+      const currentLines = bodyLines.slice(consumedLines, consumedLines + maxLines);
+      consumedLines += currentLines.length;
+      await this.drawDiaryEntryPdfPage(pageCtx, entry, currentLines, firstPage, textWidth);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+      pages.push({ dataUrl, width: canvas.width, height: canvas.height });
+      pageIndex += 1;
+    }
+    canvas.width = 1;
+    canvas.height = 1;
+    return pages;
+  }
+
+  private async drawDiaryEntryPdfPage(ctx: CanvasRenderingContext2D, entry: DiaryEntry, bodyLines: string[], firstPage: boolean, textWidth: number): Promise<void> {
+    const canvas = ctx.canvas;
     ctx.fillStyle = "#f4e7c8";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = "#fff8dc";
@@ -1706,37 +1740,34 @@ export class WalkBackHomeApp {
     ctx.lineWidth = 4;
     ctx.strokeRect(88, 78, canvas.width - 176, canvas.height - 156);
     ctx.fillStyle = "rgba(128, 95, 57, 0.22)";
-    for (let y = 360; y < 1450; y += 54) ctx.fillRect(150, y, canvas.width - 300, 2);
-    ctx.fillStyle = "#755330";
-    ctx.font = "600 30px sans-serif";
-    ctx.fillText(entry.date, 150, 155);
-    ctx.font = "700 48px serif";
-    const titleBottom = this.wrapCanvasText(ctx, entry.title || "Untitled Memory", 150, 225, 900, 58, 3);
-    ctx.font = "400 26px sans-serif";
-    const meta = [entry.location, entry.weather, entry.memoryKind].filter(Boolean).join(" · ");
-    if (meta) this.wrapCanvasText(ctx, meta, 150, titleBottom + 20, 900, 34, 2);
+    const bodyY = firstPage ? 390 : 150;
+    for (let y = bodyY - 30; y < 1480; y += 50) ctx.fillRect(150, y, canvas.width - 300, 2);
+    if (firstPage) {
+      ctx.fillStyle = "#755330";
+      ctx.font = "600 30px sans-serif";
+      ctx.fillText(entry.date, 150, 155);
+      ctx.font = "700 48px serif";
+      const titleBottom = this.wrapCanvasText(ctx, entry.title || "Untitled Memory", 150, 225, 900, 58, 3);
+      ctx.font = "400 26px sans-serif";
+      const meta = [entry.location, entry.weather, entry.memoryKind].filter(Boolean).join(" · ");
+      if (meta) this.wrapCanvasText(ctx, meta, 150, titleBottom + 20, 900, 34, 2);
+    }
 
     const photos = entry.photos ?? [];
     const elements = [...(entry.scrapbookLayout?.elements ?? [])].sort((a, b) => a.zIndex - b.zIndex);
-    const hasPhotoSpread = photos.length > 0;
     ctx.fillStyle = "#4f3a28";
     ctx.font = "400 30px sans-serif";
-    this.wrapCanvasText(ctx, entry.body || "Empty draft", 150, 390, hasPhotoSpread ? 600 : 900, 50, 20);
-    await this.drawPdfPhotoSpread(ctx, entry, 760, 410, 320, elements.length ? 620 : 460);
+    this.drawCanvasTextLines(ctx, bodyLines, 150, bodyY, 46);
+    if (firstPage) await this.drawPdfPhotoSpread(ctx, entry, 760, 410, 320, elements.length ? 620 : 460);
     ctx.fillStyle = "rgba(88, 60, 35, 0.55)";
     ctx.font = "400 22px sans-serif";
-    ctx.fillText(`${photos.length} photos · ${elements.length} placed elements`, 150, 1535);
+    ctx.fillText(`${photos.length} photos · ${elements.length} placed elements${firstPage ? "" : " · continued"}`, 150, 1535);
     ctx.restore();
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
-    const page = { dataUrl, width: canvas.width, height: canvas.height };
-    canvas.width = 1;
-    canvas.height = 1;
-    return page;
   }
 
   private async renderMonthlyPdfPages(month: JournalMonth): Promise<MonthlyJournalPdfPage[]> {
     const pages: MonthlyJournalPdfPage[] = [await this.renderJournalCoverPage(month)];
-    for (const entry of month.entries) pages.push(await this.renderDiaryEntryPdfPage(entry));
+    for (const entry of [...month.entries].reverse()) pages.push(...await this.renderDiaryEntryPdfPages(entry));
     return pages;
   }
 
@@ -1784,7 +1815,7 @@ export class WalkBackHomeApp {
         <span>${this.escapeHtml(photo.caption ?? photo.id)}</span>
         <button data-action="add-photo-to-scrapbook" data-photo="${this.escapeHtml(photo.id)}">Place</button>
         <button data-action="cutout-photo" data-photo="${this.escapeHtml(photo.id)}">Circle cutout</button>
-        <button data-action="remove-photo-attachment" data-photo="${this.escapeHtml(photo.id)}">Clear</button>
+        <button data-action="remove-photo-attachment" data-photo="${this.escapeHtml(photo.id)}">Remove</button>
       </div>`).join("") || `<p class="quiet-line">No photos attached yet.</p>`;
     const elements = [...(editing?.scrapbookLayout?.elements ?? [])]
       .sort((a, b) => a.zIndex - b.zIndex)
@@ -1793,7 +1824,7 @@ export class WalkBackHomeApp {
         const photo = editing?.photos?.find((item) => item.id === photoId);
         const selected = element.id === this.selectedScrapbookElementId;
         const cutoutClass = element.type === "cutout" ? ` ${element.crop?.shape === "circle" ? "circle-cutout" : "rect-cutout"}` : "";
-        return `<div class="scrapbook-element${cutoutClass} ${selected ? "selected" : ""}" data-action="select-scrapbook-element" data-element="${this.escapeHtml(element.id)}" tabindex="0" style="left:${element.x}%;top:${element.y}%;transform:translate(-50%, -50%) rotate(${element.rotation}deg) scale(${element.scale});z-index:${element.zIndex};">${photo ? `<img src="${this.escapeHtml(photo.src)}" alt="">` : `<span>Missing photo</span>`}${selected ? `<div class="element-controls" style="transform:rotate(${-element.rotation}deg) scale(${1 / element.scale});"><button data-action="scrapbook-delete" aria-label="Delete visual">×</button><button data-action="scrapbook-rotate" data-delta="-8" aria-label="Rotate left">↶</button><button data-action="scrapbook-rotate" data-delta="8" aria-label="Rotate right">↷</button><button data-action="scrapbook-resize" data-delta="0.1" aria-label="Bigger">+</button><button data-action="scrapbook-resize" data-delta="-0.1" aria-label="Smaller">−</button></div>` : ""}</div>`;
+        return `<div class="scrapbook-element${cutoutClass} ${selected ? "selected" : ""}" data-action="select-scrapbook-element" data-element="${this.escapeHtml(element.id)}" tabindex="0" style="left:${element.x}%;top:${element.y}%;transform:translate(-50%, -50%) rotate(${element.rotation}deg) scale(${element.scale});z-index:${element.zIndex + 30};">${photo ? `<img src="${this.escapeHtml(photo.src)}" alt="">` : `<span>Missing photo</span>`}${selected ? `<div class="element-controls" style="transform:rotate(${-element.rotation}deg) scale(${1 / element.scale});"><button data-action="scrapbook-delete" aria-label="Delete visual">×</button><button data-action="scrapbook-rotate" data-delta="-8" aria-label="Rotate left">↶</button><button data-action="scrapbook-rotate" data-delta="8" aria-label="Rotate right">↷</button><button data-action="scrapbook-resize" data-delta="0.1" aria-label="Bigger">+</button><button data-action="scrapbook-resize" data-delta="-0.1" aria-label="Smaller">−</button></div>` : ""}</div>`;
       }).join("");
     this.overlay.innerHTML = `
       <div class="modal game-panel diary-editor diary-page-editor journal-modal" data-entry="${this.escapeHtml(editing?.id ?? "")}">
@@ -2122,11 +2153,8 @@ export class WalkBackHomeApp {
     const photoId = `photo-${Date.now()}`;
     const storageKey = `diary-images/${entry.id}/${photoId}`;
     const photo = { id: photoId, storageKey, src, caption: file.name };
-    const withPlacedPhoto = input.id === "diary-photo-input"
-      ? attachPhotoAndPlaceOnPage(draft, photo, `element-${Date.now()}`)
-      : addPhotoAttachment(draft, photo);
-    this.selectedScrapbookElementId = withPlacedPhoto.scrapbookLayout?.elements.at(-1)?.id ?? this.selectedScrapbookElementId;
-    this.updateDiaryEntry(withPlacedPhoto);
+    const withPhoto = addPhotoAttachment(draft, photo);
+    this.updateDiaryEntry(withPhoto);
     if (input.id === "diary-photo-input") this.showDiaryEditor(entry.id);
     else this.showScrapbookComposer(entry.id);
     this.showToast("Photo attached");
