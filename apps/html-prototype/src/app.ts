@@ -1514,7 +1514,7 @@ export class WalkBackHomeApp {
 
   private renderDiaryPreview(entry: DiaryEntry): string {
     const photos = (entry.photos ?? []).slice(0, 9).map((photo) => `<img class="preview-photo-square" src="${this.escapeHtml(photo.src)}" alt="">`).join("");
-    const photoGrid = photos ? `<span class="preview-photo-grid">${photos}</span>` : "";
+    const photoGrid = photos ? `<div class="preview-photo-grid">${photos}</div>` : "";
     return `<span class="preview-date">${this.escapeHtml(entry.date)}</span><strong>${this.escapeHtml(entry.title)}</strong><span class="preview-body">${this.escapeHtml(entry.body.slice(0, 150)) || "Empty draft"}</span>${photoGrid}<small>${entry.memoryKind}</small>`;
   }
 
@@ -1701,9 +1701,8 @@ export class WalkBackHomeApp {
     const canvas = this.makePdfCanvas();
     const ctx = canvas.getContext("2d")!;
     ctx.font = "400 30px sans-serif";
-    const hasPhotoSpread = (entry.photos?.length ?? 0) > 0;
     const compactBody = (entry.body || "Empty draft").replace(/\n{2,}/g, "\n").trim();
-    const bodyLines = this.canvasTextLines(ctx, compactBody, hasPhotoSpread ? 600 : 900);
+    const bodyLines = this.canvasTextLines(ctx, compactBody, 900);
     const pages: MonthlyJournalPdfPage[] = [];
     let consumedLines = 0;
     let pageIndex = 0;
@@ -1712,21 +1711,21 @@ export class WalkBackHomeApp {
       canvas.height = 1754;
       const pageCtx = canvas.getContext("2d")!;
       const firstPage = pageIndex === 0;
-      const textWidth = firstPage && hasPhotoSpread ? 600 : 900;
       const maxLines = firstPage ? 22 : 29;
       const currentLines = bodyLines.slice(consumedLines, consumedLines + maxLines);
       consumedLines += currentLines.length;
-      await this.drawDiaryEntryPdfPage(pageCtx, entry, currentLines, firstPage, textWidth);
+      this.drawDiaryEntryPdfPage(pageCtx, entry, currentLines, firstPage);
       const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
       pages.push({ dataUrl, width: canvas.width, height: canvas.height });
       pageIndex += 1;
     }
+    pages.push(...await this.renderDiaryPhotoPdfPages(entry, canvas));
     canvas.width = 1;
     canvas.height = 1;
     return pages;
   }
 
-  private async drawDiaryEntryPdfPage(ctx: CanvasRenderingContext2D, entry: DiaryEntry, bodyLines: string[], firstPage: boolean, textWidth: number): Promise<void> {
+  private drawDiaryEntryPdfPage(ctx: CanvasRenderingContext2D, entry: DiaryEntry, bodyLines: string[], firstPage: boolean): void {
     const canvas = ctx.canvas;
     ctx.fillStyle = "#f4e7c8";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1758,11 +1757,50 @@ export class WalkBackHomeApp {
     ctx.fillStyle = "#4f3a28";
     ctx.font = "400 30px sans-serif";
     this.drawCanvasTextLines(ctx, bodyLines, 150, bodyY, 46);
-    if (firstPage) await this.drawPdfPhotoSpread(ctx, entry, 760, 410, 320, elements.length ? 620 : 460);
     ctx.fillStyle = "rgba(88, 60, 35, 0.55)";
     ctx.font = "400 22px sans-serif";
     ctx.fillText(`${photos.length} photos · ${elements.length} placed elements${firstPage ? "" : " · continued"}`, 150, 1535);
     ctx.restore();
+  }
+
+  private async renderDiaryPhotoPdfPages(entry: DiaryEntry, canvas: HTMLCanvasElement): Promise<MonthlyJournalPdfPage[]> {
+    const photos = entry.photos ?? [];
+    if (!photos.length) return [];
+    const pages: MonthlyJournalPdfPage[] = [];
+    for (let offset = 0; offset < photos.length; offset += 9) {
+      canvas.width = 1240;
+      canvas.height = 1754;
+      const ctx = canvas.getContext("2d")!;
+      ctx.fillStyle = "#f4e7c8";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#fff8dc";
+      ctx.fillRect(88, 78, canvas.width - 176, canvas.height - 156);
+      ctx.strokeStyle = "rgba(116, 82, 48, 0.4)";
+      ctx.lineWidth = 4;
+      ctx.strokeRect(88, 78, canvas.width - 176, canvas.height - 156);
+      ctx.fillStyle = "#755330";
+      ctx.font = "700 44px serif";
+      ctx.fillText(`${entry.title || "Untitled Memory"} · photos`, 150, 170);
+      const pagePhotos = photos.slice(offset, offset + 9);
+      for (const [index, photo] of pagePhotos.entries()) {
+        const image = await this.loadCanvasImage(photo.src);
+        if (!image) continue;
+        const column = index % 3;
+        const row = Math.floor(index / 3);
+        const size = 250;
+        const gap = 46;
+        const x = 198 + column * (size + gap);
+        const y = 290 + row * (size + 72);
+        ctx.fillStyle = "#fffdf0";
+        ctx.fillRect(x - 10, y - 10, size + 20, size + 20);
+        this.drawPdfImage(ctx, image, x, y, size, size);
+      }
+      ctx.fillStyle = "rgba(88, 60, 35, 0.55)";
+      ctx.font = "400 22px sans-serif";
+      ctx.fillText(`${offset + 1}-${offset + pagePhotos.length} of ${photos.length} imported photos`, 150, 1535);
+      pages.push({ dataUrl: canvas.toDataURL("image/jpeg", 0.9), width: canvas.width, height: canvas.height });
+    }
+    return pages;
   }
 
   private async renderMonthlyPdfPages(month: JournalMonth): Promise<MonthlyJournalPdfPage[]> {
