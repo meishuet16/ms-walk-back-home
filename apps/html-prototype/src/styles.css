@@ -103,7 +103,7 @@ canvas {
 .music-player:not(:empty) {
   position: absolute;
   inset: 0;
-  z-index: 24;
+  z-index: 29;
   display: block;
   pointer-events: none;
 }
@@ -144,6 +144,18 @@ canvas {
   color: #f7e4bb;
   text-align: center;
   backdrop-filter: blur(4px);
+  touch-action: none;
+}
+.floating-records-link {
+  display: inline-flex;
+  justify-content: center;
+  min-height: 28px;
+  margin: 0 auto 6px;
+  padding: 3px 10px;
+  border-color: rgba(232, 200, 139, .52);
+  background: rgba(42, 31, 23, .62);
+  color: #f9e5ba;
+  font-size: 12px;
 }
 .music-player .floating-lyrics {
   display: block;
@@ -231,6 +243,9 @@ canvas {
   background: #d5aa69;
 }
 .floating-player-controls .icon-button {
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
   min-width: 38px;
   min-height: 34px;
   padding: 0 8px;
@@ -1310,6 +1325,48 @@ canvas {
   color: #f8d99b;
   font-size: 13px;
 }
+.timeline-applied {
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  border: 1px solid rgba(245, 217, 161, .58);
+  border-radius: 999px;
+  background: rgba(89, 117, 77, .42);
+  color: #fff0bd;
+  font-size: 13px;
+}
+.timeline-date-picker {
+  margin: 6px 0 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(232, 202, 148, .24);
+  border-radius: 6px;
+  background: rgba(19, 16, 13, .28);
+}
+.timeline-date-picker > span {
+  display: block;
+  margin-bottom: 8px;
+  color: #f8d99b;
+  font-size: 13px;
+}
+.timeline-date-picker > div {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(28px, 1fr));
+  gap: 5px;
+}
+.timeline-date-picker button {
+  min-height: 30px;
+  padding: 0;
+  border-radius: 5px;
+}
+.timeline-date-picker button.no-result {
+  opacity: .34;
+  color: rgba(255, 237, 196, .62);
+  background: rgba(255,255,255,.06);
+  border-color: rgba(255,255,255,.08);
+}
+.timeline-date-picker button.selected {
+  background: #d5aa69;
+  color: #2d2117;
+}
 .timeline-entry {
   position: relative;
   display: grid;
@@ -1420,6 +1477,31 @@ canvas {
   padding: 22px;
   text-align: center;
   color: #ead4a8;
+}
+.backup-panel .quiet-line,
+.sync-status p {
+  color: #ead3a0;
+}
+.backup-restore-button {
+  display: grid;
+  gap: 6px;
+  min-height: 74px;
+  padding: 14px 16px;
+  border: 1px solid rgba(232, 202, 148, .36);
+  border-radius: 6px;
+  background: rgba(74, 51, 31, .7);
+  color: #ffe4ad;
+  cursor: pointer;
+}
+.backup-restore-button input {
+  max-width: 100%;
+}
+.sync-status {
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid rgba(232, 202, 148, .22);
+  border-radius: 6px;
+  background: rgba(19, 16, 13, .24);
 }
 .book-grid,
 .book-spread {

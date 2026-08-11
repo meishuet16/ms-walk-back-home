@@ -18,6 +18,32 @@ export class MusicBlobStore {
     await this.transaction(db, "readwrite", (store) => store.delete(key));
   }
 
+  async entries(): Promise<Array<{ key: string; blob: Blob }>> {
+    const db = await this.db();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction("blobs", "readonly");
+      const store = tx.objectStore("blobs");
+      const request = store.openCursor();
+      const entries: Array<{ key: string; blob: Blob }> = [];
+      request.addEventListener("success", () => {
+        const cursor = request.result;
+        if (!cursor) {
+          resolve(entries);
+          return;
+        }
+        if (typeof cursor.key === "string" && cursor.value instanceof Blob) entries.push({ key: cursor.key, blob: cursor.value });
+        cursor.continue();
+      });
+      request.addEventListener("error", () => reject(request.error));
+      tx.addEventListener("error", () => reject(tx.error));
+    });
+  }
+
+  async putDataUrl(key: string, dataUrl: string): Promise<void> {
+    const response = await fetch(dataUrl);
+    await this.putBlob(key, await response.blob());
+  }
+
   async objectUrlFor(key: string): Promise<string> {
     const existing = this.objectUrls.get(key);
     if (existing) return existing;

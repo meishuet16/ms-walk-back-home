@@ -14,7 +14,8 @@ import { makeDiaryEntry, parseDiaryImport, updateDiaryMemoryKind, type DiaryFore
 import { DialogueSystem } from "./systems/DialogueSystem.js";
 import { resolveChapterReflection, type Ending } from "./systems/EndingResolver.js";
 import { InputManager } from "./systems/InputManager.js";
-import { adjacentMonthKey, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, selectedOrLatestMonth, sortMonthEntries, visibleTimelineEntries, type JournalMonth, type MonthlyJournalPdfPage, type TimelineMemoryKindFilter } from "./systems/JournalModel.js";
+import { adjacentMonthKey, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, monthLabel, selectedOrLatestMonth, sortMonthEntries, timelineCursorKeyForStep, visibleTimelineEntries, type JournalMonth, type MonthlyJournalPdfPage, type TimelineDateScope, type TimelineMemoryKindFilter } from "./systems/JournalModel.js";
+import { createBackupBundle, parseBackupBundle, walkBackupFilename, type BackupBlobEntry } from "./systems/BackupManager.js";
 import { MusicBlobStore } from "./systems/MusicBlobStore.js";
 import { ParticleSystem } from "./systems/ParticleSystem.js";
 import { activeLyricIndexAt, adjacentTrackIdForControl, clampLyricsOverlay, createDefaultPersonalPlayerState, filterAndSortMusic, isBuiltInTrackId, nextTrackIdForPlayback, normalizePlaybackMode, parseLrc, personalMusicShouldPlayInScene } from "./systems/PersonalMusic.js";
@@ -53,7 +54,6 @@ import type { MusicScene } from "./systems/SceneMusic.js";
 import { emptyTendencies } from "./systems/TendencySystem.js";
 
 type ForestNode = AuthoredForestEntry | DiaryForestMemory;
-type TimelineDateScope = "all" | "year" | "month" | "date";
 type LabisDialogueLine = { speaker: string; text: string };
 type LabisDialogueAfter = "motor-choice" | "photo-choice" | "filter-choice" | "finish-echo" | "show-reflection" | "finish-chicken-cake" | null;
 type LabisOverlayMode = "dialogue" | "choice" | "vignette" | "reflection" | null;
@@ -124,6 +124,7 @@ export class WalkBackHomeApp {
   private timelineKindFilter: TimelineMemoryKindFilter = "all";
   private timelineDateFilter = "";
   private timelineDateScope: TimelineDateScope = "all";
+  private timelineFilterAppliedMessage = "";
   private journalMode: "timeline" | "books" | "reader" = "timeline";
   private selectedJournalMonthKey = "";
   private timelineVisibleCount = journalBatchSize;
@@ -135,7 +136,7 @@ export class WalkBackHomeApp {
   private musicBlobStore = new MusicBlobStore();
   private recordsPanelOpen = false;
   private lyricsDrag: { offsetX: number; offsetY: number } | null = null;
-  private pendingPersonalSeek = 0;
+  private pendingPersonalSeek: number | null = null;
   private settings = { rain: true, muted: false, volume: 0.45, compact: false, reducedMotion: false, musicEnabled: true, musicScene: "bakery" as MusicScene };
   private room: RoomJourneyState = createDefaultRoomState();
   private chapterProgress = new Map<string, ChapterProgress>();
@@ -253,6 +254,7 @@ export class WalkBackHomeApp {
     if (action === "delete-diary-entry") this.deleteDiaryEntry(target.dataset.id ?? "");
     if (action === "timeline-apply-filters") this.applyTimelineFilters();
     if (action === "timeline-clear-filters") this.clearTimelineFilters();
+    if (action === "timeline-pick-date") this.pickTimelineDate(target.dataset.date ?? "");
     if (action === "timeline-select-all") this.selectAllTimelineEntries();
     if (action === "timeline-clear-selected") this.clearTimelineSelection();
     if (action === "timeline-delete-selected") this.deleteSelectedTimelineEntries();
@@ -286,6 +288,8 @@ export class WalkBackHomeApp {
     if (action === "toggle-floating-lyrics") this.toggleFloatingLyrics();
     if (action === "delete-user-track") void this.deleteUserTrack(target.dataset.track ?? "");
     if (action === "remove-player-background") void this.removePlayerBackground();
+    if (action === "backup-sync") this.showBackupSync();
+    if (action === "download-backup") void this.downloadBackup();
     if (action === "reset-journey") this.resetJourney();
     if (action === "compact") this.toggleCompact();
     if (action === "fullscreen") this.toggleFullscreen();
@@ -1474,7 +1478,7 @@ export class WalkBackHomeApp {
         <button data-action="open-map">Walk Back Home<span>${this.allDoors().length} forest memories</span></button>
         <button data-action="open-room">Muji Room<span>Present-tense rest space</span></button>
       </div>
-      <div class="settings-row"><button data-action="music">Music: ${this.settings.musicEnabled ? "On" : "Off"}</button><button data-action="rain">Rain: ${this.settings.rain ? "On" : "Off"}</button><button data-action="mute">${this.settings.muted ? "Sound Off" : "Sound On"}</button><button data-action="compact">${this.settings.compact ? "960x540" : "480x270"}</button><button data-action="reset-journey">Begin Again</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
+      <div class="settings-row"><button data-action="music">Music: ${this.settings.musicEnabled ? "On" : "Off"}</button><button data-action="rain">Rain: ${this.settings.rain ? "On" : "Off"}</button><button data-action="mute">${this.settings.muted ? "Sound Off" : "Sound On"}</button><button data-action="compact">${this.settings.compact ? "960x540" : "480x270"}</button><button data-action="backup-sync">Backup / Sync</button><button data-action="reset-journey">Begin Again</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
   }
 
   private showHome(): void {
@@ -1564,7 +1568,7 @@ export class WalkBackHomeApp {
   }
 
   private currentTimelineBaseMonth(): JournalMonth {
-    const selected = this.currentJournalMonth();
+    const selected = this.timelineCursorMonth();
     const [yearText] = selected.key.split("-");
     if (this.timelineDateScope === "all") {
       return { ...selected, key: "all", label: "All Journals", entries: sortMonthEntries(this.diaryEntries) };
@@ -1580,8 +1584,23 @@ export class WalkBackHomeApp {
     return selected;
   }
 
+  private timelineCursorMonth(): JournalMonth {
+    const fallback = this.selectedJournalMonthKey || this.currentJournalMonth().key;
+    const cursorKey = /^\d{4}-\d{2}$/.test(fallback) ? fallback : new Date().toISOString().slice(0, 7);
+    const [yearText, monthText] = cursorKey.split("-");
+    const year = Number(yearText);
+    const month = Number(monthText);
+    return {
+      key: cursorKey,
+      year,
+      month,
+      label: monthLabel(year, month),
+      entries: sortMonthEntries(this.diaryEntries.filter((entry) => entry.date.startsWith(cursorKey)))
+    };
+  }
+
   private renderTimelineFilters(month: JournalMonth): string {
-    const selectedDate = this.timelineDateFilter || `${this.selectedJournalMonthKey || this.currentJournalMonth().key}-01`;
+    const selectedDate = this.timelineDateFilter || `${this.timelineCursorMonth().key}-01`;
     const feedback = this.timelineFilterFeedback(month);
     const dateClass = this.timelineDateInputHasEntries(selectedDate) ? "" : " no-results";
     return `<div class="timeline-toolbar">
@@ -1593,11 +1612,29 @@ export class WalkBackHomeApp {
       <button data-action="timeline-apply-filters">Done</button>
       <button data-action="timeline-clear-filters">Clear Filters</button>
       <span class="timeline-feedback">${this.escapeHtml(feedback)}</span>
+      ${this.timelineFilterAppliedMessage ? `<span class="timeline-applied">${this.escapeHtml(this.timelineFilterAppliedMessage)}</span>` : ""}
       <span>${this.selectedTimelineEntryIds.size} selected</span>
       <button data-action="timeline-select-all">Select All</button>
       <button data-action="timeline-clear-selected">Clear Selection</button>
       <button data-action="timeline-delete-selected">Delete Selected</button>
-    </div>`;
+    </div>${this.renderTimelineDatePicker(selectedDate)}`;
+  }
+
+  private renderTimelineDatePicker(selectedDate: string): string {
+    if (this.timelineDateScope === "all") return "";
+    const monthKey = /^\d{4}-\d{2}-\d{2}$/.test(selectedDate) ? selectedDate.slice(0, 7) : this.timelineCursorMonth().key;
+    const [yearText, monthText] = monthKey.split("-");
+    const year = Number(yearText);
+    const month = Number(monthText);
+    const days = new Date(year, month, 0).getDate();
+    const buttons = Array.from({ length: days }, (_, index) => {
+      const day = index + 1;
+      const date = `${monthKey}-${String(day).padStart(2, "0")}`;
+      const hasEntries = this.timelineDateHasEntries(date);
+      const selected = selectedDate === date;
+      return `<button class="${selected ? "selected" : ""} ${hasEntries ? "" : "no-result"}" data-action="timeline-pick-date" data-date="${date}" ${hasEntries ? "" : "disabled"}>${day}</button>`;
+    }).join("");
+    return `<div class="timeline-date-picker" aria-label="Dates with diary results"><span>${this.escapeHtml(monthLabel(year, month))}</span><div>${buttons}</div></div>`;
   }
 
   private timelineDateHasEntries(date: string): boolean {
@@ -1616,9 +1653,9 @@ export class WalkBackHomeApp {
     const dateLabel = this.timelineDateScope === "all"
       ? "All diary"
       : this.timelineDateScope === "year"
-        ? `Year ${this.selectedJournalMonthKey.slice(0, 4)}`
+        ? `Year ${this.timelineCursorMonth().key.slice(0, 4)}`
         : this.timelineDateScope === "month"
-          ? `Month ${this.selectedJournalMonthKey}`
+          ? `Month ${this.timelineCursorMonth().key}`
           : this.timelineDateFilter;
     const filters = [
       this.timelineKindFilter === "all" ? "All memories" : this.timelineKindFilter === "diary" ? "Diary only" : this.timelineKindFilter === "fragment" ? "Memory Fragment" : "Memory Chapter",
@@ -1647,12 +1684,15 @@ export class WalkBackHomeApp {
   }
 
   private moveJournalMonth(direction: -1 | 1): void {
-    this.selectedJournalMonthKey = adjacentMonthKey(this.currentJournalMonth().key, direction);
     this.timelineVisibleCount = journalBatchSize;
     if (this.journalMode === "timeline") {
-      this.timelineDateScope = "month";
+      this.selectedJournalMonthKey = timelineCursorKeyForStep(this.timelineCursorMonth().key, this.timelineDateScope, direction);
       this.timelineDateFilter = "";
+      this.timelineFilterAppliedMessage = "";
+      this.showTimeline();
+      return;
     }
+    this.selectedJournalMonthKey = adjacentMonthKey(this.currentJournalMonth().key, direction);
     if (this.journalMode === "books") this.showMonthlyBooks();
     else if (this.journalMode === "reader") this.openMonthlyBook(this.selectedJournalMonthKey);
     else this.showTimeline();
@@ -2216,7 +2256,7 @@ export class WalkBackHomeApp {
     const dateInput = this.overlay.querySelector<HTMLInputElement>("#timeline-date-input");
     const scopeInput = this.overlay.querySelector<HTMLSelectElement>("#timeline-date-scope");
     const searchInput = this.overlay.querySelector<HTMLInputElement>("#timeline-search");
-    const selectedDate = dateInput?.value || `${this.currentJournalMonth().key}-01`;
+    const selectedDate = dateInput?.value || `${this.timelineCursorMonth().key}-01`;
     const scope = this.normalizeTimelineDateScope(scopeInput?.value);
     if (scope !== "all" && !/^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) {
       this.showToast("Choose a calendar date first");
@@ -2230,9 +2270,23 @@ export class WalkBackHomeApp {
     this.timelineSearch = searchInput?.value.trim() ?? "";
     this.timelineVisibleCount = journalBatchSize;
     this.selectedTimelineEntryIds.clear();
-    const nextMonth = makeTimelineMonthView(this.currentJournalMonth(), this.timelineSort, this.timelineSearch, this.timelineKindFilter, this.timelineDateFilter);
+    const nextMonth = this.currentTimelineMonthView();
+    this.timelineFilterAppliedMessage = nextMonth.entries.length ? `Applied · ${nextMonth.entries.length} result${nextMonth.entries.length === 1 ? "" : "s"}` : "Applied · no result";
     this.showTimeline();
     this.showToast(nextMonth.entries.length ? `Showing ${nextMonth.entries.length} result${nextMonth.entries.length === 1 ? "" : "s"}` : "No result for those filters");
+  }
+
+  private pickTimelineDate(date: string): void {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !this.timelineDateHasEntries(date)) return;
+    this.timelineDateScope = "date";
+    this.timelineDateFilter = date;
+    this.selectedJournalMonthKey = date.slice(0, 7);
+    this.timelineVisibleCount = journalBatchSize;
+    this.selectedTimelineEntryIds.clear();
+    const nextMonth = this.currentTimelineMonthView();
+    this.timelineFilterAppliedMessage = `Applied · ${nextMonth.entries.length} result${nextMonth.entries.length === 1 ? "" : "s"}`;
+    this.showTimeline();
+    this.showToast(`Showing ${date}`);
   }
 
   private clearTimelineFilters(): void {
@@ -2241,6 +2295,7 @@ export class WalkBackHomeApp {
     this.timelineDateFilter = "";
     this.timelineDateScope = "all";
     this.timelineSearch = "";
+    this.timelineFilterAppliedMessage = "Filters cleared";
     this.timelineVisibleCount = journalBatchSize;
     this.selectedTimelineEntryIds.clear();
     this.showTimeline();
@@ -2352,6 +2407,7 @@ export class WalkBackHomeApp {
   private async handleChange(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     if (input.id === "timeline-date-scope" || input.id === "timeline-date-input") {
+      this.timelineFilterAppliedMessage = "";
       const dateInput = this.overlay.querySelector<HTMLInputElement>("#timeline-date-input");
       if (dateInput) dateInput.classList.toggle("no-results", !this.timelineDateInputHasEntries(dateInput.value));
       return;
@@ -2386,6 +2442,10 @@ export class WalkBackHomeApp {
     }
     if (input.id === "music-background-input") {
       await this.handlePlayerBackgroundInput(input);
+      return;
+    }
+    if (input.id === "restore-backup-input") {
+      await this.handleRestoreBackupInput(input);
       return;
     }
     if (input.id === "music-sort") {
@@ -2856,12 +2916,15 @@ export class WalkBackHomeApp {
   }
 
   private async selectVinyl(recordId: string, announce = true): Promise<void> {
+    const sameTrack = this.personalPlayer.selectedTrackId === recordId;
+    const startPosition = sameTrack ? this.currentPersonalPlaybackTime() : 0;
     this.personalPlayer.selectedTrackId = recordId;
     this.personalPlayer.playing = true;
-    this.personalPlayer.playbackPosition = 0;
+    this.personalPlayer.playbackPosition = startPosition;
+    this.pendingPersonalSeek = null;
     if (isBuiltInTrackId(recordId)) this.room = this.selectAvailableVinylRecord(recordId);
     else this.room = { ...this.room, selectedVinylId: recordId, vinylPlaying: true, musicOn: true };
-    await this.playPersonalMusic(recordId, 0);
+    await this.playPersonalMusic(recordId, startPosition);
     if (this.recordsPanelOpen) await this.showRecords();
     else this.updatePersonalMusicOverlay();
     if (announce) this.showToast("Record changed");
@@ -2941,7 +3004,7 @@ export class WalkBackHomeApp {
     const track = this.allPersonalTracks().find((item) => item.id === trackId) ?? this.currentPersonalTrack();
     if (!track) return;
     try {
-      const src = track.source === "user" && track.audioBlobKey ? await this.musicBlobStore.objectUrlFor(track.audioBlobKey) : track.src;
+      const src = await this.sourceForPersonalTrack(track);
       if (!src) return;
       this.audio.setTrack(src);
       this.audio.setLoop(this.personalPlayer.repeatOne);
@@ -2957,6 +3020,10 @@ export class WalkBackHomeApp {
       this.room.vinylPlaying = false;
       this.showToast("This audio file could not be played in this browser.");
     }
+  }
+
+  private async sourceForPersonalTrack(track: ReturnType<typeof this.allPersonalTracks>[number]): Promise<string> {
+    return track.source === "user" && track.audioBlobKey ? await this.musicBlobStore.objectUrlFor(track.audioBlobKey) : track.src ?? "";
   }
 
   private async playAdjacentPersonalTrack(direction: -1 | 1): Promise<void> {
@@ -3032,11 +3099,25 @@ export class WalkBackHomeApp {
     const targetTime = Math.max(0, Math.min(duration, Number.isFinite(seconds) ? seconds : 0));
     this.pendingPersonalSeek = targetTime;
     this.personalPlayer.playbackPosition = targetTime;
-    this.audio.seek(targetTime);
+    void this.seekLoadedPersonalMusic(targetTime);
     if (this.personalPlayer.playing && this.audio.isPaused() && this.settings.musicEnabled && !this.settings.muted) void this.audio.ensurePlaying();
     this.refreshRecordsPlaybackUI();
     this.updatePersonalMusicOverlay();
     this.save.savePersonalPlayer(this.personalPlayer);
+  }
+
+  private async seekLoadedPersonalMusic(targetTime: number): Promise<void> {
+    const track = this.currentPersonalTrack();
+    if (!track) return;
+    const src = await this.sourceForPersonalTrack(track);
+    if (src && !this.audio.isCurrentTrack(src)) this.audio.setTrack(src);
+    this.audio.seek(targetTime);
+    if (this.personalPlayer.playing && this.settings.musicEnabled && !this.settings.muted) await this.audio.ensurePlaying();
+  }
+
+  private currentPersonalPlaybackTime(): number {
+    if (this.pendingPersonalSeek !== null) return this.pendingPersonalSeek;
+    return this.audio.getCurrentTime() || this.personalPlayer.playbackPosition;
   }
 
   private syncPersonalPlaybackState(): void {
@@ -3049,6 +3130,7 @@ export class WalkBackHomeApp {
   private handlePersonalTimeUpdate(): void {
     if (!this.personalPlayer.playing || !personalMusicShouldPlayInScene(this.scene)) return;
     this.personalPlayer.playbackPosition = this.audio.getCurrentTime();
+    if (this.pendingPersonalSeek !== null && Math.abs(this.personalPlayer.playbackPosition - this.pendingPersonalSeek) < 0.4) this.pendingPersonalSeek = null;
     this.refreshRecordsPlaybackUI();
     this.updatePersonalMusicOverlay();
   }
@@ -3073,7 +3155,7 @@ export class WalkBackHomeApp {
 
   private refreshRecordsPlaybackUI(): void {
     if (!this.recordsPanelOpen) return;
-    const currentTime = this.audio.getCurrentTime() || this.personalPlayer.playbackPosition;
+    const currentTime = this.currentPersonalPlaybackTime();
     const duration = this.audio.getDuration() || this.currentPersonalTrack()?.duration || 0;
     const currentLabel = this.overlay.querySelector<HTMLElement>("[data-music-current]");
     const durationLabel = this.overlay.querySelector<HTMLElement>("[data-music-duration]");
@@ -3109,7 +3191,7 @@ export class WalkBackHomeApp {
       return;
     }
     const lyrics = track.syncedLyrics ?? [];
-    const activeIndex = activeLyricIndexAt(lyrics, this.audio.getCurrentTime() || this.personalPlayer.playbackPosition);
+    const activeIndex = activeLyricIndexAt(lyrics, this.currentPersonalPlaybackTime());
     const overlay = clampLyricsOverlay(this.personalPlayer.lyricsOverlay, this.canvas.width, this.canvas.height);
     this.personalPlayer.lyricsOverlay = overlay;
     const activeLyric = activeIndex >= 0 ? activeIndex : 0;
@@ -3122,7 +3204,7 @@ export class WalkBackHomeApp {
       }).join("")
       : `<span class="muted">${this.escapeHtml(track.title)}</span><span class="active">${this.escapeHtml(track.artist ?? "Now playing")}</span>`;
     const floatingLyrics = this.personalPlayer.lyricsVisible
-      ? `<div class="floating-lyrics" style="left:${overlay.x}px;top:${overlay.y}px;width:${overlay.width}px" aria-live="off"><button class="floating-lyric-shortcut" data-action="room-records" aria-label="Open records">${lyricHtml}</button><div class="floating-player-controls"><button class="icon-button" data-action="music-prev" aria-label="Previous" title="Previous">⏮</button><button class="icon-button primary" data-action="vinyl-pause" aria-label="${this.personalPlayer.playing ? "Pause" : "Play"}" title="${this.personalPlayer.playing ? "Pause" : "Play"}">${this.personalPlayer.playing ? "⏸" : "▶"}</button><button class="icon-button" data-action="music-next" aria-label="Next" title="Next">⏭</button></div></div>`
+      ? `<div class="floating-lyrics" style="left:${overlay.x}px;top:${overlay.y}px;width:${overlay.width}px" aria-live="off"><button class="floating-records-link" data-action="room-records">♪ Records</button><button class="floating-lyric-shortcut" data-action="room-records" aria-label="Open records">${lyricHtml}</button><div class="floating-player-controls"><button class="icon-button" data-action="music-prev" aria-label="Previous" title="Previous">⏮</button><button class="icon-button primary" data-action="vinyl-pause" aria-label="${this.personalPlayer.playing ? "Pause" : "Play"}" title="${this.personalPlayer.playing ? "Pause" : "Play"}">${this.personalPlayer.playing ? "⏸" : "▶"}</button><button class="icon-button" data-action="music-next" aria-label="Next" title="Next">⏭</button></div></div>`
       : "";
     this.musicPlayer.innerHTML = `<button class="mini-now-playing" data-action="room-records">♪ ${this.escapeHtml(track.title)}</button>${floatingLyrics}`;
   }
@@ -3217,6 +3299,98 @@ export class WalkBackHomeApp {
     this.save.saveDiaryLibrary(this.makeDiaryLibrary());
     this.showToast("Your diary will stay. The walk begins again.");
     this.overlay.innerHTML = "";
+  }
+
+  private showBackupSync(): void {
+    this.recordsPanelOpen = false;
+    this.overlay.innerHTML = `
+      <div class="modal game-panel backup-panel">
+        <h2>Backup / Sync</h2>
+        <p class="quiet-line">Portable backup includes diary pages, timeline classifications, journey state, personal records, custom covers, backgrounds, and imported music blobs.</p>
+        <div class="module-grid">
+          <button data-action="download-backup">Download Backup<span>Save a full local JSON file for Google Drive or another device</span></button>
+          <label class="backup-restore-button">Restore Backup<input id="restore-backup-input" type="file" accept="application/json,.json"></label>
+        </div>
+        <div class="sync-status">
+          <h3>Cloud / Phone Sync</h3>
+          <p>Direct Google Drive or phone-number sync needs a configured sign-in provider and server connector. This local prototype stays free and private by default, so today it gives you a complete backup file you can store in Google Drive, send to yourself, then restore after login or on another device.</p>
+        </div>
+        <div class="settings-row"><button data-action="settings">Back</button><button data-action="close">Close</button></div>
+      </div>`;
+    this.focusStage();
+  }
+
+  private async downloadBackup(): Promise<void> {
+    const blobs = await this.backupBlobEntries();
+    const bundle = createBackupBundle({
+      diaryLibrary: this.makeDiaryLibrary(),
+      journey: this.makeJourney(),
+      musicLibrary: this.musicLibrary,
+      personalPlayer: this.personalPlayer,
+      blobs
+    });
+    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = walkBackupFilename();
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    this.showToast(`Backup downloaded · ${blobs.length} media item${blobs.length === 1 ? "" : "s"}`);
+  }
+
+  private async backupBlobEntries(): Promise<BackupBlobEntry[]> {
+    const entries = await this.musicBlobStore.entries();
+    return Promise.all(entries.map(async ({ key, blob }) => ({
+      key,
+      type: blob.type || "application/octet-stream",
+      dataUrl: await this.blobToDataUrl(blob)
+    })));
+  }
+
+  private blobToDataUrl(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.addEventListener("load", () => resolve(String(reader.result ?? "")));
+      reader.addEventListener("error", () => reject(reader.error));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  private async handleRestoreBackupInput(input: HTMLInputElement): Promise<void> {
+    const file = input.files?.[0];
+    if (!file) return;
+    const bundle = parseBackupBundle(await this.readFileAsText(file));
+    if (!bundle) {
+      this.showToast("That backup file was not recognized.");
+      return;
+    }
+    for (const entry of bundle.blobs) await this.musicBlobStore.putDataUrl(entry.key, entry.dataUrl);
+    if (bundle.diaryLibrary) {
+      this.applyDiaryLibrary(bundle.diaryLibrary);
+      this.save.saveDiaryLibrary(this.makeDiaryLibrary());
+    }
+    if (bundle.musicLibrary) {
+      this.musicLibrary = bundle.musicLibrary;
+      this.save.saveMusicLibrary(this.musicLibrary);
+    }
+    if (bundle.personalPlayer) {
+      this.personalPlayer = { ...createDefaultPersonalPlayerState(), ...bundle.personalPlayer };
+      this.normalizePersonalPlayerToggles();
+      this.save.savePersonalPlayer(this.personalPlayer);
+    }
+    if (bundle.journey) {
+      this.applyJourney(bundle.journey);
+      if (bundle.personalPlayer) {
+        this.personalPlayer = { ...this.personalPlayer, ...bundle.personalPlayer };
+        this.normalizePersonalPlayerToggles();
+      }
+      this.save.saveJourney(this.makeJourney());
+      this.save.savePersonalPlayer(this.personalPlayer);
+    }
+    this.showBackupSync();
+    this.showToast(`Backup restored · ${bundle.blobs.length} media item${bundle.blobs.length === 1 ? "" : "s"}`);
+    this.autosave();
   }
 
   private showSettings(): void {

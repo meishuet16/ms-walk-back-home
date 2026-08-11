@@ -72,6 +72,10 @@ export class AudioManager {
     if (!wasPaused && !this.muted) void this.ensurePlaying();
   }
 
+  isCurrentTrack(src: string): boolean {
+    return !!this.track && sameAudioSource(this.track.src, resolveAudioSource(src));
+  }
+
   setLoop(loop: boolean): void {
     if (this.track) this.track.loop = loop;
   }

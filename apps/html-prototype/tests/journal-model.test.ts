@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createDiaryLibrary } from "../src/systems/DiaryLibrary.js";
 import { makeDiaryEntry } from "../src/systems/DiaryImport.js";
-import { deriveJournalMonths, filterJournalEntries, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, searchJournalEntries, selectedOrLatestMonth, visibleTimelineEntries } from "../src/systems/JournalModel.js";
+import { deriveJournalMonths, filterJournalEntries, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, searchJournalEntries, selectedOrLatestMonth, timelineCursorKeyForStep, visibleTimelineEntries } from "../src/systems/JournalModel.js";
 
 function entry(date: string, title: string) {
   return makeDiaryEntry(date, title, `${title} body`, `entry-${date}-${title}`);
@@ -25,6 +25,13 @@ test("timeline initially shows five entries and show more reveals batches", () =
   assert.equal(hasMoreTimelineEntries(month, journalBatchSize), true);
   assert.equal(visibleTimelineEntries(month, journalBatchSize + 5).length, 8);
   assert.equal(hasMoreTimelineEntries(month, journalBatchSize + 5), false);
+});
+
+test("timeline date cursor steps years without falling back to month mode", () => {
+  assert.equal(timelineCursorKeyForStep("2026-04", "year", -1), "2025-04");
+  assert.equal(timelineCursorKeyForStep("2026-04", "year", 1), "2027-04");
+  assert.equal(timelineCursorKeyForStep("2026-04", "month", -1), "2026-03");
+  assert.equal(timelineCursorKeyForStep("2026-04", "date", 1), "2026-05");
 });
 
 test("timeline month view filters by keyword before batching", () => {

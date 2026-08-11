@@ -21,6 +21,7 @@ export type MonthlyBookSummary = {
 };
 
 export const journalBatchSize = 5;
+export type TimelineDateScope = "all" | "year" | "month" | "date";
 
 const monthNames = [
   "January", "February", "March", "April", "May", "June",
@@ -83,6 +84,15 @@ export function adjacentMonthKey(currentKey: string, direction: -1 | 1): string 
   const [yearText, monthText] = currentKey.split("-");
   const date = new Date(Number(yearText), Number(monthText) - 1 + direction, 1);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+export function timelineCursorKeyForStep(currentKey: string, scope: TimelineDateScope, direction: -1 | 1): string {
+  const safeKey = /^\d{4}-\d{2}$/.test(currentKey) ? currentKey : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+  if (scope === "year") {
+    const [yearText, monthText] = safeKey.split("-");
+    return `${Number(yearText) + direction}-${monthText}`;
+  }
+  return adjacentMonthKey(safeKey, direction);
 }
 
 export function visibleTimelineEntries(month: JournalMonth, visibleCount: number): DiaryEntry[] {
