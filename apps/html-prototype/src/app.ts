@@ -1510,13 +1510,13 @@ export class WalkBackHomeApp {
   }
 
   private renderDiaryPreview(entry: DiaryEntry): string {
-    const photos = (entry.photos ?? []).slice(0, 3).map((photo, index) => `<img class="preview-photo p${index}" src="${this.escapeHtml(photo.src)}" alt="">`).join("");
     const elements = [...(entry.scrapbookLayout?.elements ?? [])].sort((a, b) => a.zIndex - b.zIndex).slice(0, 8).map((element) => {
       const photoId = element.type === "photo" ? element.photoId : element.sourcePhotoId;
       const photo = entry.photos?.find((item) => item.id === photoId);
       const cutout = element.type === "cutout" ? " cutout" : "";
       return photo ? `<img class="preview-scrap${cutout}" src="${this.escapeHtml(photo.src)}" alt="" style="left:${element.x}%;top:${element.y}%;transform:translate(-50%,-50%) rotate(${element.rotation}deg) scale(${Math.max(0.25, element.scale * 0.42)});z-index:${element.zIndex};">` : "";
     }).join("");
+    const photos = elements ? "" : (entry.photos ?? []).slice(0, 3).map((photo, index) => `<img class="preview-photo p${index}" src="${this.escapeHtml(photo.src)}" alt="">`).join("");
     return `<span class="preview-date">${this.escapeHtml(entry.date)}</span><strong>${this.escapeHtml(entry.title)}</strong><span class="preview-body">${this.escapeHtml(entry.body.slice(0, 180)) || "Empty draft"}</span>${photos}${elements}<small>${entry.memoryKind}</small>`;
   }
 
@@ -1560,10 +1560,11 @@ export class WalkBackHomeApp {
   private wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number, maxLines = 18): number {
     let lineCount = 0;
     for (const paragraph of text.split(/\r?\n/)) {
-      const words = paragraph.split(/\s+/).filter(Boolean);
+      const words = paragraph.match(/[A-Za-z0-9_./:+-]+|\s+|./gu)?.filter((token) => token.trim()) ?? [""];
       let line = "";
       for (const word of words.length ? words : [""]) {
-        const next = line ? `${line} ${word}` : word;
+        const joinsWithoutSpace = /^[\u4e00-\u9fff，。？！、；：“”‘’（）]/u.test(word);
+        const next = line ? `${line}${joinsWithoutSpace ? "" : " "}${word}` : word;
         if (ctx.measureText(next).width > maxWidth && line) {
           ctx.fillText(line, x, y);
           line = word;
@@ -1605,6 +1606,59 @@ export class WalkBackHomeApp {
     ctx.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, x, y, width, height);
   }
 
+  private async drawPdfPhotoSpread(ctx: CanvasRenderingContext2D, entry: DiaryEntry, x: number, y: number, width: number, height: number): Promise<void> {
+    const photos = entry.photos ?? [];
+    if (!photos.length) return;
+    const elements = [...(entry.scrapbookLayout?.elements ?? [])].sort((a, b) => a.zIndex - b.zIndex);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x - 28, y - 28, width + 56, height + 56);
+    ctx.clip();
+    if (elements.length) {
+      for (const element of elements) {
+        const photoId = element.type === "photo" ? element.photoId : element.sourcePhotoId;
+        const photo = photos.find((item) => item.id === photoId);
+        const image = photo ? await this.loadCanvasImage(photo.src) : null;
+        if (!image) continue;
+        const imageWidth = 190 * Math.max(0.55, Math.min(1.6, element.scale));
+        const imageHeight = 145 * Math.max(0.55, Math.min(1.6, element.scale));
+        const imageX = x + (element.x / 100) * width;
+        const imageY = y + (element.y / 100) * height;
+        ctx.save();
+        ctx.translate(imageX, imageY);
+        ctx.rotate((element.rotation * Math.PI) / 180);
+        ctx.fillStyle = "#fffdf0";
+        if (element.type === "cutout" && element.crop?.shape === "circle") {
+          ctx.beginPath();
+          ctx.arc(0, 0, Math.min(imageWidth, imageHeight) / 2, 0, Math.PI * 2);
+          ctx.clip();
+          this.drawPdfImage(ctx, image, -imageWidth / 2, -imageHeight / 2, imageWidth, imageHeight);
+        } else {
+          ctx.fillRect(-imageWidth / 2 - 10, -imageHeight / 2 - 10, imageWidth + 20, imageHeight + 20);
+          this.drawPdfImage(ctx, image, -imageWidth / 2, -imageHeight / 2, imageWidth, imageHeight);
+        }
+        ctx.restore();
+      }
+    } else {
+      for (let index = 0; index < Math.min(photos.length, 4); index += 1) {
+        const image = await this.loadCanvasImage(photos[index].src);
+        if (!image) continue;
+        const column = index % 2;
+        const row = Math.floor(index / 2);
+        const imageX = x + column * (width / 2) + 16;
+        const imageY = y + row * 210 + 12;
+        ctx.save();
+        ctx.translate(imageX + 78, imageY + 66);
+        ctx.rotate((index % 2 ? 0.05 : -0.04) + index * 0.015);
+        ctx.fillStyle = "#fffdf0";
+        ctx.fillRect(-88, -76, 176, 152);
+        this.drawPdfImage(ctx, image, -78, -66, 156, 112);
+        ctx.restore();
+      }
+    }
+    ctx.restore();
+  }
+
   private async renderJournalCoverPage(month: JournalMonth): Promise<MonthlyJournalPdfPage> {
     const canvas = this.makePdfCanvas();
     const ctx = canvas.getContext("2d")!;
@@ -1644,6 +1698,10 @@ export class WalkBackHomeApp {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = "#fff8dc";
     ctx.fillRect(88, 78, canvas.width - 176, canvas.height - 156);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(88, 78, canvas.width - 176, canvas.height - 156);
+    ctx.clip();
     ctx.strokeStyle = "rgba(116, 82, 48, 0.4)";
     ctx.lineWidth = 4;
     ctx.strokeRect(88, 78, canvas.width - 176, canvas.height - 156);
@@ -1653,57 +1711,22 @@ export class WalkBackHomeApp {
     ctx.font = "600 30px sans-serif";
     ctx.fillText(entry.date, 150, 155);
     ctx.font = "700 48px serif";
-    ctx.fillText(entry.title || "Untitled Memory", 150, 225);
+    const titleBottom = this.wrapCanvasText(ctx, entry.title || "Untitled Memory", 150, 225, 900, 58, 3);
     ctx.font = "400 26px sans-serif";
     const meta = [entry.location, entry.weather, entry.memoryKind].filter(Boolean).join(" · ");
-    if (meta) ctx.fillText(meta, 150, 275);
+    if (meta) this.wrapCanvasText(ctx, meta, 150, titleBottom + 20, 900, 34, 2);
 
     const photos = entry.photos ?? [];
-    if (photos.length && !(entry.scrapbookLayout?.elements.length)) {
-      const image = await this.loadCanvasImage(photos[0].src);
-      if (image) {
-        ctx.save();
-        ctx.translate(820, 250);
-        ctx.rotate(-0.04);
-        ctx.fillStyle = "#fffdf0";
-        ctx.fillRect(-8, -8, 332, 252);
-        this.drawPdfImage(ctx, image, 0, 0, 316, 210);
-        ctx.restore();
-      }
-    }
-
     const elements = [...(entry.scrapbookLayout?.elements ?? [])].sort((a, b) => a.zIndex - b.zIndex);
-    for (const element of elements) {
-      const photoId = element.type === "photo" ? element.photoId : element.sourcePhotoId;
-      const photo = photos.find((item) => item.id === photoId);
-      const image = photo ? await this.loadCanvasImage(photo.src) : null;
-      if (!image) continue;
-      const width = 320 * Math.max(0.35, element.scale);
-      const height = 230 * Math.max(0.35, element.scale);
-      const x = (element.x / 100) * canvas.width;
-      const y = (element.y / 100) * canvas.height;
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate((element.rotation * Math.PI) / 180);
-      ctx.fillStyle = "#fffdf0";
-      if (element.type === "cutout" && element.crop?.shape === "circle") {
-        ctx.beginPath();
-        ctx.arc(0, 0, Math.min(width, height) / 2, 0, Math.PI * 2);
-        ctx.clip();
-        this.drawPdfImage(ctx, image, -width / 2, -height / 2, width, height);
-      } else {
-        ctx.fillRect(-width / 2 - 10, -height / 2 - 10, width + 20, height + 20);
-        this.drawPdfImage(ctx, image, -width / 2, -height / 2, width, height);
-      }
-      ctx.restore();
-    }
-
+    const hasPhotoSpread = photos.length > 0;
     ctx.fillStyle = "#4f3a28";
     ctx.font = "400 30px sans-serif";
-    this.wrapCanvasText(ctx, entry.body || "Empty draft", 150, 370, 750, 50, 18);
+    this.wrapCanvasText(ctx, entry.body || "Empty draft", 150, 390, hasPhotoSpread ? 600 : 900, 50, 20);
+    await this.drawPdfPhotoSpread(ctx, entry, 760, 410, 320, elements.length ? 620 : 460);
     ctx.fillStyle = "rgba(88, 60, 35, 0.55)";
     ctx.font = "400 22px sans-serif";
     ctx.fillText(`${photos.length} photos · ${elements.length} placed elements`, 150, 1535);
+    ctx.restore();
     const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
     const page = { dataUrl, width: canvas.width, height: canvas.height };
     canvas.width = 1;

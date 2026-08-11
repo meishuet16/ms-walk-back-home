@@ -882,10 +882,12 @@ canvas {
 .journal-body-field {
   position: absolute;
   left: 120px;
-  top: 390px;
-  width: min(470px, 48%);
-  height: 300px;
+  right: 78px;
+  top: 438px;
+  width: auto;
+  height: 410px;
   margin: 0;
+  z-index: 4;
 }
 .journal-body-field textarea {
   height: 100%;
@@ -1884,6 +1886,7 @@ canvas {
   }
   .journal-body-field {
     left: 74px;
+    right: 28px;
     top: 696px;
     width: calc(100% - 102px);
     height: 250px;
