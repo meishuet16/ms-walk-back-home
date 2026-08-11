@@ -1066,8 +1066,8 @@ export class WalkBackHomeApp {
     const y = (actor.y - cameraY) * scale;
     const pose = actor.expression ?? "idle";
     const src = actor.id === "ms" ? labisAssetPath("ms", pose) : actor.id === "motor" ? labisAssetPath("et", pose) : undefined;
-    if (actor.id === "motor" && this.drawLabisImage(src, x, y + 34 * scale, 154 * scale, 138 * scale)) return;
-    if (actor.id === "ms" && this.drawLabisImage(src, x, y + 34 * scale, 104 * scale, 138 * scale)) return;
+    if (actor.id === "motor" && this.drawLabisImage(src, x, y + 42 * scale, 218 * scale, 172 * scale)) return;
+    if (actor.id === "ms" && this.drawLabisImage(src, x, y + 42 * scale, 142 * scale, 172 * scale)) return;
     drawSceneActor(this.ctx, actor, cameraX, cameraY, scale);
   }
 
@@ -1080,12 +1080,12 @@ export class WalkBackHomeApp {
       const pulse = Math.sin(time / 420 + echo.x) * 0.5 + 0.5;
       this.ctx.save();
       this.ctx.globalAlpha = 0.32 + pulse * 0.2;
-      const clue = this.ctx.createRadialGradient(x, y - 22 * scale, 2 * scale, x, y - 22 * scale, 44 * scale);
-      clue.addColorStop(0, "rgba(255, 231, 166, .44)");
+      const clue = this.ctx.createRadialGradient(x, y - 24 * scale, 2 * scale, x, y - 24 * scale, 52 * scale);
+      clue.addColorStop(0, "rgba(255, 231, 166, .52)");
       clue.addColorStop(1, "rgba(255, 231, 166, 0)");
       this.ctx.fillStyle = clue;
       this.ctx.beginPath();
-      this.ctx.arc(x, y - 22 * scale, 44 * scale, 0, Math.PI * 2);
+      this.ctx.arc(x, y - 24 * scale, 52 * scale, 0, Math.PI * 2);
       this.ctx.fill();
       if (echo.tell === "steam") {
         this.ctx.strokeStyle = "rgba(255, 246, 205, .62)";
@@ -1126,29 +1126,30 @@ export class WalkBackHomeApp {
     this.ctx.fillStyle = "rgba(28, 21, 16, .18)";
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     if (echo.id === "july19-photo-threat") {
-      this.drawLabisImage(labisAssetPath("ms", "holding_book"), x - 54 * scale, y + 30 * scale, 128 * scale, 128 * scale) || this.drawMemoryTableFallback(x - 56 * scale, y + 10 * scale, scale);
-      this.drawLabisImage(labisAssetPath("et", age > 2.2 ? "photo_smug" : "phone"), x + 76 * scale, y + 32 * scale, 92 * scale, 126 * scale) || this.drawEchoHuman(x + 76 * scale, y + 18 * scale, scale * 1.4, "#202020", true);
+      this.drawLabisImage(labisAssetPath("ms", "holding_book"), x - 104 * scale, y + 42 * scale, 166 * scale, 166 * scale) || this.drawMemoryTableFallback(x - 104 * scale, y + 12 * scale, scale * 1.55);
+      this.drawLabisImage(labisAssetPath("ms", "confused"), x + 10 * scale, y + 46 * scale, 132 * scale, 176 * scale) || this.drawEchoHuman(x + 10 * scale, y + 22 * scale, scale * 1.75, "#f1eadc", false);
+      this.drawLabisImage(labisAssetPath("et", age > 2.2 ? "photo_smug" : "phone"), x + 126 * scale, y + 46 * scale, 136 * scale, 176 * scale) || this.drawEchoHuman(x + 126 * scale, y + 22 * scale, scale * 1.75, "#202020", true);
     } else if (echo.id === "july19-chicken-porridge" || echo.id === "july19-fried-noodles") {
-      this.drawMemoryTableFallback(x, y, scale);
+      this.drawMemoryTableFallback(x, y, scale * 1.35);
       const prop = echo.id === "july19-chicken-porridge" ? labisAssetPath("prop", "chicken_porridge") : labisAssetPath("prop", "fried_noodles");
-      this.drawLabisImage(prop, x, y - 2 * scale, 120 * scale, 76 * scale) || this.drawFoodFallback(x, y - 28 * scale, scale * 1.35, echo.id === "july19-chicken-porridge");
+      this.drawLabisImage(prop, x, y + 2 * scale, 158 * scale, 100 * scale) || this.drawFoodFallback(x, y - 28 * scale, scale * 1.75, echo.id === "july19-chicken-porridge");
     } else if (echo.id === "july19-haircut") {
-      this.drawLabisImage(labisAssetPath("et", "haircut_happy"), x, y + 26 * scale, 100 * scale, 132 * scale) || this.drawEchoHuman(x, y + 18 * scale, scale * 1.45, "#202020", true);
+      this.drawLabisImage(labisAssetPath("et", "haircut_happy"), x, y + 42 * scale, 142 * scale, 188 * scale) || this.drawEchoHuman(x, y + 24 * scale, scale * 1.95, "#202020", true);
     } else if (echo.id === "july19-kancil") {
       this.ctx.strokeStyle = "rgba(255, 248, 210, .58)";
-      this.ctx.strokeRect(x - 48 * scale, y - 44 * scale, 96 * scale, 54 * scale);
+      this.ctx.strokeRect(x - 66 * scale, y - 52 * scale, 132 * scale, 74 * scale);
       this.ctx.fillStyle = "rgba(255, 248, 210, .16)";
-      this.ctx.fillRect(x - 42 * scale, y - 38 * scale, 84 * scale, 42 * scale);
+      this.ctx.fillRect(x - 58 * scale, y - 44 * scale, 116 * scale, 56 * scale);
     } else if (echo.id === "july19-badminton") {
-      this.drawLabisImage(labisAssetPath("prop", "badminton"), x, y + 12 * scale, 132 * scale, 98 * scale);
+      this.drawLabisImage(labisAssetPath("prop", "badminton"), x, y + 20 * scale, 172 * scale, 128 * scale);
       this.ctx.fillStyle = "rgba(255,255,230,.72)";
       this.ctx.beginPath();
       this.ctx.arc(x + Math.sin(time / 180) * 60 * scale, y - 52 * scale + Math.cos(time / 210) * 16 * scale, 4 * scale, 0, Math.PI * 2);
       this.ctx.fill();
     } else if (echo.id === "july19-filter-evening") {
-      this.drawLabisImage(labisAssetPath("prop", "filter_manual_table"), x, y + 34 * scale, 220 * scale, 140 * scale) || this.drawMemoryTableFallback(x, y + 12 * scale, scale * 1.35);
-      this.drawLabisImage(labisAssetPath("et", "sitting_reading"), x - 82 * scale, y + 38 * scale, 98 * scale, 120 * scale) || this.drawEchoHuman(x - 82 * scale, y + 20 * scale, scale * 1.35, "#202020", false);
-      this.drawLabisImage(labisAssetPath("mom", "sitting"), x + 84 * scale, y + 38 * scale, 98 * scale, 120 * scale) || this.drawEchoHuman(x + 84 * scale, y + 20 * scale, scale * 1.35, "#6d553d", false);
+      this.drawLabisImage(labisAssetPath("prop", "filter_manual_table"), x, y + 44 * scale, 286 * scale, 182 * scale) || this.drawMemoryTableFallback(x, y + 16 * scale, scale * 1.7);
+      this.drawLabisImage(labisAssetPath("et", "sitting_reading"), x - 110 * scale, y + 50 * scale, 136 * scale, 166 * scale) || this.drawEchoHuman(x - 110 * scale, y + 28 * scale, scale * 1.8, "#202020", false);
+      this.drawLabisImage(labisAssetPath("mom", "sitting"), x + 110 * scale, y + 50 * scale, 136 * scale, 166 * scale) || this.drawEchoHuman(x + 110 * scale, y + 28 * scale, scale * 1.8, "#6d553d", false);
     }
     this.ctx.restore();
   }

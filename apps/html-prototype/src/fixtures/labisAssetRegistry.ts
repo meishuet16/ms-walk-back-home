@@ -10,8 +10,8 @@ const labisActors: LabisAssetRegistry = {
     ride_happy: "assets/labis/et-motor-happy.png",
     look_back_happy: "assets/labis/et-motor-lookback.png",
     phone: "assets/labis/et-phone.png",
-    photo_smug: "assets/labis/et-photo-smug.png",
-    haircut_happy: "assets/labis/et-haircut-happy.png",
+    photo_smug: "assets/labis/et-photo-smugs.png",
+    haircut_happy: "assets/labis/et-haircut.png",
     sitting_reading: "assets/labis/et-filter-manual.png"
   },
   ms: {
@@ -27,9 +27,9 @@ const labisActors: LabisAssetRegistry = {
     sitting: "assets/labis/mom-filter-manual.png"
   },
   prop: {
-    chicken_porridge: "assets/labis/props/chicken-porridge.png",
-    fried_noodles: "assets/labis/props/fried-noodles.png",
-    badminton: "assets/labis/props/badminton.png",
+    chicken_porridge: "assets/labis/chicken-porridge.png",
+    fried_noodles: "assets/labis/fried-noodles.png",
+    badminton: "assets/labis/badminton.png",
     filter_manual_table: "assets/labis/table-filter-manual.png"
   }
 };

@@ -7,8 +7,12 @@ import { emptyTendencies } from "../src/systems/TendencySystem.js";
 
 test("labis production assets are referenced semantically and stay local-only paths", () => {
   assert.equal(labisAssetPath("et", "ride_happy"), "assets/labis/et-motor-happy.png");
+  assert.equal(labisAssetPath("et", "photo_smug"), "assets/labis/et-photo-smugs.png");
+  assert.equal(labisAssetPath("et", "haircut_happy"), "assets/labis/et-haircut.png");
   assert.equal(labisAssetPath("ms", "confused"), "assets/labis/ms-confuse.png");
-  assert.equal(labisAssetPath("prop", "chicken_porridge"), "assets/labis/props/chicken-porridge.png");
+  assert.equal(labisAssetPath("prop", "chicken_porridge"), "assets/labis/chicken-porridge.png");
+  assert.equal(labisAssetPath("prop", "fried_noodles"), "assets/labis/fried-noodles.png");
+  assert.equal(labisAssetPath("prop", "badminton"), "assets/labis/badminton.png");
   assert.equal(labisAssetPath("prop", "missing"), undefined);
   assert.ok(labisProductionAssetPaths.every((path) => path.startsWith("assets/labis/")));
   assert.ok(labisProductionAssetPaths.includes(labisAssetManifest.chickenCake));
