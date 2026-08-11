@@ -1196,12 +1196,33 @@ canvas {
   background: rgba(255, 248, 232, .9);
   color: #2f2117;
 }
+.timeline-toolbar option:disabled {
+  color: rgba(84, 74, 62, .42);
+}
+.timeline-toolbar input.no-results {
+  color: rgba(47, 33, 23, .48);
+  background: rgba(226, 218, 202, .68);
+}
+.timeline-year-input {
+  width: 86px;
+  appearance: textfield;
+}
+.timeline-year-input::-webkit-outer-spin-button,
+.timeline-year-input::-webkit-inner-spin-button {
+  margin: 0;
+  appearance: none;
+}
 .timeline-search {
   flex: 1 1 230px;
 }
 .timeline-search input {
   width: 100%;
   min-width: 180px;
+}
+.timeline-feedback {
+  flex: 1 1 100%;
+  color: #f8d99b;
+  font-size: 13px;
 }
 .timeline-entry {
   position: relative;

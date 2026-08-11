@@ -1,4 +1,4 @@
-import type { DiaryEntry } from "../types.js";
+import type { DiaryEntry, MemoryKind } from "../types.js";
 import { sortDiaryEntriesForTimeline, type DiaryTimelineSort } from "./DiaryImport.js";
 
 export type JournalMonth = {
@@ -110,10 +110,21 @@ export function searchJournalEntries(entries: DiaryEntry[], query: string): Diar
   });
 }
 
-export function makeTimelineMonthView(month: JournalMonth, sort: DiaryTimelineSort, query = ""): JournalMonth {
+export type TimelineMemoryKindFilter = "all" | MemoryKind;
+
+export function filterJournalEntries(entries: DiaryEntry[], options: { query?: string; memoryKind?: TimelineMemoryKindFilter; date?: string } = {}): DiaryEntry[] {
+  const searched = searchJournalEntries(entries, options.query ?? "");
+  return searched.filter((entry) => {
+    if (options.memoryKind && options.memoryKind !== "all" && entry.memoryKind !== options.memoryKind) return false;
+    if (options.date && entry.date !== options.date) return false;
+    return true;
+  });
+}
+
+export function makeTimelineMonthView(month: JournalMonth, sort: DiaryTimelineSort, query = "", memoryKind: TimelineMemoryKindFilter = "all", date = ""): JournalMonth {
   return {
     ...month,
-    entries: sortDiaryEntriesForTimeline(searchJournalEntries(month.entries, query), sort)
+    entries: sortDiaryEntriesForTimeline(filterJournalEntries(month.entries, { query, memoryKind, date }), sort)
   };
 }
 

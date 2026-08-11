@@ -50,16 +50,6 @@ test("timeline defaults to date descending and can sort ascending", () => {
   assert.deepEqual(getDiaryTimeline(library, "date-asc").map((entry) => entry.date), ["2026-08-09", "2026-08-10", "2026-08-11"]);
 });
 
-test("timeline can sort by memory classification", () => {
-  const diary = makeDiaryEntry("2026-08-09", "Diary", "A.", undefined, "diary");
-  const fragment = makeDiaryEntry("2026-08-11", "Fragment", "B.", undefined, "fragment");
-  const chapter = makeDiaryEntry("2026-08-10", "Chapter", "C.", undefined, "chapter");
-  const library = createDiaryLibrary([diary, fragment, chapter]);
-
-  assert.deepEqual(getDiaryTimeline(library, "kind-asc").map((entry) => entry.memoryKind), ["chapter", "fragment", "diary"]);
-  assert.deepEqual(getDiaryTimeline(library, "kind-desc").map((entry) => entry.memoryKind), ["diary", "fragment", "chapter"]);
-});
-
 test("bulk deleting selected diary ids clears multiple entries at once", () => {
   const keep = makeDiaryEntry("2026-08-09", "Keep", "A.");
   const removeOne = makeDiaryEntry("2026-08-10", "Remove One", "B.");

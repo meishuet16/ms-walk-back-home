@@ -14,7 +14,7 @@ import { makeDiaryEntry, parseDiaryImport, updateDiaryMemoryKind, type DiaryFore
 import { DialogueSystem } from "./systems/DialogueSystem.js";
 import { resolveChapterReflection, type Ending } from "./systems/EndingResolver.js";
 import { InputManager } from "./systems/InputManager.js";
-import { adjacentMonthKey, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, selectedOrLatestMonth, visibleTimelineEntries, type JournalMonth, type MonthlyJournalPdfPage } from "./systems/JournalModel.js";
+import { adjacentMonthKey, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, selectedOrLatestMonth, visibleTimelineEntries, type JournalMonth, type MonthlyJournalPdfPage, type TimelineMemoryKindFilter } from "./systems/JournalModel.js";
 import { MusicBlobStore } from "./systems/MusicBlobStore.js";
 import { ParticleSystem } from "./systems/ParticleSystem.js";
 import { activeLyricIndexAt, clampLyricsOverlay, createDefaultPersonalPlayerState, filterAndSortMusic, isBuiltInTrackId, nextTrackIdForPlayback, normalizePlaybackMode, parseLrc, personalMusicShouldPlayInScene } from "./systems/PersonalMusic.js";
@@ -120,6 +120,8 @@ export class WalkBackHomeApp {
   private selectedTimelineEntryIds = new Set<string>();
   private timelineSort: DiaryTimelineSort = "date-desc";
   private timelineSearch = "";
+  private timelineKindFilter: TimelineMemoryKindFilter = "all";
+  private timelineDateFilter = "";
   private journalMode: "timeline" | "books" | "reader" = "timeline";
   private selectedJournalMonthKey = "";
   private timelineVisibleCount = journalBatchSize;
@@ -247,6 +249,8 @@ export class WalkBackHomeApp {
     if (action === "save-diary-entry") this.saveDiaryEntry(target.dataset.id);
     if (action === "edit-diary-entry") this.showDiaryEditor(target.dataset.id);
     if (action === "delete-diary-entry") this.deleteDiaryEntry(target.dataset.id ?? "");
+    if (action === "timeline-apply-filters") this.applyTimelineFilters();
+    if (action === "timeline-clear-filters") this.clearTimelineFilters();
     if (action === "timeline-select-all") this.selectAllTimelineEntries();
     if (action === "timeline-clear-selected") this.clearTimelineSelection();
     if (action === "timeline-delete-selected") this.deleteSelectedTimelineEntries();
@@ -1533,8 +1537,9 @@ export class WalkBackHomeApp {
       </article>`;
     }).join("");
     const showMore = hasMoreTimelineEntries(month, this.timelineVisibleCount) ? `<button class="show-more" data-action="journal-show-more">Show More</button>` : "";
-    const empty = `<div class="journal-empty"><p>${this.timelineSearch.trim() ? "No diary matched that search." : "Nothing was written here."}</p><button data-action="new-diary-entry">Create New Journal</button></div>`;
-    this.overlay.innerHTML = `<div class="modal game-panel timeline-panel journal-panel">${this.journalHeader("Timeline", month)}<div class="timeline-toolbar"><label>Sort<select id="timeline-sort"><option value="date-desc" ${this.timelineSort === "date-desc" ? "selected" : ""}>Newest first</option><option value="date-asc" ${this.timelineSort === "date-asc" ? "selected" : ""}>Oldest first</option><option value="title-asc" ${this.timelineSort === "title-asc" ? "selected" : ""}>Title A-Z</option><option value="kind-asc" ${this.timelineSort === "kind-asc" ? "selected" : ""}>Memory chapters first</option><option value="kind-desc" ${this.timelineSort === "kind-desc" ? "selected" : ""}>Diary only first</option></select></label><label>Month<input id="timeline-month-picker" type="month" value="${this.escapeHtml(this.selectedJournalMonthKey || month.key)}"></label><label class="timeline-search">Search<input id="timeline-search" type="search" placeholder="keyword, title, place..." value="${this.escapeHtml(this.timelineSearch)}"></label><span>${this.selectedTimelineEntryIds.size} selected</span><button data-action="timeline-select-all">Select All</button><button data-action="timeline-clear-selected">Clear Selection</button><button data-action="timeline-delete-selected">Delete Selected</button></div><div class="timeline-list">${rows || empty}</div>${showMore}</div>`;
+    const noResult = this.timelineSearch.trim() || this.timelineKindFilter !== "all" || this.timelineDateFilter;
+    const empty = `<div class="journal-empty"><p>${noResult ? "No diary matched these filters." : "Nothing was written here."}</p><button data-action="new-diary-entry">Create New Journal</button></div>`;
+    this.overlay.innerHTML = `<div class="modal game-panel timeline-panel journal-panel">${this.journalHeader("Timeline", month)}${this.renderTimelineFilters(month)}<div class="timeline-list">${rows || empty}</div>${showMore}</div>`;
     if (options.restoreScrollTop !== undefined) {
       requestAnimationFrame(() => {
         const panel = this.overlay.querySelector<HTMLElement>(".journal-panel");
@@ -1551,7 +1556,73 @@ export class WalkBackHomeApp {
   }
 
   private currentTimelineMonthView(): JournalMonth {
-    return makeTimelineMonthView(this.currentJournalMonth(), this.timelineSort, this.timelineSearch);
+    return makeTimelineMonthView(this.currentJournalMonth(), this.timelineSort, this.timelineSearch, this.timelineKindFilter, this.timelineDateFilter);
+  }
+
+  private renderTimelineFilters(month: JournalMonth): string {
+    const [yearValue, monthValue] = (this.selectedJournalMonthKey || month.key).split("-");
+    const dayValue = this.timelineDateFilter ? this.timelineDateFilter.slice(8, 10) : "";
+    const monthOptions = this.renderTimelineMonthOptions(Number(yearValue), Number(monthValue));
+    const dayOptions = this.renderTimelineDayOptions(Number(yearValue), Number(monthValue), dayValue);
+    const feedback = this.timelineFilterFeedback(month);
+    const yearClass = this.timelineYearHasEntries(Number(yearValue)) ? "" : " no-results";
+    return `<div class="timeline-toolbar">
+      <label>Sort<select id="timeline-sort"><option value="date-desc" ${this.timelineSort === "date-desc" ? "selected" : ""}>Newest first</option><option value="date-asc" ${this.timelineSort === "date-asc" ? "selected" : ""}>Oldest first</option><option value="title-asc" ${this.timelineSort === "title-asc" ? "selected" : ""}>Title A-Z</option></select></label>
+      <label>Filter<select id="timeline-kind-filter"><option value="all" ${this.timelineKindFilter === "all" ? "selected" : ""}>All memories</option><option value="diary" ${this.timelineKindFilter === "diary" ? "selected" : ""}>Diary only</option><option value="fragment" ${this.timelineKindFilter === "fragment" ? "selected" : ""}>Memory Fragment</option><option value="chapter" ${this.timelineKindFilter === "chapter" ? "selected" : ""}>Memory Chapter</option></select></label>
+      <label>Year<input id="timeline-year-input" class="timeline-year-input${yearClass}" inputmode="numeric" pattern="[0-9]*" value="${this.escapeHtml(yearValue || String(month.year))}" aria-label="Timeline year"></label>
+      <label>Month<select id="timeline-month-select">${monthOptions}</select></label>
+      <label>Date<select id="timeline-day-select">${dayOptions}</select></label>
+      <label class="timeline-search">Search<input id="timeline-search" type="search" placeholder="keyword, title, place..." value="${this.escapeHtml(this.timelineSearch)}"></label>
+      <button data-action="timeline-apply-filters">Done</button>
+      <button data-action="timeline-clear-filters">Clear Filters</button>
+      <span class="timeline-feedback">${this.escapeHtml(feedback)}</span>
+      <span>${this.selectedTimelineEntryIds.size} selected</span>
+      <button data-action="timeline-select-all">Select All</button>
+      <button data-action="timeline-clear-selected">Clear Selection</button>
+      <button data-action="timeline-delete-selected">Delete Selected</button>
+    </div>`;
+  }
+
+  private renderTimelineMonthOptions(year: number, selectedMonth: number): string {
+    const names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return names.map((name, index) => {
+      const month = index + 1;
+      const value = String(month).padStart(2, "0");
+      const hasEntries = this.timelineMonthHasEntries(year, month);
+      return `<option value="${value}" ${month === selectedMonth ? "selected" : ""} ${hasEntries ? "" : "disabled"}>${name}${hasEntries ? "" : " · no result"}</option>`;
+    }).join("");
+  }
+
+  private renderTimelineDayOptions(year: number, month: number, selectedDay: string): string {
+    const total = new Date(year, month, 0).getDate();
+    const days = Array.from({ length: Number.isFinite(total) ? total : 31 }, (_, index) => index + 1);
+    return `<option value="" ${selectedDay ? "" : "selected"}>All dates</option>${days.map((day) => {
+      const value = String(day).padStart(2, "0");
+      const hasEntries = this.timelineDateHasEntries(`${year}-${String(month).padStart(2, "0")}-${value}`);
+      return `<option value="${value}" ${value === selectedDay ? "selected" : ""} ${hasEntries ? "" : "disabled"}>${day}${hasEntries ? "" : " · no result"}</option>`;
+    }).join("")}`;
+  }
+
+  private timelineYearHasEntries(year: number): boolean {
+    return this.diaryEntries.some((entry) => entry.date.startsWith(`${year}-`));
+  }
+
+  private timelineMonthHasEntries(year: number, month: number): boolean {
+    return this.diaryEntries.some((entry) => entry.date.startsWith(`${year}-${String(month).padStart(2, "0")}`));
+  }
+
+  private timelineDateHasEntries(date: string): boolean {
+    return this.diaryEntries.some((entry) => entry.date === date);
+  }
+
+  private timelineFilterFeedback(month: JournalMonth): string {
+    const filters = [
+      this.timelineKindFilter === "all" ? "All memories" : this.timelineKindFilter === "diary" ? "Diary only" : this.timelineKindFilter === "fragment" ? "Memory Fragment" : "Memory Chapter",
+      this.timelineDateFilter || month.key,
+      this.timelineSearch.trim() ? `Search: ${this.timelineSearch.trim()}` : ""
+    ].filter(Boolean);
+    const count = month.entries.length;
+    return `${count} result${count === 1 ? "" : "s"} · ${filters.join(" · ")}`;
   }
 
   private journalHeader(active: "Timeline" | "Books" | "Reader", month: JournalMonth): string {
@@ -2018,17 +2089,8 @@ export class WalkBackHomeApp {
 
   private handleInput(event: Event): void {
     const target = event.target as HTMLElement;
-    if (target instanceof HTMLInputElement && target.id === "timeline-search") {
-      this.timelineSearch = target.value;
-      this.timelineVisibleCount = journalBatchSize;
-      this.selectedTimelineEntryIds.clear();
-      this.showTimeline();
-      requestAnimationFrame(() => {
-        const search = this.overlay.querySelector<HTMLInputElement>("#timeline-search");
-        if (!search) return;
-        search.focus();
-        search.setSelectionRange(search.value.length, search.value.length);
-      });
+    if (target instanceof HTMLInputElement && target.id === "timeline-year-input") {
+      this.refreshTimelineDateSelectors();
       return;
     }
     if (target instanceof HTMLInputElement && target.id === "music-search") {
@@ -2145,6 +2207,56 @@ export class WalkBackHomeApp {
     this.autosave();
   }
 
+  private applyTimelineFilters(): void {
+    const sort = this.overlay.querySelector<HTMLSelectElement>("#timeline-sort")?.value as DiaryTimelineSort | undefined;
+    const kind = this.overlay.querySelector<HTMLSelectElement>("#timeline-kind-filter")?.value as TimelineMemoryKindFilter | undefined;
+    const yearInput = this.overlay.querySelector<HTMLInputElement>("#timeline-year-input");
+    const monthInput = this.overlay.querySelector<HTMLSelectElement>("#timeline-month-select");
+    const dayInput = this.overlay.querySelector<HTMLSelectElement>("#timeline-day-select");
+    const searchInput = this.overlay.querySelector<HTMLInputElement>("#timeline-search");
+    const year = Number(yearInput?.value.trim());
+    const month = monthInput?.value || "01";
+    if (!Number.isInteger(year) || year < 1900 || year > 2100) {
+      this.showToast("Type a year between 1900 and 2100");
+      return;
+    }
+    this.timelineSort = sort === "date-asc" || sort === "title-asc" ? sort : "date-desc";
+    this.timelineKindFilter = kind === "diary" || kind === "fragment" || kind === "chapter" ? kind : "all";
+    this.selectedJournalMonthKey = `${year}-${month}`;
+    this.timelineDateFilter = dayInput?.value ? `${this.selectedJournalMonthKey}-${dayInput.value}` : "";
+    this.timelineSearch = searchInput?.value.trim() ?? "";
+    this.timelineVisibleCount = journalBatchSize;
+    this.selectedTimelineEntryIds.clear();
+    const nextMonth = makeTimelineMonthView(this.currentJournalMonth(), this.timelineSort, this.timelineSearch, this.timelineKindFilter, this.timelineDateFilter);
+    this.showTimeline();
+    this.showToast(nextMonth.entries.length ? `Showing ${nextMonth.entries.length} result${nextMonth.entries.length === 1 ? "" : "s"}` : "No result for those filters");
+  }
+
+  private clearTimelineFilters(): void {
+    this.timelineSort = "date-desc";
+    this.timelineKindFilter = "all";
+    this.timelineDateFilter = "";
+    this.timelineSearch = "";
+    this.timelineVisibleCount = journalBatchSize;
+    this.selectedTimelineEntryIds.clear();
+    this.showTimeline();
+    this.showToast("Timeline filters cleared");
+  }
+
+  private refreshTimelineDateSelectors(): void {
+    const yearInput = this.overlay.querySelector<HTMLInputElement>("#timeline-year-input");
+    const monthInput = this.overlay.querySelector<HTMLSelectElement>("#timeline-month-select");
+    const dayInput = this.overlay.querySelector<HTMLSelectElement>("#timeline-day-select");
+    if (!yearInput || !monthInput || !dayInput) return;
+    const year = Number(yearInput.value.trim());
+    const selectedMonth = Number(monthInput.value || "1");
+    if (!Number.isInteger(year)) return;
+    yearInput.classList.toggle("no-results", !this.timelineYearHasEntries(year));
+    monthInput.innerHTML = this.renderTimelineMonthOptions(year, selectedMonth);
+    const activeMonth = monthInput.value || String(selectedMonth).padStart(2, "0");
+    dayInput.innerHTML = this.renderTimelineDayOptions(year, Number(activeMonth), dayInput.value);
+  }
+
   private selectAllTimelineEntries(): void {
     this.selectedTimelineEntryIds = new Set(visibleTimelineEntries(this.currentTimelineMonthView(), this.timelineVisibleCount).map((entry) => entry.id));
     this.showTimeline();
@@ -2245,19 +2357,8 @@ export class WalkBackHomeApp {
 
   private async handleChange(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
-    const timelineSort = input.id === "timeline-sort" ? (input as unknown as HTMLSelectElement).value as DiaryTimelineSort : "";
-    if (timelineSort) {
-      this.timelineSort = timelineSort;
-      this.timelineVisibleCount = journalBatchSize;
-      this.selectedTimelineEntryIds.clear();
-      this.showTimeline();
-      return;
-    }
-    if (input.id === "timeline-month-picker") {
-      this.selectedJournalMonthKey = input.value;
-      this.timelineVisibleCount = journalBatchSize;
-      this.selectedTimelineEntryIds.clear();
-      this.showTimeline();
+    if (input.id === "timeline-month-select") {
+      this.refreshTimelineDateSelectors();
       return;
     }
     const timelineKindId = input.dataset.timelineKind;

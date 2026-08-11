@@ -11,7 +11,7 @@ export type DiaryTimelineItem = {
   hasScrapbookLayout: boolean;
 };
 
-export type DiaryTimelineSort = "date-desc" | "date-asc" | "title-asc" | "kind-asc" | "kind-desc";
+export type DiaryTimelineSort = "date-desc" | "date-asc" | "title-asc";
 
 export type DiaryForestMemory =
   | {
@@ -40,7 +40,6 @@ export type DiaryForestMemory =
 export type DiaryDoor = Extract<DiaryForestMemory, { kind: "chapter" }>;
 
 const authoredChapterIds = new Set(["bakery-day", "labis-motor-day"]);
-const memoryKindSortRank: Record<MemoryKind, number> = { chapter: 0, fragment: 1, diary: 2 };
 
 const datePositionPool = [
   { x: 530, y: 205 },
@@ -74,14 +73,6 @@ export function sortDiaryEntriesForTimeline(entries: DiaryEntry[], sort: DiaryTi
     const newestFirst = b.date.localeCompare(a.date) || b.id.localeCompare(a.id);
     if (sort === "date-asc") return a.date.localeCompare(b.date) || a.id.localeCompare(b.id);
     if (sort === "title-asc") return a.title.localeCompare(b.title) || newestFirst;
-    if (sort === "kind-asc") {
-      const kind = memoryKindSortRank[a.memoryKind] - memoryKindSortRank[b.memoryKind];
-      return kind || newestFirst;
-    }
-    if (sort === "kind-desc") {
-      const kind = memoryKindSortRank[b.memoryKind] - memoryKindSortRank[a.memoryKind];
-      return kind || newestFirst;
-    }
     return newestFirst;
   });
 }

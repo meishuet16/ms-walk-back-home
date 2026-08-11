@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createDiaryLibrary } from "../src/systems/DiaryLibrary.js";
 import { makeDiaryEntry } from "../src/systems/DiaryImport.js";
-import { deriveJournalMonths, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, searchJournalEntries, selectedOrLatestMonth, visibleTimelineEntries } from "../src/systems/JournalModel.js";
+import { deriveJournalMonths, filterJournalEntries, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, searchJournalEntries, selectedOrLatestMonth, visibleTimelineEntries } from "../src/systems/JournalModel.js";
 
 function entry(date: string, title: string) {
   return makeDiaryEntry(date, title, `${title} body`, `entry-${date}-${title}`);
@@ -36,7 +36,9 @@ test("timeline month view filters by keyword before batching", () => {
   const month = selectedOrLatestMonth(entries, "2026-07");
 
   assert.deepEqual(searchJournalEntries(entries, "labis").map((item) => item.id), ["entry-labis"]);
-  assert.deepEqual(makeTimelineMonthView(month, "kind-asc", "点").entries.map((item) => item.id), ["entry-labis"]);
+  assert.deepEqual(makeTimelineMonthView(month, "date-desc", "点", "chapter").entries.map((item) => item.id), ["entry-labis"]);
+  assert.deepEqual(filterJournalEntries(entries, { memoryKind: "fragment" }).map((item) => item.id), ["entry-rain"]);
+  assert.deepEqual(makeTimelineMonthView(month, "date-desc", "", "all", "2026-07-01").entries.map((item) => item.id), ["entry-market"]);
 });
 
 test("monthly books and pdf export are derived on demand", async () => {
