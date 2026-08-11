@@ -1,5 +1,7 @@
 import { bakeryChapter } from "./fixtures/chapterPlan.js";
 import { canStartLabisMotorMemory, labisBlockers, labisInteractionForPoint, labisMotorMemoryActions, labisSpawn } from "./fixtures/labisMotorMemory.js";
+import { labisAssetManifest, labisAssetPath, labisProductionAssetPaths } from "./fixtures/labisAssetRegistry.js";
+import { labisChoicePoints, labisEchoes, resolveLabisMemoryReflection, type LabisChoicePoint, type LabisEcho } from "./fixtures/labisMemoryEchoes.js";
 import type { ChapterProgress, Choice, DiaryEntry, DiaryLibraryState, JourneyState, MemoryKind, RoomJourneyState, SceneId, Tendencies } from "./types.js";
 import { AudioManager } from "./systems/AudioManager.js";
 import { chapterRegistry, forestEntries, routeForestEntry, type AuthoredForestEntry } from "./systems/ChapterRegistry.js";
@@ -49,6 +51,9 @@ import type { MusicScene } from "./systems/SceneMusic.js";
 import { emptyTendencies } from "./systems/TendencySystem.js";
 
 type ForestNode = AuthoredForestEntry | DiaryForestMemory;
+type LabisDialogueLine = { speaker: string; text: string };
+type LabisDialogueAfter = "motor-choice" | "photo-choice" | "filter-choice" | "finish-echo" | "show-reflection" | "finish-chicken-cake" | null;
+type LabisOverlayMode = "dialogue" | "choice" | "vignette" | "reflection" | null;
 
 const assets = {
   forest: "assets/forest.png",
@@ -124,6 +129,15 @@ export class WalkBackHomeApp {
   private labisReplayMode = false;
   private labisLessonChoiceIndex = -1;
   private labisLessonLeadLines: string[] = [];
+  private labisOverlayMode: LabisOverlayMode = null;
+  private labisDialogueQueue: LabisDialogueLine[] = [];
+  private labisDialogueIndex = 0;
+  private labisDialogueAfter: LabisDialogueAfter = null;
+  private labisActiveChoice: LabisChoicePoint["id"] | null = null;
+  private labisActiveEcho: LabisEcho | null = null;
+  private labisVignetteStartedAt = 0;
+  private labisReflectionLines: string[] = [];
+  private labisImages = new Map<string, HTMLImageElement>();
   private completedMemoryEvents = new Set<string>();
   private ending: Ending | null = null;
 
@@ -172,6 +186,7 @@ export class WalkBackHomeApp {
       this.images.room.src = assets.roomFallback;
     }, { once: true });
     this.images.room.src = assets.room;
+    this.preloadLabisAssets();
     this.audio.setVolume(this.settings.volume);
     void this.audio.enable();
     document.addEventListener("visibilitychange", () => {
@@ -249,10 +264,22 @@ export class WalkBackHomeApp {
       this.enterCurrentMemory();
     }
     if (action === "labis-replay") this.startLabisMemory(true);
-    if (action === "labis-lesson-choice") this.chooseLabisLessonChoice(target.dataset.choice ?? "", Number(target.dataset.node ?? 0));
-    if (action === "labis-reflection-choice") this.chooseLabisReflection(target.dataset.choice ?? "");
+    if (action === "labis-dialogue-next") this.advanceLabisDialogue();
+    if (action === "labis-choice") this.chooseLabisChoice(target.dataset.choice ?? "");
+    if (action === "labis-vignette-close") this.finishLabisEcho(true);
+    if (action === "labis-reflection-close") this.closeLabisReflection();
     if (action === "finish-memory") this.finishBakery();
     if (action === "choice") this.choose(target.dataset.choice ?? "");
+  }
+
+  private preloadLabisAssets(): void {
+    for (const src of labisProductionAssetPaths) {
+      const image = img(src);
+      image.addEventListener("error", () => {
+        this.labisImages.delete(src);
+      }, { once: true });
+      this.labisImages.set(src, image);
+    }
   }
 
   private loop(time: number): void {
@@ -356,7 +383,7 @@ export class WalkBackHomeApp {
       this.activeObject = "";
       return;
     }
-    if (this.labisLessonChoiceIndex >= 0) {
+    if (this.labisOverlayMode || this.labisLessonChoiceIndex >= 0) {
       this.activeObject = "";
       return;
     }
@@ -367,33 +394,19 @@ export class WalkBackHomeApp {
       return;
     }
     const labisInteraction = labisInteractionForPoint(this.player, this.readMemories, this.completedMemoryEvents);
+    const echo = this.availableLabisEchoAtPlayer();
     const nearExit = this.player.y > 735 || this.player.x < 135;
     const nearShop = Math.hypot(this.player.x - 1040, this.player.y - 345) < 96;
-    this.activeObject = labisInteraction || (nearShop ? "family shop" : nearExit ? "exit" : "");
+    this.activeObject = labisInteraction || echo?.prompt.replace(/^E ·\s*/, "") || (nearShop ? "family shop" : nearExit ? "exit" : "");
   }
 
   private startLabisMemory(replay: boolean): void {
-    if (!replay) {
-      this.labisReplayMode = false;
-      this.labisLessonLeadLines = [
-        "ET：你不是讲要教我驾 motor 咩",
-        "MS：你真的要驾啊",
-        "ET：要啊。我都讲几次了。",
-        "MS：等下跌倒不要赖我。",
-        "ET：不会的啦，快点。",
-        "MS：先不要乱转油。",
-        "ET：这个是油？",
-        "MS：……不然勒。",
-        "ET：哦。",
-        "ET：然后怎样。"
-      ];
-      this.showLabisLessonChoice(0);
-      return;
-    }
     this.labisCutscene = new CutsceneSystem(labisMotorMemoryActions);
     this.labisDialogueOpen = false;
     this.labisReplayMode = replay;
     this.labisLessonChoiceIndex = -1;
+    this.labisOverlayMode = null;
+    this.labisActiveChoice = null;
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
     this.showToast(replay ? "Replaying memory" : "The past appears");
@@ -418,8 +431,8 @@ export class WalkBackHomeApp {
     this.labisReplayMode = false;
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
-    this.showToast(alreadyCompleted ? "Memory replayed" : "Memory Unlocked · 第一次学会驾 motor");
-    if (!alreadyCompleted) this.showLabisReflectionDialogue();
+    this.showToast(alreadyCompleted ? "Memory replayed" : "✦ 第一次学会驾 motor · 07.19 · Labis");
+    if (!alreadyCompleted) this.showLabisChoice("motor");
     this.autosave();
   }
 
@@ -463,6 +476,8 @@ export class WalkBackHomeApp {
       return this.showToast(this.readMemories.has(this.currentMemoryKey()) ? "Walk closer to Friend A" : "Find the glowing diary memory first");
     }
     if (this.scene === "labis") {
+      if (this.labisOverlayMode === "dialogue") return this.advanceLabisDialogue();
+      if (this.labisOverlayMode === "choice" || this.labisOverlayMode === "vignette" || this.labisOverlayMode === "reflection") return;
       if (this.labisCutscene?.currentDialogue) {
         this.labisCutscene.advanceDialogue();
         this.labisDialogueOpen = false;
@@ -474,6 +489,8 @@ export class WalkBackHomeApp {
       if (this.activeObject === "exit") return this.returnToForest();
       if (this.activeObject === "diary memory") return this.showDiaryMemory();
       if (this.activeObject === "motor memory") return this.showLabisMemoryPoint();
+      const echo = this.availableLabisEchoAtPlayer();
+      if (echo) return this.startLabisEcho(echo);
       if (this.activeObject === "family shop") return this.inspectLabisShop();
       return this.showToast("Walk through the open road");
     }
@@ -668,66 +685,184 @@ export class WalkBackHomeApp {
   }
 
   private showLabisReflectionDialogue(): void {
-    this.showLabisLessonChoice(2);
+    this.showLabisChoice("motor");
   }
 
-  private showLabisLessonChoice(index: number): void {
-    const chapter = chapterRegistry["labis-motor-day"];
-    const node = chapter?.dialogue[index];
-    if (!node) return this.showChapterEndingQuote("after the motor lesson", "The afternoon stays ordinary");
-    this.labisLessonChoiceIndex = index;
-    const setup = this.labisLessonLeadLines.length ? `<p class="memory-line">${this.labisLessonLeadLines.map((line) => this.escapeHtml(line)).join("<br>")}</p>` : "";
-    const action = index === 2 ? "labis-reflection-choice" : "labis-lesson-choice";
-    const small = index === 2 ? "reflection" : "motor";
-    const choices = node.choices?.map((choice) => `<button data-action="${action}" data-node="${index}" data-choice="${this.escapeHtml(choice.id)}"><span>${this.escapeHtml(choice.label)}</span><small>${small}</small></button>`).join("") ?? "";
-    this.overlay.classList.add("dialogue-open");
-    this.overlay.innerHTML = `<div class="vn labis-vn"><div class="vn-portrait labis-portrait et-ms"></div><div><h3>${this.escapeHtml(node.speaker)}</h3>${setup}<p>${this.escapeHtml(node.text)}</p><div class="choices">${choices}</div></div></div>`;
+  private showLabisChoice(id: LabisChoicePoint["id"]): void {
+    const point = labisChoicePoints.find((item) => item.id === id);
+    if (!point) return;
+    this.labisOverlayMode = "choice";
+    this.labisActiveChoice = id;
+    this.labisActiveEcho = null;
+    const choices = point.choices.map((choice) => `<button class="labis-choice-card" data-action="labis-choice" data-choice="${this.escapeHtml(choice.id)}">${this.escapeHtml(choice.label)}</button>`).join("");
+    this.overlay.classList.remove("dialogue-open");
+    this.overlay.innerHTML = `<div class="labis-choice-ui"><p>${this.escapeHtml(point.prompt)}</p><div>${choices}</div></div>`;
     this.focusStage();
   }
 
-  private chooseLabisLessonChoice(choiceId: string, nodeIndex: number): void {
-    const chapter = chapterRegistry["labis-motor-day"];
-    const node = chapter?.dialogue[nodeIndex];
-    const choice = node?.choices?.find((item) => item.id === choiceId);
+  private chooseLabisChoice(choiceId: string): void {
+    if (!this.labisActiveChoice) return;
+    const point = labisChoicePoints.find((item) => item.id === this.labisActiveChoice);
+    const choice = point?.choices.find((item) => item.id === choiceId);
     if (!choice) return;
     this.recordLabisChoice(choice);
-    this.labisLessonLeadLines = this.responseLines(choice.response);
-    if (nodeIndex === 0) {
-      this.labisLessonLeadLines.push("ET 慢慢开出去。");
-      this.showLabisLessonChoice(1);
-      return;
-    }
-    this.labisLessonLeadLines.push(
-      "ET 骑到另一边，转回来，停下。",
-      "ET：欸。",
-      "MS：做么。",
-      "ET：我会了。",
-      "MS：会了咯。",
-      "ET：嘿嘿。",
-      "ET：我觉得这个是我来这里最大的收获。",
-      "MS：驾 motor？",
-      "ET：嗯。"
-    );
-    this.labisLessonChoiceIndex = -1;
-    this.labisCutscene = new CutsceneSystem(labisMotorMemoryActions);
-    this.labisDialogueOpen = false;
-    this.overlay.classList.remove("dialogue-open");
-    this.overlay.innerHTML = "";
-    this.showToast("Motor starts moving");
+    const after: LabisDialogueAfter = this.labisActiveChoice === "filter" ? "show-reflection" : "finish-echo";
+    this.labisActiveChoice = null;
+    this.showLabisDialogueQueue(this.responseLines(choice.response).map((line) => this.lineToDialogue(line)), after);
     this.autosave();
   }
 
-  private chooseLabisReflection(choiceId: string): void {
-    const chapter = chapterRegistry["labis-motor-day"];
-    const node = chapter?.dialogue[2];
-    const choice = node?.choices?.find((item) => item.id === choiceId);
-    const leadLines: string[] = [];
-    if (choice) {
-      this.recordLabisChoice(choice);
-      leadLines.push(...this.responseLines(choice.response));
+  private showLabisDialogueQueue(lines: LabisDialogueLine[], after: LabisDialogueAfter): void {
+    this.labisDialogueQueue = lines;
+    this.labisDialogueIndex = 0;
+    this.labisDialogueAfter = after;
+    this.labisOverlayMode = "dialogue";
+    this.renderLabisDialogue();
+  }
+
+  private lineToDialogue(line: string): LabisDialogueLine {
+    const match = /^([^：:]+)[：:]\s*(.+)$/.exec(line);
+    if (match) return { speaker: match[1], text: match[2] };
+    return { speaker: "Muji", text: line };
+  }
+
+  private renderLabisDialogue(): void {
+    const line = this.labisDialogueQueue[this.labisDialogueIndex];
+    if (!line) return this.finishLabisDialogueQueue();
+    this.overlay.classList.add("dialogue-open");
+    this.overlay.innerHTML = `<div class="rpg-dialogue"><span>${this.escapeHtml(line.speaker)}</span><p>${this.escapeHtml(line.text)}</p><button data-action="labis-dialogue-next" aria-label="Continue">▼</button></div>`;
+    this.focusStage();
+  }
+
+  private advanceLabisDialogue(): void {
+    if (this.labisOverlayMode !== "dialogue") return;
+    this.labisDialogueIndex += 1;
+    this.renderLabisDialogue();
+  }
+
+  private finishLabisDialogueQueue(): void {
+    const after = this.labisDialogueAfter;
+    this.labisDialogueQueue = [];
+    this.labisDialogueIndex = 0;
+    this.labisDialogueAfter = null;
+    this.labisOverlayMode = null;
+    this.overlay.classList.remove("dialogue-open");
+    this.overlay.innerHTML = "";
+    if (after === "motor-choice") this.showLabisChoice("motor");
+    if (after === "photo-choice") this.showLabisChoice("photo");
+    if (after === "filter-choice") this.showLabisChoice("filter");
+    if (after === "finish-echo") this.finishLabisEcho();
+    if (after === "show-reflection") this.showLabisMemoryReflection();
+    if (after === "finish-chicken-cake") this.finishLabisEcho(true);
+  }
+
+  private availableLabisEchoAtPlayer(): LabisEcho | null {
+    return labisEchoes.find((echo) => this.canUseLabisEcho(echo) && Math.hypot(this.player.x - echo.x, this.player.y - echo.y) < echo.radius) ?? null;
+  }
+
+  private canUseLabisEcho(echo: LabisEcho): boolean {
+    if (!echo.repeatable && this.completedMemoryEvents.has(echo.id)) return false;
+    if (echo.id === "july19-chicken-cake" && this.completedLabisOptionalCount() < 3) return false;
+    return (echo.requires ?? []).every((id) => this.completedMemoryEvents.has(id));
+  }
+
+  private completedLabisOptionalCount(): number {
+    return labisEchoes.filter((echo) => echo.id !== "july19-chicken-cake" && this.completedMemoryEvents.has(echo.id)).length;
+  }
+
+  private startLabisEcho(echo: LabisEcho): void {
+    this.labisActiveEcho = echo;
+    this.labisVignetteStartedAt = performance.now();
+    if (echo.id === "july19-photo-threat") {
+      return this.showLabisDialogueQueue([
+        { speaker: "ET", text: "诶？" },
+        { speaker: "ET", text: "拍起来。" },
+        { speaker: "ET", text: "以后可以威胁 MS。" },
+        { speaker: "MS", text: "蛤？" }
+      ], "photo-choice");
     }
-    this.labisLessonChoiceIndex = -1;
-    this.showChapterEndingQuote("after the motor lesson", "The afternoon stays ordinary", leadLines);
+    if (echo.id === "july19-chicken-porridge") {
+      return this.showLabisDialogueQueue([
+        { speaker: "Memory", text: "回家放了行李，我们就去阿爸阿妈店。" },
+        { speaker: "Memory", text: "吃阿爸煮的鸡粥。" }
+      ], "finish-echo");
+    }
+    if (echo.id === "july19-fried-noodles") {
+      return this.showLabisDialogueQueue([
+        { speaker: "Memory", text: "下午阿爸又炒面叫她去吃。" },
+        { speaker: "ET", text: "不是刚刚吃饱吗？" }
+      ], "finish-echo");
+    }
+    if (echo.id === "july19-haircut") {
+      return this.showLabisDialogueQueue([
+        { speaker: "Memory", text: "她也剪了头发和刘海。" },
+        { speaker: "Memory", text: "看起来很喜欢。" }
+      ], "finish-echo");
+    }
+    if (echo.id === "july19-kancil") {
+      return this.showLabisDialogueQueue([
+        { speaker: "Memory", text: "她开。" },
+        { speaker: "Memory", text: "我看路，也帮她记录。" }
+      ], "finish-echo");
+    }
+    if (echo.id === "july19-badminton") {
+      return this.showLabisDialogueQueue([
+        { speaker: "Memory", text: "啪" },
+        { speaker: "Memory", text: "傍晚我们去打了一下羽球。" }
+      ], "finish-echo");
+    }
+    if (echo.id === "july19-filter-evening") {
+      return this.showLabisDialogueQueue([
+        { speaker: "Memory", text: "她还坐在那里陪阿妈研究过滤器。" },
+        { speaker: "Muji", text: "她好像在哪里都可以自己找到事情做。" }
+      ], "filter-choice");
+    }
+    if (echo.id === "july19-chicken-cake") {
+      this.completedMemoryEvents.add(echo.id);
+      this.readMemories.add(echo.id);
+      this.labisOverlayMode = "vignette";
+      const src = labisAssetManifest.chickenCake;
+      const hasImage = this.isLabisImageReady(src);
+      this.overlay.classList.remove("dialogue-open");
+      this.overlay.innerHTML = `<div class="labis-keyframe">${hasImage ? `<img src="${src}" alt="">` : `<div class="labis-keyframe-fallback"><span>Zzz</span><strong>鸡蛋糕……</strong></div>`}<div class="sleep-bubble">鸡蛋糕……</div><div class="question-mark">?</div><p>Muji：到底梦到什么。</p><button data-action="labis-vignette-close">Close</button></div>`;
+      this.autosave();
+    }
+  }
+
+  private finishLabisEcho(keepDiscovery = false): void {
+    const echo = this.labisActiveEcho;
+    if (echo && (keepDiscovery || !this.completedMemoryEvents.has(echo.id))) {
+      this.completedMemoryEvents.add(echo.id);
+      this.readMemories.add(echo.id);
+    }
+    this.labisOverlayMode = null;
+    this.labisActiveEcho = null;
+    this.overlay.classList.remove("dialogue-open");
+    this.overlay.innerHTML = "";
+    if (echo?.id && echo.id !== "july19-chicken-cake") this.showToast(`Memory echo · ${echo.label}`);
+    this.autosave();
+  }
+
+  private showLabisMemoryReflection(): void {
+    const reflection = resolveLabisMemoryReflection(this.progressFor("labis-motor-day").tendencies);
+    const progress = markChapterDialogueComplete(this.progressFor("labis-motor-day"));
+    this.chapterProgress.set("labis-motor-day", finishChapterWalkthrough(progress, reflection.id, "accepting"));
+    this.walkedThroughMemories.add("labis-motor-day");
+    this.room.residueIds = [...new Set([...(this.room.residueIds ?? []), "labis-motor-day"])];
+    this.labisReflectionLines = reflection.lines;
+    this.labisOverlayMode = "reflection";
+    this.overlay.classList.remove("dialogue-open");
+    this.overlay.innerHTML = `<div class="labis-reflection">${reflection.lines.map((line) => `<p>${this.escapeHtml(line)}</p>`).join("")}<button data-action="labis-reflection-close">Close</button></div>`;
+    this.audio.ping("ending");
+    this.autosave();
+  }
+
+  private closeLabisReflection(): void {
+    if (this.labisOverlayMode !== "reflection") return;
+    this.labisOverlayMode = null;
+    this.labisReflectionLines = [];
+    this.overlay.innerHTML = "";
+    this.showToast("Returned to Labis");
     this.autosave();
   }
 
@@ -871,22 +1006,17 @@ export class WalkBackHomeApp {
     this.ctx.drawImage(this.images.labis, cameraX, cameraY, 960, 540, 0, 0, this.canvas.width, this.canvas.height);
     if (!this.images.labis.complete || this.images.labis.naturalWidth === 0) this.drawLabisFallback(scale);
 
-    if (this.completedMemoryEvents.has("july19-motor-learning") && !this.labisCutscene) {
-      const x = (740 - cameraX) * scale;
-      const y = (545 - cameraY) * scale;
-      const glow = this.ctx.createRadialGradient(x, y, 2, x, y, 32 * scale);
-      glow.addColorStop(0, "rgba(255, 226, 160, .38)");
-      glow.addColorStop(1, "rgba(255, 226, 160, 0)");
-      this.ctx.fillStyle = glow;
-      this.ctx.beginPath();
-      this.ctx.arc(x, y, 32 * scale, 0, Math.PI * 2);
-      this.ctx.fill();
+    if (this.labisCutscene || this.labisActiveEcho) {
+      this.ctx.fillStyle = "rgba(226, 181, 109, .10)";
+      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
+    if (!this.labisCutscene && !this.labisOverlayMode) this.drawLabisMemoryTells(cameraX, cameraY, scale, time);
+    if (this.labisActiveEcho) this.drawLabisEchoVisual(this.labisActiveEcho, cameraX, cameraY, scale, time);
 
     const actorList = this.labisCutscene ? [...this.labisCutscene.actors.values()] : [];
     const mujiScreen = { x: (this.player.x - cameraX) * scale, y: (this.player.y - cameraY) * scale };
     const drawables = [
-      ...actorList.map((actor) => ({ y: actor.y, draw: () => drawSceneActor(this.ctx, actor, cameraX, cameraY, scale) })),
+      ...actorList.map((actor) => ({ y: actor.y, draw: () => this.drawLabisSceneActor(actor, cameraX, cameraY, scale) })),
       { y: this.player.y, draw: () => this.drawMuji(mujiScreen, time, scale) }
     ].sort((a, b) => a.y - b.y);
     drawables.forEach((item) => item.draw());
@@ -907,6 +1037,131 @@ export class WalkBackHomeApp {
     this.ctx.fillRect(90 * scale, 70 * scale, 760 * scale, 210 * scale);
     this.ctx.fillStyle = "#4c6b48";
     this.ctx.fillRect(790 * scale, 65 * scale, 90 * scale, 170 * scale);
+  }
+
+  private isLabisImageReady(src?: string): boolean {
+    if (!src) return false;
+    const image = this.labisImages.get(src);
+    return Boolean(image?.complete && image.naturalWidth > 0);
+  }
+
+  private drawLabisImage(src: string | undefined, x: number, y: number, width: number, height: number): boolean {
+    if (!src) return false;
+    const image = this.labisImages.get(src);
+    if (!image?.complete || image.naturalWidth === 0) return false;
+    this.ctx.drawImage(image, x - width / 2, y - height, width, height);
+    return true;
+  }
+
+  private drawLabisSceneActor(actor: Parameters<typeof drawSceneActor>[1], cameraX: number, cameraY: number, scale: number): void {
+    const x = (actor.x - cameraX) * scale;
+    const y = (actor.y - cameraY) * scale;
+    const pose = actor.expression ?? "idle";
+    const src = actor.id === "ms" ? labisAssetPath("ms", pose) : actor.id === "motor" ? labisAssetPath("et", pose) : undefined;
+    if (this.drawLabisImage(src, x, y + 16 * scale, actor.id === "motor" ? 96 * scale : 58 * scale, actor.id === "motor" ? 86 * scale : 82 * scale)) return;
+    drawSceneActor(this.ctx, actor, cameraX, cameraY, scale);
+  }
+
+  private drawLabisMemoryTells(cameraX: number, cameraY: number, scale: number, time: number): void {
+    for (const echo of labisEchoes) {
+      if (!this.canUseLabisEcho(echo)) continue;
+      const x = (echo.x - cameraX) * scale;
+      const y = (echo.y - cameraY) * scale;
+      if (x < -80 || y < -80 || x > this.canvas.width + 80 || y > this.canvas.height + 80) continue;
+      const pulse = Math.sin(time / 420 + echo.x) * 0.5 + 0.5;
+      this.ctx.save();
+      this.ctx.globalAlpha = 0.18 + pulse * 0.12;
+      if (echo.tell === "steam") {
+        this.ctx.strokeStyle = "rgba(255, 246, 205, .62)";
+        this.ctx.lineWidth = 1.2 * scale;
+        for (let i = 0; i < 3; i += 1) {
+          this.ctx.beginPath();
+          this.ctx.moveTo(x + i * 6 * scale, y - 4 * scale);
+          this.ctx.bezierCurveTo(x - 8 * scale + i * 5 * scale, y - 18 * scale, x + 12 * scale, y - 30 * scale, x + i * 3 * scale, y - 44 * scale);
+          this.ctx.stroke();
+        }
+      } else if (echo.tell === "reflection" || echo.tell === "windshield" || echo.tell === "paper") {
+        this.ctx.fillStyle = "rgba(255, 235, 180, .46)";
+        this.ctx.fillRect(x - 24 * scale, y - 18 * scale, 48 * scale, 2 * scale);
+      } else if (echo.tell === "sound") {
+        this.ctx.fillStyle = "rgba(255, 238, 190, .64)";
+        this.ctx.font = `${20 * scale}px Georgia`;
+        this.ctx.fillText("啪", x, y - 28 * scale);
+        this.ctx.strokeStyle = "rgba(255, 238, 190, .34)";
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - 48 * scale, y - 20 * scale);
+        this.ctx.quadraticCurveTo(x, y - 72 * scale, x + 62 * scale, y - 30 * scale);
+        this.ctx.stroke();
+      } else if (echo.tell === "hidden-star") {
+        this.ctx.fillStyle = "rgba(255, 235, 174, .52)";
+        this.ctx.fillText("✦", x, y - 14 * scale);
+      }
+      this.ctx.restore();
+    }
+  }
+
+  private drawLabisEchoVisual(echo: LabisEcho, cameraX: number, cameraY: number, scale: number, time: number): void {
+    const x = (echo.x - cameraX) * scale;
+    const y = (echo.y - cameraY) * scale;
+    const age = Math.max(0, (time - this.labisVignetteStartedAt) / 1000);
+    this.ctx.save();
+    this.ctx.globalAlpha = Math.min(1, 0.25 + age * 1.6);
+    this.ctx.fillStyle = "rgba(28, 21, 16, .18)";
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    if (echo.id === "july19-photo-threat") {
+      this.drawLabisImage(labisAssetPath("ms", "holding_book"), x - 34 * scale, y + 12 * scale, 78 * scale, 78 * scale) || this.drawMemoryTableFallback(x - 42 * scale, y, scale);
+      this.drawLabisImage(labisAssetPath("et", age > 2.2 ? "photo_smug" : "phone"), x + 64 * scale, y + 18 * scale, 58 * scale, 82 * scale) || this.drawEchoHuman(x + 64 * scale, y, scale, "#202020", true);
+    } else if (echo.id === "july19-chicken-porridge" || echo.id === "july19-fried-noodles") {
+      this.drawMemoryTableFallback(x, y, scale);
+      const prop = echo.id === "july19-chicken-porridge" ? labisAssetPath("prop", "chicken_porridge") : labisAssetPath("prop", "fried_noodles");
+      this.drawLabisImage(prop, x, y - 5 * scale, 72 * scale, 46 * scale) || this.drawFoodFallback(x, y - 28 * scale, scale, echo.id === "july19-chicken-porridge");
+    } else if (echo.id === "july19-haircut") {
+      this.drawLabisImage(labisAssetPath("et", "haircut_happy"), x, y + 8 * scale, 62 * scale, 82 * scale) || this.drawEchoHuman(x, y, scale, "#202020", true);
+    } else if (echo.id === "july19-kancil") {
+      this.ctx.strokeStyle = "rgba(255, 248, 210, .58)";
+      this.ctx.strokeRect(x - 48 * scale, y - 44 * scale, 96 * scale, 54 * scale);
+      this.ctx.fillStyle = "rgba(255, 248, 210, .16)";
+      this.ctx.fillRect(x - 42 * scale, y - 38 * scale, 84 * scale, 42 * scale);
+    } else if (echo.id === "july19-badminton") {
+      this.drawLabisImage(labisAssetPath("prop", "badminton"), x, y, 88 * scale, 66 * scale);
+      this.ctx.fillStyle = "rgba(255,255,230,.72)";
+      this.ctx.beginPath();
+      this.ctx.arc(x + Math.sin(time / 180) * 60 * scale, y - 52 * scale + Math.cos(time / 210) * 16 * scale, 4 * scale, 0, Math.PI * 2);
+      this.ctx.fill();
+    } else if (echo.id === "july19-filter-evening") {
+      this.drawLabisImage(labisAssetPath("prop", "filter_manual_table"), x, y + 16 * scale, 150 * scale, 96 * scale) || this.drawMemoryTableFallback(x, y + 12 * scale, scale);
+      this.drawLabisImage(labisAssetPath("et", "sitting_reading"), x - 54 * scale, y + 22 * scale, 62 * scale, 76 * scale) || this.drawEchoHuman(x - 54 * scale, y, scale, "#202020", false);
+      this.drawLabisImage(labisAssetPath("mom", "sitting"), x + 56 * scale, y + 22 * scale, 62 * scale, 76 * scale) || this.drawEchoHuman(x + 56 * scale, y, scale, "#6d553d", false);
+    }
+    this.ctx.restore();
+  }
+
+  private drawMemoryTableFallback(x: number, y: number, scale: number): void {
+    this.ctx.fillStyle = "rgba(93, 61, 34, .78)";
+    this.ctx.fillRect(x - 46 * scale, y - 38 * scale, 92 * scale, 30 * scale);
+    this.ctx.fillStyle = "rgba(52, 34, 24, .55)";
+    this.ctx.fillRect(x - 38 * scale, y - 8 * scale, 8 * scale, 34 * scale);
+    this.ctx.fillRect(x + 30 * scale, y - 8 * scale, 8 * scale, 34 * scale);
+  }
+
+  private drawFoodFallback(x: number, y: number, scale: number, pale: boolean): void {
+    this.ctx.fillStyle = "#efe4cd";
+    this.ctx.beginPath();
+    this.ctx.ellipse(x, y, 26 * scale, 12 * scale, 0, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.fillStyle = pale ? "#fff3d6" : "#b95f32";
+    this.ctx.beginPath();
+    this.ctx.ellipse(x, y - 2 * scale, 18 * scale, 7 * scale, 0, 0, Math.PI * 2);
+    this.ctx.fill();
+  }
+
+  private drawEchoHuman(x: number, y: number, scale: number, shirt: string, longHair: boolean): void {
+    this.ctx.fillStyle = shirt;
+    this.ctx.fillRect(x - 9 * scale, y - 52 * scale, 18 * scale, 26 * scale);
+    this.ctx.fillStyle = "#ead6bb";
+    this.ctx.fillRect(x - 7 * scale, y - 68 * scale, 14 * scale, 14 * scale);
+    this.ctx.fillStyle = "#211b18";
+    this.ctx.fillRect(x - 9 * scale, y - 72 * scale, 18 * scale, longHair ? 28 * scale : 10 * scale);
   }
 
   private drawMemorySpot(cameraX: number, cameraY: number, scale: number, time: number): void {

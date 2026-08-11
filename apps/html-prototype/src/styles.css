@@ -160,6 +160,156 @@ canvas {
   object-fit: contain;
   image-rendering: pixelated;
 }
+.rpg-dialogue {
+  pointer-events: auto;
+  position: relative;
+  width: min(66%, 650px);
+  min-height: 76px;
+  margin: 0 auto;
+  padding: 18px 46px 16px 24px;
+  border: 2px solid rgba(230, 187, 107, .82);
+  border-radius: 5px;
+  background: rgba(28, 24, 22, .88);
+  color: #f7e7c4;
+  box-shadow: 0 10px 34px rgba(0,0,0,.42);
+  animation: dialogueRise .14s ease-out both;
+}
+.rpg-dialogue span {
+  position: absolute;
+  top: -22px;
+  left: 16px;
+  min-width: 58px;
+  padding: 3px 12px;
+  border: 2px solid rgba(230, 187, 107, .82);
+  border-bottom: 0;
+  border-radius: 5px 5px 0 0;
+  background: rgba(28, 24, 22, .92);
+  color: #ffe2a8;
+  text-align: center;
+}
+.rpg-dialogue p {
+  margin: 0;
+  max-width: 100%;
+  font-size: 18px;
+  line-height: 1.45;
+}
+.rpg-dialogue button {
+  position: absolute;
+  right: 14px;
+  bottom: 10px;
+  padding: 2px 7px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #f8d79a;
+}
+.labis-choice-ui {
+  pointer-events: auto;
+  width: min(32%, 310px);
+  justify-self: end;
+  align-self: end;
+  margin: 0 28px 44px 0;
+  color: #f9e8c6;
+}
+.labis-choice-ui p {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(230, 187, 107, .64);
+  border-radius: 5px;
+  background: rgba(28, 24, 22, .82);
+}
+.labis-choice-ui div {
+  display: grid;
+  gap: 8px;
+}
+.labis-choice-card {
+  width: 100%;
+  min-height: 48px;
+  text-align: left;
+  background: rgba(40, 31, 24, .92);
+  border-color: rgba(230, 187, 107, .76);
+  color: #f8e3b8;
+}
+.labis-reflection {
+  pointer-events: auto;
+  width: min(600px, calc(100vw - 34px));
+  align-self: end;
+  margin-bottom: 78px;
+  padding: 18px 22px;
+  text-align: center;
+  color: #ffe7b5;
+  text-shadow: 0 2px 8px rgba(0,0,0,.75);
+  background: rgba(10, 12, 14, .32);
+}
+.labis-reflection p {
+  margin: 8px 0;
+  font-size: 20px;
+  line-height: 1.5;
+}
+.labis-keyframe {
+  pointer-events: auto;
+  position: relative;
+  width: min(680px, calc(100vw - 34px));
+  padding: 12px;
+  border: 2px solid rgba(230, 187, 107, .72);
+  border-radius: 6px;
+  background: rgba(13, 11, 14, .9);
+  color: #ffe5b2;
+  text-align: center;
+}
+.labis-keyframe img {
+  display: block;
+  width: 100%;
+  max-height: 58vh;
+  object-fit: contain;
+  animation: keyframeBreathe 3.2s ease-in-out infinite alternate;
+}
+.sleep-bubble,
+.question-mark {
+  position: absolute;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgba(255, 246, 218, .92);
+  color: #2a211b;
+}
+.sleep-bubble { right: 18%; top: 18%; }
+.question-mark { left: 20%; top: 42%; font-weight: 700; }
+.labis-keyframe-fallback {
+  height: 260px;
+  display: grid;
+  place-content: center;
+  gap: 14px;
+  background: #1b1720;
+}
+@keyframes dialogueRise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes keyframeBreathe {
+  from { transform: scale(1); }
+  to { transform: scale(1.02); }
+}
+@media (max-width: 760px) {
+  .overlay.dialogue-open {
+    padding-bottom: 106px;
+  }
+  .rpg-dialogue {
+    width: min(92%, 620px);
+    min-height: 66px;
+    padding: 16px 38px 12px 18px;
+  }
+  .rpg-dialogue p {
+    font-size: 15px;
+  }
+  .labis-choice-ui {
+    width: min(86%, 360px);
+    margin: 0 auto 34px;
+    justify-self: center;
+  }
+  .labis-reflection p {
+    font-size: 17px;
+  }
+}
 .memory-line {
   border-left: 3px solid #a7773d;
   padding-left: 10px;
