@@ -8,6 +8,7 @@ export class InputManager {
   private keys = new Set<string>();
   private touch = { x: 0, y: 0 };
   private interactionQueued = false;
+  private touchActionLabel: HTMLElement | null = null;
 
   constructor(private root: HTMLElement) {
     window.addEventListener("keydown", (event) => {
@@ -20,8 +21,9 @@ export class InputManager {
   mountTouchControls(onInteract: () => void): HTMLElement {
     const wrap = document.createElement("div");
     wrap.className = "touch-controls";
-    wrap.innerHTML = `<div class="touch-stick" aria-label="Touch movement"></div><button class="touch-action">E</button>`;
+    wrap.innerHTML = `<div class="touch-stick" aria-label="Virtual joystick"></div><button class="touch-action"><span class="touch-action-label">Interact</span></button>`;
     const stick = wrap.querySelector<HTMLElement>(".touch-stick")!;
+    this.touchActionLabel = wrap.querySelector<HTMLElement>(".touch-action-label");
     stick.addEventListener("pointermove", (event) => {
       const rect = stick.getBoundingClientRect();
       this.touch = {
@@ -33,6 +35,10 @@ export class InputManager {
     wrap.querySelector("button")!.addEventListener("click", onInteract);
     this.root.append(wrap);
     return wrap;
+  }
+
+  setTouchInteractionLabel(label: string): void {
+    if (this.touchActionLabel) this.touchActionLabel.textContent = label;
   }
 
   read(): InputState {

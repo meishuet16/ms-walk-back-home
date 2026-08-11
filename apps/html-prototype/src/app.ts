@@ -1355,33 +1355,26 @@ export class WalkBackHomeApp {
 
   private drawForestMonthSign(cameraX: number, cameraY: number, scale: number): void {
     const month = this.currentForestMonth();
-    const label = month.label.toUpperCase();
+    const label = month.label;
     const x = (1182 - cameraX) * scale;
-    const y = (748 - cameraY) * scale;
+    const y = (738 - cameraY) * scale;
     if (x < -160 || y < -80 || x > this.canvas.width + 160 || y > this.canvas.height + 80) return;
     this.ctx.save();
     this.ctx.textAlign = "center";
     this.ctx.textBaseline = "middle";
-    this.ctx.font = `700 ${20 * scale}px Georgia`;
-    const width = Math.max(162 * scale, this.ctx.measureText(label).width + 38 * scale);
-    const height = 40 * scale;
-    const glow = this.ctx.createRadialGradient(x, y, 6 * scale, x, y, 98 * scale);
-    glow.addColorStop(0, "rgba(255, 224, 135, .64)");
+    this.ctx.font = `600 ${13 * scale}px Georgia`;
+    const glow = this.ctx.createRadialGradient(x, y, 3 * scale, x, y, 76 * scale);
+    glow.addColorStop(0, "rgba(255, 224, 150, .26)");
+    glow.addColorStop(0.5, "rgba(255, 210, 122, .12)");
     glow.addColorStop(1, "rgba(255, 184, 72, 0)");
     this.ctx.fillStyle = glow;
     this.ctx.beginPath();
-    this.ctx.ellipse(x, y, 106 * scale, 42 * scale, 0, 0, Math.PI * 2);
+    this.ctx.ellipse(x, y + 4 * scale, 86 * scale, 24 * scale, 0, 0, Math.PI * 2);
     this.ctx.fill();
-    this.ctx.fillStyle = "rgba(50, 31, 14, .72)";
-    this.ctx.strokeStyle = "rgba(255, 219, 129, .72)";
-    this.ctx.lineWidth = 1.4 * scale;
-    this.roundRect(x - width / 2, y - height / 2, width, height, 8 * scale);
-    this.ctx.fill();
-    this.ctx.stroke();
-    this.ctx.shadowColor = "rgba(255, 219, 129, .95)";
-    this.ctx.shadowBlur = 10 * scale;
-    this.ctx.fillStyle = "#ffe4a0";
-    this.ctx.fillText(label, x, y + 1 * scale);
+    this.ctx.shadowColor = "rgba(255, 226, 157, .68)";
+    this.ctx.shadowBlur = 6 * scale;
+    this.ctx.fillStyle = "rgba(255, 231, 176, .72)";
+    this.ctx.fillText(label, x, y);
     this.ctx.restore();
   }
 
@@ -1540,13 +1533,29 @@ export class WalkBackHomeApp {
 
   private drawHud(): void {
     const labisPrompt = this.scene === "labis" && this.labisCutscene ? "Memory is playing" : this.scene === "labis" && this.activeObject === "exit" ? "Press E · 回到 Memory Forest" : this.scene === "labis" && this.activeObject ? `Press E · ${this.activeObject}` : "";
-    const text = this.scene === "forest" && this.activeDoor ? `Press E · ${this.activeDoor.date} ${this.activeDoor.title}` : this.scene === "bakery" && this.activeObject ? `Press E · ${this.activeObject}` : labisPrompt || (this.scene === "muji-room" && this.activeRoomInteraction ? `Press E · ${this.activeRoomInteraction.label}` : "WASD / arrows · E / Enter");
+    const rawText = this.scene === "forest" && this.activeDoor ? `Press E · ${this.activeDoor.date} ${this.activeDoor.title}` : this.scene === "bakery" && this.activeObject ? `Press E · ${this.activeObject}` : labisPrompt || (this.scene === "muji-room" && this.activeRoomInteraction ? `Press E · ${this.activeRoomInteraction.label}` : "WASD / arrows · E / Enter");
+    const text = this.mobileHudPrompt(rawText);
+    this.input.setTouchInteractionLabel(this.touchActionText(rawText));
     const exit = this.scene === "forest" ? "" : `<button data-action="forest">Exit to forest</button>`;
-    const html = `<div class="prompt">${text}</div><div class="hud-actions"><button data-action="menu">Menu</button>${exit}<button data-action="music">Music: ${this.settings.musicEnabled ? "On" : "Off"}</button><button data-action="compact">${this.settings.compact ? "960x540" : "480x270"}</button><button data-action="fullscreen">Fullscreen</button><button data-action="rain">Rain: ${this.settings.rain ? "On" : "Off"}</button><button data-action="mute">${this.settings.muted ? "Sound Off" : "Sound On"}</button></div>`;
+    const forestMonth = this.scene === "forest" ? `<div class="forest-month-hud" aria-label="Forest month"><button data-action="forest-month-prev" aria-label="Previous forest month">‹</button><strong>${this.escapeHtml(this.currentForestMonth().label)}</strong><button data-action="forest-month-next" aria-label="Next forest month">›</button></div>` : "";
+    const html = `<div class="prompt">${text}</div>${forestMonth}<div class="hud-actions"><button data-action="menu">Menu</button>${exit}<button data-action="music">Music: ${this.settings.musicEnabled ? "On" : "Off"}</button><button data-action="compact">${this.settings.compact ? "960x540" : "480x270"}</button><button data-action="fullscreen">Fullscreen</button><button data-action="rain">Rain: ${this.settings.rain ? "On" : "Off"}</button><button data-action="mute">${this.settings.muted ? "Sound Off" : "Sound On"}</button></div>`;
     if (html !== this.lastHudHtml) {
       this.hud.innerHTML = html;
       this.lastHudHtml = html;
     }
+  }
+
+  private touchActionText(prompt: string): string {
+    const match = /Press E ·\s*(.+)$/.exec(prompt);
+    return match?.[1] ?? "Interact";
+  }
+
+  private mobileHudPrompt(prompt: string): string {
+    if (!window.matchMedia("(max-width: 860px)").matches) return prompt;
+    const match = /Press E ·\s*(.+)$/.exec(prompt);
+    if (match) return `Tap Interact · ${match[1]}`;
+    if (prompt.includes("WASD") || prompt.includes("E / Enter")) return "Virtual joystick · Interact";
+    return prompt;
   }
 
   private settingsContent(): string {
@@ -1557,6 +1566,7 @@ export class WalkBackHomeApp {
         <button data-action="open-map">Walk Back Home<span>${this.allDoors().length} forest memories</span></button>
         <button data-action="open-room">Muji Room<span>Present-tense rest space</span></button>
         <button data-action="reflection-wall">Reflection Wall<span>${this.reflectionWall.notes.length} paper notes</span></button>
+        <button data-action="room-records">Records<span>Play personal music and floating lyrics</span></button>
       </div>
       <div class="settings-row"><button data-action="music">Music: ${this.settings.musicEnabled ? "On" : "Off"}</button><button data-action="rain">Rain: ${this.settings.rain ? "On" : "Off"}</button><button data-action="mute">${this.settings.muted ? "Sound Off" : "Sound On"}</button><button data-action="compact">${this.settings.compact ? "960x540" : "480x270"}</button><button data-action="backup-sync">Backup / Sync</button><button data-action="reset-journey">Begin Again</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
   }
@@ -2093,7 +2103,7 @@ export class WalkBackHomeApp {
       const state = this.isChapterNode(door) ? this.progressFor(this.chapterIdFor(door)).state : "fragment";
       return `<button data-action="enter-door" data-door="${this.escapeHtml(door.id)}">${this.escapeHtml(door.date)} ${this.escapeHtml(door.title)}<span>${state === "walkedThrough" ? "Remember" : state}</span></button>`;
     }).join("");
-    this.overlay.innerHTML = `<div class="modal game-panel"><h2>Walk Back Home</h2><p>Public authored doors stay here. Private Memory Fragment lights are showing ${this.escapeHtml(month.label)}.</p><div class="month-nav"><button data-action="forest-month-prev">‹</button><strong>${this.escapeHtml(month.label)}</strong><button data-action="forest-month-next">›</button></div><div class="settings-row">${doors || "<p>No forest-visible diary entries yet.</p>"}</div><button data-action="open-timeline">Timeline</button><button data-action="settings">Back</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
+    this.overlay.innerHTML = `<div class="modal game-panel walk-map-panel"><h2>Walk Back Home</h2><p>Public authored doors stay here. Private Memory Fragment lights are showing ${this.escapeHtml(month.label)}.</p><div class="month-nav"><button data-action="forest-month-prev">‹</button><strong>${this.escapeHtml(month.label)}</strong><button data-action="forest-month-next">›</button></div><div class="settings-row">${doors || "<p>No forest-visible diary entries yet.</p>"}</div><button data-action="open-timeline">Timeline</button><button data-action="settings">Back</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
     this.focusStage();
   }
 
@@ -2106,7 +2116,10 @@ export class WalkBackHomeApp {
 
   private moveForestMonth(direction: -1 | 1): void {
     this.selectedForestMonthKey = adjacentMonthKey(this.currentForestMonth().key, direction);
-    this.showMap();
+    this.activeDoor = null;
+    this.lastHudHtml = "";
+    if (this.overlay.querySelector(".walk-map-panel")) this.showMap();
+    else this.showToast(this.currentForestMonth().label);
   }
 
   private showDiaryEditor(editId = ""): void {
@@ -2856,7 +2869,7 @@ export class WalkBackHomeApp {
       return;
     }
     const lyrics = (event.target as HTMLElement).closest<HTMLElement>(".floating-lyrics");
-    if (lyrics && !(event.target as HTMLElement).closest("button,input,select,textarea")) {
+    if (lyrics && (event.target as HTMLElement).closest(".floating-drag-handle") && !(event.target as HTMLElement).closest(".floating-controls-bar,button,input,select,textarea")) {
       const rect = lyrics.getBoundingClientRect();
       this.lyricsDrag = { offsetX: event.clientX - rect.left, offsetY: event.clientY - rect.top };
       event.preventDefault();
@@ -3503,7 +3516,7 @@ export class WalkBackHomeApp {
       }).join("")
       : `<span class="muted">${this.escapeHtml(track.title)}</span><span class="active">${this.escapeHtml(track.artist ?? "Now playing")}</span>`;
     const floatingLyrics = this.personalPlayer.lyricsVisible
-      ? `<div class="floating-lyrics" style="left:${overlay.x}px;top:${overlay.y}px;width:${overlay.width}px" aria-live="off"><button class="floating-records-link" data-action="room-records">♪ Records</button><button class="floating-lyric-shortcut" data-action="room-records" aria-label="Open records">${lyricHtml}</button><div class="floating-player-controls"><button class="icon-button" data-action="music-prev" aria-label="Previous" title="Previous">⏮</button><button class="icon-button primary" data-action="vinyl-pause" aria-label="${this.personalPlayer.playing ? "Pause" : "Play"}" title="${this.personalPlayer.playing ? "Pause" : "Play"}">${this.personalPlayer.playing ? "⏸" : "▶"}</button><button class="icon-button" data-action="music-next" aria-label="Next" title="Next">⏭</button></div></div>`
+      ? `<div class="floating-lyrics" style="left:${overlay.x}px;top:${overlay.y}px;width:${overlay.width}px" aria-live="off"><button class="floating-records-link floating-controls-bar" data-action="room-records">♪ Records</button><div class="floating-lyric-shortcut floating-drag-handle" data-action="room-records" role="button" tabindex="0" aria-label="Open records">${lyricHtml}</div><div class="floating-player-controls floating-controls-bar"><button class="icon-button" data-action="music-prev" aria-label="Previous" title="Previous">⏮</button><button class="icon-button primary" data-action="vinyl-pause" aria-label="${this.personalPlayer.playing ? "Pause" : "Play"}" title="${this.personalPlayer.playing ? "Pause" : "Play"}">${this.personalPlayer.playing ? "⏸" : "▶"}</button><button class="icon-button" data-action="music-next" aria-label="Next" title="Next">⏭</button></div></div>`
       : "";
     this.musicPlayer.innerHTML = `<button class="mini-now-playing" data-action="room-records">♪ ${this.escapeHtml(track.title)}</button>${floatingLyrics}`;
   }

@@ -29,6 +29,21 @@ Reflection Wall data is stored separately from Journey in `walk-back-home:html-p
 - Reset Journey migrates any legacy room reflection text first, then preserves the wall.
 - Chapter reflection “Keep this” creates a `source: "chapter"` note linked to the chapter id.
 
+## Mobile Implementation Status
+
+Updated 2026-08-11.
+
+- Forest exposes an in-scene month switcher under the Memory Forest sign; the Walk Back Home modal and forest scene share the same month key.
+- Forest month filtering is applied to authored chapter doors and private Memory Fragment lights before the scene nodes are built.
+- Mobile HUD copy uses virtual joystick / contextual Interact wording instead of keyboard-only E prompts.
+- Touch controls include a virtual joystick and a contextual interaction button label.
+- Portrait Journal uses a single-column, scrollable editor layout with static paper fields.
+- Portrait Reflection Wall preserves tap targets, note drag gestures, and empty-wall pan behavior through explicit touch-action rules.
+- Landscape Muji Room and Forest use compact top navigation, HUD, joystick, and interaction controls for short mobile viewports.
+- Floating lyrics separates draggable lyrics from the Records / previous / play / next control bar so transport buttons remain clickable.
+- Verification run: `npm test -- ui-policy` from `apps/html-prototype`, which builds and runs 111 tests.
+- Browser visual check: Codex in-app browser viewport `390x844` confirmed the mobile HUD renders `Virtual joystick · Interact`; this in-app backend does not support scripted click/drag automation, so interaction coverage is enforced by tests and source-level event target checks.
+
 ## Backup / Restore
 
 `walk-back-home-backup-YYYY-MM-DD.json` is a local-first JSON envelope containing:
