@@ -165,7 +165,24 @@ canvas {
   height: auto;
   place-content: initial;
 }
+.floating-lyric-shortcut {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  min-height: 72px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  align-content: center;
+  cursor: pointer;
+}
 .floating-lyric-lines span {
+  opacity: .58;
+  transition: opacity 140ms ease, color 140ms ease;
+}
+.floating-lyric-shortcut span {
   opacity: .58;
   transition: opacity 140ms ease, color 140ms ease;
 }
@@ -174,7 +191,16 @@ canvas {
   color: #fff1c8;
   font-weight: 700;
 }
+.floating-lyric-shortcut span.active {
+  opacity: 1;
+  color: #fff1c8;
+  font-weight: 700;
+}
 .floating-lyric-lines span.muted {
+  opacity: .72;
+  font-size: 14px;
+}
+.floating-lyric-shortcut span.muted {
   opacity: .72;
   font-size: 14px;
 }
@@ -2094,11 +2120,15 @@ canvas {
   width: 100%;
   accent-color: #d5aa69;
 }
-.records-transport .vinyl-controls {
+.transport-controls {
   grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
 }
 .playback-modes {
-  grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;

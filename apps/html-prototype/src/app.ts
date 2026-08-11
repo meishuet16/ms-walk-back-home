@@ -14,10 +14,10 @@ import { makeDiaryEntry, parseDiaryImport, updateDiaryMemoryKind, type DiaryFore
 import { DialogueSystem } from "./systems/DialogueSystem.js";
 import { resolveChapterReflection, type Ending } from "./systems/EndingResolver.js";
 import { InputManager } from "./systems/InputManager.js";
-import { adjacentMonthKey, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, selectedOrLatestMonth, visibleTimelineEntries, type JournalMonth, type MonthlyJournalPdfPage, type TimelineMemoryKindFilter } from "./systems/JournalModel.js";
+import { adjacentMonthKey, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, selectedOrLatestMonth, sortMonthEntries, visibleTimelineEntries, type JournalMonth, type MonthlyJournalPdfPage, type TimelineMemoryKindFilter } from "./systems/JournalModel.js";
 import { MusicBlobStore } from "./systems/MusicBlobStore.js";
 import { ParticleSystem } from "./systems/ParticleSystem.js";
-import { activeLyricIndexAt, clampLyricsOverlay, createDefaultPersonalPlayerState, filterAndSortMusic, isBuiltInTrackId, nextTrackIdForPlayback, normalizePlaybackMode, parseLrc, personalMusicShouldPlayInScene } from "./systems/PersonalMusic.js";
+import { activeLyricIndexAt, adjacentTrackIdForControl, clampLyricsOverlay, createDefaultPersonalPlayerState, filterAndSortMusic, isBuiltInTrackId, nextTrackIdForPlayback, normalizePlaybackMode, parseLrc, personalMusicShouldPlayInScene } from "./systems/PersonalMusic.js";
 import { drawSceneActor } from "./systems/SceneActorRenderer.js";
 import { applyChoice } from "./systems/TendencySystem.js";
 import {
@@ -53,6 +53,7 @@ import type { MusicScene } from "./systems/SceneMusic.js";
 import { emptyTendencies } from "./systems/TendencySystem.js";
 
 type ForestNode = AuthoredForestEntry | DiaryForestMemory;
+type TimelineDateScope = "all" | "year" | "month" | "date";
 type LabisDialogueLine = { speaker: string; text: string };
 type LabisDialogueAfter = "motor-choice" | "photo-choice" | "filter-choice" | "finish-echo" | "show-reflection" | "finish-chicken-cake" | null;
 type LabisOverlayMode = "dialogue" | "choice" | "vignette" | "reflection" | null;
@@ -122,6 +123,7 @@ export class WalkBackHomeApp {
   private timelineSearch = "";
   private timelineKindFilter: TimelineMemoryKindFilter = "all";
   private timelineDateFilter = "";
+  private timelineDateScope: TimelineDateScope = "all";
   private journalMode: "timeline" | "books" | "reader" = "timeline";
   private selectedJournalMonthKey = "";
   private timelineVisibleCount = journalBatchSize;
@@ -1557,22 +1559,36 @@ export class WalkBackHomeApp {
   }
 
   private currentTimelineMonthView(): JournalMonth {
-    return makeTimelineMonthView(this.currentJournalMonth(), this.timelineSort, this.timelineSearch, this.timelineKindFilter, this.timelineDateFilter);
+    const base = this.currentTimelineBaseMonth();
+    return makeTimelineMonthView(base, this.timelineSort, this.timelineSearch, this.timelineKindFilter, this.timelineDateScope === "date" ? this.timelineDateFilter : "");
+  }
+
+  private currentTimelineBaseMonth(): JournalMonth {
+    const selected = this.currentJournalMonth();
+    const [yearText] = selected.key.split("-");
+    if (this.timelineDateScope === "all") {
+      return { ...selected, key: "all", label: "All Journals", entries: sortMonthEntries(this.diaryEntries) };
+    }
+    if (this.timelineDateScope === "year") {
+      return {
+        ...selected,
+        key: yearText,
+        label: `${yearText}`,
+        entries: sortMonthEntries(this.diaryEntries.filter((entry) => entry.date.startsWith(`${yearText}-`)))
+      };
+    }
+    return selected;
   }
 
   private renderTimelineFilters(month: JournalMonth): string {
-    const [yearValue, monthValue] = (this.selectedJournalMonthKey || month.key).split("-");
-    const dayValue = this.timelineDateFilter ? this.timelineDateFilter.slice(8, 10) : "";
-    const monthOptions = this.renderTimelineMonthOptions(Number(yearValue), Number(monthValue));
-    const dayOptions = this.renderTimelineDayOptions(Number(yearValue), Number(monthValue), dayValue);
+    const selectedDate = this.timelineDateFilter || `${this.selectedJournalMonthKey || this.currentJournalMonth().key}-01`;
     const feedback = this.timelineFilterFeedback(month);
-    const yearClass = this.timelineYearHasEntries(Number(yearValue)) ? "" : " no-results";
+    const dateClass = this.timelineDateInputHasEntries(selectedDate) ? "" : " no-results";
     return `<div class="timeline-toolbar">
       <label>Sort<select id="timeline-sort"><option value="date-desc" ${this.timelineSort === "date-desc" ? "selected" : ""}>Newest first</option><option value="date-asc" ${this.timelineSort === "date-asc" ? "selected" : ""}>Oldest first</option><option value="title-asc" ${this.timelineSort === "title-asc" ? "selected" : ""}>Title A-Z</option></select></label>
       <label>Filter<select id="timeline-kind-filter"><option value="all" ${this.timelineKindFilter === "all" ? "selected" : ""}>All memories</option><option value="diary" ${this.timelineKindFilter === "diary" ? "selected" : ""}>Diary only</option><option value="fragment" ${this.timelineKindFilter === "fragment" ? "selected" : ""}>Memory Fragment</option><option value="chapter" ${this.timelineKindFilter === "chapter" ? "selected" : ""}>Memory Chapter</option></select></label>
-      <label>Year<input id="timeline-year-input" class="timeline-year-input${yearClass}" inputmode="numeric" pattern="[0-9]*" value="${this.escapeHtml(yearValue || String(month.year))}" aria-label="Timeline year"></label>
-      <label>Month<select id="timeline-month-select">${monthOptions}</select></label>
-      <label>Date<select id="timeline-day-select">${dayOptions}</select></label>
+      <label>Range<select id="timeline-date-scope"><option value="all" ${this.timelineDateScope === "all" ? "selected" : ""}>All diary</option><option value="year" ${this.timelineDateScope === "year" ? "selected" : ""}>By year</option><option value="month" ${this.timelineDateScope === "month" ? "selected" : ""}>By month</option><option value="date" ${this.timelineDateScope === "date" ? "selected" : ""}>Exact date</option></select></label>
+      <label>Date<input id="timeline-date-input" type="date" class="timeline-date-input${dateClass}" value="${this.escapeHtml(selectedDate)}" aria-label="Timeline date"></label>
       <label class="timeline-search">Search<input id="timeline-search" type="search" placeholder="keyword, title, place..." value="${this.escapeHtml(this.timelineSearch)}"></label>
       <button data-action="timeline-apply-filters">Done</button>
       <button data-action="timeline-clear-filters">Clear Filters</button>
@@ -1584,42 +1600,29 @@ export class WalkBackHomeApp {
     </div>`;
   }
 
-  private renderTimelineMonthOptions(year: number, selectedMonth: number): string {
-    const names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    return names.map((name, index) => {
-      const month = index + 1;
-      const value = String(month).padStart(2, "0");
-      const hasEntries = this.timelineMonthHasEntries(year, month);
-      return `<option value="${value}" ${month === selectedMonth ? "selected" : ""} ${hasEntries ? "" : "disabled"}>${name}${hasEntries ? "" : " · no result"}</option>`;
-    }).join("");
-  }
-
-  private renderTimelineDayOptions(year: number, month: number, selectedDay: string): string {
-    const total = new Date(year, month, 0).getDate();
-    const days = Array.from({ length: Number.isFinite(total) ? total : 31 }, (_, index) => index + 1);
-    return `<option value="" ${selectedDay ? "" : "selected"}>All dates</option>${days.map((day) => {
-      const value = String(day).padStart(2, "0");
-      const hasEntries = this.timelineDateHasEntries(`${year}-${String(month).padStart(2, "0")}-${value}`);
-      return `<option value="${value}" ${value === selectedDay ? "selected" : ""} ${hasEntries ? "" : "disabled"}>${day}${hasEntries ? "" : " · no result"}</option>`;
-    }).join("")}`;
-  }
-
-  private timelineYearHasEntries(year: number): boolean {
-    return this.diaryEntries.some((entry) => entry.date.startsWith(`${year}-`));
-  }
-
-  private timelineMonthHasEntries(year: number, month: number): boolean {
-    return this.diaryEntries.some((entry) => entry.date.startsWith(`${year}-${String(month).padStart(2, "0")}`));
-  }
-
   private timelineDateHasEntries(date: string): boolean {
     return this.diaryEntries.some((entry) => entry.date === date);
   }
 
+  private timelineDateInputHasEntries(date: string): boolean {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+    if (this.timelineDateScope === "all") return true;
+    if (this.timelineDateScope === "year") return this.diaryEntries.some((entry) => entry.date.startsWith(`${date.slice(0, 4)}-`));
+    if (this.timelineDateScope === "month") return this.diaryEntries.some((entry) => entry.date.startsWith(date.slice(0, 7)));
+    return this.timelineDateHasEntries(date);
+  }
+
   private timelineFilterFeedback(month: JournalMonth): string {
+    const dateLabel = this.timelineDateScope === "all"
+      ? "All diary"
+      : this.timelineDateScope === "year"
+        ? `Year ${this.selectedJournalMonthKey.slice(0, 4)}`
+        : this.timelineDateScope === "month"
+          ? `Month ${this.selectedJournalMonthKey}`
+          : this.timelineDateFilter;
     const filters = [
       this.timelineKindFilter === "all" ? "All memories" : this.timelineKindFilter === "diary" ? "Diary only" : this.timelineKindFilter === "fragment" ? "Memory Fragment" : "Memory Chapter",
-      this.timelineDateFilter || month.key,
+      dateLabel || month.key,
       this.timelineSearch.trim() ? `Search: ${this.timelineSearch.trim()}` : ""
     ].filter(Boolean);
     const count = month.entries.length;
@@ -1646,6 +1649,10 @@ export class WalkBackHomeApp {
   private moveJournalMonth(direction: -1 | 1): void {
     this.selectedJournalMonthKey = adjacentMonthKey(this.currentJournalMonth().key, direction);
     this.timelineVisibleCount = journalBatchSize;
+    if (this.journalMode === "timeline") {
+      this.timelineDateScope = "month";
+      this.timelineDateFilter = "";
+    }
     if (this.journalMode === "books") this.showMonthlyBooks();
     else if (this.journalMode === "reader") this.openMonthlyBook(this.selectedJournalMonthKey);
     else this.showTimeline();
@@ -2090,8 +2097,8 @@ export class WalkBackHomeApp {
 
   private handleInput(event: Event): void {
     const target = event.target as HTMLElement;
-    if (target instanceof HTMLInputElement && target.id === "timeline-year-input") {
-      this.refreshTimelineDateSelectors();
+    if (target instanceof HTMLInputElement && target.id === "timeline-date-input") {
+      target.classList.toggle("no-results", !this.timelineDateInputHasEntries(target.value));
       return;
     }
     if (target instanceof HTMLInputElement && target.id === "music-search") {
@@ -2101,12 +2108,7 @@ export class WalkBackHomeApp {
       return;
     }
     if (target instanceof HTMLInputElement && target.id === "music-seek") {
-      this.pendingPersonalSeek = Number(target.value);
-      this.audio.seek(this.pendingPersonalSeek);
-      this.personalPlayer.playbackPosition = this.pendingPersonalSeek;
-      this.refreshRecordsPlaybackUI();
-      this.updatePersonalMusicOverlay();
-      this.save.savePersonalPlayer(this.personalPlayer);
+      this.seekPersonalMusic(Number(target.value));
       return;
     }
     if (target instanceof HTMLInputElement && (target.id === "music-title" || target.id === "music-artist")) {
@@ -2211,20 +2213,20 @@ export class WalkBackHomeApp {
   private applyTimelineFilters(): void {
     const sort = this.overlay.querySelector<HTMLSelectElement>("#timeline-sort")?.value as DiaryTimelineSort | undefined;
     const kind = this.overlay.querySelector<HTMLSelectElement>("#timeline-kind-filter")?.value as TimelineMemoryKindFilter | undefined;
-    const yearInput = this.overlay.querySelector<HTMLInputElement>("#timeline-year-input");
-    const monthInput = this.overlay.querySelector<HTMLSelectElement>("#timeline-month-select");
-    const dayInput = this.overlay.querySelector<HTMLSelectElement>("#timeline-day-select");
+    const dateInput = this.overlay.querySelector<HTMLInputElement>("#timeline-date-input");
+    const scopeInput = this.overlay.querySelector<HTMLSelectElement>("#timeline-date-scope");
     const searchInput = this.overlay.querySelector<HTMLInputElement>("#timeline-search");
-    const year = Number(yearInput?.value.trim());
-    const month = monthInput?.value || "01";
-    if (!Number.isInteger(year) || year < 1900 || year > 2100) {
-      this.showToast("Type a year between 1900 and 2100");
+    const selectedDate = dateInput?.value || `${this.currentJournalMonth().key}-01`;
+    const scope = this.normalizeTimelineDateScope(scopeInput?.value);
+    if (scope !== "all" && !/^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) {
+      this.showToast("Choose a calendar date first");
       return;
     }
     this.timelineSort = sort === "date-asc" || sort === "title-asc" ? sort : "date-desc";
     this.timelineKindFilter = kind === "diary" || kind === "fragment" || kind === "chapter" ? kind : "all";
-    this.selectedJournalMonthKey = `${year}-${month}`;
-    this.timelineDateFilter = dayInput?.value ? `${this.selectedJournalMonthKey}-${dayInput.value}` : "";
+    this.timelineDateScope = scope;
+    if (scope !== "all") this.selectedJournalMonthKey = selectedDate.slice(0, 7);
+    this.timelineDateFilter = scope === "date" ? selectedDate : "";
     this.timelineSearch = searchInput?.value.trim() ?? "";
     this.timelineVisibleCount = journalBatchSize;
     this.selectedTimelineEntryIds.clear();
@@ -2237,6 +2239,7 @@ export class WalkBackHomeApp {
     this.timelineSort = "date-desc";
     this.timelineKindFilter = "all";
     this.timelineDateFilter = "";
+    this.timelineDateScope = "all";
     this.timelineSearch = "";
     this.timelineVisibleCount = journalBatchSize;
     this.selectedTimelineEntryIds.clear();
@@ -2244,18 +2247,8 @@ export class WalkBackHomeApp {
     this.showToast("Timeline filters cleared");
   }
 
-  private refreshTimelineDateSelectors(): void {
-    const yearInput = this.overlay.querySelector<HTMLInputElement>("#timeline-year-input");
-    const monthInput = this.overlay.querySelector<HTMLSelectElement>("#timeline-month-select");
-    const dayInput = this.overlay.querySelector<HTMLSelectElement>("#timeline-day-select");
-    if (!yearInput || !monthInput || !dayInput) return;
-    const year = Number(yearInput.value.trim());
-    const selectedMonth = Number(monthInput.value || "1");
-    if (!Number.isInteger(year)) return;
-    yearInput.classList.toggle("no-results", !this.timelineYearHasEntries(year));
-    monthInput.innerHTML = this.renderTimelineMonthOptions(year, selectedMonth);
-    const activeMonth = monthInput.value || String(selectedMonth).padStart(2, "0");
-    dayInput.innerHTML = this.renderTimelineDayOptions(year, Number(activeMonth), dayInput.value);
+  private normalizeTimelineDateScope(value: unknown): TimelineDateScope {
+    return value === "year" || value === "month" || value === "date" ? value : "all";
   }
 
   private selectAllTimelineEntries(): void {
@@ -2358,8 +2351,9 @@ export class WalkBackHomeApp {
 
   private async handleChange(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
-    if (input.id === "timeline-month-select") {
-      this.refreshTimelineDateSelectors();
+    if (input.id === "timeline-date-scope" || input.id === "timeline-date-input") {
+      const dateInput = this.overlay.querySelector<HTMLInputElement>("#timeline-date-input");
+      if (dateInput) dateInput.classList.toggle("no-results", !this.timelineDateInputHasEntries(dateInput.value));
       return;
     }
     const timelineKindId = input.dataset.timelineKind;
@@ -2521,9 +2515,9 @@ export class WalkBackHomeApp {
       };
       this.save.saveMusicLibrary(this.musicLibrary);
     }
+    this.autosave();
     await this.showRecords();
     this.showToast("Cover changed");
-    this.autosave();
   }
 
   private async handlePersonalLyricsInput(input: HTMLInputElement): Promise<void> {
@@ -2855,8 +2849,7 @@ export class WalkBackHomeApp {
           <label class="file-control">Add Lyrics<input id="music-lyrics-input" type="file" accept=".lrc,text/plain" aria-label="Add lyrics"></label>
           <button data-action="toggle-floating-lyrics">${this.personalPlayer.lyricsVisible ? "Hide Lyrics" : "Show Lyrics"}</button>
           <div class="time-row"><span data-music-current>${this.formatTime(currentTime)}</span><input id="music-seek" type="range" min="0" max="${Math.max(1, duration || current?.duration || 1)}" step="0.1" value="${Math.min(currentTime, Math.max(1, duration || current?.duration || 1))}" aria-label="Seek"><span data-music-duration>${this.formatTime(duration || current?.duration || 0)}</span></div>
-          <div class="playback-modes" aria-label="Playback toggles"><button class="icon-button ${this.personalPlayer.repeatOne ? "selected" : ""}" data-action="music-repeat-one" aria-label="Repeat one" title="Repeat one">↻1</button><button class="icon-button ${this.personalPlayer.shuffleEnabled ? "selected" : ""}" data-action="music-shuffle" aria-label="Shuffle" title="Shuffle">⤨</button></div>
-          <div class="vinyl-controls"><button class="icon-button" data-action="music-prev" aria-label="Previous" title="Previous">⏮</button><button class="icon-button primary" data-action="vinyl-pause" aria-label="${this.personalPlayer.playing ? "Pause" : "Play"}" title="${this.personalPlayer.playing ? "Pause" : "Play"}">${this.personalPlayer.playing ? "⏸" : "▶"}</button><button class="icon-button" data-action="music-next" aria-label="Next" title="Next">⏭</button></div>
+          <div class="transport-controls"><div class="vinyl-controls"><button class="icon-button" data-action="music-prev" aria-label="Previous" title="Previous">⏮</button><button class="icon-button primary" data-action="vinyl-pause" aria-label="${this.personalPlayer.playing ? "Pause" : "Play"}" title="${this.personalPlayer.playing ? "Pause" : "Play"}">${this.personalPlayer.playing ? "⏸" : "▶"}</button><button class="icon-button" data-action="music-next" aria-label="Next" title="Next">⏭</button></div><div class="playback-modes" aria-label="Playback toggles"><button class="icon-button ${this.personalPlayer.repeatOne ? "selected" : ""}" data-action="music-repeat-one" aria-label="Repeat one" title="Repeat one">↻1</button><button class="icon-button ${this.personalPlayer.shuffleEnabled ? "selected" : ""}" data-action="music-shuffle" aria-label="Shuffle" title="Shuffle">⤨</button></div></div>
         </footer>
       </div>`;
     this.focusStage();
@@ -2970,9 +2963,8 @@ export class WalkBackHomeApp {
     const tracks = this.visibleMusicTracks();
     if (!tracks.length) return;
     const current = this.currentPersonalTrack();
-    const index = Math.max(0, tracks.findIndex((track) => track.id === current?.id));
-    const next = tracks[(index + direction + tracks.length) % tracks.length];
-    await this.selectVinyl(next.id);
+    const nextId = adjacentTrackIdForControl(tracks.map((track) => track.id), current?.id, direction, { shuffleEnabled: this.personalPlayer.shuffleEnabled });
+    if (nextId) await this.selectVinyl(nextId);
   }
 
   private toggleMusicShuffle(): void {
@@ -3033,6 +3025,18 @@ export class WalkBackHomeApp {
   private formatTime(seconds: number): string {
     const safe = Math.max(0, Math.floor(Number.isFinite(seconds) ? seconds : 0));
     return `${Math.floor(safe / 60)}:${String(safe % 60).padStart(2, "0")}`;
+  }
+
+  private seekPersonalMusic(seconds: number): void {
+    const duration = this.audio.getDuration() || this.currentPersonalTrack()?.duration || Number.POSITIVE_INFINITY;
+    const targetTime = Math.max(0, Math.min(duration, Number.isFinite(seconds) ? seconds : 0));
+    this.pendingPersonalSeek = targetTime;
+    this.personalPlayer.playbackPosition = targetTime;
+    this.audio.seek(targetTime);
+    if (this.personalPlayer.playing && this.audio.isPaused() && this.settings.musicEnabled && !this.settings.muted) void this.audio.ensurePlaying();
+    this.refreshRecordsPlaybackUI();
+    this.updatePersonalMusicOverlay();
+    this.save.savePersonalPlayer(this.personalPlayer);
   }
 
   private syncPersonalPlaybackState(): void {
@@ -3100,7 +3104,7 @@ export class WalkBackHomeApp {
       return;
     }
     const track = this.currentPersonalTrack();
-    if (!track || !this.personalPlayer.playing) {
+    if (!track) {
       this.musicPlayer.innerHTML = "";
       return;
     }
@@ -3117,7 +3121,10 @@ export class WalkBackHomeApp {
         return `<span class="${lyricIndex === activeIndex ? "active" : ""}">${this.escapeHtml(line.text)}</span>`;
       }).join("")
       : `<span class="muted">${this.escapeHtml(track.title)}</span><span class="active">${this.escapeHtml(track.artist ?? "Now playing")}</span>`;
-    this.musicPlayer.innerHTML = `<button class="mini-now-playing" data-action="room-records">♪ ${this.escapeHtml(track.title)}</button><div class="floating-lyrics" style="left:${overlay.x}px;top:${overlay.y}px;width:${overlay.width}px" aria-live="off"><div class="floating-lyric-lines">${lyricHtml}</div><div class="floating-player-controls"><button class="icon-button" data-action="music-prev" aria-label="Previous" title="Previous">⏮</button><button class="icon-button primary" data-action="vinyl-pause" aria-label="${this.personalPlayer.playing ? "Pause" : "Play"}" title="${this.personalPlayer.playing ? "Pause" : "Play"}">${this.personalPlayer.playing ? "⏸" : "▶"}</button><button class="icon-button" data-action="music-next" aria-label="Next" title="Next">⏭</button></div></div>`;
+    const floatingLyrics = this.personalPlayer.lyricsVisible
+      ? `<div class="floating-lyrics" style="left:${overlay.x}px;top:${overlay.y}px;width:${overlay.width}px" aria-live="off"><button class="floating-lyric-shortcut" data-action="room-records" aria-label="Open records">${lyricHtml}</button><div class="floating-player-controls"><button class="icon-button" data-action="music-prev" aria-label="Previous" title="Previous">⏮</button><button class="icon-button primary" data-action="vinyl-pause" aria-label="${this.personalPlayer.playing ? "Pause" : "Play"}" title="${this.personalPlayer.playing ? "Pause" : "Play"}">${this.personalPlayer.playing ? "⏸" : "▶"}</button><button class="icon-button" data-action="music-next" aria-label="Next" title="Next">⏭</button></div></div>`
+      : "";
+    this.musicPlayer.innerHTML = `<button class="mini-now-playing" data-action="room-records">♪ ${this.escapeHtml(track.title)}</button>${floatingLyrics}`;
   }
 
   private makeDiaryLibrary(): DiaryLibraryState {

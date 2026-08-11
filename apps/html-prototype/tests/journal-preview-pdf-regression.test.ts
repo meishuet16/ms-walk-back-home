@@ -24,3 +24,10 @@ test("monthly pdf appends imported photos after diary text on the entry page flo
   assert.doesNotMatch(appSource, /pages\.push\(\.\.\.await this\.renderDiaryPhotoPdfPages/);
   assert.match(appSource, /drawDiaryPhotosOnPdfPage/);
 });
+
+test("timeline date filtering uses a calendar-style input instead of month dropdowns", () => {
+  assert.match(appSource, /id="timeline-date-input" type="date"/);
+  assert.match(appSource, /id="timeline-date-scope"/);
+  assert.doesNotMatch(appSource, /id="timeline-month-select"/);
+  assert.doesNotMatch(appSource, /id="timeline-day-select"/);
+});

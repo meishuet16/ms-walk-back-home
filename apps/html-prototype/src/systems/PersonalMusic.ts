@@ -91,6 +91,16 @@ export function nextTrackIdForPlayback(ids: string[], currentId: string | undefi
   return ids[(currentIndex + 1) % ids.length];
 }
 
+export function adjacentTrackIdForControl(ids: string[], currentId: string | undefined, direction: -1 | 1, options: { repeatOne?: boolean; shuffleEnabled?: boolean } = {}, random = Math.random): string | undefined {
+  if (!ids.length) return undefined;
+  const currentIndex = Math.max(0, ids.findIndex((id) => id === currentId));
+  if (direction > 0 && options.shuffleEnabled && ids.length > 1) {
+    const candidates = ids.filter((id) => id !== currentId);
+    return candidates[Math.floor(random() * candidates.length)] ?? candidates[0];
+  }
+  return ids[(currentIndex + direction + ids.length) % ids.length];
+}
+
 export function normalizePlaybackMode(value: unknown): MusicPlaybackMode {
   return value === "repeat-one" || value === "shuffle" || value === "next" ? value : "next";
 }

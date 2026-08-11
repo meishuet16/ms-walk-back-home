@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { UserMusicTrack } from "../src/types.js";
 import {
+  adjacentTrackIdForControl,
   activeLyricIndexAt,
   builtInRecordIds,
   clampLyricsOverlay,
@@ -98,4 +99,13 @@ test("personal music playback modes resolve repeat next and shuffle", () => {
   assert.equal(nextTrackIdForPlayback(ids, "b", { shuffleEnabled: true }, () => 0.99), "c");
   assert.equal(normalizePlaybackMode("shuffle"), "shuffle");
   assert.equal(normalizePlaybackMode("old-save"), "next");
+});
+
+test("manual player controls honor shuffle but can move past repeat-one", () => {
+  const ids = ["a", "b", "c"];
+
+  assert.equal(adjacentTrackIdForControl(ids, "b", 1, { repeatOne: true }), "c");
+  assert.equal(adjacentTrackIdForControl(ids, "b", -1, { repeatOne: true }), "a");
+  assert.equal(adjacentTrackIdForControl(ids, "b", 1, { shuffleEnabled: true }, () => 0), "a");
+  assert.equal(adjacentTrackIdForControl(ids, "b", 1, { shuffleEnabled: true }, () => 0.99), "c");
 });
