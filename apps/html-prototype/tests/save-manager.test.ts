@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { SaveManager } from "../src/systems/SaveManager.js";
-import type { DiaryEntry, SaveState } from "../src/types.js";
+import type { DiaryEntry, PersonalMusicLibraryState, PersonalPlayerState, SaveState } from "../src/types.js";
 
 class MemoryStorage {
   private values = new Map<string, string>();
@@ -113,4 +113,52 @@ test("diary library reload preserves photo attachments and scrapbook layout", ()
 
   assert.equal(reloaded?.entries[0].photos?.[0].src, "data:image/png;base64,abc");
   assert.deepEqual(reloaded?.entries[0].scrapbookLayout?.elements[0], entry.scrapbookLayout?.elements[0]);
+});
+
+test("music library persists imported metadata separately from journey reset", () => {
+  installStorage();
+  const manager = new SaveManager();
+  const library: PersonalMusicLibraryState = {
+    version: 1,
+    savedAt: "now",
+    tracks: [{
+      id: "user-song",
+      title: "雨天",
+      artist: "美雪",
+      audioBlobKey: "audio-blob",
+      coverBlobKey: "cover-blob",
+      syncedLyrics: [{ time: 1.2, text: "第一句" }],
+      addedAt: 123
+    }]
+  };
+
+  manager.saveMusicLibrary(library);
+  manager.saveJourney({ version: 1, savedAt: "now", scene: "forest", player: { x: 1, y: 2 }, visitedMemories: [], walkedThroughMemories: [], choices: [], tendencies: legacyState([]).tendencies, readMemories: [], room: { visits: 0, reflections: [] }, finalJourney: [] });
+  manager.resetJourney();
+
+  assert.equal(manager.loadJourney(), null);
+  assert.equal(manager.loadMusicLibrary()?.tracks[0].title, "雨天");
+  assert.equal(manager.loadMusicLibrary()?.tracks[0].artist, "美雪");
+  assert.equal(manager.loadMusicLibrary()?.tracks[0].syncedLyrics?.[0].text, "第一句");
+});
+
+test("personal player state persists without media blobs", () => {
+  installStorage();
+  const manager = new SaveManager();
+  const player: PersonalPlayerState = {
+    version: 1,
+    selectedTrackId: "user-song",
+    playing: true,
+    playbackPosition: 42,
+    visualMode: "cover",
+    lyricsVisible: true,
+    lyricsOverlay: { x: 20, y: 30, width: 260 },
+    librarySort: "artist",
+    librarySearch: "雨",
+    playerBackgroundBlobKey: "bg-blob"
+  };
+
+  manager.savePersonalPlayer(player);
+
+  assert.deepEqual(manager.loadPersonalPlayer(), player);
 });

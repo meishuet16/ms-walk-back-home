@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { resolveAudioSource, sameAudioSource } from "../src/systems/AudioManager.js";
+import { AudioManager, resolveAudioSource, sameAudioSource } from "../src/systems/AudioManager.js";
 
 test("audio manager resolves encoded local mp3 sources against the current page", () => {
   const base = "http://localhost:4173/room/index.html";
@@ -19,4 +19,62 @@ test("audio manager compares sources after URL normalization", () => {
 
   assert.equal(sameAudioSource(absolute, source, base), true);
   assert.equal(sameAudioSource(absolute, "assets/audio/forest.mp3", base), false);
+});
+
+test("audio manager exposes playback time duration seek and lifecycle events", () => {
+  const OriginalAudio = globalThis.Audio;
+  const events = new Map<string, Array<() => void>>();
+  class FakeAudio {
+    src = "";
+    loop = false;
+    preload = "";
+    volume = 0;
+    muted = false;
+    paused = true;
+    currentTime = 0;
+    duration = 180;
+
+    constructor(src: string) {
+      this.src = src;
+    }
+
+    addEventListener(type: string, callback: () => void): void {
+      events.set(type, [...(events.get(type) ?? []), callback]);
+    }
+
+    removeEventListener(type: string, callback: () => void): void {
+      events.set(type, (events.get(type) ?? []).filter((item) => item !== callback));
+    }
+
+    async play(): Promise<void> {
+      this.paused = false;
+      for (const callback of events.get("play") ?? []) callback();
+    }
+
+    pause(): void {
+      this.paused = true;
+      for (const callback of events.get("pause") ?? []) callback();
+    }
+
+    load(): void {}
+  }
+  Object.defineProperty(globalThis, "Audio", { configurable: true, value: FakeAudio });
+  try {
+    const manager = new AudioManager();
+    let updated = 0;
+    const unsubscribe = manager.onTimeUpdate(() => updated += 1);
+    manager.seek(24);
+    for (const callback of events.get("timeupdate") ?? []) callback();
+
+    assert.equal(manager.getCurrentTime(), 24);
+    assert.equal(manager.getDuration(), 180);
+    assert.equal(manager.isPaused(), true);
+    assert.equal(updated, 1);
+
+    unsubscribe();
+    for (const callback of events.get("timeupdate") ?? []) callback();
+    assert.equal(updated, 1);
+  } finally {
+    Object.defineProperty(globalThis, "Audio", { configurable: true, value: OriginalAudio });
+  }
 });

@@ -87,7 +87,51 @@ export class AudioManager {
     this.track.currentTime = 0;
   }
 
+  seek(seconds: number): void {
+    if (!this.track) return;
+    const duration = Number.isFinite(this.track.duration) ? this.track.duration : Number.POSITIVE_INFINITY;
+    this.track.currentTime = Math.max(0, Math.min(duration, seconds));
+  }
+
+  getCurrentTime(): number {
+    return this.track?.currentTime ?? 0;
+  }
+
+  getDuration(): number {
+    const duration = this.track?.duration ?? 0;
+    return Number.isFinite(duration) ? duration : 0;
+  }
+
+  isPaused(): boolean {
+    return this.track?.paused ?? true;
+  }
+
+  onTimeUpdate(callback: () => void): () => void {
+    return this.on("timeupdate", callback);
+  }
+
+  onDurationChange(callback: () => void): () => void {
+    return this.on("durationchange", callback);
+  }
+
+  onEnded(callback: () => void): () => void {
+    return this.on("ended", callback);
+  }
+
+  onPlay(callback: () => void): () => void {
+    return this.on("play", callback);
+  }
+
+  onPause(callback: () => void): () => void {
+    return this.on("pause", callback);
+  }
+
   ping(_kind: "forest" | "bakery" | "ending" = "forest"): void {
     void this.ensurePlaying();
+  }
+
+  private on(type: string, callback: () => void): () => void {
+    this.track?.addEventListener(type, callback);
+    return () => this.track?.removeEventListener(type, callback);
   }
 }

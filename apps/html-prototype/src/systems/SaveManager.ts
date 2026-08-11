@@ -1,10 +1,12 @@
-import type { DiaryLibraryState, JourneyState, SaveState } from "../types.js";
+import type { DiaryLibraryState, JourneyState, PersonalMusicLibraryState, PersonalPlayerState, SaveState } from "../types.js";
 import { normalizeDiaryEntry } from "./DiaryImport.js";
 
 const key = (slot: number) => `walk-back-home:html-prototype:v1:slot-${slot}`;
 const autosaveKey = "walk-back-home:html-prototype:v1:autosave";
 const diaryLibraryKey = "walk-back-home:html-prototype:v2:diary-library";
 const journeyKey = "walk-back-home:html-prototype:v2:journey";
+const musicLibraryKey = "walk-back-home:html-prototype:v1:music-library";
+const personalPlayerKey = "walk-back-home:html-prototype:v1:personal-player";
 
 export class SaveManager {
   saveDiaryLibrary(state: DiaryLibraryState): void {
@@ -21,6 +23,22 @@ export class SaveManager {
 
   loadJourney(): JourneyState | null {
     return this.parseVersioned<JourneyState>(localStorage.getItem(journeyKey));
+  }
+
+  saveMusicLibrary(state: PersonalMusicLibraryState): void {
+    localStorage.setItem(musicLibraryKey, JSON.stringify({ ...state, savedAt: new Date().toISOString() }));
+  }
+
+  loadMusicLibrary(): PersonalMusicLibraryState | null {
+    return this.parseVersioned<PersonalMusicLibraryState>(localStorage.getItem(musicLibraryKey));
+  }
+
+  savePersonalPlayer(state: PersonalPlayerState): void {
+    localStorage.setItem(personalPlayerKey, JSON.stringify(state));
+  }
+
+  loadPersonalPlayer(): PersonalPlayerState | null {
+    return this.parseVersioned<PersonalPlayerState>(localStorage.getItem(personalPlayerKey));
   }
 
   resetJourney(): void {
