@@ -1,5 +1,24 @@
 export type ActorFacing = "down" | "up" | "left" | "right";
 export type SceneActorKind = "human" | "motor" | "compound-motor";
+export type SceneActorExpression =
+  | "neutral"
+  | "nervous"
+  | "happy"
+  | "attentive"
+  | "ride_nervous"
+  | "ride"
+  | "ride_happy"
+  | "look_back_happy"
+  | "hold_motor"
+  | "follow"
+  | "release"
+  | "watch"
+  | "phone"
+  | "photo_smug"
+  | "confused"
+  | "holding_book"
+  | "haircut_happy"
+  | "sitting_reading";
 
 export type SceneActor = {
   id: string;
@@ -7,7 +26,7 @@ export type SceneActor = {
   x: number;
   y: number;
   facing: ActorFacing;
-  expression?: "neutral" | "nervous" | "happy" | "attentive";
+  expression?: SceneActorExpression;
   visible: boolean;
   kind: SceneActorKind;
   color?: string;

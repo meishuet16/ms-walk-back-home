@@ -7,8 +7,7 @@ import { CutsceneSystem } from "../src/systems/CutsceneSystem.js";
 import { activeMemoryTrigger } from "../src/systems/MemoryTrigger.js";
 import { SaveManager } from "../src/systems/SaveManager.js";
 import { emptyTendencies } from "../src/systems/TendencySystem.js";
-import { initialChapterProgress, recordChapterChoice } from "../src/systems/ChapterProgressManager.js";
-import { resolveChapterReflection } from "../src/systems/EndingResolver.js";
+import { labisChoicePoints, resolveLabisMemoryReflection } from "../src/fixtures/labisMemoryEchoes.js";
 
 class MemoryStorage {
   private values = new Map<string, string>();
@@ -36,9 +35,9 @@ function installStorage(): void {
 test("labis motor day is registered as a labis runtime chapter", () => {
   const door = forestEntries.find((entry) => entry.chapterId === "labis-motor-day");
   assert.ok(door);
-  assert.equal(door.title.includes("motor"), true);
+  assert.equal(door.title.includes("单凭这一点"), true);
   assert.equal(chapterRegistry["labis-motor-day"].runtimeScene, "labis");
-  assert.equal(chapterRegistry["labis-motor-day"].location, "Labis");
+  assert.equal(chapterRegistry["labis-motor-day"].location, "Labis, Johor");
   assert.equal(routeForestEntry(door).kind, "implemented-chapter");
 });
 
@@ -48,9 +47,9 @@ test("labis memory trigger respects once-completed events", () => {
   assert.equal(activeMemoryTrigger({ x: trigger.rect.x + 20, y: trigger.rect.y + 20 }, labisMemoryTriggers, new Set(["july19-motor-learning"])), null);
 });
 
-test("labis motor trigger requires the diary memory to be read first", () => {
+test("labis motor trigger can start from quiet exploration without forcing diary first", () => {
   const trigger = labisMemoryTriggers[0];
-  assert.equal(canStartLabisMotorMemory({ x: trigger.rect.x + 20, y: trigger.rect.y + 20 }, new Set(), new Set()), false);
+  assert.equal(canStartLabisMotorMemory({ x: trigger.rect.x + 20, y: trigger.rect.y + 20 }, new Set(), new Set()), true);
   assert.equal(canStartLabisMotorMemory({ x: trigger.rect.x + 20, y: trigger.rect.y + 20 }, new Set(["labis-motor-day"]), new Set()), true);
 });
 
@@ -62,21 +61,19 @@ test("labis diary memory remains repeatable and is not covered by the motor trig
   assert.equal(canStartLabisMotorMemory(point, new Set(["labis-motor-day"]), new Set()), false);
 });
 
-test("labis chapter offers three motor choices and four reflection endings", () => {
-  assert.deepEqual(labisMotorChapter.dialogue.map((node) => node.id), ["labis-teach", "labis-release", "labis-remember"]);
-  assert.deepEqual(labisMotorChapter.dialogue.map((node) => node.choices?.length), [3, 3, 4]);
-  assert.deepEqual(labisMotorChapter.reflectionQuotes.map((quote) => quote.tone), ["accepting", "holding", "rewriting", "not-ready"]);
-  assert.ok(labisMotorChapter.reflectionQuotes.every((quote) => quote.title && quote.afterline));
+test("labis chapter offers three interpretation choice points and four memory reflections", () => {
+  assert.deepEqual(labisMotorChapter.dialogue.map((node) => node.id), ["labis-choice-motor", "labis-choice-photo", "labis-choice-filter"]);
+  assert.deepEqual(labisMotorChapter.dialogue.map((node) => node.choices?.length), [3, 3, 3]);
+  assert.deepEqual(labisChoicePoints.map((point) => point.choices.length), [3, 3, 3]);
+  assert.equal(labisMotorChapter.reflectionQuotes.length, 4);
+  assert.ok(labisMotorChapter.reflectionQuotes.every((quote) => quote.title === "Memory Reflection"));
 });
 
-test("labis final reflection choice controls the closing quote tone", () => {
-  const base = initialChapterProgress("labis-motor-day");
-  const picked = recordChapterChoice(base, "labis-final-photo", emptyTendencies());
-  const reflection = resolveChapterReflection(labisMotorChapter, picked);
-
-  assert.equal(reflection.tone, "rewriting");
-  assert.equal(reflection.title, "以后再驾");
-  assert.equal(reflection.afterline, "后来是真的。那天下午也是真的。");
+test("labis final reflection uses hidden tendencies instead of good or bad labels", () => {
+  const reflection = resolveLabisMemoryReflection({ ...emptyTendencies(), closeness: 2, intervention: 2 });
+  assert.equal(reflection.id, "labis-reflection-not-ready");
+  assert.equal(reflection.title, "Memory Reflection");
+  assert.equal(reflection.lines.some((line) => /Good|Bad|True/.test(line)), false);
 });
 
 test("labis cutscene reaches ET dialogue and completes after acknowledgement", () => {
@@ -87,9 +84,6 @@ test("labis cutscene reaches ET dialogue and completes after acknowledgement", (
   assert.equal(cutscene.currentDialogue?.text, "单凭这一点，没有白来。");
   assert.equal(cutscene.actors.has("motor"), true);
 
-  cutscene.advanceDialogue();
-  cutscene.update(1 / 30);
-  assert.equal(cutscene.currentDialogue?.speaker, "Memory");
   cutscene.advanceDialogue();
   for (let i = 0; i < 120 && !cutscene.completed; i += 1) cutscene.update(1 / 30);
 

@@ -1,145 +1,44 @@
 import type { ChapterDefinition } from "../types.js";
+import { labisChoicePoints, labisMemoryReflections } from "./labisMemoryEchoes.js";
 
 export const labisMotorChapter: ChapterDefinition = {
   id: "labis-motor-day",
   runtimeScene: "labis",
-  date: "07.19",
-  title: "学会驾 motor 的下午",
-  mood: "ordinary, warm, quietly precious",
-  weather: "sunny afternoon",
-  location: "Labis",
-  characters: ["ET", "MS"],
-  objects: ["motor"],
-  evidence: ["labis-july19-background"],
+  date: "2026-07-19",
+  title: "07.19 · 单凭这一点，没有白来",
+  mood: "ordinary, funny, domestic, worth remembering",
+  weather: "Sunny",
+  location: "Labis, Johor",
+  characters: ["ET", "MS", "Muji"],
+  objects: ["motor", "family shop", "photos", "chicken porridge", "fried noodles", "filter manual", "Kancil", "badminton", "chicken cake"],
+  evidence: ["labis-july19-background", "local-only-labis-production-assets"],
   memoryText: [
-    "2026-07-19 · 学会驾 motor 的下午",
-    "Labis 的下午很晒，马路前面的灰尘被车轮带起来，又慢慢落回去。那天本来没有什么特别的安排，只是她一直说要我教她驾 motor。",
-    "我记得 motor 很轻，声音也不大。MS 在后面帮她稳着，ET 坐在前面，整个人都很小心，好像一用力就会把下午弄坏。",
-    "后来 MS 松开手，她还真的继续往前走了。不是很快，也不是很帅，可是那一小段路突然变得很长。",
-    "她回头的时候笑了一下，说：单凭这一点，没有白来。",
-    "那时候谁都不知道，这种普通到几乎不会被写进日记的下午，后来会变成值得回来的地方。"
+    "2026-07-19 · Labis, Johor · Sunny",
+    "那天没有什么大事。回家放了行李，去阿爸阿妈店，吃鸡粥，下午又有人被叫去吃炒面。",
+    "ET 学 motor，从紧张到稳住，再到回头笑。MS 只是扶着、跟着、然后松手。",
+    "她看到书里的照片，还拍起来说以后可以威胁 MS。MS 的反应不是震惊，是完全没跟上。",
+    "她剪了头发和刘海，看起来很喜欢。傍晚打了一下羽球。后来她坐在饭厅，陪阿妈研究过滤器说明书。",
+    "这些事情普通到当时不会发光。只是后来想起来，普通也会留下来。"
   ],
-  dialogue: [
-    {
-      id: "labis-teach",
-      speaker: "MS",
-      portrait: "none",
-      text: "你不是讲要教我驾 motor 咩",
-      choices: [
-        {
-          id: "labis-teach-hold",
-          label: "我扶着，你慢慢来。",
-          effects: { companionship: 1 },
-          response: "MS：我扶着，你慢慢来。<br>ET：你不要突然放手啊。<br>MS：知道啦。真的真的。"
-        },
-        {
-          id: "labis-teach-simple",
-          label: "很简单罢了，走走走。",
-          effects: { acceptance: 1 },
-          response: "MS：很简单罢了，走走走。<br>ET：等下等下。<br>MS：慢慢放。<br>ET：我在放了啦。"
-        },
-        {
-          id: "labis-teach-tease",
-          label: "你不是很厉害？自己来。",
-          effects: { closeness: 1, intervention: 1 },
-          response: "MS：你不是很厉害，自己来咯。<br>ET：蛤？？ms，你至少扶一下啦。<br>MS：哈哈哈哈好啦。"
-        }
-      ]
-    },
-    {
-      id: "labis-release",
-      speaker: "MS",
-      portrait: "none",
-      text: "第二次，她又说再来。MS 跟在旁边。看前面，不要一直看下面。",
-      choices: [
-        {
-          id: "labis-release-hold",
-          label: "继续扶着。",
-          effects: { companionship: 1 },
-          response: "ET：你是不是还扶着。<br>MS：嗯。<br>ET：可以放了啦。"
-        },
-        {
-          id: "labis-release-slow",
-          label: "慢慢松手。",
-          effects: { acceptance: 1 },
-          response: "ET：你没有扶了？！<br>MS：你不是会了吗。<br>ET：walao。"
-        },
-        {
-          id: "labis-release-tell",
-          label: "可以了，你自己来。",
-          effects: { acceptance: 1, honesty: 1 },
-          response: "ET：可以咩。<br>MS：可以。"
-        }
-      ]
-    },
-    {
-      id: "labis-remember",
-      speaker: "ET",
-      portrait: "none",
-      text: "单凭这一点，没有白来。",
-      choices: [
-        {
-          id: "labis-final-accept",
-          label: "嗯，没有白来。",
-          effects: { acceptance: 1 },
-          response: "MS：嗯，没有白来。<br>ET：是不是。<br>MS：是啦。"
-        },
-        {
-          id: "labis-final-happy",
-          label: "你开心就好。",
-          effects: { companionship: 1 },
-          response: "MS：你开心就好。<br>ET：我很开心啊。<br>MS：看得出。"
-        },
-        {
-          id: "labis-final-photo",
-          label: "早知道就拍下来。",
-          effects: { intervention: 1 },
-          response: "MS：早知道刚才拍下来。<br>ET：拍来做么。<br>MS：不知道，留着咯。<br>ET：以后再驾啦。"
-        },
-        {
-          id: "labis-final-silent",
-          label: "……",
-          effects: { distance: 1 },
-          response: "ET：做么。<br>MS：没有啊。<br>ET：奇怪的人。"
-        }
-      ]
-    }
-  ],
+  dialogue: labisChoicePoints.map((point) => ({
+    id: `labis-choice-${point.id}`,
+    speaker: "Muji",
+    portrait: "none",
+    text: point.prompt,
+    choices: point.choices
+  })),
   canonicalClosure: {
     historicalEventId: "july19-motor-learning",
     lines: [
       "ET 学会了驾 motor。",
-      "那天下午，她说单凭这一点，没有白来。"
+      "ET 拍下了书里的照片。",
+      "那天也有鸡粥、炒面、剪刘海、Kancil、羽球和过滤器说明书。"
     ]
   },
-  reflectionQuotes: [
-    {
-      id: "labis-motor-ordinary",
-      tone: "accepting",
-      title: "没有白来",
-      lines: ["那时候我没有想过，", "一个人学会往前走，也会成为我的记忆。"],
-      afterline: "她学会了。那就已经足够。"
-    },
-    {
-      id: "labis-motor-holding",
-      tone: "holding",
-      title: "她很开心",
-      lines: ["我记不得那天下午说过多少话。", "但我还记得，她骑回来的时候在笑。"],
-      afterline: "有些东西留下来，不是因为重要，只是因为舍不得忘。"
-    },
-    {
-      id: "labis-motor-rewriting",
-      tone: "rewriting",
-      title: "以后再驾",
-      lines: ["当时说“以后”的时候，", "谁都没有觉得那是一个需要兑现的约定。", "所以我不想用后来发生的事，", "去责怪那时候相信这句话的自己。"],
-      afterline: "后来是真的。那天下午也是真的。"
-    },
-    {
-      id: "labis-motor-not-ready",
-      tone: "not-ready",
-      title: "单凭这一点",
-      lines: ["她说，单凭这一点，没有白来。", "那我今天，就先记到这里。"],
-      afterline: "不是每一次回来，都必须带走一个答案。"
-    }
-  ]
+  reflectionQuotes: labisMemoryReflections.map((reflection, index) => ({
+    id: reflection.id,
+    tone: index === 0 ? "accepting" : index === 1 ? "holding" : index === 2 ? "not-ready" : "rewriting",
+    title: reflection.title,
+    lines: reflection.lines
+  }))
 };

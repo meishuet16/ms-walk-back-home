@@ -34,8 +34,7 @@ function inDiaryMemorySpot(point: Point): boolean {
   return Math.hypot(point.x - labisDiaryMemorySpot.x, point.y - labisDiaryMemorySpot.y) < labisDiaryMemorySpot.radius;
 }
 
-export function canStartLabisMotorMemory(point: Point, readMemories: Set<string>, completedEventIds: Set<string>): boolean {
-  if (!readMemories.has("labis-motor-day")) return false;
+export function canStartLabisMotorMemory(point: Point, _readMemories: Set<string>, completedEventIds: Set<string>): boolean {
   if (inDiaryMemorySpot(point)) return false;
   return Boolean(activeMemoryTrigger(point, labisMemoryTriggers, completedEventIds));
 }
@@ -49,18 +48,21 @@ export function labisInteractionForPoint(point: Point, readMemories: Set<string>
 
 export const labisMotorMemoryActions: CutsceneAction[] = [
   { type: "wait", duration: 0.42 },
-  { type: "spawn", actor: "motor", kind: "compound-motor", x: 570, y: 555, facing: "right", expression: "nervous", label: "ET + motor" },
-  { type: "spawn", actor: "ms", kind: "human", x: 528, y: 558, facing: "right", expression: "attentive", color: "#24211f", label: "MS" },
+  { type: "spawn", actor: "motor", kind: "compound-motor", x: 570, y: 555, facing: "right", expression: "ride_nervous", label: "ET + motor" },
+  { type: "spawn", actor: "ms", kind: "human", x: 528, y: 558, facing: "right", expression: "hold_motor", color: "#f4eee6", label: "MS" },
   { type: "wait", duration: 0.45 },
-  { type: "move", actor: "motor", x: 710, y: 548, duration: 1.7, expression: "nervous" },
-  { type: "move", actor: "ms", x: 650, y: 552, duration: 1.0, expression: "attentive" },
+  { type: "move", actor: "motor", x: 710, y: 548, duration: 1.7, expression: "ride_nervous" },
+  { type: "move", actor: "ms", x: 650, y: 552, duration: 1.0, expression: "follow" },
   { type: "wait", duration: 0.25 },
-  { type: "move", actor: "motor", x: 890, y: 530, duration: 2.0, expression: "nervous" },
-  { type: "expression", actor: "motor", value: "happy" },
+  { type: "expression", actor: "ms", value: "release" },
+  { type: "wait", duration: 0.32 },
+  { type: "move", actor: "motor", x: 890, y: 530, duration: 2.0, expression: "ride" },
+  { type: "expression", actor: "ms", value: "watch" },
+  { type: "expression", actor: "motor", value: "ride_happy" },
   { type: "face", actor: "motor", direction: "left" },
-  { type: "wait", duration: 0.35 },
+  { type: "expression", actor: "motor", value: "look_back_happy" },
+  { type: "wait", duration: 0.42 },
   { type: "dialogue", speaker: "ET", text: "单凭这一点，没有白来。" },
-  { type: "dialogue", speaker: "Memory", text: "那个下午当时没有发光，只是后来一直没有散掉。" },
   { type: "wait", duration: 0.7 },
   { type: "despawn", actor: "motor" },
   { type: "despawn", actor: "ms" }
