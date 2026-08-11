@@ -27,9 +27,9 @@ const labisActors: LabisAssetRegistry = {
     sitting: "assets/labis/mom-filter-manual.png"
   },
   prop: {
-    chicken_porridge: "assets/labis/chicken-porridge.png",
-    fried_noodles: "assets/labis/fried-noodles.png",
-    badminton: "assets/labis/badminton.png",
+    chicken_porridge: "assets/labis/props/chicken-porridge.png",
+    fried_noodles: "assets/labis/props/fried-noodles.png",
+    badminton: "assets/labis/props/badminton.png",
     filter_manual_table: "assets/labis/table-filter-manual.png"
   }
 };

@@ -266,7 +266,7 @@ export class WalkBackHomeApp {
     if (action === "labis-replay") this.startLabisMemory(true);
     if (action === "labis-dialogue-next") this.advanceLabisDialogue();
     if (action === "labis-choice") this.chooseLabisChoice(target.dataset.choice ?? "");
-    if (action === "labis-vignette-close") this.finishLabisEcho(true);
+    if (action === "labis-vignette-close") this.closeLabisKeyframeVignette();
     if (action === "labis-reflection-close") this.closeLabisReflection();
     if (action === "finish-memory") this.finishBakery();
     if (action === "choice") this.choose(target.dataset.choice ?? "");
@@ -832,9 +832,16 @@ export class WalkBackHomeApp {
       const src = labisAssetManifest.chickenCake;
       const hasImage = this.isLabisImageReady(src);
       this.overlay.classList.remove("dialogue-open");
-      this.overlay.innerHTML = `<div class="labis-keyframe">${hasImage ? `<img src="${src}" alt="">` : `<div class="labis-keyframe-fallback"><span>Zzz</span><strong>鸡蛋糕……</strong></div>`}<div class="sleep-bubble">鸡蛋糕……</div><div class="question-mark">?</div><p>Muji：到底梦到什么。</p><button data-action="labis-vignette-close">Close</button></div>`;
+      this.overlay.innerHTML = `<div class="labis-keyframe"><div class="labis-keyframe-aura"></div>${hasImage ? `<img src="${src}" alt="">` : `<div class="labis-keyframe-fallback"><span>Zzz</span><strong>鸡蛋糕……</strong></div>`}<div class="zzz-drift">Zzz</div><div class="sleep-bubble">鸡蛋糕……</div><div class="question-mark">?</div><p>Muji：到底梦到什么。</p><button data-action="labis-vignette-close">Close</button></div>`;
       this.autosave();
     }
+  }
+
+  private closeLabisKeyframeVignette(): void {
+    const keyframe = this.overlay.querySelector<HTMLElement>(".labis-keyframe");
+    if (!keyframe) return this.finishLabisEcho(true);
+    keyframe.classList.add("is-closing");
+    window.setTimeout(() => this.finishLabisEcho(true), 360);
   }
 
   private finishLabisEcho(keepDiscovery = false): void {
@@ -1079,14 +1086,20 @@ export class WalkBackHomeApp {
       if (x < -80 || y < -80 || x > this.canvas.width + 80 || y > this.canvas.height + 80) continue;
       const pulse = Math.sin(time / 420 + echo.x) * 0.5 + 0.5;
       this.ctx.save();
-      this.ctx.globalAlpha = 0.32 + pulse * 0.2;
-      const clue = this.ctx.createRadialGradient(x, y - 24 * scale, 2 * scale, x, y - 24 * scale, 52 * scale);
-      clue.addColorStop(0, "rgba(255, 231, 166, .52)");
+      this.ctx.globalAlpha = 0.48 + pulse * 0.28;
+      const clue = this.ctx.createRadialGradient(x, y - 26 * scale, 2 * scale, x, y - 26 * scale, 72 * scale);
+      clue.addColorStop(0, "rgba(255, 237, 174, .72)");
+      clue.addColorStop(0.45, "rgba(255, 221, 126, .24)");
       clue.addColorStop(1, "rgba(255, 231, 166, 0)");
       this.ctx.fillStyle = clue;
       this.ctx.beginPath();
-      this.ctx.arc(x, y - 24 * scale, 52 * scale, 0, Math.PI * 2);
+      this.ctx.arc(x, y - 26 * scale, 72 * scale, 0, Math.PI * 2);
       this.ctx.fill();
+      this.ctx.strokeStyle = "rgba(255, 239, 188, .4)";
+      this.ctx.lineWidth = 1.2 * scale;
+      this.ctx.beginPath();
+      this.ctx.arc(x, y - 26 * scale, (30 + pulse * 10) * scale, 0, Math.PI * 2);
+      this.ctx.stroke();
       if (echo.tell === "steam") {
         this.ctx.strokeStyle = "rgba(255, 246, 205, .62)";
         this.ctx.lineWidth = 1.8 * scale;
@@ -1126,15 +1139,15 @@ export class WalkBackHomeApp {
     this.ctx.fillStyle = "rgba(28, 21, 16, .18)";
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     if (echo.id === "july19-photo-threat") {
-      this.drawLabisImage(labisAssetPath("ms", "holding_book"), x - 104 * scale, y + 42 * scale, 166 * scale, 166 * scale) || this.drawMemoryTableFallback(x - 104 * scale, y + 12 * scale, scale * 1.55);
-      this.drawLabisImage(labisAssetPath("ms", "confused"), x + 10 * scale, y + 46 * scale, 132 * scale, 176 * scale) || this.drawEchoHuman(x + 10 * scale, y + 22 * scale, scale * 1.75, "#f1eadc", false);
-      this.drawLabisImage(labisAssetPath("et", age > 2.2 ? "photo_smug" : "phone"), x + 126 * scale, y + 46 * scale, 136 * scale, 176 * scale) || this.drawEchoHuman(x + 126 * scale, y + 22 * scale, scale * 1.75, "#202020", true);
+      this.drawLabisImage(labisAssetPath("ms", "holding_book"), x - 126 * scale, y + 54 * scale, 204 * scale, 186 * scale) || this.drawMemoryTableFallback(x - 126 * scale, y + 16 * scale, scale * 1.85);
+      this.drawLabisImage(labisAssetPath("ms", "confused"), x + 12 * scale, y + 58 * scale, 164 * scale, 202 * scale) || this.drawEchoHuman(x + 12 * scale, y + 28 * scale, scale * 2.05, "#f1eadc", false);
+      this.drawLabisImage(labisAssetPath("et", age > 2.2 ? "photo_smug" : "phone"), x + 154 * scale, y + 58 * scale, 172 * scale, 202 * scale) || this.drawEchoHuman(x + 154 * scale, y + 28 * scale, scale * 2.05, "#202020", true);
     } else if (echo.id === "july19-chicken-porridge" || echo.id === "july19-fried-noodles") {
       this.drawMemoryTableFallback(x, y, scale * 1.35);
       const prop = echo.id === "july19-chicken-porridge" ? labisAssetPath("prop", "chicken_porridge") : labisAssetPath("prop", "fried_noodles");
       this.drawLabisImage(prop, x, y + 2 * scale, 158 * scale, 100 * scale) || this.drawFoodFallback(x, y - 28 * scale, scale * 1.75, echo.id === "july19-chicken-porridge");
     } else if (echo.id === "july19-haircut") {
-      this.drawLabisImage(labisAssetPath("et", "haircut_happy"), x, y + 42 * scale, 142 * scale, 188 * scale) || this.drawEchoHuman(x, y + 24 * scale, scale * 1.95, "#202020", true);
+      this.drawLabisImage(labisAssetPath("et", "haircut_happy"), x, y + 56 * scale, 188 * scale, 224 * scale) || this.drawEchoHuman(x, y + 30 * scale, scale * 2.25, "#202020", true);
     } else if (echo.id === "july19-kancil") {
       this.ctx.strokeStyle = "rgba(255, 248, 210, .58)";
       this.ctx.strokeRect(x - 66 * scale, y - 52 * scale, 132 * scale, 74 * scale);

@@ -10,9 +10,9 @@ test("labis production assets are referenced semantically and stay local-only pa
   assert.equal(labisAssetPath("et", "photo_smug"), "assets/labis/et-photo-smugs.png");
   assert.equal(labisAssetPath("et", "haircut_happy"), "assets/labis/et-haircut.png");
   assert.equal(labisAssetPath("ms", "confused"), "assets/labis/ms-confuse.png");
-  assert.equal(labisAssetPath("prop", "chicken_porridge"), "assets/labis/chicken-porridge.png");
-  assert.equal(labisAssetPath("prop", "fried_noodles"), "assets/labis/fried-noodles.png");
-  assert.equal(labisAssetPath("prop", "badminton"), "assets/labis/badminton.png");
+  assert.equal(labisAssetPath("prop", "chicken_porridge"), "assets/labis/props/chicken-porridge.png");
+  assert.equal(labisAssetPath("prop", "fried_noodles"), "assets/labis/props/fried-noodles.png");
+  assert.equal(labisAssetPath("prop", "badminton"), "assets/labis/props/badminton.png");
   assert.equal(labisAssetPath("prop", "missing"), undefined);
   assert.ok(labisProductionAssetPaths.every((path) => path.startsWith("assets/labis/")));
   assert.ok(labisProductionAssetPaths.includes(labisAssetManifest.chickenCake));
@@ -50,6 +50,10 @@ test("labis memory echoes remain replayable and use readable discovery anchors",
   assert.ok(kancil.x >= 1160 && kancil.x <= 1320);
   assert.ok(kancil.y >= 220 && kancil.y <= 340);
   assert.ok(kancil.radius >= 120);
+  const filter = labisEchoes.find((echo) => echo.id === "july19-filter-evening");
+  assert.ok(filter);
+  assert.ok(filter.radius >= 145);
+  assert.equal(filter.tell, "paper");
 });
 
 test("labis choice points expose interpretation choices without stat labels", () => {

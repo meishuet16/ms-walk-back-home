@@ -256,8 +256,26 @@ canvas {
   background: rgba(13, 11, 14, .9);
   color: #ffe5b2;
   text-align: center;
+  overflow: hidden;
+  animation: keyframeFadeIn 420ms ease both;
+}
+.labis-keyframe.is-closing {
+  pointer-events: none;
+  animation: keyframeFadeOut 360ms ease both;
+}
+.labis-keyframe-aura {
+  position: absolute;
+  inset: -18%;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 30% 24%, rgba(255, 224, 154, .24), transparent 26%),
+    radial-gradient(circle at 70% 70%, rgba(170, 205, 190, .16), transparent 28%),
+    radial-gradient(circle at 50% 50%, transparent 36%, rgba(0, 0, 0, .38) 78%);
+  animation: keyframeAura 3.8s ease-in-out infinite alternate;
 }
 .labis-keyframe img {
+  position: relative;
+  z-index: 1;
   display: block;
   width: 100%;
   max-height: 58vh;
@@ -271,10 +289,31 @@ canvas {
   border-radius: 999px;
   background: rgba(255, 246, 218, .92);
   color: #2a211b;
+  z-index: 2;
+  box-shadow: 0 0 18px rgba(255, 232, 171, .28);
+}
+.zzz-drift {
+  position: absolute;
+  right: 12%;
+  top: 34%;
+  z-index: 2;
+  color: rgba(255, 241, 202, .72);
+  font-family: Georgia, serif;
+  font-size: 18px;
+  letter-spacing: 0;
+  text-shadow: 0 0 12px rgba(255, 230, 168, .42);
+  animation: zzzDrift 2.8s ease-in-out infinite;
 }
 .sleep-bubble { right: 18%; top: 18%; }
 .question-mark { left: 20%; top: 42%; font-weight: 700; }
+.labis-keyframe p,
+.labis-keyframe button {
+  position: relative;
+  z-index: 2;
+}
 .labis-keyframe-fallback {
+  position: relative;
+  z-index: 1;
   height: 260px;
   display: grid;
   place-content: center;
@@ -288,6 +327,23 @@ canvas {
 @keyframes keyframeBreathe {
   from { transform: scale(1); }
   to { transform: scale(1.02); }
+}
+@keyframes keyframeFadeIn {
+  from { opacity: 0; transform: translateY(8px) scale(.985); filter: saturate(.75) blur(1px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: saturate(1) blur(0); }
+}
+@keyframes keyframeFadeOut {
+  from { opacity: 1; transform: translateY(0) scale(1); filter: saturate(1) blur(0); }
+  to { opacity: 0; transform: translateY(8px) scale(1.015); filter: saturate(.65) blur(1.5px); }
+}
+@keyframes keyframeAura {
+  from { opacity: .72; transform: scale(1); }
+  to { opacity: 1; transform: scale(1.04); }
+}
+@keyframes zzzDrift {
+  0% { opacity: 0; transform: translateY(8px) scale(.95); }
+  35% { opacity: .78; }
+  100% { opacity: 0; transform: translateY(-26px) scale(1.08); }
 }
 @media (max-width: 760px) {
   .overlay.dialogue-open {
