@@ -574,7 +574,7 @@ export class WalkBackHomeApp {
     this.visitedMemories.add(door.id);
     this.currentDoor = door;
     if ("kind" in door && door.kind === "fragment") {
-      this.overlay.innerHTML = `<div class="modal"><h2>${this.escapeHtml(door.date)} · ${this.escapeHtml(door.title)}</h2><p>${this.escapeHtml(door.excerpt)}</p><p>This memory is a small light, not a full chapter.</p><button data-action="close">Stay in forest</button><button data-action="open-timeline">Open Timeline</button></div>`;
+      this.overlay.innerHTML = `<div class="modal diary-memory"><div class="diary-memory-scroll"><h2>${this.escapeHtml(door.date)} · ${this.escapeHtml(door.title)}</h2><p>${this.escapeHtml(door.excerpt)}</p><p>This memory is a small light, not a full chapter.</p></div><div class="memory-actions"><button data-action="close">Stay in forest</button><button data-action="open-timeline">Open Timeline</button></div></div>`;
       this.autosave();
       this.focusStage();
       return;
