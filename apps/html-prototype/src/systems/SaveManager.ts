@@ -1,5 +1,6 @@
 import type { DiaryLibraryState, JourneyState, PersonalMusicLibraryState, PersonalPlayerState, SaveState } from "../types.js";
 import { normalizeDiaryEntry } from "./DiaryImport.js";
+import { normalizePlaybackMode } from "./PersonalMusic.js";
 
 const key = (slot: number) => `walk-back-home:html-prototype:v1:slot-${slot}`;
 const autosaveKey = "walk-back-home:html-prototype:v1:autosave";
@@ -38,7 +39,8 @@ export class SaveManager {
   }
 
   loadPersonalPlayer(): PersonalPlayerState | null {
-    return this.parseVersioned<PersonalPlayerState>(localStorage.getItem(personalPlayerKey));
+    const parsed = this.parseVersioned<PersonalPlayerState>(localStorage.getItem(personalPlayerKey));
+    return parsed ? { ...parsed, playbackMode: normalizePlaybackMode(parsed.playbackMode) } : null;
   }
 
   resetJourney(): void {

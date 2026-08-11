@@ -155,10 +155,30 @@ test("personal player state persists without media blobs", () => {
     lyricsOverlay: { x: 20, y: 30, width: 260 },
     librarySort: "artist",
     librarySearch: "雨",
+    playbackMode: "shuffle",
+    customTrackLyrics: { "audio-hu-xia": { syncedLyrics: [{ time: 1, text: "第一句" }], plainLyrics: "[00:01]第一句" } },
     playerBackgroundBlobKey: "bg-blob"
   };
 
   manager.savePersonalPlayer(player);
 
   assert.deepEqual(manager.loadPersonalPlayer(), player);
+});
+
+test("old personal player saves gain a default playback mode", () => {
+  installStorage();
+  localStorage.setItem("walk-back-home:html-prototype:v1:personal-player", JSON.stringify({
+    version: 1,
+    selectedTrackId: "user-song",
+    playing: true,
+    playbackPosition: 42,
+    visualMode: "cover",
+    lyricsVisible: true,
+    lyricsOverlay: { x: 20, y: 30, width: 260 },
+    librarySort: "artist",
+    librarySearch: "雨"
+  }));
+  const manager = new SaveManager();
+
+  assert.equal(manager.loadPersonalPlayer()?.playbackMode, "next");
 });

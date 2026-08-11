@@ -72,6 +72,10 @@ export class AudioManager {
     if (!wasPaused && !this.muted) void this.ensurePlaying();
   }
 
+  setLoop(loop: boolean): void {
+    if (this.track) this.track.loop = loop;
+  }
+
   setScene(scene: MusicScene): void {
     this.setTrack(sceneMusic[scene].src);
     void this.ensurePlaying();

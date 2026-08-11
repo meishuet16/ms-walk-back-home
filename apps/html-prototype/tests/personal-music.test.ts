@@ -8,6 +8,8 @@ import {
   createDefaultPersonalPlayerState,
   filterAndSortMusic,
   isBuiltInTrackId,
+  nextTrackIdForPlayback,
+  normalizePlaybackMode,
   parseLrc,
   personalMusicShouldPlayInScene,
   personalMusicShouldResumeAfterScene
@@ -27,6 +29,7 @@ test("personal music defaults preserve present-scene preferences without media d
   assert.equal(state.librarySort, "recently-added");
   assert.equal(state.lyricsVisible, true);
   assert.equal(state.playbackPosition, 0);
+  assert.equal(state.playbackMode, "next");
 });
 
 test("music library search is case-insensitive and unicode-safe", () => {
@@ -82,4 +85,16 @@ test("personal music belongs to room and forest but yields to memory chapters", 
   assert.equal(personalMusicShouldPlayInScene("labis"), false);
   assert.equal(personalMusicShouldResumeAfterScene("bakery", "forest"), true);
   assert.equal(personalMusicShouldResumeAfterScene("labis", "muji-room"), true);
+});
+
+test("personal music playback modes resolve repeat next and shuffle", () => {
+  const ids = ["a", "b", "c"];
+
+  assert.equal(nextTrackIdForPlayback(ids, "b", "repeat-one"), "b");
+  assert.equal(nextTrackIdForPlayback(ids, "b", "next"), "c");
+  assert.equal(nextTrackIdForPlayback(ids, "c", "next"), "a");
+  assert.equal(nextTrackIdForPlayback(ids, "b", "shuffle", () => 0), "a");
+  assert.equal(nextTrackIdForPlayback(ids, "b", "shuffle", () => 0.99), "c");
+  assert.equal(normalizePlaybackMode("shuffle"), "shuffle");
+  assert.equal(normalizePlaybackMode("old-save"), "next");
 });

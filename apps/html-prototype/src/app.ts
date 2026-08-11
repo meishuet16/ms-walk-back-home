@@ -2,7 +2,7 @@ import { bakeryChapter } from "./fixtures/chapterPlan.js";
 import { canStartLabisMotorMemory, labisBlockers, labisDiaryMemorySpot, labisInteractionForPoint, labisMotorMemoryActions, labisSpawn } from "./fixtures/labisMotorMemory.js";
 import { labisAssetManifest, labisAssetPath, labisProductionAssetPaths } from "./fixtures/labisAssetRegistry.js";
 import { labisChoicePoints, labisEchoes, resolveLabisMemoryReflection, type LabisChoicePoint, type LabisEcho } from "./fixtures/labisMemoryEchoes.js";
-import type { ChapterProgress, Choice, DiaryEntry, DiaryLibraryState, JourneyState, MemoryKind, MusicSort, PersonalMusicLibraryState, PersonalPlayerState, RoomJourneyState, SceneId, Tendencies, UserMusicTrack } from "./types.js";
+import type { ChapterProgress, Choice, DiaryEntry, DiaryLibraryState, JourneyState, MemoryKind, MusicPlaybackMode, MusicSort, PersonalMusicLibraryState, PersonalPlayerState, RoomJourneyState, SceneId, Tendencies, UserMusicTrack } from "./types.js";
 import { AudioManager } from "./systems/AudioManager.js";
 import { chapterRegistry, forestEntries, routeForestEntry, type AuthoredForestEntry } from "./systems/ChapterRegistry.js";
 import { beginChapterVisit, finishChapterWalkthrough, initialChapterProgress, markChapterDialogueComplete, markChapterMemoryRead, recordChapterChoice } from "./systems/ChapterProgressManager.js";
@@ -17,7 +17,7 @@ import { InputManager } from "./systems/InputManager.js";
 import { adjacentMonthKey, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, selectedOrLatestMonth, visibleTimelineEntries, type JournalMonth, type MonthlyJournalPdfPage } from "./systems/JournalModel.js";
 import { MusicBlobStore } from "./systems/MusicBlobStore.js";
 import { ParticleSystem } from "./systems/ParticleSystem.js";
-import { activeLyricIndexAt, clampLyricsOverlay, createDefaultPersonalPlayerState, filterAndSortMusic, isBuiltInTrackId, parseLrc, personalMusicShouldPlayInScene } from "./systems/PersonalMusic.js";
+import { activeLyricIndexAt, clampLyricsOverlay, createDefaultPersonalPlayerState, filterAndSortMusic, isBuiltInTrackId, nextTrackIdForPlayback, normalizePlaybackMode, parseLrc, personalMusicShouldPlayInScene } from "./systems/PersonalMusic.js";
 import { drawSceneActor } from "./systems/SceneActorRenderer.js";
 import { applyChoice } from "./systems/TendencySystem.js";
 import {
@@ -205,6 +205,9 @@ export class WalkBackHomeApp {
     this.images.room.src = assets.room;
     this.preloadLabisAssets();
     this.audio.setVolume(this.settings.volume);
+    this.audio.onTimeUpdate(() => this.handlePersonalTimeUpdate());
+    this.audio.onDurationChange(() => this.refreshRecordsPlaybackUI());
+    this.audio.onEnded(() => void this.handlePersonalTrackEnded());
     void this.audio.enable();
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) this.last = performance.now();
@@ -271,6 +274,7 @@ export class WalkBackHomeApp {
     if (action === "vinyl-pause") void this.pauseVinyl();
     if (action === "music-prev") void this.playAdjacentPersonalTrack(-1);
     if (action === "music-next") void this.playAdjacentPersonalTrack(1);
+    if (action === "music-mode") this.setMusicPlaybackMode(target.dataset.mode as MusicPlaybackMode);
     if (action === "music-visual") this.setMusicVisualMode(target.dataset.mode === "cover" ? "cover" : "vinyl");
     if (action === "toggle-floating-lyrics") this.toggleFloatingLyrics();
     if (action === "delete-user-track") void this.deleteUserTrack(target.dataset.track ?? "");
@@ -1022,6 +1026,8 @@ export class WalkBackHomeApp {
   private finishReturnToForest(): void {
     const leavingDoor = this.scene === "bakery" || this.scene === "labis" ? this.currentDoor : null;
     const leavingRoom = this.scene === "muji-room";
+    const keepPersonalMusic = personalMusicShouldPlayInScene(this.scene) && this.personalPlayer.playing && Boolean(this.personalPlayer.selectedTrackId);
+    this.syncPersonalPlaybackState();
     this.labisCutscene = null;
     this.labisDialogueOpen = false;
     this.labisReplayMode = false;
@@ -1034,7 +1040,8 @@ export class WalkBackHomeApp {
     this.room.windowFocus = false;
     this.showToast(leavingDoor ? "You can come back when you are ready." : leavingRoom ? "Returned to forest" : "Returned to forest");
     this.focusStage();
-    this.applyAudioForCurrentScene();
+    if (keepPersonalMusic) this.updatePersonalMusicOverlay();
+    else this.applyAudioForCurrentScene();
     this.autosave();
   }
 
@@ -2034,6 +2041,7 @@ export class WalkBackHomeApp {
       this.pendingPersonalSeek = Number(target.value);
       this.audio.seek(this.pendingPersonalSeek);
       this.personalPlayer.playbackPosition = this.pendingPersonalSeek;
+      this.refreshRecordsPlaybackUI();
       this.updatePersonalMusicOverlay();
       this.save.savePersonalPlayer(this.personalPlayer);
       return;
@@ -2399,9 +2407,10 @@ export class WalkBackHomeApp {
     const file = input.files?.[0];
     const trackId = this.personalPlayer.selectedTrackId ?? this.currentPersonalTrack()?.id;
     if (!file || !trackId || !file.type.startsWith("image/")) return;
+    const current = this.allPersonalTracks().find((track) => track.id === trackId);
     const key = `music/cover/${trackId}-${Date.now()}`;
     await this.musicBlobStore.putBlob(key, file);
-    if (isBuiltInTrackId(trackId)) {
+    if (current?.source === "built-in") {
       this.room = withCustomVinylCover(this.room, trackId, key);
     } else {
       this.musicLibrary = {
@@ -2418,8 +2427,8 @@ export class WalkBackHomeApp {
   private async handlePersonalLyricsInput(input: HTMLInputElement): Promise<void> {
     const file = input.files?.[0];
     const trackId = this.personalPlayer.selectedTrackId;
-    if (!file || !trackId || isBuiltInTrackId(trackId)) {
-      this.showToast(isBuiltInTrackId(trackId ?? "") ? "Lyrics attach to imported songs for now." : "Choose a song first.");
+    if (!file || !trackId) {
+      this.showToast("Choose a song first.");
       return;
     }
     const text = await this.readFileAsText(file);
@@ -2428,11 +2437,19 @@ export class WalkBackHomeApp {
       this.showToast("No synchronized lyric timestamps were found.");
       return;
     }
-    this.musicLibrary = {
-      ...this.musicLibrary,
-      tracks: this.musicLibrary.tracks.map((track) => track.id === trackId ? { ...track, syncedLyrics, plainLyrics: text } : track)
-    };
-    this.save.saveMusicLibrary(this.musicLibrary);
+    const current = this.allPersonalTracks().find((track) => track.id === trackId);
+    if (current?.source === "built-in") {
+      this.personalPlayer.customTrackLyrics = {
+        ...(this.personalPlayer.customTrackLyrics ?? {}),
+        [trackId]: { syncedLyrics, plainLyrics: text }
+      };
+    } else {
+      this.musicLibrary = {
+        ...this.musicLibrary,
+        tracks: this.musicLibrary.tracks.map((track) => track.id === trackId ? { ...track, syncedLyrics, plainLyrics: text } : track)
+      };
+      this.save.saveMusicLibrary(this.musicLibrary);
+    }
     await this.showRecords();
     this.showToast("Lyrics added");
     this.autosave();
@@ -2459,7 +2476,7 @@ export class WalkBackHomeApp {
 
   private updateCurrentUserTrackMetadata(): void {
     const trackId = this.personalPlayer.selectedTrackId;
-    if (!trackId || isBuiltInTrackId(trackId)) return;
+    if (!trackId || this.currentPersonalTrack()?.source !== "user") return;
     const title = this.overlay.querySelector<HTMLInputElement>("#music-title")?.value.trim() || "Untitled Song";
     const artist = this.overlay.querySelector<HTMLInputElement>("#music-artist")?.value.trim() || "My Music";
     this.musicLibrary = {
@@ -2617,6 +2634,8 @@ export class WalkBackHomeApp {
   }
 
   private enterMujiRoom(): void {
+    const keepPersonalMusic = personalMusicShouldPlayInScene(this.scene) && this.personalPlayer.playing && Boolean(this.personalPlayer.selectedTrackId);
+    this.syncPersonalPlaybackState();
     this.scene = "muji-room";
     this.player = { ...roomSpawn };
     this.activeDoor = null;
@@ -2626,7 +2645,8 @@ export class WalkBackHomeApp {
     this.overlay.innerHTML = "";
     this.focusStage();
     this.showToast("Returned to the room");
-    this.applyAudioForCurrentScene();
+    if (keepPersonalMusic) this.updatePersonalMusicOverlay();
+    else this.applyAudioForCurrentScene();
     this.autosave();
   }
 
@@ -2690,12 +2710,14 @@ export class WalkBackHomeApp {
     }).join("");
     const visualStyle = cover ? `--cover:url('${this.escapeHtml(cover)}')` : "";
     const bgStyle = background ? `style="--player-bg:url('${this.escapeHtml(background)}')"` : "";
+    const coverInitials = cover ? "" : `<span>${this.escapeHtml(this.trackInitials(current?.title ?? "Music"))}</span>`;
+    const playbackMode = normalizePlaybackMode(this.personalPlayer.playbackMode);
     this.overlay.innerHTML = `
       <div class="modal game-panel records-panel personal-records ${background ? "has-bg" : ""}" ${bgStyle}>
         <header class="records-header"><div><h2>My Records</h2><p>Personal songs for the room and forest.</p></div><button data-action="close" aria-label="Close Records">Close</button></header>
         <div class="records-grid">
           <section class="record-visual ${this.personalPlayer.visualMode}">
-            ${this.personalPlayer.visualMode === "cover" ? `<div class="cover-visual" style="${visualStyle}"><span>${this.escapeHtml(this.trackInitials(current?.title ?? "Music"))}</span></div>` : `<div class="record-disc personal ${this.personalPlayer.playing && !this.settings.reducedMotion ? "playing" : ""}" style="${visualStyle}"><span></span></div><div class="tone-arm personal"></div>`}
+            ${this.personalPlayer.visualMode === "cover" ? `<div class="cover-visual ${cover ? "has-cover" : ""}" style="${visualStyle}">${coverInitials}</div>` : `<div class="record-disc personal ${cover ? "has-cover" : ""} ${this.personalPlayer.playing && !this.settings.reducedMotion ? "playing" : ""}" style="${visualStyle}"><span></span></div><div class="tone-arm personal"></div>`}
             <div class="visual-tabs"><button class="${this.personalPlayer.visualMode === "vinyl" ? "selected" : ""}" data-action="music-visual" data-mode="vinyl">Vinyl</button><button class="${this.personalPlayer.visualMode === "cover" ? "selected" : ""}" data-action="music-visual" data-mode="cover">Cover</button></div>
             <label class="file-control">Change Cover<input id="vinyl-cover-input" type="file" accept="image/*" aria-label="Change cover"></label>
             <label class="file-control">Change Background<input id="music-background-input" type="file" accept="image/*" aria-label="Change player background"></label>
@@ -2720,14 +2742,15 @@ export class WalkBackHomeApp {
           <label class="metadata-edit">Artist<input id="music-artist" value="${this.escapeHtml(current?.artist ?? "")}" ${current?.source === "user" ? "" : "disabled"} aria-label="Edit artist"></label>
           <label class="file-control">Add Lyrics<input id="music-lyrics-input" type="file" accept=".lrc,text/plain" aria-label="Add lyrics"></label>
           <button data-action="toggle-floating-lyrics">${this.personalPlayer.lyricsVisible ? "Hide Lyrics" : "Show Lyrics"}</button>
-          <div class="time-row"><span>${this.formatTime(currentTime)}</span><input id="music-seek" type="range" min="0" max="${Math.max(1, duration || current?.duration || 1)}" step="0.1" value="${Math.min(currentTime, Math.max(1, duration || current?.duration || 1))}" aria-label="Seek"><span>${this.formatTime(duration || current?.duration || 0)}</span></div>
+          <div class="time-row"><span data-music-current>${this.formatTime(currentTime)}</span><input id="music-seek" type="range" min="0" max="${Math.max(1, duration || current?.duration || 1)}" step="0.1" value="${Math.min(currentTime, Math.max(1, duration || current?.duration || 1))}" aria-label="Seek"><span data-music-duration>${this.formatTime(duration || current?.duration || 0)}</span></div>
+          <div class="playback-modes" aria-label="Playback mode"><button class="${playbackMode === "repeat-one" ? "selected" : ""}" data-action="music-mode" data-mode="repeat-one">Loop 1</button><button class="${playbackMode === "shuffle" ? "selected" : ""}" data-action="music-mode" data-mode="shuffle">Shuffle</button><button class="${playbackMode === "next" ? "selected" : ""}" data-action="music-mode" data-mode="next">Auto Next</button></div>
           <div class="vinyl-controls"><button data-action="music-prev" aria-label="Previous">Previous</button><button data-action="vinyl-pause" aria-label="${this.personalPlayer.playing ? "Pause" : "Play"}">${this.personalPlayer.playing ? "Pause" : "Play"}</button><button data-action="music-next" aria-label="Next">Next</button></div>
         </footer>
       </div>`;
     this.focusStage();
   }
 
-  private async selectVinyl(recordId: string): Promise<void> {
+  private async selectVinyl(recordId: string, announce = true): Promise<void> {
     this.personalPlayer.selectedTrackId = recordId;
     this.personalPlayer.playing = true;
     this.personalPlayer.playbackPosition = 0;
@@ -2735,7 +2758,7 @@ export class WalkBackHomeApp {
     else this.room = { ...this.room, selectedVinylId: recordId, vinylPlaying: true, musicOn: true };
     await this.playPersonalMusic(recordId, 0);
     await this.showRecords();
-    this.showToast("Record changed");
+    if (announce) this.showToast("Record changed");
     this.autosave();
   }
 
@@ -2766,7 +2789,7 @@ export class WalkBackHomeApp {
       src: record.sideA?.src,
       duration: record.sideA?.duration,
       coverBlobKey: undefined,
-      syncedLyrics: undefined,
+      syncedLyrics: this.personalPlayer.customTrackLyrics?.[record.id]?.syncedLyrics,
       addedAt: 1000 - index,
       lastPlayedAt: record.id === this.personalPlayer.selectedTrackId ? Date.now() : undefined
     }));
@@ -2786,7 +2809,7 @@ export class WalkBackHomeApp {
         src: record.sideA?.src,
         duration: record.sideA?.duration,
         coverBlobKey: undefined,
-        syncedLyrics: undefined,
+        syncedLyrics: this.personalPlayer.customTrackLyrics?.[record.id]?.syncedLyrics,
         addedAt: 1000 - index
       }))
       .filter((record) => !needle || [record.title, record.artist].filter(Boolean).join(" ").toLocaleLowerCase().includes(needle));
@@ -2808,6 +2831,7 @@ export class WalkBackHomeApp {
       const src = track.source === "user" && track.audioBlobKey ? await this.musicBlobStore.objectUrlFor(track.audioBlobKey) : track.src;
       if (!src) return;
       this.audio.setTrack(src);
+      this.audio.setLoop(normalizePlaybackMode(this.personalPlayer.playbackMode) === "repeat-one");
       this.audio.seek(position);
       if (this.settings.musicEnabled && !this.settings.muted) await this.audio.ensurePlaying();
       this.personalPlayer.selectedTrackId = track.id;
@@ -2829,6 +2853,13 @@ export class WalkBackHomeApp {
     const index = Math.max(0, tracks.findIndex((track) => track.id === current?.id));
     const next = tracks[(index + direction + tracks.length) % tracks.length];
     await this.selectVinyl(next.id);
+  }
+
+  private setMusicPlaybackMode(mode: MusicPlaybackMode): void {
+    this.personalPlayer.playbackMode = normalizePlaybackMode(mode);
+    this.audio.setLoop(this.personalPlayer.playbackMode === "repeat-one");
+    void this.showRecords();
+    this.autosave();
   }
 
   private setMusicVisualMode(mode: "vinyl" | "cover"): void {
@@ -2881,6 +2912,55 @@ export class WalkBackHomeApp {
     const currentTime = this.audio.getCurrentTime();
     if (Math.abs(currentTime - this.personalPlayer.playbackPosition) < 0.5) return;
     this.personalPlayer.playbackPosition = currentTime;
+  }
+
+  private handlePersonalTimeUpdate(): void {
+    if (!this.personalPlayer.playing || !personalMusicShouldPlayInScene(this.scene)) return;
+    this.personalPlayer.playbackPosition = this.audio.getCurrentTime();
+    this.refreshRecordsPlaybackUI();
+    this.updatePersonalMusicOverlay();
+  }
+
+  private async handlePersonalTrackEnded(): Promise<void> {
+    if (!this.personalPlayer.playing || !personalMusicShouldPlayInScene(this.scene)) return;
+    const tracks = this.visibleMusicTracks();
+    const nextId = nextTrackIdForPlayback(tracks.map((track) => track.id), this.personalPlayer.selectedTrackId, normalizePlaybackMode(this.personalPlayer.playbackMode));
+    if (!nextId) {
+      this.personalPlayer.playing = false;
+      this.room.vinylPlaying = false;
+      this.refreshRecordsPlaybackUI();
+      this.updatePersonalMusicOverlay();
+      this.autosave();
+      return;
+    }
+    await this.selectVinyl(nextId, false);
+  }
+
+  private refreshRecordsPlaybackUI(): void {
+    if (!this.recordsPanelOpen) return;
+    const currentTime = this.audio.getCurrentTime() || this.personalPlayer.playbackPosition;
+    const duration = this.audio.getDuration() || this.currentPersonalTrack()?.duration || 0;
+    const currentLabel = this.overlay.querySelector<HTMLElement>("[data-music-current]");
+    const durationLabel = this.overlay.querySelector<HTMLElement>("[data-music-duration]");
+    const seek = this.overlay.querySelector<HTMLInputElement>("#music-seek");
+    if (currentLabel) currentLabel.textContent = this.formatTime(currentTime);
+    if (durationLabel) durationLabel.textContent = this.formatTime(duration);
+    if (seek && document.activeElement !== seek) {
+      seek.max = String(Math.max(1, duration || 1));
+      seek.value = String(Math.min(currentTime, Math.max(1, duration || 1)));
+    }
+    this.refreshRecordsLyricsUI(currentTime);
+  }
+
+  private refreshRecordsLyricsUI(currentTime: number): void {
+    const lyrics = this.currentPersonalTrack()?.syncedLyrics ?? [];
+    const active = activeLyricIndexAt(lyrics, currentTime);
+    const rows = Array.from(this.overlay.querySelectorAll<HTMLElement>(".lyrics-pane p"));
+    if (!rows.length || !lyrics.length) return;
+    rows.forEach((row, index) => {
+      row.classList.toggle("active", index === active);
+      row.classList.toggle("near", index !== active && Math.abs(index - active) <= 2);
+    });
   }
 
   private updatePersonalMusicOverlay(): void {
@@ -2945,6 +3025,7 @@ export class WalkBackHomeApp {
     this.completedMemoryEvents = new Set(state.completedMemoryEvents ?? []);
     this.room = { ...this.room, ...state.room };
     this.personalPlayer = { ...this.personalPlayer, ...(state.personalPlayer ?? this.save.loadPersonalPlayer() ?? {}) };
+    this.personalPlayer.playbackMode = normalizePlaybackMode(this.personalPlayer.playbackMode);
     if (this.scene === "labis") {
       this.currentDoor = this.allDoors().find((door) => this.isChapterNode(door) && chapterRegistry[door.chapterId]?.runtimeScene === "labis") ?? this.currentDoor;
       this.labisCutscene = null;

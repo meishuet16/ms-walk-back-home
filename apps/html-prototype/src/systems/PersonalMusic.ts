@@ -1,4 +1,4 @@
-import type { LyricsOverlayState, MusicSort, PersonalPlayerState, SceneId, SyncedLyricLine, UserMusicTrack } from "../types.js";
+import type { LyricsOverlayState, MusicPlaybackMode, MusicSort, PersonalPlayerState, SceneId, SyncedLyricLine, UserMusicTrack } from "../types.js";
 import { vinylRecords } from "./MujiRoom.js";
 
 export const builtInRecordIds = vinylRecords.map((record) => record.id);
@@ -12,7 +12,8 @@ export function createDefaultPersonalPlayerState(): PersonalPlayerState {
     lyricsVisible: true,
     lyricsOverlay: { x: 620, y: 96, width: 280 },
     librarySort: "recently-added",
-    librarySearch: ""
+    librarySearch: "",
+    playbackMode: "next"
   };
 }
 
@@ -76,4 +77,19 @@ export function personalMusicShouldPlayInScene(scene: SceneId): boolean {
 
 export function personalMusicShouldResumeAfterScene(from: SceneId, to: SceneId): boolean {
   return !personalMusicShouldPlayInScene(from) && personalMusicShouldPlayInScene(to);
+}
+
+export function nextTrackIdForPlayback(ids: string[], currentId: string | undefined, mode: MusicPlaybackMode, random = Math.random): string | undefined {
+  if (!ids.length) return undefined;
+  if (mode === "repeat-one" && currentId) return currentId;
+  const currentIndex = Math.max(0, ids.findIndex((id) => id === currentId));
+  if (mode === "shuffle" && ids.length > 1) {
+    const candidates = ids.filter((id) => id !== currentId);
+    return candidates[Math.floor(random() * candidates.length)] ?? candidates[0];
+  }
+  return ids[(currentIndex + 1) % ids.length];
+}
+
+export function normalizePlaybackMode(value: unknown): MusicPlaybackMode {
+  return value === "repeat-one" || value === "shuffle" || value === "next" ? value : "next";
 }

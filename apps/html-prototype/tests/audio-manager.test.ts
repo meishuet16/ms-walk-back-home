@@ -25,6 +25,7 @@ test("audio manager exposes playback time duration seek and lifecycle events", (
   const OriginalAudio = globalThis.Audio;
   const events = new Map<string, Array<() => void>>();
   class FakeAudio {
+    static instances: FakeAudio[] = [];
     src = "";
     loop = false;
     preload = "";
@@ -36,6 +37,7 @@ test("audio manager exposes playback time duration seek and lifecycle events", (
 
     constructor(src: string) {
       this.src = src;
+      FakeAudio.instances.push(this);
     }
 
     addEventListener(type: string, callback: () => void): void {
@@ -64,11 +66,15 @@ test("audio manager exposes playback time duration seek and lifecycle events", (
     let updated = 0;
     const unsubscribe = manager.onTimeUpdate(() => updated += 1);
     manager.seek(24);
+    manager.setLoop(false);
     for (const callback of events.get("timeupdate") ?? []) callback();
 
     assert.equal(manager.getCurrentTime(), 24);
     assert.equal(manager.getDuration(), 180);
     assert.equal(manager.isPaused(), true);
+    assert.equal(FakeAudio.instances[0].loop, false);
+    manager.setLoop(true);
+    assert.equal(FakeAudio.instances[0].loop, true);
     assert.equal(updated, 1);
 
     unsubscribe();

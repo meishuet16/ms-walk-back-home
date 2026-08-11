@@ -117,6 +117,7 @@ export type MusicSourceKind = "built-in" | "user";
 export type PersonalMusicContext = "muji-room" | "forest";
 export type MusicSort = "recently-added" | "recently-played" | "title" | "artist";
 export type MusicVisualMode = "vinyl" | "cover";
+export type MusicPlaybackMode = "next" | "repeat-one" | "shuffle";
 
 export type SyncedLyricLine = {
   time: number;
@@ -158,6 +159,8 @@ export type PersonalPlayerState = {
   lyricsOverlay: LyricsOverlayState;
   librarySort: MusicSort;
   librarySearch: string;
+  playbackMode: MusicPlaybackMode;
+  customTrackLyrics?: Record<string, { syncedLyrics: SyncedLyricLine[]; plainLyrics?: string }>;
   playerBackgroundBlobKey?: string;
 };
 
