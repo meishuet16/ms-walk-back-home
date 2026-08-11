@@ -52,8 +52,9 @@ test("labis memory echoes remain replayable and use readable discovery anchors",
   assert.ok(kancil.radius >= 120);
   const filter = labisEchoes.find((echo) => echo.id === "july19-filter-evening");
   assert.ok(filter);
-  assert.ok(filter.radius >= 145);
+  assert.ok(filter.radius >= 175);
   assert.equal(filter.tell, "paper");
+  assert.equal(filter.requires, undefined);
 });
 
 test("labis choice points expose interpretation choices without stat labels", () => {

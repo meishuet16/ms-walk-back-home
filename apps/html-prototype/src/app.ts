@@ -767,8 +767,10 @@ export class WalkBackHomeApp {
   }
 
   private labisEchoPriority(echo: LabisEcho): number {
+    if (echo.id === "july19-filter-evening" && !this.completedMemoryEvents.has(echo.id)) return 5;
     if (echo.id === "july19-fried-noodles" && this.completedMemoryEvents.has("july19-chicken-porridge")) return 4;
     if (echo.id === "july19-chicken-porridge" && !this.completedMemoryEvents.has("july19-chicken-porridge")) return 3;
+    if (echo.id === "july19-filter-evening") return 3;
     if (!this.completedMemoryEvents.has(echo.id)) return 2;
     return 1;
   }
@@ -1086,14 +1088,14 @@ export class WalkBackHomeApp {
       if (x < -80 || y < -80 || x > this.canvas.width + 80 || y > this.canvas.height + 80) continue;
       const pulse = Math.sin(time / 420 + echo.x) * 0.5 + 0.5;
       this.ctx.save();
-      this.ctx.globalAlpha = 0.48 + pulse * 0.28;
-      const clue = this.ctx.createRadialGradient(x, y - 26 * scale, 2 * scale, x, y - 26 * scale, 72 * scale);
-      clue.addColorStop(0, "rgba(255, 237, 174, .72)");
-      clue.addColorStop(0.45, "rgba(255, 221, 126, .24)");
+      this.ctx.globalAlpha = 0.58 + pulse * 0.32;
+      const clue = this.ctx.createRadialGradient(x, y - 26 * scale, 2 * scale, x, y - 26 * scale, 86 * scale);
+      clue.addColorStop(0, "rgba(255, 241, 184, .84)");
+      clue.addColorStop(0.45, "rgba(255, 221, 126, .32)");
       clue.addColorStop(1, "rgba(255, 231, 166, 0)");
       this.ctx.fillStyle = clue;
       this.ctx.beginPath();
-      this.ctx.arc(x, y - 26 * scale, 72 * scale, 0, Math.PI * 2);
+      this.ctx.arc(x, y - 26 * scale, 86 * scale, 0, Math.PI * 2);
       this.ctx.fill();
       this.ctx.strokeStyle = "rgba(255, 239, 188, .4)";
       this.ctx.lineWidth = 1.2 * scale;
