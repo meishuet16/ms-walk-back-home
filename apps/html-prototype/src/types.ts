@@ -113,6 +113,54 @@ export type RoomJourneyState = {
   reflectionNote?: string;
 };
 
+export type MusicSourceKind = "built-in" | "user";
+export type PersonalMusicContext = "muji-room" | "forest";
+export type MusicSort = "recently-added" | "recently-played" | "title" | "artist";
+export type MusicVisualMode = "vinyl" | "cover";
+
+export type SyncedLyricLine = {
+  time: number;
+  text: string;
+};
+
+export type UserMusicTrack = {
+  id: string;
+  title: string;
+  artist?: string;
+  album?: string;
+  audioBlobKey: string;
+  coverBlobKey?: string;
+  syncedLyrics?: SyncedLyricLine[];
+  plainLyrics?: string;
+  addedAt: number;
+  lastPlayedAt?: number;
+};
+
+export type PersonalMusicLibraryState = {
+  version: 1;
+  savedAt: string;
+  tracks: UserMusicTrack[];
+};
+
+export type LyricsOverlayState = {
+  x: number;
+  y: number;
+  width?: number;
+};
+
+export type PersonalPlayerState = {
+  version: 1;
+  selectedTrackId?: string;
+  playing: boolean;
+  playbackPosition: number;
+  visualMode: MusicVisualMode;
+  lyricsVisible: boolean;
+  lyricsOverlay: LyricsOverlayState;
+  librarySort: MusicSort;
+  librarySearch: string;
+  playerBackgroundBlobKey?: string;
+};
+
 export type DiaryLibraryState = {
   version: 1;
   savedAt: string;
@@ -132,6 +180,7 @@ export type JourneyState = {
   readMemories: string[];
   completedMemoryEvents?: string[];
   room: RoomJourneyState;
+  personalPlayer?: PersonalPlayerState;
   finalJourney: string[];
 };
 
