@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createDiaryLibrary } from "../src/systems/DiaryLibrary.js";
 import { makeDiaryEntry } from "../src/systems/DiaryImport.js";
-import { deriveJournalMonths, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, monthlyBookSummaries, monthlyPdfFilename, selectedOrLatestMonth, visibleTimelineEntries } from "../src/systems/JournalModel.js";
+import { deriveJournalMonths, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, searchJournalEntries, selectedOrLatestMonth, visibleTimelineEntries } from "../src/systems/JournalModel.js";
 
 function entry(date: string, title: string) {
   return makeDiaryEntry(date, title, `${title} body`, `entry-${date}-${title}`);
@@ -25,6 +25,18 @@ test("timeline initially shows five entries and show more reveals batches", () =
   assert.equal(hasMoreTimelineEntries(month, journalBatchSize), true);
   assert.equal(visibleTimelineEntries(month, journalBatchSize + 5).length, 8);
   assert.equal(hasMoreTimelineEntries(month, journalBatchSize + 5), false);
+});
+
+test("timeline month view filters by keyword before batching", () => {
+  const entries = [
+    makeDiaryEntry("2026-07-01", "Market", "Bought noodles.", "entry-market"),
+    makeDiaryEntry("2026-07-02", "Labis", "单凭这一点，没有白来。", "entry-labis", "chapter"),
+    makeDiaryEntry("2026-07-03", "Rain", "Bus stop.", "entry-rain", "fragment")
+  ];
+  const month = selectedOrLatestMonth(entries, "2026-07");
+
+  assert.deepEqual(searchJournalEntries(entries, "labis").map((item) => item.id), ["entry-labis"]);
+  assert.deepEqual(makeTimelineMonthView(month, "kind-asc", "点").entries.map((item) => item.id), ["entry-labis"]);
 });
 
 test("monthly books and pdf export are derived on demand", async () => {

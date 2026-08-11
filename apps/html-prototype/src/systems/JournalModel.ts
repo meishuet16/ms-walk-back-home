@@ -1,4 +1,5 @@
 import type { DiaryEntry } from "../types.js";
+import { sortDiaryEntriesForTimeline, type DiaryTimelineSort } from "./DiaryImport.js";
 
 export type JournalMonth = {
   key: string;
@@ -90,6 +91,30 @@ export function visibleTimelineEntries(month: JournalMonth, visibleCount: number
 
 export function hasMoreTimelineEntries(month: JournalMonth, visibleCount: number): boolean {
   return month.entries.length > Math.max(journalBatchSize, visibleCount);
+}
+
+export function searchJournalEntries(entries: DiaryEntry[], query: string): DiaryEntry[] {
+  const normalized = query.trim().toLocaleLowerCase();
+  if (!normalized) return entries;
+  return entries.filter((entry) => {
+    const searchable = [
+      entry.date,
+      entry.title,
+      entry.body,
+      entry.location ?? "",
+      entry.weather ?? "",
+      entry.memoryKind,
+      entry.chapterId ?? ""
+    ].join("\n").toLocaleLowerCase();
+    return searchable.includes(normalized);
+  });
+}
+
+export function makeTimelineMonthView(month: JournalMonth, sort: DiaryTimelineSort, query = ""): JournalMonth {
+  return {
+    ...month,
+    entries: sortDiaryEntriesForTimeline(searchJournalEntries(month.entries, query), sort)
+  };
 }
 
 export function monthlyBookSummaries(entries: DiaryEntry[]): MonthlyBookSummary[] {

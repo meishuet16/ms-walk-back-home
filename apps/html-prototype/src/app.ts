@@ -14,7 +14,7 @@ import { makeDiaryEntry, parseDiaryImport, updateDiaryMemoryKind, type DiaryFore
 import { DialogueSystem } from "./systems/DialogueSystem.js";
 import { resolveChapterReflection, type Ending } from "./systems/EndingResolver.js";
 import { InputManager } from "./systems/InputManager.js";
-import { adjacentMonthKey, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, monthlyBookSummaries, monthlyPdfFilename, selectedOrLatestMonth, visibleTimelineEntries, type JournalMonth, type MonthlyJournalPdfPage } from "./systems/JournalModel.js";
+import { adjacentMonthKey, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, selectedOrLatestMonth, visibleTimelineEntries, type JournalMonth, type MonthlyJournalPdfPage } from "./systems/JournalModel.js";
 import { MusicBlobStore } from "./systems/MusicBlobStore.js";
 import { ParticleSystem } from "./systems/ParticleSystem.js";
 import { activeLyricIndexAt, clampLyricsOverlay, createDefaultPersonalPlayerState, filterAndSortMusic, isBuiltInTrackId, parseLrc, personalMusicShouldPlayInScene } from "./systems/PersonalMusic.js";
@@ -119,6 +119,7 @@ export class WalkBackHomeApp {
   private selectedScrapbookElementId = "";
   private selectedTimelineEntryIds = new Set<string>();
   private timelineSort: DiaryTimelineSort = "date-desc";
+  private timelineSearch = "";
   private journalMode: "timeline" | "books" | "reader" = "timeline";
   private selectedJournalMonthKey = "";
   private timelineVisibleCount = journalBatchSize;
@@ -1505,9 +1506,9 @@ export class WalkBackHomeApp {
     this.autosave();
   }
 
-  private showTimeline(): void {
+  private showTimeline(options: { restoreScrollTop?: number } = {}): void {
     this.journalMode = "timeline";
-    const month = this.currentJournalMonth();
+    const month = this.currentTimelineMonthView();
     const visibleEntries = visibleTimelineEntries(month, this.timelineVisibleCount);
     const rows = visibleEntries.map((entry) => {
       const checked = this.selectedTimelineEntryIds.has(entry.id) ? "checked" : "";
@@ -1525,8 +1526,14 @@ export class WalkBackHomeApp {
       </article>`;
     }).join("");
     const showMore = hasMoreTimelineEntries(month, this.timelineVisibleCount) ? `<button class="show-more" data-action="journal-show-more">Show More</button>` : "";
-    const empty = `<div class="journal-empty"><p>Nothing was written here.</p><button data-action="new-diary-entry">Create New Journal</button></div>`;
-    this.overlay.innerHTML = `<div class="modal game-panel timeline-panel journal-panel">${this.journalHeader("Timeline", month)}<div class="timeline-toolbar"><label>Sort<select id="timeline-sort"><option value="date-desc" ${this.timelineSort === "date-desc" ? "selected" : ""}>Newest first</option><option value="date-asc" ${this.timelineSort === "date-asc" ? "selected" : ""}>Oldest first</option><option value="title-asc" ${this.timelineSort === "title-asc" ? "selected" : ""}>Title A-Z</option></select></label><span>${this.selectedTimelineEntryIds.size} selected</span><button data-action="timeline-select-all">Select All</button><button data-action="timeline-clear-selected">Clear Selection</button><button data-action="timeline-delete-selected">Delete Selected</button></div><div class="timeline-list">${rows || empty}</div>${showMore}</div>`;
+    const empty = `<div class="journal-empty"><p>${this.timelineSearch.trim() ? "No diary matched that search." : "Nothing was written here."}</p><button data-action="new-diary-entry">Create New Journal</button></div>`;
+    this.overlay.innerHTML = `<div class="modal game-panel timeline-panel journal-panel">${this.journalHeader("Timeline", month)}<div class="timeline-toolbar"><label>Sort<select id="timeline-sort"><option value="date-desc" ${this.timelineSort === "date-desc" ? "selected" : ""}>Newest first</option><option value="date-asc" ${this.timelineSort === "date-asc" ? "selected" : ""}>Oldest first</option><option value="title-asc" ${this.timelineSort === "title-asc" ? "selected" : ""}>Title A-Z</option><option value="kind-asc" ${this.timelineSort === "kind-asc" ? "selected" : ""}>Memory chapters first</option><option value="kind-desc" ${this.timelineSort === "kind-desc" ? "selected" : ""}>Diary only first</option></select></label><label>Month<input id="timeline-month-picker" type="month" value="${this.escapeHtml(this.selectedJournalMonthKey || month.key)}"></label><label class="timeline-search">Search<input id="timeline-search" type="search" placeholder="keyword, title, place..." value="${this.escapeHtml(this.timelineSearch)}"></label><span>${this.selectedTimelineEntryIds.size} selected</span><button data-action="timeline-select-all">Select All</button><button data-action="timeline-clear-selected">Clear Selection</button><button data-action="timeline-delete-selected">Delete Selected</button></div><div class="timeline-list">${rows || empty}</div>${showMore}</div>`;
+    if (options.restoreScrollTop !== undefined) {
+      requestAnimationFrame(() => {
+        const panel = this.overlay.querySelector<HTMLElement>(".journal-panel");
+        if (panel) panel.scrollTop = options.restoreScrollTop ?? 0;
+      });
+    }
     this.focusStage();
   }
 
@@ -1536,6 +1543,10 @@ export class WalkBackHomeApp {
     return month;
   }
 
+  private currentTimelineMonthView(): JournalMonth {
+    return makeTimelineMonthView(this.currentJournalMonth(), this.timelineSort, this.timelineSearch);
+  }
+
   private journalHeader(active: "Timeline" | "Books" | "Reader", month: JournalMonth): string {
     return `<div class="journal-archive-header"><div><h2>Journal</h2><p>${this.escapeHtml(active)} · ${this.escapeHtml(month.label)}</p></div><div class="journal-tabs"><button class="${active === "Timeline" ? "selected" : ""}" data-action="journal-timeline">Timeline</button><button class="${active === "Books" || active === "Reader" ? "selected" : ""}" data-action="journal-books">Books</button></div><div class="journal-header-actions"><button data-action="new-diary-entry">Create New Journal</button><button data-action="close">Close</button></div></div><div class="month-nav"><button data-action="journal-month-prev">‹</button><strong>${this.escapeHtml(month.label)}</strong><button data-action="journal-month-next">›</button></div>`;
   }
@@ -1543,12 +1554,14 @@ export class WalkBackHomeApp {
   private renderDiaryPreview(entry: DiaryEntry): string {
     const photos = (entry.photos ?? []).slice(0, 9).map((photo) => `<img class="preview-photo-square" src="${this.escapeHtml(photo.src)}" alt="">`).join("");
     const photoGrid = photos ? `<div class="preview-photo-grid">${photos}</div>` : "";
-    return `<div class="preview-text"><span class="preview-date">${this.escapeHtml(entry.date)}</span><strong>${this.escapeHtml(entry.title)}</strong><span class="preview-body">${this.escapeHtml(entry.body.slice(0, 110)) || "Empty draft"}</span></div>${photoGrid}<small>${entry.memoryKind}</small>`;
+    return `<div class="preview-text"><span class="preview-date">${this.escapeHtml(entry.date)}</span><strong>${this.escapeHtml(entry.title)}</strong><span class="preview-body">${this.escapeHtml(entry.body.slice(0, 160)) || "Empty draft"}</span></div>${photoGrid}<small>${entry.memoryKind}</small>`;
   }
 
   private showMoreTimelineEntries(): void {
+    const panel = this.overlay.querySelector<HTMLElement>(".journal-panel");
+    const restoreScrollTop = panel?.scrollTop ?? 0;
     this.timelineVisibleCount += journalBatchSize;
-    this.showTimeline();
+    this.showTimeline({ restoreScrollTop });
   }
 
   private moveJournalMonth(direction: -1 | 1): void {
@@ -1998,6 +2011,19 @@ export class WalkBackHomeApp {
 
   private handleInput(event: Event): void {
     const target = event.target as HTMLElement;
+    if (target instanceof HTMLInputElement && target.id === "timeline-search") {
+      this.timelineSearch = target.value;
+      this.timelineVisibleCount = journalBatchSize;
+      this.selectedTimelineEntryIds.clear();
+      this.showTimeline();
+      requestAnimationFrame(() => {
+        const search = this.overlay.querySelector<HTMLInputElement>("#timeline-search");
+        if (!search) return;
+        search.focus();
+        search.setSelectionRange(search.value.length, search.value.length);
+      });
+      return;
+    }
     if (target instanceof HTMLInputElement && target.id === "music-search") {
       this.personalPlayer.librarySearch = target.value;
       void this.showRecords();
@@ -2112,7 +2138,7 @@ export class WalkBackHomeApp {
   }
 
   private selectAllTimelineEntries(): void {
-    this.selectedTimelineEntryIds = new Set(visibleTimelineEntries(this.currentJournalMonth(), this.timelineVisibleCount).map((entry) => entry.id));
+    this.selectedTimelineEntryIds = new Set(visibleTimelineEntries(this.currentTimelineMonthView(), this.timelineVisibleCount).map((entry) => entry.id));
     this.showTimeline();
   }
 
@@ -2214,6 +2240,15 @@ export class WalkBackHomeApp {
     const timelineSort = input.id === "timeline-sort" ? (input as unknown as HTMLSelectElement).value as DiaryTimelineSort : "";
     if (timelineSort) {
       this.timelineSort = timelineSort;
+      this.timelineVisibleCount = journalBatchSize;
+      this.selectedTimelineEntryIds.clear();
+      this.showTimeline();
+      return;
+    }
+    if (input.id === "timeline-month-picker") {
+      this.selectedJournalMonthKey = input.value;
+      this.timelineVisibleCount = journalBatchSize;
+      this.selectedTimelineEntryIds.clear();
       this.showTimeline();
       return;
     }

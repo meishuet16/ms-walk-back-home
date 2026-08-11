@@ -1188,12 +1188,20 @@ canvas {
   color: #f1d7a2;
 }
 .timeline-toolbar select,
+.timeline-toolbar input,
 .timeline-kind select {
   min-height: 34px;
   border: 1px solid #c8a879;
   border-radius: 6px;
   background: rgba(255, 248, 232, .9);
   color: #2f2117;
+}
+.timeline-search {
+  flex: 1 1 230px;
+}
+.timeline-search input {
+  width: 100%;
+  min-width: 180px;
 }
 .timeline-entry {
   position: relative;
@@ -1259,7 +1267,7 @@ canvas {
   border-radius: 7px;
 }
 .preview-text {
-  min-height: 98px;
+  min-height: 0;
 }
 .diary-page-preview strong,
 .diary-page-preview span,
@@ -1286,7 +1294,7 @@ canvas {
   display: grid;
   grid-template-columns: repeat(3, 50px);
   gap: 6px;
-  margin-top: 12px;
+  margin-top: 14px;
   color: transparent;
 }
 .diary-page-preview .preview-photo-square {
