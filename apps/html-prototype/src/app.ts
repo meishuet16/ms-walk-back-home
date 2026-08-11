@@ -839,7 +839,7 @@ export class WalkBackHomeApp {
       return this.showLabisDialogueQueue([
         { speaker: "Memory", text: "她还坐在那里陪阿妈研究过滤器。" },
         { speaker: "Muji", text: "她好像在哪里都可以自己找到事情做。" }
-      ], replay ? "finish-echo" : "filter-choice");
+      ], "filter-choice");
     }
     if (echo.id === "july19-chicken-cake") {
       this.completedMemoryEvents.add(echo.id);
@@ -975,10 +975,9 @@ export class WalkBackHomeApp {
   }
 
   private returnToForest(): void {
-    if (this.scene === "labis" && this.completedMemoryEvents.has("july19-motor-learning") && !this.walkedThroughMemories.has("labis-motor-day")) {
+    if (this.scene === "labis" && this.completedMemoryEvents.has("july19-motor-learning")) {
       return this.continueLabisReflectionBeforeExit();
     }
-    if (this.scene === "labis" && this.completedMemoryEvents.has("july19-motor-learning")) this.finishCurrentChapterWalkthrough();
     this.finishReturnToForest();
   }
 
@@ -1214,9 +1213,9 @@ export class WalkBackHomeApp {
       this.ctx.arc(x + Math.sin(time / 180) * 60 * scale, y - 52 * scale + Math.cos(time / 210) * 16 * scale, 4 * scale, 0, Math.PI * 2);
       this.ctx.fill();
     } else if (echo.id === "july19-filter-evening") {
-      this.drawLabisImage(labisAssetPath("prop", "filter_manual_table"), x, y + 44 * scale, 286 * scale, 182 * scale) || this.drawMemoryTableFallback(x, y + 16 * scale, scale * 1.7);
-      this.drawLabisImage(labisAssetPath("et", "sitting_reading"), x - 110 * scale, y + 50 * scale, 136 * scale, 166 * scale) || this.drawEchoHuman(x - 110 * scale, y + 28 * scale, scale * 1.8, "#202020", false);
-      this.drawLabisImage(labisAssetPath("mom", "sitting"), x + 110 * scale, y + 50 * scale, 136 * scale, 166 * scale) || this.drawEchoHuman(x + 110 * scale, y + 28 * scale, scale * 1.8, "#6d553d", false);
+      this.drawLabisImage(labisAssetPath("prop", "filter_manual_table"), x, y + 58 * scale, 368 * scale, 222 * scale) || this.drawMemoryTableFallback(x, y + 20 * scale, scale * 2.05);
+      this.drawLabisImage(labisAssetPath("et", "sitting_reading"), x - 142 * scale, y + 62 * scale, 176 * scale, 214 * scale) || this.drawEchoHuman(x - 142 * scale, y + 34 * scale, scale * 2.18, "#202020", false);
+      this.drawLabisImage(labisAssetPath("mom", "sitting"), x + 142 * scale, y + 62 * scale, 176 * scale, 214 * scale) || this.drawEchoHuman(x + 142 * scale, y + 34 * scale, scale * 2.18, "#6d553d", false);
     }
     this.ctx.restore();
   }
