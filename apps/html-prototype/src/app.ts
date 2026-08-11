@@ -1066,7 +1066,8 @@ export class WalkBackHomeApp {
     const y = (actor.y - cameraY) * scale;
     const pose = actor.expression ?? "idle";
     const src = actor.id === "ms" ? labisAssetPath("ms", pose) : actor.id === "motor" ? labisAssetPath("et", pose) : undefined;
-    if (this.drawLabisImage(src, x, y + 16 * scale, actor.id === "motor" ? 96 * scale : 58 * scale, actor.id === "motor" ? 86 * scale : 82 * scale)) return;
+    if (actor.id === "motor" && this.drawLabisImage(src, x, y + 34 * scale, 154 * scale, 138 * scale)) return;
+    if (actor.id === "ms" && this.drawLabisImage(src, x, y + 34 * scale, 104 * scale, 138 * scale)) return;
     drawSceneActor(this.ctx, actor, cameraX, cameraY, scale);
   }
 
