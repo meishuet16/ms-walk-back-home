@@ -757,13 +757,20 @@ export class WalkBackHomeApp {
   }
 
   private availableLabisEchoAtPlayer(): LabisEcho | null {
-    return labisEchoes.find((echo) => this.canUseLabisEcho(echo) && Math.hypot(this.player.x - echo.x, this.player.y - echo.y) < echo.radius) ?? null;
+    const nearby = labisEchoes.filter((echo) => this.canUseLabisEcho(echo) && Math.hypot(this.player.x - echo.x, this.player.y - echo.y) < echo.radius);
+    return nearby.sort((a, b) => this.labisEchoPriority(b) - this.labisEchoPriority(a))[0] ?? null;
   }
 
   private canUseLabisEcho(echo: LabisEcho): boolean {
-    if (!echo.repeatable && this.completedMemoryEvents.has(echo.id)) return false;
     if (echo.id === "july19-chicken-cake" && this.completedLabisOptionalCount() < 3) return false;
     return (echo.requires ?? []).every((id) => this.completedMemoryEvents.has(id));
+  }
+
+  private labisEchoPriority(echo: LabisEcho): number {
+    if (echo.id === "july19-fried-noodles" && this.completedMemoryEvents.has("july19-chicken-porridge")) return 4;
+    if (echo.id === "july19-chicken-porridge" && !this.completedMemoryEvents.has("july19-chicken-porridge")) return 3;
+    if (!this.completedMemoryEvents.has(echo.id)) return 2;
+    return 1;
   }
 
   private completedLabisOptionalCount(): number {
@@ -773,13 +780,14 @@ export class WalkBackHomeApp {
   private startLabisEcho(echo: LabisEcho): void {
     this.labisActiveEcho = echo;
     this.labisVignetteStartedAt = performance.now();
+    const replay = this.completedMemoryEvents.has(echo.id);
     if (echo.id === "july19-photo-threat") {
       return this.showLabisDialogueQueue([
         { speaker: "ET", text: "诶？" },
         { speaker: "ET", text: "拍起来。" },
         { speaker: "ET", text: "以后可以威胁 MS。" },
         { speaker: "MS", text: "蛤？" }
-      ], "photo-choice");
+      ], replay ? "finish-echo" : "photo-choice");
     }
     if (echo.id === "july19-chicken-porridge") {
       return this.showLabisDialogueQueue([
@@ -815,7 +823,7 @@ export class WalkBackHomeApp {
       return this.showLabisDialogueQueue([
         { speaker: "Memory", text: "她还坐在那里陪阿妈研究过滤器。" },
         { speaker: "Muji", text: "她好像在哪里都可以自己找到事情做。" }
-      ], "filter-choice");
+      ], replay ? "finish-echo" : "filter-choice");
     }
     if (echo.id === "july19-chicken-cake") {
       this.completedMemoryEvents.add(echo.id);
@@ -1070,10 +1078,17 @@ export class WalkBackHomeApp {
       if (x < -80 || y < -80 || x > this.canvas.width + 80 || y > this.canvas.height + 80) continue;
       const pulse = Math.sin(time / 420 + echo.x) * 0.5 + 0.5;
       this.ctx.save();
-      this.ctx.globalAlpha = 0.18 + pulse * 0.12;
+      this.ctx.globalAlpha = 0.32 + pulse * 0.2;
+      const clue = this.ctx.createRadialGradient(x, y - 22 * scale, 2 * scale, x, y - 22 * scale, 44 * scale);
+      clue.addColorStop(0, "rgba(255, 231, 166, .44)");
+      clue.addColorStop(1, "rgba(255, 231, 166, 0)");
+      this.ctx.fillStyle = clue;
+      this.ctx.beginPath();
+      this.ctx.arc(x, y - 22 * scale, 44 * scale, 0, Math.PI * 2);
+      this.ctx.fill();
       if (echo.tell === "steam") {
         this.ctx.strokeStyle = "rgba(255, 246, 205, .62)";
-        this.ctx.lineWidth = 1.2 * scale;
+        this.ctx.lineWidth = 1.8 * scale;
         for (let i = 0; i < 3; i += 1) {
           this.ctx.beginPath();
           this.ctx.moveTo(x + i * 6 * scale, y - 4 * scale);
@@ -1082,7 +1097,7 @@ export class WalkBackHomeApp {
         }
       } else if (echo.tell === "reflection" || echo.tell === "windshield" || echo.tell === "paper") {
         this.ctx.fillStyle = "rgba(255, 235, 180, .46)";
-        this.ctx.fillRect(x - 24 * scale, y - 18 * scale, 48 * scale, 2 * scale);
+        this.ctx.fillRect(x - 38 * scale, y - 20 * scale, 76 * scale, 3 * scale);
       } else if (echo.tell === "sound") {
         this.ctx.fillStyle = "rgba(255, 238, 190, .64)";
         this.ctx.font = `${20 * scale}px Georgia`;
@@ -1094,6 +1109,7 @@ export class WalkBackHomeApp {
         this.ctx.stroke();
       } else if (echo.tell === "hidden-star") {
         this.ctx.fillStyle = "rgba(255, 235, 174, .52)";
+        this.ctx.font = `${22 * scale}px Georgia`;
         this.ctx.fillText("✦", x, y - 14 * scale);
       }
       this.ctx.restore();
@@ -1109,29 +1125,29 @@ export class WalkBackHomeApp {
     this.ctx.fillStyle = "rgba(28, 21, 16, .18)";
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     if (echo.id === "july19-photo-threat") {
-      this.drawLabisImage(labisAssetPath("ms", "holding_book"), x - 34 * scale, y + 12 * scale, 78 * scale, 78 * scale) || this.drawMemoryTableFallback(x - 42 * scale, y, scale);
-      this.drawLabisImage(labisAssetPath("et", age > 2.2 ? "photo_smug" : "phone"), x + 64 * scale, y + 18 * scale, 58 * scale, 82 * scale) || this.drawEchoHuman(x + 64 * scale, y, scale, "#202020", true);
+      this.drawLabisImage(labisAssetPath("ms", "holding_book"), x - 54 * scale, y + 30 * scale, 128 * scale, 128 * scale) || this.drawMemoryTableFallback(x - 56 * scale, y + 10 * scale, scale);
+      this.drawLabisImage(labisAssetPath("et", age > 2.2 ? "photo_smug" : "phone"), x + 76 * scale, y + 32 * scale, 92 * scale, 126 * scale) || this.drawEchoHuman(x + 76 * scale, y + 18 * scale, scale * 1.4, "#202020", true);
     } else if (echo.id === "july19-chicken-porridge" || echo.id === "july19-fried-noodles") {
       this.drawMemoryTableFallback(x, y, scale);
       const prop = echo.id === "july19-chicken-porridge" ? labisAssetPath("prop", "chicken_porridge") : labisAssetPath("prop", "fried_noodles");
-      this.drawLabisImage(prop, x, y - 5 * scale, 72 * scale, 46 * scale) || this.drawFoodFallback(x, y - 28 * scale, scale, echo.id === "july19-chicken-porridge");
+      this.drawLabisImage(prop, x, y - 2 * scale, 120 * scale, 76 * scale) || this.drawFoodFallback(x, y - 28 * scale, scale * 1.35, echo.id === "july19-chicken-porridge");
     } else if (echo.id === "july19-haircut") {
-      this.drawLabisImage(labisAssetPath("et", "haircut_happy"), x, y + 8 * scale, 62 * scale, 82 * scale) || this.drawEchoHuman(x, y, scale, "#202020", true);
+      this.drawLabisImage(labisAssetPath("et", "haircut_happy"), x, y + 26 * scale, 100 * scale, 132 * scale) || this.drawEchoHuman(x, y + 18 * scale, scale * 1.45, "#202020", true);
     } else if (echo.id === "july19-kancil") {
       this.ctx.strokeStyle = "rgba(255, 248, 210, .58)";
       this.ctx.strokeRect(x - 48 * scale, y - 44 * scale, 96 * scale, 54 * scale);
       this.ctx.fillStyle = "rgba(255, 248, 210, .16)";
       this.ctx.fillRect(x - 42 * scale, y - 38 * scale, 84 * scale, 42 * scale);
     } else if (echo.id === "july19-badminton") {
-      this.drawLabisImage(labisAssetPath("prop", "badminton"), x, y, 88 * scale, 66 * scale);
+      this.drawLabisImage(labisAssetPath("prop", "badminton"), x, y + 12 * scale, 132 * scale, 98 * scale);
       this.ctx.fillStyle = "rgba(255,255,230,.72)";
       this.ctx.beginPath();
       this.ctx.arc(x + Math.sin(time / 180) * 60 * scale, y - 52 * scale + Math.cos(time / 210) * 16 * scale, 4 * scale, 0, Math.PI * 2);
       this.ctx.fill();
     } else if (echo.id === "july19-filter-evening") {
-      this.drawLabisImage(labisAssetPath("prop", "filter_manual_table"), x, y + 16 * scale, 150 * scale, 96 * scale) || this.drawMemoryTableFallback(x, y + 12 * scale, scale);
-      this.drawLabisImage(labisAssetPath("et", "sitting_reading"), x - 54 * scale, y + 22 * scale, 62 * scale, 76 * scale) || this.drawEchoHuman(x - 54 * scale, y, scale, "#202020", false);
-      this.drawLabisImage(labisAssetPath("mom", "sitting"), x + 56 * scale, y + 22 * scale, 62 * scale, 76 * scale) || this.drawEchoHuman(x + 56 * scale, y, scale, "#6d553d", false);
+      this.drawLabisImage(labisAssetPath("prop", "filter_manual_table"), x, y + 34 * scale, 220 * scale, 140 * scale) || this.drawMemoryTableFallback(x, y + 12 * scale, scale * 1.35);
+      this.drawLabisImage(labisAssetPath("et", "sitting_reading"), x - 82 * scale, y + 38 * scale, 98 * scale, 120 * scale) || this.drawEchoHuman(x - 82 * scale, y + 20 * scale, scale * 1.35, "#202020", false);
+      this.drawLabisImage(labisAssetPath("mom", "sitting"), x + 84 * scale, y + 38 * scale, 98 * scale, 120 * scale) || this.drawEchoHuman(x + 84 * scale, y + 20 * scale, scale * 1.35, "#6d553d", false);
     }
     this.ctx.restore();
   }

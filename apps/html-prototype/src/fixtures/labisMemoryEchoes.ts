@@ -35,13 +35,13 @@ export type LabisReflection = {
 };
 
 export const labisEchoes: LabisEcho[] = [
-  { id: "july19-photo-threat", label: "照片", prompt: "E · 回想", presentation: "secondary-echo", x: 1040, y: 350, radius: 95, tell: "character", requires: ["july19-motor-learning"] },
-  { id: "july19-chicken-porridge", label: "鸡粥", prompt: "E · 回想", presentation: "visual-echo", x: 1088, y: 360, radius: 82, tell: "steam" },
-  { id: "july19-fried-noodles", label: "炒面", prompt: "E · 回想", presentation: "visual-echo", x: 1088, y: 360, radius: 82, tell: "steam", requires: ["july19-chicken-porridge"] },
-  { id: "july19-haircut", label: "玻璃", prompt: "E · 回想", presentation: "visual-echo", x: 632, y: 326, radius: 76, tell: "reflection" },
-  { id: "july19-kancil", label: "那辆 Kancil", prompt: "E · 那辆 Kancil", presentation: "environmental-trace", x: 1260, y: 535, radius: 92, tell: "windshield", usesExistingMapVehicle: true },
-  { id: "july19-badminton", label: "啪", prompt: "E · 回想", presentation: "environmental-trace", x: 290, y: 660, radius: 94, tell: "sound" },
-  { id: "july19-filter-evening", label: "说明书", prompt: "E · 回想", presentation: "secondary-visual-echo", x: 965, y: 455, radius: 92, tell: "paper", requires: ["july19-photo-threat"] },
+  { id: "july19-photo-threat", label: "照片", prompt: "E · 回想照片", presentation: "secondary-echo", x: 1040, y: 350, radius: 115, tell: "character", requires: ["july19-motor-learning"], repeatable: true },
+  { id: "july19-chicken-porridge", label: "鸡粥", prompt: "E · 回想鸡粥", presentation: "visual-echo", x: 1088, y: 360, radius: 96, tell: "steam", repeatable: true },
+  { id: "july19-fried-noodles", label: "炒面", prompt: "E · 回想炒面", presentation: "visual-echo", x: 1088, y: 360, radius: 96, tell: "steam", requires: ["july19-chicken-porridge"], repeatable: true },
+  { id: "july19-haircut", label: "玻璃", prompt: "E · 回想刘海", presentation: "visual-echo", x: 632, y: 326, radius: 92, tell: "reflection", repeatable: true },
+  { id: "july19-kancil", label: "那辆 Kancil", prompt: "E · 那辆 Kancil", presentation: "environmental-trace", x: 1245, y: 285, radius: 145, tell: "windshield", repeatable: true, usesExistingMapVehicle: true },
+  { id: "july19-badminton", label: "啪", prompt: "E · 回想羽球", presentation: "environmental-trace", x: 290, y: 660, radius: 110, tell: "sound", repeatable: true },
+  { id: "july19-filter-evening", label: "说明书", prompt: "E · 回想说明书", presentation: "secondary-visual-echo", x: 965, y: 455, radius: 112, tell: "paper", requires: ["july19-photo-threat"], repeatable: true },
   { id: "july19-chicken-cake", label: "昨晚", prompt: "E · 回想昨晚", presentation: "hidden-keyframe", x: 435, y: 610, radius: 62, tell: "hidden-star", requires: ["july19-motor-learning"], repeatable: true }
 ];
 

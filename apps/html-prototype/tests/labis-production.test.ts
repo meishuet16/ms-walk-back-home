@@ -38,6 +38,16 @@ test("labis memory echoes keep distinct presentation levels instead of text term
   assert.equal(labisEchoes.find((echo) => echo.id === "july19-fried-noodles")?.requires?.[0], "july19-chicken-porridge");
 });
 
+test("labis memory echoes remain replayable and use readable discovery anchors", () => {
+  assert.ok(labisEchoes.every((echo) => echo.repeatable));
+  const kancil = labisEchoes.find((echo) => echo.id === "july19-kancil");
+  assert.ok(kancil);
+  assert.equal(kancil.usesExistingMapVehicle, true);
+  assert.ok(kancil.x >= 1160 && kancil.x <= 1320);
+  assert.ok(kancil.y >= 220 && kancil.y <= 340);
+  assert.ok(kancil.radius >= 120);
+});
+
 test("labis choice points expose interpretation choices without stat labels", () => {
   assert.deepEqual(labisChoicePoints.map((point) => [point.id, point.prompt, point.choices.length]), [
     ["motor", "这一幕，你想记住什么？", 3],
