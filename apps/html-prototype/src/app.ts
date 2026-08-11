@@ -14,7 +14,7 @@ import { makeDiaryEntry, parseDiaryImport, updateDiaryMemoryKind, type DiaryFore
 import { DialogueSystem } from "./systems/DialogueSystem.js";
 import { resolveChapterReflection, type Ending } from "./systems/EndingResolver.js";
 import { InputManager } from "./systems/InputManager.js";
-import { adjacentMonthKey, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalPdf, monthlyBookSummaries, monthlyPdfFilename, selectedOrLatestMonth, visibleTimelineEntries, type JournalMonth } from "./systems/JournalModel.js";
+import { adjacentMonthKey, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, monthlyBookSummaries, monthlyPdfFilename, selectedOrLatestMonth, visibleTimelineEntries, type JournalMonth, type MonthlyJournalPdfPage } from "./systems/JournalModel.js";
 import { ParticleSystem } from "./systems/ParticleSystem.js";
 import { drawSceneActor } from "./systems/SceneActorRenderer.js";
 import { applyChoice } from "./systems/TendencySystem.js";
@@ -1550,15 +1550,184 @@ export class WalkBackHomeApp {
     this.focusStage();
   }
 
+  private makePdfCanvas(): HTMLCanvasElement {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1240;
+    canvas.height = 1754;
+    return canvas;
+  }
+
+  private wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number, maxLines = 18): number {
+    let lineCount = 0;
+    for (const paragraph of text.split(/\r?\n/)) {
+      const words = paragraph.split(/\s+/).filter(Boolean);
+      let line = "";
+      for (const word of words.length ? words : [""]) {
+        const next = line ? `${line} ${word}` : word;
+        if (ctx.measureText(next).width > maxWidth && line) {
+          ctx.fillText(line, x, y);
+          line = word;
+          y += lineHeight;
+          lineCount += 1;
+          if (lineCount >= maxLines) return y;
+        } else {
+          line = next;
+        }
+      }
+      if (lineCount >= maxLines) return y;
+      ctx.fillText(line, x, y);
+      y += lineHeight;
+      lineCount += 1;
+    }
+    return y;
+  }
+
+  private async loadCanvasImage(src: string): Promise<HTMLImageElement | null> {
+    if (!src) return null;
+    const image = new Image();
+    image.decoding = "async";
+    image.src = src;
+    try {
+      await image.decode();
+      return image;
+    } catch {
+      return null;
+    }
+  }
+
+  private drawPdfImage(ctx: CanvasRenderingContext2D, image: HTMLImageElement, x: number, y: number, width: number, height: number): void {
+    const imageRatio = image.naturalWidth / Math.max(1, image.naturalHeight);
+    const boxRatio = width / height;
+    const sourceWidth = imageRatio > boxRatio ? image.naturalHeight * boxRatio : image.naturalWidth;
+    const sourceHeight = imageRatio > boxRatio ? image.naturalHeight : image.naturalWidth / boxRatio;
+    const sourceX = (image.naturalWidth - sourceWidth) / 2;
+    const sourceY = (image.naturalHeight - sourceHeight) / 2;
+    ctx.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, x, y, width, height);
+  }
+
+  private async renderJournalCoverPage(month: JournalMonth): Promise<MonthlyJournalPdfPage> {
+    const canvas = this.makePdfCanvas();
+    const ctx = canvas.getContext("2d")!;
+    ctx.fillStyle = "#efe1c3";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#31433a";
+    ctx.fillRect(0, 0, canvas.width, 240);
+    ctx.fillStyle = "#f6edcf";
+    ctx.font = "700 64px serif";
+    ctx.fillText("Walk Back Home", 100, 140);
+    ctx.font = "400 34px sans-serif";
+    ctx.fillText("Monthly Journal", 104, 194);
+    ctx.fillStyle = "#87643a";
+    ctx.font = "700 72px serif";
+    ctx.fillText(month.label, 110, 470);
+    ctx.font = "400 30px sans-serif";
+    ctx.fillText(`${month.entries.length} entries`, 114, 540);
+    ctx.fillText(`${new Set(month.entries.map((entry) => entry.date)).size} written days`, 114, 588);
+    ctx.strokeStyle = "rgba(102, 72, 42, 0.32)";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(86, 340, canvas.width - 172, canvas.height - 520);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.26)";
+    for (let y = 690; y < 1460; y += 64) {
+      ctx.fillRect(150, y, canvas.width - 300, 2);
+    }
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+    const page = { dataUrl, width: canvas.width, height: canvas.height };
+    canvas.width = 1;
+    canvas.height = 1;
+    return page;
+  }
+
+  private async renderDiaryEntryPdfPage(entry: DiaryEntry): Promise<MonthlyJournalPdfPage> {
+    const canvas = this.makePdfCanvas();
+    const ctx = canvas.getContext("2d")!;
+    ctx.fillStyle = "#f4e7c8";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#fff8dc";
+    ctx.fillRect(88, 78, canvas.width - 176, canvas.height - 156);
+    ctx.strokeStyle = "rgba(116, 82, 48, 0.4)";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(88, 78, canvas.width - 176, canvas.height - 156);
+    ctx.fillStyle = "rgba(128, 95, 57, 0.22)";
+    for (let y = 360; y < 1450; y += 54) ctx.fillRect(150, y, canvas.width - 300, 2);
+    ctx.fillStyle = "#755330";
+    ctx.font = "600 30px sans-serif";
+    ctx.fillText(entry.date, 150, 155);
+    ctx.font = "700 48px serif";
+    ctx.fillText(entry.title || "Untitled Memory", 150, 225);
+    ctx.font = "400 26px sans-serif";
+    const meta = [entry.location, entry.weather, entry.memoryKind].filter(Boolean).join(" · ");
+    if (meta) ctx.fillText(meta, 150, 275);
+
+    const photos = entry.photos ?? [];
+    if (photos.length && !(entry.scrapbookLayout?.elements.length)) {
+      const image = await this.loadCanvasImage(photos[0].src);
+      if (image) {
+        ctx.save();
+        ctx.translate(820, 250);
+        ctx.rotate(-0.04);
+        ctx.fillStyle = "#fffdf0";
+        ctx.fillRect(-8, -8, 332, 252);
+        this.drawPdfImage(ctx, image, 0, 0, 316, 210);
+        ctx.restore();
+      }
+    }
+
+    const elements = [...(entry.scrapbookLayout?.elements ?? [])].sort((a, b) => a.zIndex - b.zIndex);
+    for (const element of elements) {
+      const photoId = element.type === "photo" ? element.photoId : element.sourcePhotoId;
+      const photo = photos.find((item) => item.id === photoId);
+      const image = photo ? await this.loadCanvasImage(photo.src) : null;
+      if (!image) continue;
+      const width = 320 * Math.max(0.35, element.scale);
+      const height = 230 * Math.max(0.35, element.scale);
+      const x = (element.x / 100) * canvas.width;
+      const y = (element.y / 100) * canvas.height;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate((element.rotation * Math.PI) / 180);
+      ctx.fillStyle = "#fffdf0";
+      if (element.type === "cutout" && element.crop?.shape === "circle") {
+        ctx.beginPath();
+        ctx.arc(0, 0, Math.min(width, height) / 2, 0, Math.PI * 2);
+        ctx.clip();
+        this.drawPdfImage(ctx, image, -width / 2, -height / 2, width, height);
+      } else {
+        ctx.fillRect(-width / 2 - 10, -height / 2 - 10, width + 20, height + 20);
+        this.drawPdfImage(ctx, image, -width / 2, -height / 2, width, height);
+      }
+      ctx.restore();
+    }
+
+    ctx.fillStyle = "#4f3a28";
+    ctx.font = "400 30px sans-serif";
+    this.wrapCanvasText(ctx, entry.body || "Empty draft", 150, 370, 750, 50, 18);
+    ctx.fillStyle = "rgba(88, 60, 35, 0.55)";
+    ctx.font = "400 22px sans-serif";
+    ctx.fillText(`${photos.length} photos · ${elements.length} placed elements`, 150, 1535);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+    const page = { dataUrl, width: canvas.width, height: canvas.height };
+    canvas.width = 1;
+    canvas.height = 1;
+    return page;
+  }
+
+  private async renderMonthlyPdfPages(month: JournalMonth): Promise<MonthlyJournalPdfPage[]> {
+    const pages: MonthlyJournalPdfPage[] = [await this.renderJournalCoverPage(month)];
+    for (const entry of month.entries) pages.push(await this.renderDiaryEntryPdfPage(entry));
+    return pages;
+  }
+
   private async exportMonthlyPdf(monthKey: string): Promise<void> {
     const month = this.currentJournalMonth(monthKey);
-    const blob = makeMonthlyJournalPdf(month);
+    this.showToast("Exporting monthly PDF...");
+    const pages = await this.renderMonthlyPdfPages(month);
+    const blob = makeMonthlyJournalImagePdf(month, pages);
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
     anchor.download = monthlyPdfFilename(month.key);
     anchor.click();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     this.showToast(`Exported ${anchor.download}`);
   }
 

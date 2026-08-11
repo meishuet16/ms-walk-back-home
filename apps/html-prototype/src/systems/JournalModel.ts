@@ -109,46 +109,44 @@ export function monthlyPdfFilename(monthKey: string): string {
   return `WalkBackHome-Journal-${monthKey}.pdf`;
 }
 
-function escapePdfText(value: string): string {
-  return value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)").replace(/\r?\n/g, " ");
+export type MonthlyJournalPdfPage = {
+  dataUrl: string;
+  width: number;
+  height: number;
+};
+
+function jpegBinaryFromDataUrl(dataUrl: string): string {
+  const [, encoded = ""] = dataUrl.split(",");
+  return atob(encoded);
 }
 
-export function makeMonthlyJournalPdf(month: JournalMonth): Blob {
-  const pages = [
-    {
-      title: `Walk Back Home Journal`,
-      lines: [month.label, `${month.entries.length} entries`, `${new Set(month.entries.map((entry) => entry.date)).size} written days`]
-    },
-    ...month.entries.map((entry) => ({
-      title: `${entry.date} · ${entry.title}`,
-      lines: [
-        entry.body || "Empty draft",
-        `${entry.photos?.length ?? 0} photos · ${entry.scrapbookLayout?.elements.length ?? 0} placed elements`
-      ]
-    }))
-  ];
+export function makeMonthlyJournalImagePdf(month: JournalMonth, pages: MonthlyJournalPdfPage[]): Blob {
+  const safePages = pages.length ? pages : [{ dataUrl: "data:image/jpeg;base64,", width: 1, height: 1 }];
   const objects: string[] = [];
   const pageRefs: number[] = [];
   objects.push("<< /Type /Catalog /Pages 2 0 R >>");
   objects.push("<< /Type /Pages /Kids [] /Count 0 >>");
-  for (const page of pages) {
+  for (const [index, page] of safePages.entries()) {
+    const imageBinary = jpegBinaryFromDataUrl(page.dataUrl);
+    const imageId = objects.length + 1;
     const contentId = objects.length + 2;
-    const pageId = objects.length + 1;
-    pageRefs.push(pageId);
-    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 420 595] /Resources << /Font << /F1 ${contentId + 1} 0 R >> >> /Contents ${contentId} 0 R >>`);
-    const body = [
-      "q 0.96 0.90 0.78 rg 32 36 356 520 re f Q",
-      "q 0.52 0.33 0.18 RG 32 36 356 520 re S Q",
-      "BT /F1 18 Tf 48 520 Td (" + escapePdfText(page.title.slice(0, 60)) + ") Tj ET",
-      ...page.lines.flatMap((line, index) => {
-        const chunks = line.match(/.{1,58}/g) ?? [""];
-        return chunks.slice(0, 11 - index).map((chunk, chunkIndex) => `BT /F1 10 Tf 52 ${486 - (index * 88 + chunkIndex * 14)} Td (${escapePdfText(chunk)}) Tj ET`);
-      })
-    ].join("\n");
+    const pageId = objects.length + 3;
+    const pageWidth = 420;
+    const pageHeight = 595;
+    const imageAspect = Math.max(0.01, page.width / Math.max(1, page.height));
+    const pageAspect = pageWidth / pageHeight;
+    const drawWidth = imageAspect > pageAspect ? pageWidth : pageHeight * imageAspect;
+    const drawHeight = imageAspect > pageAspect ? pageWidth / imageAspect : pageHeight;
+    const drawX = (pageWidth - drawWidth) / 2;
+    const drawY = (pageHeight - drawHeight) / 2;
+    const body = `q ${drawWidth.toFixed(2)} 0 0 ${drawHeight.toFixed(2)} ${drawX.toFixed(2)} ${drawY.toFixed(2)} cm /Im${index + 1} Do Q`;
+    objects.push(`<< /Type /XObject /Subtype /Image /Width ${Math.max(1, Math.round(page.width))} /Height ${Math.max(1, Math.round(page.height))} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imageBinary.length} >>\nstream\n${imageBinary}\nendstream`);
     objects.push(`<< /Length ${body.length} >>\nstream\n${body}\nendstream`);
-    objects.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+    pageRefs.push(pageId);
+    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /XObject << /Im${index + 1} ${imageId} 0 R >> >> /Contents ${contentId} 0 R >>`);
   }
   objects[1] = `<< /Type /Pages /Kids [${pageRefs.map((ref) => `${ref} 0 R`).join(" ")}] /Count ${pageRefs.length} >>`;
+  objects.push(`<< /Title (Walk Back Home Journal ${month.key}) /Subject (${month.entries.length} entries) >>`);
   let pdf = "%PDF-1.4\n";
   const offsets = [0];
   objects.forEach((object, index) => {
