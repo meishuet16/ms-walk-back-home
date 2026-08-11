@@ -155,7 +155,9 @@ test("personal player state persists without media blobs", () => {
     lyricsOverlay: { x: 20, y: 30, width: 260 },
     librarySort: "artist",
     librarySearch: "雨",
-    playbackMode: "shuffle",
+    shuffleEnabled: true,
+    repeatOne: false,
+    customTrackMeta: { "audio-hu-xia": { title: "胡夏 Xia Hu", artist: "Those Bygone Years" } },
     customTrackLyrics: { "audio-hu-xia": { syncedLyrics: [{ time: 1, text: "第一句" }], plainLyrics: "[00:01]第一句" } },
     playerBackgroundBlobKey: "bg-blob"
   };
@@ -180,5 +182,6 @@ test("old personal player saves gain a default playback mode", () => {
   }));
   const manager = new SaveManager();
 
-  assert.equal(manager.loadPersonalPlayer()?.playbackMode, "next");
+  assert.equal(manager.loadPersonalPlayer()?.shuffleEnabled, false);
+  assert.equal(manager.loadPersonalPlayer()?.repeatOne, false);
 });

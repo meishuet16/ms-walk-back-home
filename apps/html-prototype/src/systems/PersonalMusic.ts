@@ -13,7 +13,8 @@ export function createDefaultPersonalPlayerState(): PersonalPlayerState {
     lyricsOverlay: { x: 620, y: 96, width: 280 },
     librarySort: "recently-added",
     librarySearch: "",
-    playbackMode: "next"
+    shuffleEnabled: false,
+    repeatOne: false
   };
 }
 
@@ -79,11 +80,11 @@ export function personalMusicShouldResumeAfterScene(from: SceneId, to: SceneId):
   return !personalMusicShouldPlayInScene(from) && personalMusicShouldPlayInScene(to);
 }
 
-export function nextTrackIdForPlayback(ids: string[], currentId: string | undefined, mode: MusicPlaybackMode, random = Math.random): string | undefined {
+export function nextTrackIdForPlayback(ids: string[], currentId: string | undefined, options: { repeatOne?: boolean; shuffleEnabled?: boolean } = {}, random = Math.random): string | undefined {
   if (!ids.length) return undefined;
-  if (mode === "repeat-one" && currentId) return currentId;
+  if (options.repeatOne && currentId) return currentId;
   const currentIndex = Math.max(0, ids.findIndex((id) => id === currentId));
-  if (mode === "shuffle" && ids.length > 1) {
+  if (options.shuffleEnabled && ids.length > 1) {
     const candidates = ids.filter((id) => id !== currentId);
     return candidates[Math.floor(random() * candidates.length)] ?? candidates[0];
   }

@@ -40,7 +40,14 @@ export class SaveManager {
 
   loadPersonalPlayer(): PersonalPlayerState | null {
     const parsed = this.parseVersioned<PersonalPlayerState>(localStorage.getItem(personalPlayerKey));
-    return parsed ? { ...parsed, playbackMode: normalizePlaybackMode(parsed.playbackMode) } : null;
+    if (!parsed) return null;
+    const legacyMode = normalizePlaybackMode(parsed.playbackMode);
+    const { playbackMode: _playbackMode, ...player } = parsed;
+    return {
+      ...player,
+      shuffleEnabled: player.shuffleEnabled || legacyMode === "shuffle",
+      repeatOne: player.repeatOne || legacyMode === "repeat-one"
+    };
   }
 
   resetJourney(): void {

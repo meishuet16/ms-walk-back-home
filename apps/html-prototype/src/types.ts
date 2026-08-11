@@ -159,7 +159,10 @@ export type PersonalPlayerState = {
   lyricsOverlay: LyricsOverlayState;
   librarySort: MusicSort;
   librarySearch: string;
-  playbackMode: MusicPlaybackMode;
+  playbackMode?: MusicPlaybackMode;
+  shuffleEnabled: boolean;
+  repeatOne: boolean;
+  customTrackMeta?: Record<string, { title?: string; artist?: string }>;
   customTrackLyrics?: Record<string, { syncedLyrics: SyncedLyricLine[]; plainLyrics?: string }>;
   playerBackgroundBlobKey?: string;
 };

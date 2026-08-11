@@ -154,6 +154,66 @@ canvas {
   font-size: 16px;
   line-height: 1.5;
 }
+.floating-lyric-lines {
+  display: grid;
+  gap: 2px;
+  min-height: 72px;
+  align-content: center;
+}
+.music-player .floating-lyric-lines {
+  display: grid;
+  height: auto;
+  place-content: initial;
+}
+.floating-lyric-lines span {
+  opacity: .58;
+  transition: opacity 140ms ease, color 140ms ease;
+}
+.floating-lyric-lines span.active {
+  opacity: 1;
+  color: #fff1c8;
+  font-weight: 700;
+}
+.floating-lyric-lines span.muted {
+  opacity: .72;
+  font-size: 14px;
+}
+.floating-player-controls {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.music-player .floating-player-controls {
+  display: flex;
+  height: auto;
+  place-content: initial;
+}
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 7px;
+  font-size: 18px;
+  line-height: 1;
+}
+.icon-button.primary {
+  min-width: 50px;
+  color: #2d2117;
+  background: #d5aa69;
+}
+.floating-player-controls .icon-button {
+  min-width: 38px;
+  min-height: 34px;
+  padding: 0 8px;
+  border-color: rgba(232, 200, 139, .54);
+  background: rgba(42, 31, 23, .72);
+}
+.floating-player-controls .icon-button.primary {
+  background: rgba(213, 170, 105, .92);
+}
 .overlay {
   position: absolute;
   inset: 0;
