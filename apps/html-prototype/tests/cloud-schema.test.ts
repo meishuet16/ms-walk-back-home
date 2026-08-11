@@ -16,3 +16,9 @@ test("RLS policies require authenticated ownership for private rows and media", 
   assert.match(privateStoragePolicySql, /bucket_id = 'walk-private-media'/);
   assert.match(privateStoragePolicySql, /auth\.uid\(\)::text/);
 });
+
+test("private collection rows are keyed by user and id to avoid cross-account collisions", () => {
+  assert.match(privateCloudSchemaSql, /create table if not exists public\.diary_entries[\s\S]*primary key \(user_id, id\)/i);
+  assert.match(privateCloudSchemaSql, /create table if not exists public\.reflection_notes[\s\S]*primary key \(user_id, id\)/i);
+  assert.match(privateCloudSchemaSql, /create table if not exists public\.music_tracks[\s\S]*primary key \(user_id, id\)/i);
+});

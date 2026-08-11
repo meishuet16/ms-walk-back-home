@@ -5,6 +5,7 @@ import { labisChoicePoints, labisEchoes, resolveLabisMemoryReflection, type Labi
 import type { ChapterProgress, Choice, DiaryEntry, DiaryLibraryState, JourneyState, MemoryKind, MusicSort, PersonalMusicLibraryState, PersonalPlayerState, ReflectionNote, ReflectionWallFilter, ReflectionWallSort, ReflectionWallState, ReflectionWallView, RoomJourneyState, SceneId, Tendencies, UserMusicTrack } from "./types.js";
 import { AudioManager } from "./systems/AudioManager.js";
 import { AccountManager } from "./systems/AccountManager.js";
+import { loadAppConfig } from "./systems/AppConfig.js";
 import { chapterRegistry, forestEntries, routeForestEntry, type AuthoredForestEntry } from "./systems/ChapterRegistry.js";
 import { beginChapterVisit, finishChapterWalkthrough, initialChapterProgress, markChapterDialogueComplete, markChapterMemoryRead, recordChapterChoice } from "./systems/ChapterProgressManager.js";
 import { inAnyRect, type Point, type Rect } from "./systems/CollisionSystem.js";
@@ -53,6 +54,7 @@ import {
 } from "./systems/MujiRoom.js";
 import { SaveManager } from "./systems/SaveManager.js";
 import type { MusicScene } from "./systems/SceneMusic.js";
+import { SupabaseSync } from "./systems/SupabaseSync.js";
 import { emptyTendencies } from "./systems/TendencySystem.js";
 
 type ForestNode = AuthoredForestEntry | DiaryForestMemory;
@@ -92,6 +94,7 @@ export class WalkBackHomeApp {
   private audio = new AudioManager();
   private account = new AccountManager();
   private save = new SaveManager();
+  private cloudSync = new SupabaseSync(loadAppConfig());
   private particles = new ParticleSystem();
   private images = {
     forest: img(assets.forest),
@@ -213,7 +216,9 @@ export class WalkBackHomeApp {
     });
     root.addEventListener("pointerdown", () => void this.audio.ensurePlaying(), { passive: true });
     root.addEventListener("keydown", () => void this.audio.ensurePlaying());
+    this.applyAccountSession(this.account.current());
     this.bootstrapDiaryLibrary();
+    void this.hydrateCloudAccount();
     void this.loadVinylManifest();
     this.images.room.addEventListener("error", () => {
       this.images.room.src = assets.roomFallback;
@@ -317,8 +322,11 @@ export class WalkBackHomeApp {
     if (action === "backup-sync") this.showBackupSync();
     if (action === "download-backup") void this.downloadBackup();
     if (action === "reset-journey") this.resetJourney();
-    if (action === "account-sign-out") this.signOutAccount();
+    if (action === "account-sign-out") void this.signOutAccount();
     if (action === "account-claim-local") this.claimLocalDataForAccount();
+    if (action === "account-google-sign-in") void this.signInWithGoogle();
+    if (action === "cloud-sync-push") void this.pushCloudSync();
+    if (action === "cloud-sync-pull") void this.pullCloudSync();
     if (action === "compact") this.toggleCompact();
     if (action === "fullscreen") this.toggleFullscreen();
     if (action === "rain") this.toggleRain();
@@ -434,6 +442,36 @@ export class WalkBackHomeApp {
     const migrated = this.save.migrateLegacyAutosave();
     this.applyDiaryLibrary(seedAuthoredChapterDiaryEntries(migrated.diary));
     this.save.saveDiaryLibrary(this.makeDiaryLibrary());
+  }
+
+  private applyAccountSession(session = this.account.current(), reloadState = false): void {
+    this.save = new SaveManager(session.ownerId);
+    if (reloadState) this.loadAccountLocalState();
+  }
+
+  private loadAccountLocalState(): void {
+    this.musicLibrary = this.save.loadMusicLibrary() ?? { version: 1, savedAt: new Date().toISOString(), tracks: [] };
+    this.personalPlayer = { ...createDefaultPersonalPlayerState(), ...(this.save.loadPersonalPlayer() ?? {}) };
+    this.normalizePersonalPlayerToggles();
+    this.reflectionWall = this.save.loadReflectionWall() ?? createReflectionWallState();
+    const diary = this.save.loadDiaryLibrary();
+    if (diary) this.applyDiaryLibrary(seedAuthoredChapterDiaryEntries(diary));
+    const journey = this.save.loadJourney();
+    if (journey) this.applyJourney(journey);
+    this.lastHudHtml = "";
+  }
+
+  private async hydrateCloudAccount(): Promise<void> {
+    if (!this.cloudSync.isConfigured()) return;
+    try {
+      const session = await this.cloudSync.currentSession();
+      if (!session) return;
+      const accountSession = this.account.signInWithConfiguredProvider({ provider: "google", userId: session.userId, email: session.email });
+      this.applyAccountSession(accountSession, true);
+      this.showToast("Google account connected");
+    } catch (error) {
+      this.showToast(`Cloud auth unavailable · ${this.errorMessage(error)}`);
+    }
   }
 
   private updateForest(x: number, y: number, dt: number): void {
@@ -3622,6 +3660,10 @@ export class WalkBackHomeApp {
     const accountLabel = session.mode === "guest" ? "Guest / local mode" : `${session.email ?? session.ownerId} · Google`;
     const claimButton = session.mode === "authenticated" && !session.claimedGuestDataAt ? `<button data-action="account-claim-local">Keep local memories with this account</button>` : "";
     const signOut = session.mode === "authenticated" ? `<button data-action="account-sign-out">Sign out</button>` : "";
+    const signIn = session.mode === "guest" && this.cloudSync.isConfigured() ? `<button data-action="account-google-sign-in">Sign in with Google</button>` : "";
+    const cloudActions = session.mode === "authenticated" && this.cloudSync.isConfigured()
+      ? `<button data-action="cloud-sync-push">Sync this device to cloud</button><button data-action="cloud-sync-pull">Pull cloud memories</button>`
+      : "";
     this.overlay.innerHTML = `
       <div class="modal game-panel backup-panel">
         <h2>Backup / Sync</h2>
@@ -3633,25 +3675,104 @@ export class WalkBackHomeApp {
         <div class="sync-status">
           <h3>Account</h3>
           <p>${this.escapeHtml(accountLabel)}</p>
-          <div class="settings-row">${claimButton}${signOut}</div>
+          <div class="settings-row">${signIn}${claimButton}${signOut}</div>
           <h3>Cloud / Cross-device Sync</h3>
-          <p>Google sign-in and private cloud sync are prepared behind configuration. Add Supabase URL, anon key, Google OAuth, and the private media bucket before enabling production login. Until then, guest mode and portable backup remain fully local and free.</p>
+          <p>${this.escapeHtml(this.cloudSync.statusLabel())}</p>
+          <div class="settings-row">${cloudActions}</div>
         </div>
         <div class="settings-row"><button data-action="settings">Back</button><button data-action="close">Close</button></div>
       </div>`;
     this.focusStage();
   }
 
-  private signOutAccount(): void {
-    this.account.signOut();
+  private async signInWithGoogle(): Promise<void> {
+    try {
+      await this.cloudSync.signInWithGoogle();
+    } catch (error) {
+      this.showToast(`Google sign-in failed · ${this.errorMessage(error)}`);
+    }
+  }
+
+  private async signOutAccount(): Promise<void> {
+    try {
+      await this.cloudSync.signOut();
+    } catch {
+      // Local sign-out still succeeds if the cloud provider is unavailable.
+    }
+    this.applyAccountSession(this.account.signOut(), true);
     this.showToast("Signed out to local guest mode");
     this.showBackupSync();
   }
 
   private claimLocalDataForAccount(): void {
-    this.account.claimGuestData();
+    const session = this.account.claimGuestData();
+    this.applyAccountSession(session, true);
     this.showToast("Local memories kept with this account");
     this.showBackupSync();
+  }
+
+  private async pushCloudSync(): Promise<void> {
+    const session = this.account.current();
+    if (session.mode !== "authenticated") {
+      this.showToast("Sign in with Google first");
+      return;
+    }
+    try {
+      await this.cloudSync.push(this.cloudUserId(session.ownerId), this.makeCloudBundle());
+      this.showToast("Cloud sync complete");
+      this.showBackupSync();
+    } catch (error) {
+      this.showToast(`Cloud sync failed · ${this.errorMessage(error)}`);
+    }
+  }
+
+  private async pullCloudSync(): Promise<void> {
+    try {
+      const bundle = await this.cloudSync.pull();
+      if (bundle.diaryLibrary) {
+        this.applyDiaryLibrary(bundle.diaryLibrary);
+        this.save.saveDiaryLibrary(this.makeDiaryLibrary());
+      }
+      if (bundle.musicLibrary) {
+        this.musicLibrary = bundle.musicLibrary;
+        this.save.saveMusicLibrary(this.musicLibrary);
+      }
+      if (bundle.reflectionWall) {
+        this.reflectionWall = bundle.reflectionWall;
+        this.save.saveReflectionWall(this.reflectionWall);
+      }
+      if (bundle.personalPlayer) {
+        this.personalPlayer = { ...createDefaultPersonalPlayerState(), ...bundle.personalPlayer };
+        this.normalizePersonalPlayerToggles();
+        this.save.savePersonalPlayer(this.personalPlayer);
+      }
+      if (bundle.journey) {
+        this.applyJourney(bundle.journey);
+        this.save.saveJourney(this.makeJourney());
+      }
+      this.showToast("Cloud memories pulled");
+      this.showBackupSync();
+    } catch (error) {
+      this.showToast(`Cloud pull failed · ${this.errorMessage(error)}`);
+    }
+  }
+
+  private makeCloudBundle() {
+    return {
+      diaryLibrary: this.makeDiaryLibrary(),
+      journey: this.makeJourney(),
+      reflectionWall: this.reflectionWall,
+      musicLibrary: this.musicLibrary,
+      personalPlayer: this.personalPlayer
+    };
+  }
+
+  private cloudUserId(ownerId: string): string {
+    return ownerId.replace(/^account:google:/, "");
+  }
+
+  private errorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
   }
 
   private async downloadBackup(): Promise<void> {

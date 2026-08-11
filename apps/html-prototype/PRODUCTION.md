@@ -66,6 +66,8 @@ The repository-side implementation includes:
 - owner-scoped local save namespaces
 - one-time guest data claim helper
 - Supabase-ready SQL schema and RLS policies
+- optional Supabase client wiring for Google OAuth and private JSON row sync
+- build-time public config generation into `dist/config.js`
 
 Cloud sync still requires external configuration:
 
@@ -76,6 +78,19 @@ Cloud sync still requires external configuration:
 - hosting authorization/domain
 
 Do not place service role/admin secrets in the frontend.
+
+Required values to finish real production login/sync:
+
+- Supabase project URL, from Project Settings -> API.
+- Supabase anon/public key, from Project Settings -> API.
+- Supabase SQL applied from `apps/html-prototype/supabase/migrations/20260811_private_local_first_schema.sql`.
+- Google OAuth Client ID and Client Secret from Google Cloud Console.
+- Supabase Google provider enabled with that Client ID/Secret.
+- Supabase Site URL set to the final Vercel production URL.
+- Supabase Redirect URLs including the final production URL and any preview/local URLs used for testing.
+- Vercel project connected to this repository with root directory `apps/html-prototype`.
+- Vercel environment variables: `WALK_BACK_HOME_AUTH_PROVIDER=supabase`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_PRIVATE_MEDIA_BUCKET=walk-private-media`.
+- Vercel production domain, either the default `.vercel.app` URL or a custom domain.
 
 ## Supabase Setup
 

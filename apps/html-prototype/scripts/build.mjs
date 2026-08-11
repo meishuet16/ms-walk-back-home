@@ -10,4 +10,10 @@ await writeFile(resolve(root, "dist/assets/audio-manifest.json"), JSON.stringify
 await writeFile(resolve(root, "dist/public/assets/audio-manifest.json"), JSON.stringify({ files: audioFiles }, null, 2));
 await copyFile(resolve(root, "src/index.html"), resolve(root, "dist/index.html"));
 await copyFile(resolve(root, "src/styles.css"), resolve(root, "dist/styles.css"));
+await writeFile(resolve(root, "dist/config.js"), `window.WALK_BACK_HOME_CONFIG = ${JSON.stringify({
+  authProvider: process.env.WALK_BACK_HOME_AUTH_PROVIDER ?? "local",
+  supabaseUrl: process.env.SUPABASE_URL ?? "",
+  supabaseAnonKey: process.env.SUPABASE_ANON_KEY ?? "",
+  privateMediaBucket: process.env.SUPABASE_PRIVATE_MEDIA_BUCKET ?? "walk-private-media"
+}, null, 2)};\n`);
 console.log("Built isolated HTML prototype to apps/html-prototype/dist");

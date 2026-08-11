@@ -1,10 +1,11 @@
 export const privateCloudSchemaSql = `
 create table if not exists public.diary_entries (
-  id text primary key,
+  id text not null,
   user_id uuid not null references auth.users(id) on delete cascade,
   entry jsonb not null,
   updated_at timestamptz not null default now(),
-  deleted_at timestamptz
+  deleted_at timestamptz,
+  primary key (user_id, id)
 );
 
 create table if not exists public.journey_states (
@@ -23,11 +24,12 @@ create table if not exists public.chapter_progress (
 );
 
 create table if not exists public.reflection_notes (
-  id text primary key,
+  id text not null,
   user_id uuid not null references auth.users(id) on delete cascade,
   note jsonb not null,
   updated_at timestamptz not null default now(),
-  deleted_at timestamptz
+  deleted_at timestamptz,
+  primary key (user_id, id)
 );
 
 create table if not exists public.muji_room_states (
@@ -37,11 +39,12 @@ create table if not exists public.muji_room_states (
 );
 
 create table if not exists public.music_tracks (
-  id text primary key,
+  id text not null,
   user_id uuid not null references auth.users(id) on delete cascade,
   metadata jsonb not null,
   updated_at timestamptz not null default now(),
-  deleted_at timestamptz
+  deleted_at timestamptz,
+  primary key (user_id, id)
 );
 
 alter table public.diary_entries enable row level security;

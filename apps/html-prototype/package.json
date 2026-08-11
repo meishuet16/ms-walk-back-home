@@ -9,5 +9,7 @@
     "test": "npm run build && node --test dist/tests/*.test.js",
     "typecheck": "tsc -p tsconfig.json"
   },
-  "devDependencies": {}
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.3"
+  }
 }
