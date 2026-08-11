@@ -1,5 +1,5 @@
 import { bakeryChapter } from "./fixtures/chapterPlan.js";
-import { canStartLabisMotorMemory, labisBlockers, labisInteractionForPoint, labisMotorMemoryActions, labisSpawn } from "./fixtures/labisMotorMemory.js";
+import { canStartLabisMotorMemory, labisBlockers, labisDiaryMemorySpot, labisInteractionForPoint, labisMotorMemoryActions, labisSpawn } from "./fixtures/labisMotorMemory.js";
 import { labisAssetManifest, labisAssetPath, labisProductionAssetPaths } from "./fixtures/labisAssetRegistry.js";
 import { labisChoicePoints, labisEchoes, resolveLabisMemoryReflection, type LabisChoicePoint, type LabisEcho } from "./fixtures/labisMemoryEchoes.js";
 import type { ChapterProgress, Choice, DiaryEntry, DiaryLibraryState, JourneyState, MemoryKind, RoomJourneyState, SceneId, Tendencies } from "./types.js";
@@ -8,7 +8,7 @@ import { chapterRegistry, forestEntries, routeForestEntry, type AuthoredForestEn
 import { beginChapterVisit, finishChapterWalkthrough, initialChapterProgress, markChapterDialogueComplete, markChapterMemoryRead, recordChapterChoice } from "./systems/ChapterProgressManager.js";
 import { inAnyRect, type Point, type Rect } from "./systems/CollisionSystem.js";
 import { CutsceneSystem } from "./systems/CutsceneSystem.js";
-import { createNewDiaryPage, deleteDiaryEntriesByIds, deleteDiaryEntryById, formatDiaryWeekday, getDiaryForestMemories, getDiaryTimeline, openDiaryPageForDate, upsertDiaryEntry, upsertDiaryPageDraft } from "./systems/DiaryLibrary.js";
+import { createNewDiaryPage, deleteDiaryEntriesByIds, deleteDiaryEntryById, formatDiaryWeekday, getDiaryForestMemories, getDiaryTimeline, openDiaryPageForDate, seedAuthoredChapterDiaryEntries, upsertDiaryEntry, upsertDiaryPageDraft } from "./systems/DiaryLibrary.js";
 import { diaryMoodOptions, isDiaryMood } from "./systems/DiaryMood.js";
 import { makeDiaryEntry, parseDiaryImport, updateDiaryMemoryKind, type DiaryForestMemory, type DiaryTimelineSort } from "./systems/DiaryImport.js";
 import { DialogueSystem } from "./systems/DialogueSystem.js";
@@ -137,6 +137,7 @@ export class WalkBackHomeApp {
   private labisActiveEcho: LabisEcho | null = null;
   private labisVignetteStartedAt = 0;
   private labisReflectionLines: string[] = [];
+  private labisExitAfterReflection = false;
   private labisImages = new Map<string, HTMLImageElement>();
   private completedMemoryEvents = new Set<string>();
   private ending: Ending | null = null;
@@ -341,13 +342,19 @@ export class WalkBackHomeApp {
   private bootstrapDiaryLibrary(): void {
     const saved = this.save.loadDiaryLibrary();
     if (saved) {
-      this.applyDiaryLibrary(saved);
+      this.applyDiaryLibrary(seedAuthoredChapterDiaryEntries(saved));
+      this.save.saveDiaryLibrary(this.makeDiaryLibrary());
       return;
     }
     const legacy = this.save.loadAutosave();
-    if (!legacy?.diaryEntries?.length) return;
+    if (!legacy?.diaryEntries?.length) {
+      this.applyDiaryLibrary(seedAuthoredChapterDiaryEntries({ version: 1, savedAt: new Date().toISOString(), entries: [], legacyArtifacts: [] }));
+      this.save.saveDiaryLibrary(this.makeDiaryLibrary());
+      return;
+    }
     const migrated = this.save.migrateLegacyAutosave();
-    this.applyDiaryLibrary(migrated.diary);
+    this.applyDiaryLibrary(seedAuthoredChapterDiaryEntries(migrated.diary));
+    this.save.saveDiaryLibrary(this.makeDiaryLibrary());
   }
 
   private updateForest(x: number, y: number, dt: number): void {
@@ -706,7 +713,7 @@ export class WalkBackHomeApp {
     const choice = point?.choices.find((item) => item.id === choiceId);
     if (!choice) return;
     this.recordLabisChoice(choice);
-    const after: LabisDialogueAfter = this.labisActiveChoice === "filter" ? "show-reflection" : "finish-echo";
+    const after: LabisDialogueAfter = this.labisActiveChoice === "filter" && this.labisExitAfterReflection ? "show-reflection" : "finish-echo";
     this.labisActiveChoice = null;
     this.showLabisDialogueQueue(this.responseLines(choice.response).map((line) => this.lineToDialogue(line)), after);
     this.autosave();
@@ -749,8 +756,14 @@ export class WalkBackHomeApp {
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
     if (after === "motor-choice") this.showLabisChoice("motor");
-    if (after === "photo-choice") this.showLabisChoice("photo");
-    if (after === "filter-choice") this.showLabisChoice("filter");
+    if (after === "photo-choice") {
+      this.markActiveLabisEchoDiscovered();
+      this.showLabisChoice("photo");
+    }
+    if (after === "filter-choice") {
+      this.markActiveLabisEchoDiscovered();
+      this.showLabisChoice("filter");
+    }
     if (after === "finish-echo") this.finishLabisEcho();
     if (after === "show-reflection") this.showLabisMemoryReflection();
     if (after === "finish-chicken-cake") this.finishLabisEcho(true);
@@ -861,6 +874,14 @@ export class WalkBackHomeApp {
     this.autosave();
   }
 
+  private markActiveLabisEchoDiscovered(): void {
+    const echo = this.labisActiveEcho;
+    if (!echo) return;
+    this.completedMemoryEvents.add(echo.id);
+    this.readMemories.add(echo.id);
+    this.autosave();
+  }
+
   private showLabisMemoryReflection(): void {
     const reflection = resolveLabisMemoryReflection(this.progressFor("labis-motor-day").tendencies);
     const progress = markChapterDialogueComplete(this.progressFor("labis-motor-day"));
@@ -880,6 +901,11 @@ export class WalkBackHomeApp {
     this.labisOverlayMode = null;
     this.labisReflectionLines = [];
     this.overlay.innerHTML = "";
+    if (this.labisExitAfterReflection) {
+      this.labisExitAfterReflection = false;
+      this.finishReturnToForest();
+      return;
+    }
     this.showToast("Returned to Labis");
     this.autosave();
   }
@@ -949,12 +975,16 @@ export class WalkBackHomeApp {
   }
 
   private returnToForest(): void {
-    const leavingDoor = this.scene === "bakery" || this.scene === "labis" ? this.currentDoor : null;
-    const leavingRoom = this.scene === "muji-room";
     if (this.scene === "labis" && this.completedMemoryEvents.has("july19-motor-learning") && !this.walkedThroughMemories.has("labis-motor-day")) {
       return this.continueLabisReflectionBeforeExit();
     }
     if (this.scene === "labis" && this.completedMemoryEvents.has("july19-motor-learning")) this.finishCurrentChapterWalkthrough();
+    this.finishReturnToForest();
+  }
+
+  private finishReturnToForest(): void {
+    const leavingDoor = this.scene === "bakery" || this.scene === "labis" ? this.currentDoor : null;
+    const leavingRoom = this.scene === "muji-room";
     this.labisCutscene = null;
     this.labisDialogueOpen = false;
     this.labisReplayMode = false;
@@ -1031,6 +1061,7 @@ export class WalkBackHomeApp {
       this.ctx.fillStyle = "rgba(226, 181, 109, .10)";
       this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
+    if (!this.labisCutscene && !this.labisOverlayMode) this.drawLabisDiaryBookProp(cameraX, cameraY, scale, time);
     if (!this.labisCutscene && !this.labisOverlayMode) this.drawLabisMemoryTells(cameraX, cameraY, scale, time);
     if (this.labisActiveEcho) this.drawLabisEchoVisual(this.labisActiveEcho, cameraX, cameraY, scale, time);
 
@@ -1082,6 +1113,23 @@ export class WalkBackHomeApp {
     if (actor.id === "motor" && this.drawLabisImage(src, x, y + 42 * scale, 218 * scale, 172 * scale)) return;
     if (actor.id === "ms" && this.drawLabisImage(src, x, y + 42 * scale, 142 * scale, 172 * scale)) return;
     drawSceneActor(this.ctx, actor, cameraX, cameraY, scale);
+  }
+
+  private drawLabisDiaryBookProp(cameraX: number, cameraY: number, scale: number, time: number): void {
+    const x = (labisDiaryMemorySpot.x - cameraX) * scale;
+    const y = (labisDiaryMemorySpot.y - cameraY) * scale;
+    const pulse = Math.sin(time / 460) * 0.5 + 0.5;
+    this.ctx.save();
+    this.ctx.globalAlpha = 0.56 + pulse * 0.24;
+    const glow = this.ctx.createRadialGradient(x, y - 22 * scale, 3 * scale, x, y - 22 * scale, 72 * scale);
+    glow.addColorStop(0, "rgba(255, 232, 166, .66)");
+    glow.addColorStop(1, "rgba(255, 232, 166, 0)");
+    this.ctx.fillStyle = glow;
+    this.ctx.beginPath();
+    this.ctx.arc(x, y - 22 * scale, 72 * scale, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.drawLabisImage(labisAssetPath("ms", "holding_book"), x, y + 18 * scale, 128 * scale, 104 * scale) || this.drawMemoryTableFallback(x, y, scale * 1.05);
+    this.ctx.restore();
   }
 
   private drawLabisMemoryTells(cameraX: number, cameraY: number, scale: number, time: number): void {
@@ -1395,6 +1443,7 @@ export class WalkBackHomeApp {
   }
 
   private continueLabisReflectionBeforeExit(): void {
+    this.labisExitAfterReflection = true;
     const filterEcho = labisEchoes.find((echo) => echo.id === "july19-filter-evening");
     const filterChoiceMade = this.choices.some((choice) => choice.startsWith("labis-filter-"));
     if (filterChoiceMade) {
@@ -2117,7 +2166,7 @@ export class WalkBackHomeApp {
   }
 
   private applyDiaryLibrary(state: DiaryLibraryState): void {
-    this.diaryEntries = state.entries;
+    this.diaryEntries = seedAuthoredChapterDiaryEntries(state).entries;
     this.legacyArtifacts = state.legacyArtifacts;
   }
 

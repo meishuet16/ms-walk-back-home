@@ -1,4 +1,5 @@
 import type { DiaryEntry, DiaryLibraryState, MemoryKind } from "../types.js";
+import { authoredChapterDiaryEntries } from "../fixtures/authoredDiaryEntries.js";
 import { diaryEntriesToForestMemories, diaryEntriesToTimeline, updateDiaryMemoryKind, type DiaryForestMemory, type DiaryTimelineItem, type DiaryTimelineSort } from "./DiaryImport.js";
 import { makeDiaryEntry, normalizeDiaryEntry } from "./DiaryImport.js";
 
@@ -21,6 +22,13 @@ export function upsertDiaryEntry(library: DiaryLibraryState, entry: DiaryEntry):
 
 export function upsertDiaryPageDraft(library: DiaryLibraryState, entry: DiaryEntry): DiaryLibraryState {
   return upsertDiaryEntry(library, normalizeDiaryEntry(entry));
+}
+
+export function seedAuthoredChapterDiaryEntries(library: DiaryLibraryState): DiaryLibraryState {
+  return authoredChapterDiaryEntries.reduce((next, entry) => {
+    const exists = next.entries.some((item) => item.id === entry.id || item.chapterId === entry.chapterId);
+    return exists ? next : upsertDiaryEntry(next, entry);
+  }, library);
 }
 
 export function openDiaryPageForDate(library: DiaryLibraryState, date: string): { library: DiaryLibraryState; entry: DiaryEntry; created: boolean } {

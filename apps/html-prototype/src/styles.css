@@ -176,16 +176,23 @@ canvas {
 }
 .rpg-dialogue span {
   position: absolute;
-  top: -22px;
-  left: 16px;
-  min-width: 58px;
-  padding: 3px 12px;
-  border: 2px solid rgba(230, 187, 107, .82);
-  border-bottom: 0;
-  border-radius: 5px 5px 0 0;
-  background: rgba(28, 24, 22, .92);
+  top: -20px;
+  left: 18px;
+  padding: 0 0 0 12px;
+  border: 0;
+  background: transparent;
   color: #ffe2a8;
-  text-align: center;
+  text-align: left;
+  text-shadow: 0 2px 8px rgba(0,0,0,.72);
+}
+.rpg-dialogue span::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 2px;
+  width: 2px;
+  height: 15px;
+  background: rgba(230, 187, 107, .86);
 }
 .rpg-dialogue p {
   margin: 0;
@@ -213,10 +220,18 @@ canvas {
 }
 .labis-choice-ui p {
   margin: 0 0 10px;
-  padding: 10px 12px;
-  border: 1px solid rgba(230, 187, 107, .64);
-  border-radius: 5px;
-  background: rgba(28, 24, 22, .82);
+  padding: 2px 0 4px 16px;
+  border: 0;
+  border-left: 2px solid rgba(230, 187, 107, .78);
+  background: transparent;
+  color: #ffe4ad;
+  text-shadow: 0 2px 8px rgba(0,0,0,.7);
+}
+.labis-choice-ui p::before {
+  content: "“";
+}
+.labis-choice-ui p::after {
+  content: "”";
 }
 .labis-choice-ui div {
   display: grid;

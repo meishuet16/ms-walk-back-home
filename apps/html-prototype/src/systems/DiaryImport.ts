@@ -39,7 +39,7 @@ export type DiaryForestMemory =
 
 export type DiaryDoor = Extract<DiaryForestMemory, { kind: "chapter" }>;
 
-const authoredChapterIds = new Set(["bakery-day"]);
+const authoredChapterIds = new Set(["bakery-day", "labis-motor-day"]);
 
 const datePositionPool = [
   { x: 530, y: 205 },

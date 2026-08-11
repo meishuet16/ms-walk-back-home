@@ -75,3 +75,9 @@ test("labis memory reflection resolves by tendencies with deterministic tie brea
   assert.equal(resolveLabisMemoryReflection({ ...emptyTendencies(), closeness: 2, intervention: 2 }).id, "labis-reflection-not-ready");
   assert.equal(resolveLabisMemoryReflection({ ...emptyTendencies(), acceptance: 1, companionship: 1 }).id, "labis-reflection-acceptance");
 });
+
+test("labis memory reflections preserve walk back home interpretation philosophy", () => {
+  const reflection = resolveLabisMemoryReflection({ ...emptyTendencies(), distance: 2, acceptance: 2 });
+  assert.ok(reflection.lines.join("").includes("改写"));
+  assert.ok(reflection.lines.join("").includes("解释"));
+});

@@ -81,25 +81,25 @@ export const labisMemoryReflections: LabisReflection[] = [
   {
     id: "labis-reflection-acceptance",
     title: "Memory Reflection",
-    lines: ["后来我才发现，值得记住的那一天，并没有发生什么大事。", "她只是很开心。", "我刚好在那里。", "07.19 · Labis"],
+    lines: ["离开 Labis 的时候，我没有多带走一个答案。", "那天不能被改写，只能被重新解释。", "原来所谓值得记住，有时只是普通的一天没有被后来的人删掉。", "07.19 · Labis"],
     tendencyScore: (tendencies) => tendencies.acceptance + tendencies.honesty
   },
   {
     id: "labis-reflection-companionship",
     title: "Memory Reflection",
-    lines: ["有些人来过你的生活，不是因为说过什么重要的话。", "只是那天吃了饭、剪了头发、学了 motor，然后坐在你家里看戏。", "07.19 · Labis"],
+    lines: ["有些陪伴不是一句话，也不是一种关系的名字。", "只是有人吃了饭、剪了头发、学了 motor，然后自然地坐进你家的傍晚。", "记忆没有替那天加意义；它只是承认，那些细节真的曾经同时存在。", "07.19 · Labis"],
     tendencyScore: (tendencies) => tendencies.companionship + tendencies.closeness
   },
   {
     id: "labis-reflection-letting-go",
     title: "Memory Reflection",
-    lines: ["我记得自己松开手以后，她还在往前。", "原来有些瞬间，放手也属于陪伴的一部分。", "07.19 · Labis"],
+    lines: ["我记得松手之后，motor 还在往前。", "那不是失去控制，也不是证明谁不需要谁。", "我不能改写那个动作，只能解释自己为什么一直记得。", "07.19 · Labis"],
     tendencyScore: (tendencies) => tendencies.distance + tendencies.acceptance
   },
   {
     id: "labis-reflection-not-ready",
     title: "Memory Reflection",
-    lines: ["我还是会忍不住问，那些普通的动作到底代表什么。", "但这一次，我没有替她回答。", "07.19 · Labis"],
+    lines: ["我还是会想问，普通的动作后来为什么会变重。", "但 Walk Back Home 不是审问过去。", "这一次，我把问题带走，没有替任何人补上答案。", "07.19 · Labis"],
     tendencyScore: (tendencies) => tendencies.closeness + tendencies.intervention
   }
 ];

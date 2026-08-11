@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createDiaryLibrary, deleteDiaryEntriesByIds, deleteDiaryEntryById, getDiaryForestMemories, getDiaryTimeline, setDiaryEntryKind, upsertDiaryEntry } from "../src/systems/DiaryLibrary.js";
+import { createDiaryLibrary, deleteDiaryEntriesByIds, deleteDiaryEntryById, getDiaryForestMemories, getDiaryTimeline, seedAuthoredChapterDiaryEntries, setDiaryEntryKind, upsertDiaryEntry } from "../src/systems/DiaryLibrary.js";
 import { makeDiaryEntry } from "../src/systems/DiaryImport.js";
 
 test("diary library timeline includes diary-only entries while forest does not", () => {
@@ -25,6 +25,18 @@ test("deleting diary removes its derived forest memory", () => {
 
   assert.equal(getDiaryTimeline(library).length, 0);
   assert.equal(getDiaryForestMemories(library).length, 0);
+});
+
+test("authored memory chapters seed editable diary entries into the timeline", () => {
+  const library = seedAuthoredChapterDiaryEntries(createDiaryLibrary());
+  const timeline = getDiaryTimeline(library);
+  const labis = timeline.find((entry) => entry.chapterId === "labis-motor-day");
+
+  assert.ok(labis);
+  assert.equal(labis.memoryKind, "chapter");
+  assert.equal(labis.date, "2026-07-19");
+  assert.ok(labis.body.includes("单凭这一点"));
+  assert.equal(getDiaryForestMemories(library).some((entry) => entry.kind === "chapter" && entry.chapterId === "labis-motor-day"), true);
 });
 
 test("timeline defaults to date descending and can sort ascending", () => {
