@@ -32,8 +32,9 @@ test("monthly books and pdf export are derived on demand", async () => {
   const books = monthlyBookSummaries(library.entries);
   const july = selectedOrLatestMonth(library.entries, "2026-07");
   const before = JSON.stringify(library);
-  const pdf = makeMonthlyJournalImagePdf(july, [{ dataUrl: "data:image/jpeg;base64,AAAA", width: 1200, height: 1600 }]);
+  const pdf = makeMonthlyJournalImagePdf(july, [{ dataUrl: "data:image/jpeg;base64,/9j/2Q==", width: 1200, height: 1600 }]);
   const pdfText = await pdf.text();
+  const pdfBytes = new Uint8Array(await pdf.arrayBuffer());
 
   assert.deepEqual(books.map((book) => book.key), ["2026-07", "2026-06"]);
   assert.equal(books[0].entryCount, 1);
@@ -42,5 +43,6 @@ test("monthly books and pdf export are derived on demand", async () => {
   assert.ok(pdfText.includes("%PDF-1.4"));
   assert.ok(pdfText.includes("/Subtype /Image"));
   assert.ok(pdfText.includes("/DCTDecode"));
+  assert.ok(pdfBytes.some((byte, index) => byte === 0xff && pdfBytes[index + 1] === 0xd8 && pdfBytes[index + 2] === 0xff));
   assert.equal(JSON.stringify(library), before);
 });

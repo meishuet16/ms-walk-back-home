@@ -115,19 +115,39 @@ export type MonthlyJournalPdfPage = {
   height: number;
 };
 
-function jpegBinaryFromDataUrl(dataUrl: string): string {
+const textEncoder = new TextEncoder();
+
+function pdfText(value: string): Uint8Array {
+  return textEncoder.encode(value);
+}
+
+function jpegBytesFromDataUrl(dataUrl: string): Uint8Array {
   const [, encoded = ""] = dataUrl.split(",");
-  return atob(encoded);
+  const binary = atob(encoded);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return bytes;
+}
+
+function concatBytes(parts: Uint8Array[]): Uint8Array {
+  const total = parts.reduce((sum, part) => sum + part.byteLength, 0);
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const part of parts) {
+    bytes.set(part, offset);
+    offset += part.byteLength;
+  }
+  return bytes;
 }
 
 export function makeMonthlyJournalImagePdf(month: JournalMonth, pages: MonthlyJournalPdfPage[]): Blob {
   const safePages = pages.length ? pages : [{ dataUrl: "data:image/jpeg;base64,", width: 1, height: 1 }];
-  const objects: string[] = [];
+  const objects: Uint8Array[] = [];
   const pageRefs: number[] = [];
-  objects.push("<< /Type /Catalog /Pages 2 0 R >>");
-  objects.push("<< /Type /Pages /Kids [] /Count 0 >>");
+  objects.push(pdfText("<< /Type /Catalog /Pages 2 0 R >>"));
+  objects.push(pdfText("<< /Type /Pages /Kids [] /Count 0 >>"));
   for (const [index, page] of safePages.entries()) {
-    const imageBinary = jpegBinaryFromDataUrl(page.dataUrl);
+    const imageBytes = jpegBytesFromDataUrl(page.dataUrl);
     const imageId = objects.length + 1;
     const contentId = objects.length + 2;
     const pageId = objects.length + 3;
@@ -140,22 +160,33 @@ export function makeMonthlyJournalImagePdf(month: JournalMonth, pages: MonthlyJo
     const drawX = (pageWidth - drawWidth) / 2;
     const drawY = (pageHeight - drawHeight) / 2;
     const body = `q ${drawWidth.toFixed(2)} 0 0 ${drawHeight.toFixed(2)} ${drawX.toFixed(2)} ${drawY.toFixed(2)} cm /Im${index + 1} Do Q`;
-    objects.push(`<< /Type /XObject /Subtype /Image /Width ${Math.max(1, Math.round(page.width))} /Height ${Math.max(1, Math.round(page.height))} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imageBinary.length} >>\nstream\n${imageBinary}\nendstream`);
-    objects.push(`<< /Length ${body.length} >>\nstream\n${body}\nendstream`);
+    objects.push(concatBytes([
+      pdfText(`<< /Type /XObject /Subtype /Image /Width ${Math.max(1, Math.round(page.width))} /Height ${Math.max(1, Math.round(page.height))} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imageBytes.byteLength} >>\nstream\n`),
+      imageBytes,
+      pdfText("\nendstream")
+    ]));
+    objects.push(pdfText(`<< /Length ${body.length} >>\nstream\n${body}\nendstream`));
     pageRefs.push(pageId);
-    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /XObject << /Im${index + 1} ${imageId} 0 R >> >> /Contents ${contentId} 0 R >>`);
+    objects.push(pdfText(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /XObject << /Im${index + 1} ${imageId} 0 R >> >> /Contents ${contentId} 0 R >>`));
   }
-  objects[1] = `<< /Type /Pages /Kids [${pageRefs.map((ref) => `${ref} 0 R`).join(" ")}] /Count ${pageRefs.length} >>`;
-  objects.push(`<< /Title (Walk Back Home Journal ${month.key}) /Subject (${month.entries.length} entries) >>`);
-  let pdf = "%PDF-1.4\n";
+  objects[1] = pdfText(`<< /Type /Pages /Kids [${pageRefs.map((ref) => `${ref} 0 R`).join(" ")}] /Count ${pageRefs.length} >>`);
+  objects.push(pdfText(`<< /Title (Walk Back Home Journal ${month.key}) /Subject (${month.entries.length} entries) >>`));
+  const chunks: Uint8Array[] = [pdfText("%PDF-1.4\n")];
   const offsets = [0];
+  let byteOffset = chunks[0].byteLength;
   objects.forEach((object, index) => {
-    offsets.push(pdf.length);
-    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+    offsets.push(byteOffset);
+    const header = pdfText(`${index + 1} 0 obj\n`);
+    const footer = pdfText("\nendobj\n");
+    chunks.push(header, object, footer);
+    byteOffset += header.byteLength + object.byteLength + footer.byteLength;
   });
-  const xref = pdf.length;
-  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
-  for (const offset of offsets.slice(1)) pdf += `${String(offset).padStart(10, "0")} 00000 n \n`;
-  pdf += `trailer\n<< /Root 1 0 R /Size ${objects.length + 1} >>\nstartxref\n${xref}\n%%EOF`;
-  return new Blob([pdf], { type: "application/pdf" });
+  const xref = byteOffset;
+  let trailer = `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const offset of offsets.slice(1)) trailer += `${String(offset).padStart(10, "0")} 00000 n \n`;
+  trailer += `trailer\n<< /Root 1 0 R /Size ${objects.length + 1} >>\nstartxref\n${xref}\n%%EOF`;
+  chunks.push(pdfText(trailer));
+  const pdfBytes = concatBytes(chunks);
+  const pdfBuffer = pdfBytes.buffer.slice(pdfBytes.byteOffset, pdfBytes.byteOffset + pdfBytes.byteLength) as ArrayBuffer;
+  return new Blob([pdfBuffer], { type: "application/pdf" });
 }
