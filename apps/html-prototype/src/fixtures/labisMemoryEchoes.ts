@@ -41,7 +41,7 @@ export const labisEchoes: LabisEcho[] = [
   { id: "july19-haircut", label: "玻璃", prompt: "E · 回想刘海", presentation: "visual-echo", x: 632, y: 326, radius: 118, tell: "reflection", repeatable: true },
   { id: "july19-kancil", label: "那辆 Kancil", prompt: "E · 那辆 Kancil", presentation: "environmental-trace", x: 1245, y: 285, radius: 145, tell: "windshield", repeatable: true, usesExistingMapVehicle: true },
   { id: "july19-badminton", label: "啪", prompt: "E · 回想羽球", presentation: "environmental-trace", x: 290, y: 660, radius: 132, tell: "sound", repeatable: true },
-  { id: "july19-filter-evening", label: "说明书", prompt: "E · 回想说明书", presentation: "secondary-visual-echo", x: 980, y: 420, radius: 180, tell: "paper", repeatable: true },
+  { id: "july19-filter-evening", label: "说明书", prompt: "E · 回想说明书", presentation: "secondary-visual-echo", x: 980, y: 420, radius: 180, tell: "paper", requires: ["july19-motor-learning"], repeatable: true },
   { id: "july19-chicken-cake", label: "昨晚", prompt: "E · 回想昨晚", presentation: "hidden-keyframe", x: 435, y: 610, radius: 92, tell: "hidden-star", requires: ["july19-motor-learning"], repeatable: true }
 ];
 

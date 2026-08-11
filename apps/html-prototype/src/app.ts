@@ -767,6 +767,7 @@ export class WalkBackHomeApp {
   }
 
   private labisEchoPriority(echo: LabisEcho): number {
+    if (echo.id === "july19-photo-threat" && !this.completedMemoryEvents.has(echo.id)) return 6;
     if (echo.id === "july19-filter-evening" && !this.completedMemoryEvents.has(echo.id)) return 5;
     if (echo.id === "july19-fried-noodles" && this.completedMemoryEvents.has("july19-chicken-porridge")) return 4;
     if (echo.id === "july19-chicken-porridge" && !this.completedMemoryEvents.has("july19-chicken-porridge")) return 3;
@@ -950,6 +951,9 @@ export class WalkBackHomeApp {
   private returnToForest(): void {
     const leavingDoor = this.scene === "bakery" || this.scene === "labis" ? this.currentDoor : null;
     const leavingRoom = this.scene === "muji-room";
+    if (this.scene === "labis" && this.completedMemoryEvents.has("july19-motor-learning") && !this.walkedThroughMemories.has("labis-motor-day")) {
+      return this.continueLabisReflectionBeforeExit();
+    }
     if (this.scene === "labis" && this.completedMemoryEvents.has("july19-motor-learning")) this.finishCurrentChapterWalkthrough();
     this.labisCutscene = null;
     this.labisDialogueOpen = false;
@@ -1388,6 +1392,21 @@ export class WalkBackHomeApp {
     this.showDiaryEditor(opened.entry.id);
     this.showToast(opened.created ? "Today opened" : "Today reopened");
     this.autosave();
+  }
+
+  private continueLabisReflectionBeforeExit(): void {
+    const filterEcho = labisEchoes.find((echo) => echo.id === "july19-filter-evening");
+    const filterChoiceMade = this.choices.some((choice) => choice.startsWith("labis-filter-"));
+    if (filterChoiceMade) {
+      this.showLabisMemoryReflection();
+      return;
+    }
+    if (filterEcho && !this.completedMemoryEvents.has("july19-filter-evening")) {
+      this.showToast("还有一个说明书的回声。");
+      this.startLabisEcho(filterEcho);
+      return;
+    }
+    this.showLabisChoice("filter");
   }
 
   private openNewDiaryPage(): void {
