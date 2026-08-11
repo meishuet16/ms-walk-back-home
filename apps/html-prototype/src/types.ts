@@ -113,6 +113,34 @@ export type RoomJourneyState = {
   reflectionNote?: string;
 };
 
+export type ReflectionNoteSource = "manual" | "chapter";
+export type ReflectionWallView = "wall" | "stack" | "list";
+export type ReflectionWallFilter = "all" | "today" | "week" | "month" | "manual" | "chapter" | "pinned" | "favorites";
+export type ReflectionWallSort = "manual" | "newest" | "oldest";
+
+export type ReflectionNote = {
+  id: string;
+  text: string;
+  createdAt: string;
+  updatedAt?: string;
+  styleId: string;
+  x: number;
+  y: number;
+  rotation: number;
+  pinned?: boolean;
+  favorite?: boolean;
+  source: ReflectionNoteSource;
+  chapterId?: string;
+};
+
+export type ReflectionWallState = {
+  version: 1;
+  savedAt: string;
+  defaultStyleId: string;
+  migratedLegacyKeys: string[];
+  notes: ReflectionNote[];
+};
+
 export type MusicSourceKind = "built-in" | "user";
 export type PersonalMusicContext = "muji-room" | "forest";
 export type MusicSort = "recently-added" | "recently-played" | "title" | "artist";

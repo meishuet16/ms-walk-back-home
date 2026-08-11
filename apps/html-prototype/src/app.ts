@@ -2,8 +2,9 @@ import { bakeryChapter } from "./fixtures/chapterPlan.js";
 import { canStartLabisMotorMemory, labisBlockers, labisDiaryMemorySpot, labisInteractionForPoint, labisMotorMemoryActions, labisSpawn } from "./fixtures/labisMotorMemory.js";
 import { labisAssetManifest, labisAssetPath, labisProductionAssetPaths } from "./fixtures/labisAssetRegistry.js";
 import { labisChoicePoints, labisEchoes, resolveLabisMemoryReflection, type LabisChoicePoint, type LabisEcho } from "./fixtures/labisMemoryEchoes.js";
-import type { ChapterProgress, Choice, DiaryEntry, DiaryLibraryState, JourneyState, MemoryKind, MusicSort, PersonalMusicLibraryState, PersonalPlayerState, RoomJourneyState, SceneId, Tendencies, UserMusicTrack } from "./types.js";
+import type { ChapterProgress, Choice, DiaryEntry, DiaryLibraryState, JourneyState, MemoryKind, MusicSort, PersonalMusicLibraryState, PersonalPlayerState, ReflectionNote, ReflectionWallFilter, ReflectionWallSort, ReflectionWallState, ReflectionWallView, RoomJourneyState, SceneId, Tendencies, UserMusicTrack } from "./types.js";
 import { AudioManager } from "./systems/AudioManager.js";
+import { AccountManager } from "./systems/AccountManager.js";
 import { chapterRegistry, forestEntries, routeForestEntry, type AuthoredForestEntry } from "./systems/ChapterRegistry.js";
 import { beginChapterVisit, finishChapterWalkthrough, initialChapterProgress, markChapterDialogueComplete, markChapterMemoryRead, recordChapterChoice } from "./systems/ChapterProgressManager.js";
 import { inAnyRect, type Point, type Rect } from "./systems/CollisionSystem.js";
@@ -19,6 +20,7 @@ import { createBackupBundle, parseBackupBundle, walkBackupFilename, type BackupB
 import { MusicBlobStore } from "./systems/MusicBlobStore.js";
 import { ParticleSystem } from "./systems/ParticleSystem.js";
 import { activeLyricIndexAt, adjacentTrackIdForControl, clampLyricsOverlay, createDefaultPersonalPlayerState, filterAndSortMusic, isBuiltInTrackId, nextTrackIdForPlayback, normalizePlaybackMode, parseLrc, personalMusicShouldPlayInScene } from "./systems/PersonalMusic.js";
+import { changeReflectionPaper, createChapterReflectionNote, createReflectionNote, createReflectionWallState, deleteReflectionNote, migrateLegacyReflectionWall, moveReflectionNote, reflectionPaperStyles, toggleReflectionNoteFlag, updateReflectionNote, visibleReflectionNotes } from "./systems/ReflectionWall.js";
 import { drawSceneActor } from "./systems/SceneActorRenderer.js";
 import { applyChoice } from "./systems/TendencySystem.js";
 import {
@@ -88,6 +90,7 @@ export class WalkBackHomeApp {
   private overlay: HTMLElement;
   private input: InputManager;
   private audio = new AudioManager();
+  private account = new AccountManager();
   private save = new SaveManager();
   private particles = new ParticleSystem();
   private images = {
@@ -127,6 +130,7 @@ export class WalkBackHomeApp {
   private timelineFilterAppliedMessage = "";
   private journalMode: "timeline" | "books" | "reader" = "timeline";
   private selectedJournalMonthKey = "";
+  private selectedForestMonthKey = "";
   private timelineVisibleCount = journalBatchSize;
   private scrapbookDrag: { elementId: string; entryId: string; offsetX: number; offsetY: number } | null = null;
   private diaryAutosaveTimer = 0;
@@ -139,6 +143,12 @@ export class WalkBackHomeApp {
   private pendingPersonalSeek: number | null = null;
   private settings = { rain: true, muted: false, volume: 0.45, compact: false, reducedMotion: false, musicEnabled: true, musicScene: "bakery" as MusicScene };
   private room: RoomJourneyState = createDefaultRoomState();
+  private reflectionWall: ReflectionWallState = createReflectionWallState();
+  private reflectionWallView: ReflectionWallView = "wall";
+  private reflectionWallFilter: ReflectionWallFilter = "all";
+  private reflectionWallSort: ReflectionWallSort = "manual";
+  private reflectionWallSearch = "";
+  private reflectionWallDrag: { noteId: string; offsetX: number; offsetY: number } | null = null;
   private chapterProgress = new Map<string, ChapterProgress>();
   private dialogue = new DialogueSystem(bakeryChapter.dialogue);
   private labisCutscene: CutsceneSystem | null = null;
@@ -197,6 +207,7 @@ export class WalkBackHomeApp {
     root.addEventListener("pointermove", (event) => this.handlePointerMove(event));
     root.addEventListener("pointerup", () => {
       this.scrapbookDrag = null;
+      this.reflectionWallDrag = null;
       if (this.lyricsDrag) this.autosave();
       this.lyricsDrag = null;
     });
@@ -245,6 +256,8 @@ export class WalkBackHomeApp {
     if (action === "open-month-book") this.openMonthlyBook(target.dataset.month ?? "");
     if (action === "export-month-pdf") void this.exportMonthlyPdf(target.dataset.month ?? "");
     if (action === "open-map") this.showMap();
+    if (action === "forest-month-prev") this.moveForestMonth(-1);
+    if (action === "forest-month-next") this.moveForestMonth(1);
     if (action === "open-room") this.enterMujiRoom();
     if (action === "new-diary-entry") this.openNewDiaryPage();
     if (action === "open-diary-editor") this.showTimeline();
@@ -273,8 +286,21 @@ export class WalkBackHomeApp {
     if (action === "set-memory-kind") this.setDiaryMemoryKind(target.dataset.id ?? "", target.dataset.kind as MemoryKind);
     if (action === "room-window") this.roomWindow();
     if (action === "room-lamp") this.roomLamp();
-    if (action === "room-letter") this.roomLetter();
+    if (action === "room-letter") this.openReflectionWall();
     if (action === "save-room-reflection") this.saveRoomReflection();
+    if (action === "reflection-wall") this.openReflectionWall();
+    if (action === "reflection-note-new") this.showReflectionComposer();
+    if (action === "reflection-note-save") this.saveReflectionComposer(target.dataset.note ?? "");
+    if (action === "reflection-note-open") this.showReflectionDetail(target.dataset.note ?? "");
+    if (action === "reflection-note-edit") this.showReflectionComposer(target.dataset.note ?? "");
+    if (action === "reflection-note-delete") this.deleteReflectionWallNote(target.dataset.note ?? "");
+    if (action === "reflection-note-pin") this.toggleReflectionFlag(target.dataset.note ?? "", "pinned");
+    if (action === "reflection-note-favorite") this.toggleReflectionFlag(target.dataset.note ?? "", "favorite");
+    if (action === "reflection-note-paper") this.changeReflectionNotePaper(target.dataset.note ?? "", target.dataset.style ?? "");
+    if (action === "reflection-keep-chapter") this.keepChapterReflection(target.dataset.chapter ?? "", target.dataset.text ?? "");
+    if (action === "reflection-wall-view") this.setReflectionWallView(target.dataset.view as ReflectionWallView);
+    if (action === "reflection-wall-sort") this.setReflectionWallSort(target.dataset.sort as ReflectionWallSort);
+    if (action === "reflection-wall-filter") this.setReflectionWallFilter(target.dataset.filter as ReflectionWallFilter);
     if (action === "room-diary") this.roomDiary();
     if (action === "room-records") this.showRecords();
     if (action === "room-residue") this.inspectRoomResidue();
@@ -291,6 +317,8 @@ export class WalkBackHomeApp {
     if (action === "backup-sync") this.showBackupSync();
     if (action === "download-backup") void this.downloadBackup();
     if (action === "reset-journey") this.resetJourney();
+    if (action === "account-sign-out") this.signOutAccount();
+    if (action === "account-claim-local") this.claimLocalDataForAccount();
     if (action === "compact") this.toggleCompact();
     if (action === "fullscreen") this.toggleFullscreen();
     if (action === "rain") this.toggleRain();
@@ -390,6 +418,7 @@ export class WalkBackHomeApp {
   private bootstrapDiaryLibrary(): void {
     this.musicLibrary = this.save.loadMusicLibrary() ?? this.musicLibrary;
     this.personalPlayer = { ...this.personalPlayer, ...(this.save.loadPersonalPlayer() ?? {}) };
+    this.reflectionWall = this.save.loadReflectionWall() ?? this.reflectionWall;
     const saved = this.save.loadDiaryLibrary();
     if (saved) {
       this.applyDiaryLibrary(seedAuthoredChapterDiaryEntries(saved));
@@ -562,7 +591,7 @@ export class WalkBackHomeApp {
         return;
       }
       if (this.activeRoomInteraction.id === "residue") return this.inspectRoomResidue();
-      if (this.activeRoomInteraction.id === "reflection") return this.roomLetter();
+      if (this.activeRoomInteraction.id === "reflection") return this.openReflectionWall();
     }
     if (this.scene === "ending") this.returnToForest();
   }
@@ -572,7 +601,9 @@ export class WalkBackHomeApp {
   }
 
   private allDoors(): ForestNode[] {
-    return [...forestEntries, ...getDiaryForestMemories(this.makeDiaryLibrary())];
+    const selectedMonth = this.currentForestMonth();
+    const privateFragments = getDiaryForestMemories(this.makeDiaryLibrary()).filter((memory) => memory.date.startsWith(selectedMonth.key));
+    return [...forestEntries, ...privateFragments];
   }
 
   private isChapterNode(node: ForestNode): node is AuthoredForestEntry | Extract<DiaryForestMemory, { kind: "chapter" }> {
@@ -944,7 +975,7 @@ export class WalkBackHomeApp {
     this.labisReflectionLines = reflection.lines;
     this.labisOverlayMode = "reflection";
     this.overlay.classList.remove("dialogue-open");
-    this.overlay.innerHTML = `<div class="labis-reflection">${reflection.lines.map((line) => `<p>${this.escapeHtml(line)}</p>`).join("")}<button data-action="labis-reflection-close">Close</button></div>`;
+    this.overlay.innerHTML = `<div class="labis-reflection">${reflection.lines.map((line) => `<p>${this.escapeHtml(line)}</p>`).join("")}<button data-action="reflection-keep-chapter" data-chapter="labis-motor-day" data-text="${this.escapeHtml(reflection.lines.join("\n"))}">Keep this</button><button data-action="labis-reflection-close">Close</button></div>`;
     this.audio.ping("ending");
     this.autosave();
   }
@@ -1005,7 +1036,7 @@ export class WalkBackHomeApp {
     const quoteTitle = reflection.title ?? title;
     const afterline = reflection.afterline ?? "Some places do not ask us to make them dramatic. They simply keep the afternoon until we are ready to see it.";
     this.overlay.classList.remove("dialogue-open");
-    this.overlay.innerHTML = `<div class="modal ending-quote"><span class="ending-kicker">${this.escapeHtml(kicker)}</span><h2>${this.escapeHtml(quoteTitle)}</h2>${lead}<p>${reflection.closureLines.map((line) => this.escapeHtml(line)).join("<br>")}</p><blockquote>${reflection.lines.map((line) => this.escapeHtml(line)).join("<br>")}</blockquote><p class="ending-afterline">${this.escapeHtml(afterline)}</p><button data-action="close">Close</button><button data-action="forest">Return to Forest</button></div>`;
+    this.overlay.innerHTML = `<div class="modal ending-quote"><span class="ending-kicker">${this.escapeHtml(kicker)}</span><h2>${this.escapeHtml(quoteTitle)}</h2>${lead}<p>${reflection.closureLines.map((line) => this.escapeHtml(line)).join("<br>")}</p><blockquote>${reflection.lines.map((line) => this.escapeHtml(line)).join("<br>")}</blockquote><p class="ending-afterline">${this.escapeHtml(afterline)}</p><button data-action="reflection-keep-chapter" data-chapter="${this.escapeHtml(this.currentMemoryKey())}" data-text="${this.escapeHtml(reflection.lines.join("\n"))}">Keep this</button><button data-action="close">Close</button><button data-action="forest">Return to Forest</button></div>`;
   }
 
   private finishBakery(): void {
@@ -1477,6 +1508,7 @@ export class WalkBackHomeApp {
         <button data-action="open-timeline">Timeline<span>${this.diaryEntries.length} diary entries</span></button>
         <button data-action="open-map">Walk Back Home<span>${this.allDoors().length} forest memories</span></button>
         <button data-action="open-room">Muji Room<span>Present-tense rest space</span></button>
+        <button data-action="reflection-wall">Reflection Wall<span>${this.reflectionWall.notes.length} paper notes</span></button>
       </div>
       <div class="settings-row"><button data-action="music">Music: ${this.settings.musicEnabled ? "On" : "Off"}</button><button data-action="rain">Rain: ${this.settings.rain ? "On" : "Off"}</button><button data-action="mute">${this.settings.muted ? "Sound Off" : "Sound On"}</button><button data-action="compact">${this.settings.compact ? "960x540" : "480x270"}</button><button data-action="backup-sync">Backup / Sync</button><button data-action="reset-journey">Begin Again</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
   }
@@ -2008,12 +2040,25 @@ export class WalkBackHomeApp {
   }
 
   private showMap(): void {
+    const month = this.currentForestMonth();
     const doors = this.allDoors().map((door) => {
       const state = this.isChapterNode(door) ? this.progressFor(this.chapterIdFor(door)).state : "fragment";
       return `<button data-action="enter-door" data-door="${this.escapeHtml(door.id)}">${this.escapeHtml(door.date)} ${this.escapeHtml(door.title)}<span>${state === "walkedThrough" ? "Remember" : state}</span></button>`;
     }).join("");
-    this.overlay.innerHTML = `<div class="modal game-panel"><h2>Walk Back Home</h2><p>The Forest contains only memory fragments and authored chapter doors.</p><div class="settings-row">${doors || "<p>No forest-visible diary entries yet.</p>"}</div><button data-action="open-timeline">Timeline</button><button data-action="settings">Back</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
+    this.overlay.innerHTML = `<div class="modal game-panel"><h2>Walk Back Home</h2><p>Public authored doors stay here. Private Memory Fragment lights are showing ${this.escapeHtml(month.label)}.</p><div class="month-nav"><button data-action="forest-month-prev">‹</button><strong>${this.escapeHtml(month.label)}</strong><button data-action="forest-month-next">›</button></div><div class="settings-row">${doors || "<p>No forest-visible diary entries yet.</p>"}</div><button data-action="open-timeline">Timeline</button><button data-action="settings">Back</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
     this.focusStage();
+  }
+
+  private currentForestMonth(): JournalMonth {
+    const selected = this.selectedForestMonthKey || this.selectedJournalMonthKey;
+    const month = selectedOrLatestMonth(this.diaryEntries, selected);
+    this.selectedForestMonthKey = month.key;
+    return month;
+  }
+
+  private moveForestMonth(direction: -1 | 1): void {
+    this.selectedForestMonthKey = adjacentMonthKey(this.currentForestMonth().key, direction);
+    this.showMap();
   }
 
   private showDiaryEditor(editId = ""): void {
@@ -2137,6 +2182,11 @@ export class WalkBackHomeApp {
 
   private handleInput(event: Event): void {
     const target = event.target as HTMLElement;
+    if (target instanceof HTMLInputElement && target.id === "reflection-search") {
+      this.reflectionWallSearch = target.value;
+      this.openReflectionWall();
+      return;
+    }
     if (target instanceof HTMLInputElement && target.id === "timeline-date-input") {
       target.classList.toggle("no-results", !this.timelineDateInputHasEntries(target.value));
       return;
@@ -2742,6 +2792,21 @@ export class WalkBackHomeApp {
   }
 
   private handlePointerDown(event: PointerEvent): void {
+    const note = (event.target as HTMLElement).closest<HTMLElement>(".wall-note");
+    const wall = (event.target as HTMLElement).closest<HTMLElement>(".reflection-wall-surface");
+    if (note && wall && !(event.target as HTMLElement).closest("button,input,select,textarea")) {
+      const wallRect = wall.getBoundingClientRect();
+      const noteData = this.reflectionWall.notes.find((item) => item.id === note.dataset.note);
+      if (noteData) {
+        this.reflectionWallDrag = {
+          noteId: noteData.id,
+          offsetX: ((event.clientX - wallRect.left) / wallRect.width) * 100 - noteData.x,
+          offsetY: ((event.clientY - wallRect.top) / wallRect.height) * 100 - noteData.y
+        };
+        event.preventDefault();
+      }
+      return;
+    }
     const lyrics = (event.target as HTMLElement).closest<HTMLElement>(".floating-lyrics");
     if (lyrics && !(event.target as HTMLElement).closest("button,input,select,textarea")) {
       const rect = lyrics.getBoundingClientRect();
@@ -2767,6 +2832,23 @@ export class WalkBackHomeApp {
   }
 
   private handlePointerMove(event: PointerEvent): void {
+    if (this.reflectionWallDrag) {
+      const wall = this.overlay.querySelector<HTMLElement>(".reflection-wall-surface");
+      if (!wall) return;
+      const rect = wall.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width) * 100 - this.reflectionWallDrag.offsetX;
+      const y = ((event.clientY - rect.top) / rect.height) * 100 - this.reflectionWallDrag.offsetY;
+      this.reflectionWall = moveReflectionNote(this.reflectionWall, this.reflectionWallDrag.noteId, { x, y });
+      this.save.saveReflectionWall(this.reflectionWall);
+      const note = this.overlay.querySelector<HTMLElement>(`.wall-note[data-note="${CSS.escape(this.reflectionWallDrag.noteId)}"]`);
+      const next = this.reflectionWall.notes.find((item) => item.id === this.reflectionWallDrag?.noteId);
+      if (note && next) {
+        note.style.left = `${next.x}%`;
+        note.style.top = `${next.y}%`;
+      }
+      event.preventDefault();
+      return;
+    }
     if (this.lyricsDrag) {
       const stageRect = this.stage.getBoundingClientRect();
       const scaleX = this.canvas.width / stageRect.width;
@@ -2835,17 +2917,186 @@ export class WalkBackHomeApp {
   }
 
   private roomLetter(): void {
-    this.overlay.innerHTML = `<div class="modal"><h2>Reflection Note</h2><label class="reflection-note">Optional note<textarea id="room-reflection-note" rows="5">${this.escapeHtml(this.room.reflectionNote ?? "")}</textarea></label><button data-action="save-room-reflection">Keep note</button><button data-action="close">Close</button></div>`;
-    this.focusStage();
+    this.openReflectionWall();
   }
 
   private saveRoomReflection(): void {
-    const note = this.overlay.querySelector<HTMLTextAreaElement>("#room-reflection-note")?.value.trim() ?? "";
-    this.room.reflectionNote = note;
-    if (note) this.room.reflections.push(`Reflection: ${note}`);
-    this.overlay.innerHTML = "";
-    this.showToast(note ? "Reflection kept" : "Reflection left empty");
-    this.autosave();
+    this.saveReflectionComposer();
+  }
+
+  private openReflectionWall(): void {
+    this.recordsPanelOpen = false;
+    this.reflectionWall = migrateLegacyReflectionWall(this.reflectionWall, this.room);
+    this.save.saveReflectionWall(this.reflectionWall);
+    const notes = visibleReflectionNotes(this.reflectionWall, {
+      view: this.reflectionWallView,
+      sort: this.reflectionWallSort,
+      filter: this.reflectionWallFilter,
+      search: this.reflectionWallSearch
+    });
+    const matchingIds = new Set(notes.map((note) => note.id));
+    const toolbar = this.renderReflectionToolbar(notes.length);
+    const body = this.reflectionWallView === "wall"
+      ? this.renderReflectionWallSurface(matchingIds)
+      : this.reflectionWallView === "stack"
+        ? this.renderReflectionStack(notes)
+        : this.renderReflectionList(notes);
+    this.overlay.innerHTML = `<div class="modal reflection-wall-modal">${toolbar}${body}</div>`;
+    this.focusStage();
+  }
+
+  private renderReflectionToolbar(count: number): string {
+    const filters: Array<[ReflectionWallFilter, string]> = [["all", "All Time"], ["today", "Today"], ["week", "This Week"], ["month", "This Month"], ["manual", "My Notes"], ["chapter", "Chapter Notes"], ["pinned", "Pinned"], ["favorites", "Favorites"]];
+    const views: Array<[ReflectionWallView, string]> = [["wall", "Wall"], ["stack", "Stack"], ["list", "List"]];
+    const sorts: Array<[ReflectionWallSort, string]> = [["manual", "Manual Wall Order"], ["newest", "Newest First"], ["oldest", "Oldest First"]];
+    return `<div class="reflection-wall-toolbar">
+      <div><h2>Reflection Wall</h2><p>${count} note${count === 1 ? "" : "s"}</p></div>
+      <label>Search<input id="reflection-search" type="search" value="${this.escapeHtml(this.reflectionWallSearch)}"></label>
+      <div class="reflection-chip-row">${filters.map(([filter, label]) => `<button class="${this.reflectionWallFilter === filter ? "selected" : ""}" data-action="reflection-wall-filter" data-filter="${filter}">${label}</button>`).join("")}</div>
+      <div class="reflection-chip-row">${views.map(([view, label]) => `<button class="${this.reflectionWallView === view ? "selected" : ""}" data-action="reflection-wall-view" data-view="${view}">${label}</button>`).join("")}</div>
+      <div class="reflection-chip-row">${sorts.map(([sort, label]) => `<button class="${this.reflectionWallSort === sort ? "selected" : ""}" data-action="reflection-wall-sort" data-sort="${sort}">${label}</button>`).join("")}</div>
+      <button data-action="reflection-note-new">Leave a note</button>
+      <button data-action="close">Close</button>
+    </div>`;
+  }
+
+  private renderReflectionWallSurface(matchingIds: Set<string>): string {
+    const notes = this.reflectionWall.notes.map((note) => this.renderWallNote(note, matchingIds.has(note.id))).join("");
+    return `<section class="reflection-wall-surface" aria-label="Reflection Wall">${notes || `<div class="reflection-wall-empty"><p>The wall is quiet.</p><button data-action="reflection-note-new">Leave a note</button></div>`}</section>`;
+  }
+
+  private renderWallNote(note: ReflectionNote, visible: boolean): string {
+    const faded = this.reflectionWallSearch.trim() || this.reflectionWallFilter !== "all" ? (visible ? "" : " faded") : "";
+    return `<button class="wall-note paper-${this.escapeHtml(note.styleId)}${faded}" data-note="${this.escapeHtml(note.id)}" data-action="reflection-note-open" style="left:${note.x}%;top:${note.y}%;transform:translate(-50%,-50%) rotate(${note.rotation}deg);">
+      <span>${this.escapeHtml(note.text)}</span>
+      <small>${this.escapeHtml(this.formatReflectionTimestamp(note.createdAt))}${note.updatedAt ? `<br>edited ${this.escapeHtml(this.formatReflectionTimestamp(note.updatedAt))}` : ""}</small>
+    </button>`;
+  }
+
+  private renderReflectionStack(notes: ReflectionNote[]): string {
+    const groups = new Map<string, ReflectionNote[]>();
+    for (const note of notes) {
+      const key = note.createdAt.slice(0, 7);
+      groups.set(key, [...(groups.get(key) ?? []), note]);
+    }
+    const sections = [...groups.entries()].map(([key, group]) => `<section class="reflection-stack-month"><h3>${this.escapeHtml(key)}</h3><div>${group.map((note) => this.renderStackCard(note)).join("")}</div></section>`).join("");
+    return `<div class="reflection-stack">${sections || `<p>The wall is quiet.</p>`}</div>`;
+  }
+
+  private renderStackCard(note: ReflectionNote): string {
+    return `<button class="reflection-stack-card paper-${this.escapeHtml(note.styleId)}" data-action="reflection-note-open" data-note="${this.escapeHtml(note.id)}"><span>${this.escapeHtml(note.text)}</span><small>${this.escapeHtml(this.formatReflectionTimestamp(note.createdAt))}</small></button>`;
+  }
+
+  private renderReflectionList(notes: ReflectionNote[]): string {
+    const rows = notes.map((note) => `<button class="reflection-list-row" data-action="reflection-note-open" data-note="${this.escapeHtml(note.id)}"><strong>${this.escapeHtml(this.formatReflectionTimestamp(note.createdAt))}</strong><span>${this.escapeHtml(note.text)}</span></button>`).join("");
+    return `<div class="reflection-list">${rows || `<p>The wall is quiet.</p>`}</div>`;
+  }
+
+  private showReflectionComposer(noteId = ""): void {
+    const note = this.reflectionWall.notes.find((item) => item.id === noteId);
+    const styleOptions = reflectionPaperStyles.map((style) => `<option value="${style.id}" ${note?.styleId === style.id ? "selected" : ""}>${style.label}</option>`).join("");
+    this.overlay.innerHTML = `<div class="modal reflection-compose">
+      <h2>${note ? "Edit note" : "Leave a note"}</h2>
+      <label>Thought<textarea id="reflection-note-text" rows="7" maxlength="500">${this.escapeHtml(note?.text ?? "")}</textarea></label>
+      <label>Paper<select id="reflection-note-style"><option value="paper-mix">Paper Mix / Random</option>${styleOptions}</select></label>
+      <button data-action="reflection-note-save" data-note="${this.escapeHtml(noteId)}">Keep note</button>
+      <button data-action="reflection-wall">Back to Wall</button>
+    </div>`;
+    this.focusStage();
+  }
+
+  private saveReflectionComposer(noteId = ""): void {
+    const text = this.overlay.querySelector<HTMLTextAreaElement>("#reflection-note-text")?.value.trim() ?? this.overlay.querySelector<HTMLTextAreaElement>("#room-reflection-note")?.value.trim() ?? "";
+    const styleId = this.overlay.querySelector<HTMLSelectElement>("#reflection-note-style")?.value ?? this.reflectionWall.defaultStyleId;
+    if (!text) {
+      this.showToast("The note can stay blank until words arrive.");
+      return;
+    }
+    if (noteId) {
+      this.reflectionWall = updateReflectionNote(this.reflectionWall, noteId, text);
+      this.reflectionWall = changeReflectionPaper(this.reflectionWall, noteId, styleId);
+    } else {
+      this.reflectionWall = createReflectionNote(this.reflectionWall, text, { styleId });
+    }
+    this.save.saveReflectionWall(this.reflectionWall);
+    this.openReflectionWall();
+    this.showToast("Note kept on the wall");
+  }
+
+  private showReflectionDetail(noteId: string): void {
+    const note = this.reflectionWall.notes.find((item) => item.id === noteId);
+    if (!note) return;
+    const papers = reflectionPaperStyles.map((style) => `<button data-action="reflection-note-paper" data-note="${this.escapeHtml(note.id)}" data-style="${style.id}">${style.label}</button>`).join("");
+    this.overlay.innerHTML = `<div class="modal reflection-detail paper-${this.escapeHtml(note.styleId)}">
+      <h2>${this.escapeHtml(note.source === "chapter" ? "Chapter note" : "Reflection note")}</h2>
+      <p>${this.escapeHtml(note.text).replace(/\n/g, "<br>")}</p>
+      <small>${this.escapeHtml(this.formatReflectionTimestamp(note.createdAt))}${note.updatedAt ? `<br>edited ${this.escapeHtml(this.formatReflectionTimestamp(note.updatedAt))}` : ""}</small>
+      <div class="settings-row">
+        <button data-action="reflection-note-edit" data-note="${this.escapeHtml(note.id)}">Edit</button>
+        <button data-action="reflection-note-pin" data-note="${this.escapeHtml(note.id)}">${note.pinned ? "Unpin" : "Pin"}</button>
+        <button data-action="reflection-note-favorite" data-note="${this.escapeHtml(note.id)}">${note.favorite ? "Unfavorite" : "Favorite"}</button>
+        <button data-action="reflection-note-delete" data-note="${this.escapeHtml(note.id)}">Delete</button>
+      </div>
+      <div class="reflection-paper-grid">${papers}</div>
+      <button data-action="reflection-wall">Back to Wall</button>
+    </div>`;
+    this.focusStage();
+  }
+
+  private deleteReflectionWallNote(noteId: string): void {
+    if (!noteId || !confirm("Remove this reflection note?")) return;
+    this.reflectionWall = deleteReflectionNote(this.reflectionWall, noteId);
+    this.save.saveReflectionWall(this.reflectionWall);
+    this.openReflectionWall();
+  }
+
+  private toggleReflectionFlag(noteId: string, flag: "pinned" | "favorite"): void {
+    this.reflectionWall = toggleReflectionNoteFlag(this.reflectionWall, noteId, flag);
+    this.save.saveReflectionWall(this.reflectionWall);
+    this.showReflectionDetail(noteId);
+  }
+
+  private changeReflectionNotePaper(noteId: string, styleId: string): void {
+    this.reflectionWall = changeReflectionPaper(this.reflectionWall, noteId, styleId);
+    this.save.saveReflectionWall(this.reflectionWall);
+    this.showReflectionDetail(noteId);
+  }
+
+  private keepChapterReflection(chapterId: string, text: string): void {
+    const noteText = text.trim();
+    if (!chapterId || !noteText) return;
+    this.reflectionWall = createChapterReflectionNote(this.reflectionWall, noteText, chapterId);
+    this.save.saveReflectionWall(this.reflectionWall);
+    this.showToast("Kept on the Reflection Wall");
+  }
+
+  private setReflectionWallView(view: ReflectionWallView): void {
+    if (view === "wall" || view === "stack" || view === "list") this.reflectionWallView = view;
+    this.openReflectionWall();
+  }
+
+  private setReflectionWallSort(sort: ReflectionWallSort): void {
+    if (sort === "manual" || sort === "newest" || sort === "oldest") this.reflectionWallSort = sort;
+    this.openReflectionWall();
+  }
+
+  private setReflectionWallFilter(filter: ReflectionWallFilter): void {
+    if (filter === "all" || filter === "today" || filter === "week" || filter === "month" || filter === "manual" || filter === "chapter" || filter === "pinned" || filter === "favorites") this.reflectionWallFilter = filter;
+    this.openReflectionWall();
+  }
+
+  private formatReflectionTimestamp(value: string): string {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    const parts = new Intl.DateTimeFormat(undefined, {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false
+    }).formatToParts(date).reduce<Record<string, string>>((all, part) => ({ ...all, [part.type]: part.value }), {});
+    return `${parts.year}.${parts.month}.${parts.day} · ${parts.hour}:${parts.minute}`;
   }
 
   private roomDiary(): void {
@@ -3277,6 +3528,7 @@ export class WalkBackHomeApp {
   private autosave(): void {
     this.save.saveDiaryLibrary(this.makeDiaryLibrary());
     this.save.saveJourney(this.makeJourney());
+    this.save.saveReflectionWall(this.reflectionWall);
     this.save.saveMusicLibrary(this.musicLibrary);
     this.save.savePersonalPlayer(this.personalPlayer);
   }
@@ -3292,6 +3544,8 @@ export class WalkBackHomeApp {
     this.readMemories.clear();
     this.completedMemoryEvents.clear();
     this.chapterProgress.clear();
+    this.reflectionWall = migrateLegacyReflectionWall(this.reflectionWall, this.room);
+    this.save.saveReflectionWall(this.reflectionWall);
     this.room = createDefaultRoomState();
     this.personalPlayer = createDefaultPersonalPlayerState();
     this.save.resetJourney();
@@ -3303,6 +3557,10 @@ export class WalkBackHomeApp {
 
   private showBackupSync(): void {
     this.recordsPanelOpen = false;
+    const session = this.account.current();
+    const accountLabel = session.mode === "guest" ? "Guest / local mode" : `${session.email ?? session.ownerId} · Google`;
+    const claimButton = session.mode === "authenticated" && !session.claimedGuestDataAt ? `<button data-action="account-claim-local">Keep local memories with this account</button>` : "";
+    const signOut = session.mode === "authenticated" ? `<button data-action="account-sign-out">Sign out</button>` : "";
     this.overlay.innerHTML = `
       <div class="modal game-panel backup-panel">
         <h2>Backup / Sync</h2>
@@ -3312,12 +3570,27 @@ export class WalkBackHomeApp {
           <label class="backup-restore-button">Restore Backup<input id="restore-backup-input" type="file" accept="application/json,.json"></label>
         </div>
         <div class="sync-status">
-          <h3>Cloud / Phone Sync</h3>
-          <p>Direct Google Drive or phone-number sync needs a configured sign-in provider and server connector. This local prototype stays free and private by default, so today it gives you a complete backup file you can store in Google Drive, send to yourself, then restore after login or on another device.</p>
+          <h3>Account</h3>
+          <p>${this.escapeHtml(accountLabel)}</p>
+          <div class="settings-row">${claimButton}${signOut}</div>
+          <h3>Cloud / Cross-device Sync</h3>
+          <p>Google sign-in and private cloud sync are prepared behind configuration. Add Supabase URL, anon key, Google OAuth, and the private media bucket before enabling production login. Until then, guest mode and portable backup remain fully local and free.</p>
         </div>
         <div class="settings-row"><button data-action="settings">Back</button><button data-action="close">Close</button></div>
       </div>`;
     this.focusStage();
+  }
+
+  private signOutAccount(): void {
+    this.account.signOut();
+    this.showToast("Signed out to local guest mode");
+    this.showBackupSync();
+  }
+
+  private claimLocalDataForAccount(): void {
+    this.account.claimGuestData();
+    this.showToast("Local memories kept with this account");
+    this.showBackupSync();
   }
 
   private async downloadBackup(): Promise<void> {
@@ -3325,6 +3598,7 @@ export class WalkBackHomeApp {
     const bundle = createBackupBundle({
       diaryLibrary: this.makeDiaryLibrary(),
       journey: this.makeJourney(),
+      reflectionWall: this.reflectionWall,
       musicLibrary: this.musicLibrary,
       personalPlayer: this.personalPlayer,
       blobs
@@ -3373,6 +3647,10 @@ export class WalkBackHomeApp {
     if (bundle.musicLibrary) {
       this.musicLibrary = bundle.musicLibrary;
       this.save.saveMusicLibrary(this.musicLibrary);
+    }
+    if (bundle.reflectionWall) {
+      this.reflectionWall = bundle.reflectionWall;
+      this.save.saveReflectionWall(this.reflectionWall);
     }
     if (bundle.personalPlayer) {
       this.personalPlayer = { ...createDefaultPersonalPlayerState(), ...bundle.personalPlayer };

@@ -1,4 +1,5 @@
-import type { DiaryLibraryState, JourneyState, PersonalMusicLibraryState, PersonalPlayerState } from "../types.js";
+import type { DiaryLibraryState, JourneyState, PersonalMusicLibraryState, PersonalPlayerState, ReflectionWallState } from "../types.js";
+import { normalizeReflectionWallState } from "./ReflectionWall.js";
 
 export type BackupBlobEntry = {
   key: string;
@@ -16,6 +17,7 @@ export type WalkBackupBundle = {
   };
   diaryLibrary: DiaryLibraryState | null;
   journey: JourneyState | null;
+  reflectionWall: ReflectionWallState | null;
   musicLibrary: PersonalMusicLibraryState | null;
   personalPlayer: PersonalPlayerState | null;
   blobs: BackupBlobEntry[];
@@ -30,11 +32,12 @@ export function createBackupBundle(input: Omit<WalkBackupBundle, "app" | "versio
       mode: "manual-file",
       label: "Local backup file"
     },
-    diaryLibrary: input.diaryLibrary,
-    journey: input.journey,
-    musicLibrary: input.musicLibrary,
-    personalPlayer: input.personalPlayer,
-    blobs: input.blobs
+      diaryLibrary: input.diaryLibrary,
+      journey: input.journey,
+      reflectionWall: input.reflectionWall,
+      musicLibrary: input.musicLibrary,
+      personalPlayer: input.personalPlayer,
+      blobs: input.blobs
   };
 }
 
@@ -49,6 +52,7 @@ export function parseBackupBundle(text: string): WalkBackupBundle | null {
       provider: parsed.provider?.mode === "manual-file" ? parsed.provider : { mode: "manual-file", label: "Local backup file" },
       diaryLibrary: parsed.diaryLibrary?.version === 1 ? parsed.diaryLibrary : null,
       journey: parsed.journey?.version === 1 ? parsed.journey : null,
+      reflectionWall: normalizeReflectionWallState(parsed.reflectionWall),
       musicLibrary: parsed.musicLibrary?.version === 1 ? parsed.musicLibrary : null,
       personalPlayer: parsed.personalPlayer?.version === 1 ? parsed.personalPlayer : null,
       blobs: Array.isArray(parsed.blobs) ? parsed.blobs.filter(isBackupBlobEntry) : []

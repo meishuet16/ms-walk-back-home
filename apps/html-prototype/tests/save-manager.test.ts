@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { SaveManager } from "../src/systems/SaveManager.js";
-import type { DiaryEntry, PersonalMusicLibraryState, PersonalPlayerState, SaveState } from "../src/types.js";
+import type { DiaryEntry, PersonalMusicLibraryState, PersonalPlayerState, ReflectionWallState, SaveState } from "../src/types.js";
 
 class MemoryStorage {
   private values = new Map<string, string>();
@@ -184,4 +184,32 @@ test("old personal player saves gain a default playback mode", () => {
 
   assert.equal(manager.loadPersonalPlayer()?.shuffleEnabled, false);
   assert.equal(manager.loadPersonalPlayer()?.repeatOne, false);
+});
+
+test("reflection wall persists separately from resettable journey state", () => {
+  installStorage();
+  const manager = new SaveManager();
+  const wall: ReflectionWallState = {
+    version: 1,
+    savedAt: "now",
+    defaultStyleId: "paper-mix",
+    migratedLegacyKeys: [],
+    notes: [{
+      id: "note-1",
+      text: "墙上的纸还在",
+      createdAt: "2026-08-11T11:42:00.000Z",
+      styleId: "cream-torn",
+      x: 24,
+      y: 34,
+      rotation: -1,
+      source: "manual"
+    }]
+  };
+
+  manager.saveReflectionWall(wall);
+  manager.saveJourney({ version: 1, savedAt: "now", scene: "forest", player: { x: 1, y: 2 }, visitedMemories: [], walkedThroughMemories: [], choices: [], tendencies: legacyState([]).tendencies, readMemories: [], room: { visits: 0, reflections: [] }, finalJourney: [] });
+  manager.resetJourney();
+
+  assert.equal(manager.loadJourney(), null);
+  assert.equal(manager.loadReflectionWall()?.notes[0].text, "墙上的纸还在");
 });

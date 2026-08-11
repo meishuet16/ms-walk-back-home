@@ -1,6 +1,7 @@
-import type { DiaryLibraryState, JourneyState, PersonalMusicLibraryState, PersonalPlayerState, SaveState } from "../types.js";
+import type { DiaryLibraryState, JourneyState, PersonalMusicLibraryState, PersonalPlayerState, ReflectionWallState, SaveState } from "../types.js";
 import { normalizeDiaryEntry } from "./DiaryImport.js";
 import { normalizePlaybackMode } from "./PersonalMusic.js";
+import { createReflectionWallState, migrateLegacyReflectionWall, normalizeReflectionWallState } from "./ReflectionWall.js";
 
 const key = (slot: number) => `walk-back-home:html-prototype:v1:slot-${slot}`;
 const autosaveKey = "walk-back-home:html-prototype:v1:autosave";
@@ -8,38 +9,41 @@ const diaryLibraryKey = "walk-back-home:html-prototype:v2:diary-library";
 const journeyKey = "walk-back-home:html-prototype:v2:journey";
 const musicLibraryKey = "walk-back-home:html-prototype:v1:music-library";
 const personalPlayerKey = "walk-back-home:html-prototype:v1:personal-player";
+const reflectionWallKey = "walk-back-home:html-prototype:v1:reflection-wall";
 
 export class SaveManager {
+  constructor(private ownerId = "") {}
+
   saveDiaryLibrary(state: DiaryLibraryState): void {
-    localStorage.setItem(diaryLibraryKey, JSON.stringify({ ...state, savedAt: new Date().toISOString() }));
+    localStorage.setItem(this.ownerKey(diaryLibraryKey), JSON.stringify({ ...state, savedAt: new Date().toISOString() }));
   }
 
   loadDiaryLibrary(): DiaryLibraryState | null {
-    return this.parseVersioned<DiaryLibraryState>(localStorage.getItem(diaryLibraryKey));
+    return this.parseVersioned<DiaryLibraryState>(localStorage.getItem(this.ownerKey(diaryLibraryKey)));
   }
 
   saveJourney(state: JourneyState): void {
-    localStorage.setItem(journeyKey, JSON.stringify({ ...state, savedAt: new Date().toISOString() }));
+    localStorage.setItem(this.ownerKey(journeyKey), JSON.stringify({ ...state, savedAt: new Date().toISOString() }));
   }
 
   loadJourney(): JourneyState | null {
-    return this.parseVersioned<JourneyState>(localStorage.getItem(journeyKey));
+    return this.parseVersioned<JourneyState>(localStorage.getItem(this.ownerKey(journeyKey)));
   }
 
   saveMusicLibrary(state: PersonalMusicLibraryState): void {
-    localStorage.setItem(musicLibraryKey, JSON.stringify({ ...state, savedAt: new Date().toISOString() }));
+    localStorage.setItem(this.ownerKey(musicLibraryKey), JSON.stringify({ ...state, savedAt: new Date().toISOString() }));
   }
 
   loadMusicLibrary(): PersonalMusicLibraryState | null {
-    return this.parseVersioned<PersonalMusicLibraryState>(localStorage.getItem(musicLibraryKey));
+    return this.parseVersioned<PersonalMusicLibraryState>(localStorage.getItem(this.ownerKey(musicLibraryKey)));
   }
 
   savePersonalPlayer(state: PersonalPlayerState): void {
-    localStorage.setItem(personalPlayerKey, JSON.stringify(state));
+    localStorage.setItem(this.ownerKey(personalPlayerKey), JSON.stringify(state));
   }
 
   loadPersonalPlayer(): PersonalPlayerState | null {
-    const parsed = this.parseVersioned<PersonalPlayerState>(localStorage.getItem(personalPlayerKey));
+    const parsed = this.parseVersioned<PersonalPlayerState>(localStorage.getItem(this.ownerKey(personalPlayerKey)));
     if (!parsed) return null;
     const legacyMode = normalizePlaybackMode(parsed.playbackMode);
     const { playbackMode: _playbackMode, ...player } = parsed;
@@ -50,8 +54,16 @@ export class SaveManager {
     };
   }
 
+  saveReflectionWall(state: ReflectionWallState): void {
+    localStorage.setItem(this.ownerKey(reflectionWallKey), JSON.stringify({ ...state, savedAt: new Date().toISOString() }));
+  }
+
+  loadReflectionWall(): ReflectionWallState | null {
+    return normalizeReflectionWallState(this.parseRaw(localStorage.getItem(this.ownerKey(reflectionWallKey))));
+  }
+
   resetJourney(): void {
-    localStorage.removeItem(journeyKey);
+    localStorage.removeItem(this.ownerKey(journeyKey));
   }
 
   migrateLegacyAutosave(): { diary: DiaryLibraryState; journey: JourneyState } {
@@ -93,27 +105,28 @@ export class SaveManager {
     };
     this.saveDiaryLibrary(diary);
     this.saveJourney(journey);
+    this.saveReflectionWall(migrateLegacyReflectionWall(this.loadReflectionWall() ?? createReflectionWallState(), journey.room, new Date(now)));
     return { diary, journey };
   }
 
   save(slot: number, state: SaveState): void {
-    localStorage.setItem(key(slot), JSON.stringify({ ...state, slot, savedAt: new Date().toISOString() }));
+    localStorage.setItem(this.ownerKey(key(slot)), JSON.stringify({ ...state, slot, savedAt: new Date().toISOString() }));
   }
 
   autosave(state: SaveState): void {
-    localStorage.setItem(autosaveKey, JSON.stringify({ ...state, savedAt: new Date().toISOString() }));
+    localStorage.setItem(this.ownerKey(autosaveKey), JSON.stringify({ ...state, savedAt: new Date().toISOString() }));
   }
 
   load(slot: number): SaveState | null {
-    return this.parse(localStorage.getItem(key(slot)));
+    return this.parse(localStorage.getItem(this.ownerKey(key(slot))));
   }
 
   loadAutosave(): SaveState | null {
-    return this.parse(localStorage.getItem(autosaveKey));
+    return this.parse(localStorage.getItem(this.ownerKey(autosaveKey)));
   }
 
   delete(slot: number): void {
-    localStorage.removeItem(key(slot));
+    localStorage.removeItem(this.ownerKey(key(slot)));
   }
 
   list(): Array<SaveState | null> {
@@ -130,5 +143,14 @@ export class SaveManager {
     if (!value) return null;
     const parsed = JSON.parse(value) as T;
     return parsed.version === 1 ? parsed : null;
+  }
+
+  private parseRaw(value: string | null): unknown {
+    if (!value) return null;
+    return JSON.parse(value) as unknown;
+  }
+
+  private ownerKey(storageKey: string): string {
+    return this.ownerId ? `${storageKey}:owner:${encodeURIComponent(this.ownerId)}` : storageKey;
   }
 }
