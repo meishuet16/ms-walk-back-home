@@ -1060,8 +1060,8 @@ canvas {
   gap: 8px;
 }
 .journal-panel {
-  width: min(1040px, calc(100vw - 52px));
-  max-height: min(90vh, 880px);
+  width: min(1040px, calc(100% - 36px));
+  max-height: calc(100% - 28px);
   overflow-y: auto;
   overflow-x: hidden;
   background: linear-gradient(180deg, rgba(64, 54, 40, .99), rgba(38, 33, 28, .99));
@@ -1072,10 +1072,10 @@ canvas {
   box-sizing: border-box;
 }
 .timeline-panel {
-  width: min(1040px, calc(100vw - 96px));
+  width: min(1040px, calc(100% - 36px));
   margin-inline: auto;
-  outline: 2px solid #9e6a34;
-  outline-offset: -2px;
+  border: 2px solid #b98242;
+  box-shadow: inset 0 0 0 2px rgba(245, 218, 164, .2), 0 22px 60px rgba(0,0,0,.42);
   padding-inline: 24px;
 }
 .journal-archive-header {
@@ -1205,7 +1205,7 @@ canvas {
   position: relative;
   width: 100%;
   min-height: 262px;
-  padding: 18px 18px 144px 22px;
+  padding: 18px 22px;
   overflow: hidden;
   text-align: left;
   color: #3d2c1e;
@@ -1214,6 +1214,9 @@ canvas {
     linear-gradient(135deg, #f5e3bd, #ecd1a1);
   border: 1px solid rgba(95, 70, 36, .28);
   border-radius: 7px;
+}
+.preview-text {
+  min-height: 98px;
 }
 .diary-page-preview strong,
 .diary-page-preview span,
@@ -1229,7 +1232,7 @@ canvas {
 }
 .preview-body {
   max-width: 100%;
-  max-height: 88px;
+  max-height: 62px;
   margin-top: 8px;
   font-size: 13px;
   line-height: 1.45;
@@ -1237,14 +1240,10 @@ canvas {
   white-space: pre-wrap;
 }
 .diary-page-preview .preview-photo-grid {
-  position: absolute;
-  left: 18px;
-  right: 18px;
-  bottom: 16px;
-  z-index: 3;
-  display: grid !important;
+  display: grid;
   grid-template-columns: repeat(3, 50px);
   gap: 6px;
+  margin-top: 12px;
   color: transparent;
 }
 .diary-page-preview .preview-photo-square {

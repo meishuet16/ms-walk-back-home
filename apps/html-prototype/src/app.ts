@@ -227,6 +227,7 @@ export class WalkBackHomeApp {
     if (action === "open-room") this.enterMujiRoom();
     if (action === "new-diary-entry") this.openNewDiaryPage();
     if (action === "open-diary-editor") this.showTimeline();
+    if (action === "open-diary-page") this.showDiaryEditor(target.dataset.id);
     if (action === "save-diary-entry") this.saveDiaryEntry(target.dataset.id);
     if (action === "edit-diary-entry") this.showDiaryEditor(target.dataset.id);
     if (action === "delete-diary-entry") this.deleteDiaryEntry(target.dataset.id ?? "");
@@ -574,7 +575,7 @@ export class WalkBackHomeApp {
     this.visitedMemories.add(door.id);
     this.currentDoor = door;
     if ("kind" in door && door.kind === "fragment") {
-      this.overlay.innerHTML = `<div class="modal diary-memory"><div class="diary-memory-scroll"><h2>${this.escapeHtml(door.date)} · ${this.escapeHtml(door.title)}</h2><p>${this.escapeHtml(door.excerpt)}</p><p>This memory is a small light, not a full chapter.</p></div><div class="memory-actions"><button data-action="close">Stay in forest</button><button data-action="open-timeline">Open Timeline</button></div></div>`;
+      this.overlay.innerHTML = `<div class="modal diary-memory"><div class="diary-memory-scroll"><h2>${this.escapeHtml(door.date)} · ${this.escapeHtml(door.title)}</h2><p>${this.escapeHtml(door.excerpt)}</p><p>This memory is a small light, not a full chapter.</p></div><div class="memory-actions"><button data-action="close">Stay in forest</button><button data-action="open-diary-page" data-id="${this.escapeHtml(door.userEntryId)}">Open Page</button></div></div>`;
       this.autosave();
       this.focusStage();
       return;
@@ -1515,7 +1516,7 @@ export class WalkBackHomeApp {
   private renderDiaryPreview(entry: DiaryEntry): string {
     const photos = (entry.photos ?? []).slice(0, 9).map((photo) => `<img class="preview-photo-square" src="${this.escapeHtml(photo.src)}" alt="">`).join("");
     const photoGrid = photos ? `<div class="preview-photo-grid">${photos}</div>` : "";
-    return `<span class="preview-date">${this.escapeHtml(entry.date)}</span><strong>${this.escapeHtml(entry.title)}</strong><span class="preview-body">${this.escapeHtml(entry.body.slice(0, 150)) || "Empty draft"}</span>${photoGrid}<small>${entry.memoryKind}</small>`;
+    return `<div class="preview-text"><span class="preview-date">${this.escapeHtml(entry.date)}</span><strong>${this.escapeHtml(entry.title)}</strong><span class="preview-body">${this.escapeHtml(entry.body.slice(0, 110)) || "Empty draft"}</span></div>${photoGrid}<small>${entry.memoryKind}</small>`;
   }
 
   private showMoreTimelineEntries(): void {
@@ -1706,6 +1707,7 @@ export class WalkBackHomeApp {
     const pages: MonthlyJournalPdfPage[] = [];
     let consumedLines = 0;
     let pageIndex = 0;
+    const photos = entry.photos ?? [];
     while (consumedLines < bodyLines.length || pageIndex === 0) {
       canvas.width = 1240;
       canvas.height = 1754;
@@ -1714,18 +1716,31 @@ export class WalkBackHomeApp {
       const maxLines = firstPage ? 22 : 29;
       const currentLines = bodyLines.slice(consumedLines, consumedLines + maxLines);
       consumedLines += currentLines.length;
-      this.drawDiaryEntryPdfPage(pageCtx, entry, currentLines, firstPage);
+      const isLastTextPage = consumedLines >= bodyLines.length;
+      let photosDrawn = 0;
+      if (isLastTextPage && photos.length) {
+        const bodyY = firstPage ? 390 : 150;
+        const nextY = bodyY + currentLines.length * 46 + 38;
+        const availableRows = Math.max(0, Math.min(3, Math.floor((1470 - nextY) / 210)));
+        photosDrawn = availableRows > 0 ? Math.min(photos.length, availableRows * 3) : 0;
+        this.drawDiaryEntryPdfPage(pageCtx, entry, currentLines, firstPage, photosDrawn ? "" : "photos continue");
+        if (photosDrawn) await this.drawDiaryPhotosOnPdfPage(pageCtx, photos.slice(0, photosDrawn), 150, nextY, 3, 150, 28);
+      } else {
+        this.drawDiaryEntryPdfPage(pageCtx, entry, currentLines, firstPage);
+      }
       const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
       pages.push({ dataUrl, width: canvas.width, height: canvas.height });
       pageIndex += 1;
+      if (isLastTextPage && photosDrawn < photos.length) {
+        pages.push(...await this.renderDiaryPhotoContinuationPages(entry, canvas, photosDrawn));
+      }
     }
-    pages.push(...await this.renderDiaryPhotoPdfPages(entry, canvas));
     canvas.width = 1;
     canvas.height = 1;
     return pages;
   }
 
-  private drawDiaryEntryPdfPage(ctx: CanvasRenderingContext2D, entry: DiaryEntry, bodyLines: string[], firstPage: boolean): void {
+  private drawDiaryEntryPdfPage(ctx: CanvasRenderingContext2D, entry: DiaryEntry, bodyLines: string[], firstPage: boolean, footerNote = ""): void {
     const canvas = ctx.canvas;
     ctx.fillStyle = "#f4e7c8";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1759,15 +1774,15 @@ export class WalkBackHomeApp {
     this.drawCanvasTextLines(ctx, bodyLines, 150, bodyY, 46);
     ctx.fillStyle = "rgba(88, 60, 35, 0.55)";
     ctx.font = "400 22px sans-serif";
-    ctx.fillText(`${photos.length} photos · ${elements.length} placed elements${firstPage ? "" : " · continued"}`, 150, 1535);
+    ctx.fillText(`${photos.length} photos · ${elements.length} placed elements${firstPage ? "" : " · continued"}${footerNote ? ` · ${footerNote}` : ""}`, 150, 1535);
     ctx.restore();
   }
 
-  private async renderDiaryPhotoPdfPages(entry: DiaryEntry, canvas: HTMLCanvasElement): Promise<MonthlyJournalPdfPage[]> {
+  private async renderDiaryPhotoContinuationPages(entry: DiaryEntry, canvas: HTMLCanvasElement, startIndex: number): Promise<MonthlyJournalPdfPage[]> {
     const photos = entry.photos ?? [];
-    if (!photos.length) return [];
+    if (startIndex >= photos.length) return [];
     const pages: MonthlyJournalPdfPage[] = [];
-    for (let offset = 0; offset < photos.length; offset += 9) {
+    for (let offset = startIndex; offset < photos.length; offset += 9) {
       canvas.width = 1240;
       canvas.height = 1754;
       const ctx = canvas.getContext("2d")!;
@@ -1780,27 +1795,30 @@ export class WalkBackHomeApp {
       ctx.strokeRect(88, 78, canvas.width - 176, canvas.height - 156);
       ctx.fillStyle = "#755330";
       ctx.font = "700 44px serif";
-      ctx.fillText(`${entry.title || "Untitled Memory"} · photos`, 150, 170);
+      ctx.fillText(entry.title || "Untitled Memory", 150, 170);
       const pagePhotos = photos.slice(offset, offset + 9);
-      for (const [index, photo] of pagePhotos.entries()) {
-        const image = await this.loadCanvasImage(photo.src);
-        if (!image) continue;
-        const column = index % 3;
-        const row = Math.floor(index / 3);
-        const size = 250;
-        const gap = 46;
-        const x = 198 + column * (size + gap);
-        const y = 290 + row * (size + 72);
-        ctx.fillStyle = "#fffdf0";
-        ctx.fillRect(x - 10, y - 10, size + 20, size + 20);
-        this.drawPdfImage(ctx, image, x, y, size, size);
-      }
+      await this.drawDiaryPhotosOnPdfPage(ctx, pagePhotos, 150, 260, 3, 250, 46);
       ctx.fillStyle = "rgba(88, 60, 35, 0.55)";
       ctx.font = "400 22px sans-serif";
       ctx.fillText(`${offset + 1}-${offset + pagePhotos.length} of ${photos.length} imported photos`, 150, 1535);
       pages.push({ dataUrl: canvas.toDataURL("image/jpeg", 0.9), width: canvas.width, height: canvas.height });
     }
     return pages;
+  }
+
+  private async drawDiaryPhotosOnPdfPage(ctx: CanvasRenderingContext2D, photos: DiaryEntry["photos"], x: number, y: number, columns: number, size: number, gap: number): Promise<void> {
+    if (!photos?.length) return;
+    for (const [index, photo] of photos.entries()) {
+      const image = await this.loadCanvasImage(photo.src);
+      if (!image) continue;
+      const column = index % columns;
+      const row = Math.floor(index / columns);
+      const photoX = x + column * (size + gap);
+      const photoY = y + row * (size + gap);
+      ctx.fillStyle = "#fffdf0";
+      ctx.fillRect(photoX - 8, photoY - 8, size + 16, size + 16);
+      this.drawPdfImage(ctx, image, photoX, photoY, size, size);
+    }
   }
 
   private async renderMonthlyPdfPages(month: JournalMonth): Promise<MonthlyJournalPdfPage[]> {
