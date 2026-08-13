@@ -16,7 +16,7 @@ import { makeDiaryEntry, parseDiaryImport, updateDiaryMemoryKind, type DiaryFore
 import { DialogueSystem } from "./systems/DialogueSystem.js";
 import { resolveChapterReflection, type Ending } from "./systems/EndingResolver.js";
 import { InputManager } from "./systems/InputManager.js";
-import { adjacentMonthKey, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, monthLabel, selectedOrLatestMonth, sortMonthEntries, timelineCursorKeyForStep, visibleTimelineEntries, type JournalMonth, type MonthlyJournalPdfPage, type TimelineDateScope, type TimelineMemoryKindFilter } from "./systems/JournalModel.js";
+import { adjacentMonthKey, defaultMonthlyCover, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, monthLabel, selectedOrLatestMonth, sortMonthEntries, timelineCursorKeyForStep, upsertMonthlyCover, visibleTimelineEntries, type JournalMonth, type MonthlyJournalPdfPage, type TimelineDateScope, type TimelineMemoryKindFilter } from "./systems/JournalModel.js";
 import { createBackupBundle, parseBackupBundle, walkBackupFilename, type BackupBlobEntry } from "./systems/BackupManager.js";
 import { MusicBlobStore } from "./systems/MusicBlobStore.js";
 import { ParticleSystem } from "./systems/ParticleSystem.js";
@@ -25,10 +25,12 @@ import { changeReflectionPaper, createChapterReflectionNote, createReflectionNot
 import { drawSceneActor } from "./systems/SceneActorRenderer.js";
 import { applyChoice } from "./systems/TendencySystem.js";
 import {
+  addJournalMedia,
   addPhotoAttachment,
   addPhotoElement,
   createCutoutElement,
   deleteScrapbookElement,
+  diaryMediaItems,
   layerScrapbookElement,
   moveScrapbookElement,
   removePhotoAttachment,
@@ -125,6 +127,7 @@ export class WalkBackHomeApp {
   private selectedChapter = "Yumido Bread";
   private activeScrapbookEntryId = "";
   private selectedScrapbookElementId = "";
+  private journalMoreMenuOpen = false;
   private selectedTimelineEntryIds = new Set<string>();
   private timelineSort: DiaryTimelineSort = "date-desc";
   private timelineSearch = "";
@@ -134,6 +137,7 @@ export class WalkBackHomeApp {
   private timelineFilterAppliedMessage = "";
   private journalMode: "timeline" | "books" | "reader" = "timeline";
   private selectedJournalMonthKey = "";
+  private monthlyCovers: DiaryLibraryState["monthlyCovers"] = {};
   private selectedForestMonthKey = "";
   private timelineVisibleCount = journalBatchSize;
   private scrapbookDrag: { elementId: string; entryId: string; offsetX: number; offsetY: number } | null = null;
@@ -272,9 +276,17 @@ export class WalkBackHomeApp {
     if (action === "open-room") this.enterMujiRoom();
     if (action === "new-diary-entry") this.openNewDiaryPage();
     if (action === "open-diary-editor") this.showTimeline();
-    if (action === "open-diary-page") this.showDiaryEditor(target.dataset.id);
+    if (action === "open-diary-page") this.showDiaryReader(target.dataset.id ?? "");
     if (action === "save-diary-entry") this.saveDiaryEntry(target.dataset.id);
     if (action === "edit-diary-entry") this.showDiaryEditor(target.dataset.id);
+    if (action === "journal-edit-current") this.showDiaryEditor(target.dataset.id);
+    if (action === "journal-more-menu") {
+      this.journalMoreMenuOpen = !this.journalMoreMenuOpen;
+      const entryId = target.dataset.id ?? "";
+      if (this.overlay.querySelector(".journal-reading-page")) this.showDiaryReader(entryId);
+      else this.showDiaryEditor(entryId);
+    }
+    if (action === "change-month-cover") this.overlay.querySelector<HTMLInputElement>("#month-cover-input")?.click();
     if (action === "delete-diary-entry") this.deleteDiaryEntry(target.dataset.id ?? "");
     if (action === "timeline-apply-filters") this.applyTimelineFilters();
     if (action === "timeline-clear-filters") this.clearTimelineFilters();
@@ -1719,7 +1731,7 @@ export class WalkBackHomeApp {
       <article class="timeline-entry ${checked ? "selected" : ""}">
         <label class="timeline-check"><input type="checkbox" data-timeline-select="${this.escapeHtml(entry.id)}" ${checked} aria-label="Select diary"></label>
         <div class="timeline-card">
-          <button class="diary-page-preview" data-action="edit-diary-entry" data-id="${this.escapeHtml(entry.id)}">${this.renderDiaryPreview(entry)}</button>
+          <button class="diary-page-preview" data-action="open-diary-page" data-id="${this.escapeHtml(entry.id)}">${this.renderDiaryPreview(entry)}</button>
           <div class="timeline-card-actions">
             <label class="timeline-kind"><span>${entry.scrapbookLayout?.elements.length ? "scrapbook" : "memory"}</span><select data-timeline-kind="${this.escapeHtml(entry.id)}"><option value="diary" ${entry.memoryKind === "diary" ? "selected" : ""}>Diary only</option><option value="fragment" ${entry.memoryKind === "fragment" ? "selected" : ""}>Memory Fragment</option><option value="chapter" ${entry.memoryKind === "chapter" ? "selected" : ""}>Memory Chapter</option></select></label>
             <button data-action="edit-diary-entry" data-id="${this.escapeHtml(entry.id)}">Edit</button>
@@ -1731,7 +1743,7 @@ export class WalkBackHomeApp {
     const showMore = hasMoreTimelineEntries(month, this.timelineVisibleCount) ? `<button class="show-more" data-action="journal-show-more">Show More</button>` : "";
     const noResult = this.timelineSearch.trim() || this.timelineKindFilter !== "all" || this.timelineDateFilter;
     const empty = `<div class="journal-empty"><p>${noResult ? "No diary matched these filters." : "Nothing was written here."}</p><button data-action="new-diary-entry">Create New Journal</button></div>`;
-    this.overlay.innerHTML = `<div class="modal game-panel timeline-panel journal-panel">${this.journalHeader("Timeline", month)}${this.renderTimelineFilters(month)}<div class="timeline-list">${rows || empty}</div>${showMore}</div>`;
+    this.overlay.innerHTML = `<div class="modal game-panel timeline-panel journal-panel">${this.journalHeader("Timeline", month)}${this.renderMobileWeekStrip(month)}${this.renderTimelineFilters(month)}<div class="timeline-list">${this.renderTimelineDateGroups(visibleEntries, rows) || empty}</div>${showMore}</div>`;
     if (options.restoreScrollTop !== undefined) {
       requestAnimationFrame(() => {
         const panel = this.overlay.querySelector<HTMLElement>(".journal-panel");
@@ -1805,6 +1817,44 @@ export class WalkBackHomeApp {
     </div>${this.renderTimelineDatePicker(selectedDate)}`;
   }
 
+  private renderMobileWeekStrip(month: JournalMonth): string {
+    const baseDate = month.entries[0]?.date ?? `${this.timelineCursorMonth().key}-01`;
+    const parsed = new Date(`${baseDate}T00:00:00`);
+    const day = Number.isNaN(parsed.getTime()) ? new Date().getDay() : parsed.getDay();
+    const mondayOffset = day === 0 ? -6 : 1 - day;
+    const start = new Date(parsed);
+    start.setDate(parsed.getDate() + mondayOffset);
+    const entryDates = new Set(this.diaryEntries.map((entry) => entry.date));
+    const labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const days = labels.map((label, index) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + index);
+      const iso = date.toISOString().slice(0, 10);
+      const selected = iso === baseDate;
+      return `<button class="${selected ? "selected" : ""}" data-action="timeline-pick-date" data-date="${iso}" ${entryDates.has(iso) ? "" : "disabled"}><span>${label}</span><strong>${date.getDate()}</strong><i>${entryDates.has(iso) ? "•" : ""}</i></button>`;
+    }).join("");
+    return `<div class="mobile-week-strip" aria-label="Diary week">${days}</div>`;
+  }
+
+  private renderTimelineDateGroups(entries: DiaryEntry[], rowHtml: string): string {
+    if (!entries.length) return "";
+    const rows = rowHtml.match(/<article[\s\S]*?<\/article>/g) ?? [];
+    const groups = new Map<string, string[]>();
+    entries.forEach((entry, index) => {
+      groups.set(entry.date, [...(groups.get(entry.date) ?? []), rows[index] ?? ""]);
+    });
+    return [...groups.entries()].map(([date, groupRows]) => `<section class="timeline-date-group"><h3 class="timeline-date-heading">${this.escapeHtml(this.formatDiaryDateHeading(date))}</h3>${groupRows.join("")}</section>`).join("");
+  }
+
+  private formatDiaryDateHeading(date: string): string {
+    const parsed = new Date(`${date}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) return date;
+    const day = String(parsed.getDate()).padStart(2, "0");
+    const weekday = parsed.toLocaleDateString("en-US", { weekday: "long" });
+    const month = parsed.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    return `${day} ${weekday} · ${month}`;
+  }
+
   private renderTimelineDatePicker(selectedDate: string): string {
     if (this.timelineDateScope === "all") return "";
     const monthKey = /^\d{4}-\d{2}-\d{2}$/.test(selectedDate) ? selectedDate.slice(0, 7) : this.timelineCursorMonth().key;
@@ -1856,9 +1906,12 @@ export class WalkBackHomeApp {
   }
 
   private renderDiaryPreview(entry: DiaryEntry): string {
-    const photos = (entry.photos ?? []).slice(0, 9).map((photo) => `<img class="preview-photo-square" src="${this.escapeHtml(photo.src)}" alt="">`).join("");
-    const photoGrid = photos ? `<div class="preview-photo-grid">${photos}</div>` : "";
-    return `<div class="preview-text"><span class="preview-date">${this.escapeHtml(entry.date)}</span><strong>${this.escapeHtml(entry.title)}</strong><span class="preview-body">${this.escapeHtml(entry.body.slice(0, 160)) || "Empty draft"}</span></div>${photoGrid}<small>${entry.memoryKind}</small>`;
+    const allMedia = diaryMediaItems(entry);
+    const media = allMedia.slice(0, 4);
+    const mediaGrid = media.length ? `<div class="timeline-media-grid count-${Math.min(media.length, 4)}">${media.map((item, index) => item.type === "video"
+      ? `<span class="journal-video-block preview-video">${index === 3 && allMedia.length > 4 ? `+${allMedia.length - 3}` : "▶"}<small>${this.escapeHtml(item.caption ?? "video")}</small></span>`
+      : `<img class="preview-photo-square" src="${this.escapeHtml(item.src)}" alt="">`).join("")}</div>` : "";
+    return `<div class="preview-text"><span class="preview-date">${this.escapeHtml(entry.date)}</span><strong>${this.escapeHtml(entry.title)}</strong><span class="preview-body">${this.escapeHtml(entry.body.slice(0, 160)) || "Empty draft"}</span></div>${mediaGrid}<small>${entry.memoryKind}</small>`;
   }
 
   private showMoreTimelineEntries(): void {
@@ -1886,17 +1939,20 @@ export class WalkBackHomeApp {
   private showMonthlyBooks(): void {
     this.journalMode = "books";
     const month = this.currentJournalMonth();
-    const books = monthlyBookSummaries(this.diaryEntries).map((book) => `<button class="monthly-book theme-${book.theme}" data-action="open-month-book" data-month="${book.key}"><span>${this.escapeHtml(book.label.split(" ")[0].toUpperCase())}</span><strong>${book.year}</strong><small>${book.entryCount} entries · ${book.photoCount} photos</small></button>`).join("");
-    this.overlay.innerHTML = `<div class="modal game-panel journal-panel monthly-books">${this.journalHeader("Books", month)}<div class="book-grid">${books || `<div class="journal-empty"><p>Nothing was written here.</p><button data-action="new-diary-entry">Create New Journal</button></div>`}</div></div>`;
+    const books = monthlyBookSummaries(this.diaryEntries, this.monthlyCovers).map((book) => `<button class="monthly-book theme-${book.theme}" data-action="open-month-book" data-month="${book.key}"><span class="book-cover-thumb" style="--book-cover:${book.cover?.src.startsWith("data:") ? `url('${this.escapeHtml(book.cover.src)}')` : this.escapeHtml(book.cover?.src ?? defaultMonthlyCover(book.key).src)}">${this.escapeHtml(book.label.split(" ")[0].toUpperCase())}</span><strong>${book.year}</strong><small>${book.entryCount} entries · ${book.photoCount} photos · ${book.videoCount} videos</small></button>`).join("");
+    const years = [...new Set(monthlyBookSummaries(this.diaryEntries).map((book) => book.year))].map((year) => `<button class="year-book" data-action="journal-timeline">${year}</button>`).join("");
+    this.overlay.innerHTML = `<div class="modal game-panel journal-panel monthly-books">${this.journalHeader("Books", month)}<section class="book-shelf-section"><h3>Time Albums</h3><div class="book-grid">${books || `<div class="journal-empty"><p>Your story starts here.</p><button data-action="new-diary-entry">Write the first page</button></div>`}</div></section><section class="book-shelf-section"><h3>Year Books</h3><div class="book-grid year-grid">${years || "<p>No books yet.</p>"}</div></section></div>`;
     this.focusStage();
   }
 
   private openMonthlyBook(monthKey: string): void {
     this.journalMode = "reader";
     const month = this.currentJournalMonth(monthKey);
-    const pages = month.entries.map((entry) => `<article class="book-page"><button class="diary-page-preview" data-action="edit-diary-entry" data-id="${this.escapeHtml(entry.id)}">${this.renderDiaryPreview(entry)}</button><button data-action="edit-diary-entry" data-id="${this.escapeHtml(entry.id)}">Open Page</button></article>`).join("");
-    const stats = `${month.entries.length} entries · ${month.entries.reduce((sum, entry) => sum + (entry.photos?.length ?? 0), 0)} photos`;
-    this.overlay.innerHTML = `<div class="modal game-panel journal-panel monthly-reader">${this.journalHeader("Reader", month)}<div class="reader-actions"><span>${stats}</span><button data-action="export-month-pdf" data-month="${month.key}">Export PDF</button></div><div class="book-spread">${pages || `<div class="journal-empty"><p>Nothing was written here.</p><button data-action="new-diary-entry">Create New Journal</button></div>`}</div></div>`;
+    const pages = month.entries.map((entry) => `<article class="book-page"><button class="diary-page-preview" data-action="open-diary-page" data-id="${this.escapeHtml(entry.id)}">${this.renderDiaryPreview(entry)}</button><button data-action="open-diary-page" data-id="${this.escapeHtml(entry.id)}">Open Page</button></article>`).join("");
+    const stats = `${month.entries.length} entries · ${month.entries.reduce((sum, entry) => sum + (entry.photos?.length ?? 0), 0)} photos · ${month.entries.reduce((sum, entry) => sum + (entry.media ?? []).filter((media) => media.type === "video").length, 0)} videos`;
+    const cover = this.monthlyCovers?.[month.key] ?? defaultMonthlyCover(month.key);
+    const coverStyle = cover.src.startsWith("data:") ? `background-image:url('${this.escapeHtml(cover.src)}')` : `background:${this.escapeHtml(cover.src)}`;
+    this.overlay.innerHTML = `<div class="modal game-panel journal-panel monthly-reader">${this.journalHeader("Reader", month)}<div class="reader-actions"><span>${stats}</span><button data-action="export-month-pdf" data-month="${month.key}">Export PDF</button><button data-action="change-month-cover">Change Cover</button><input id="month-cover-input" type="file" accept="image/*" aria-label="Change monthly PDF cover"></div><div class="pdf-cover-preview" style="${coverStyle}"><strong>${this.escapeHtml(month.label)}</strong><small>${this.escapeHtml(cover.caption ?? "Walk Back Home")}</small></div><div class="book-spread">${pages || `<div class="journal-empty"><p>${this.escapeHtml(month.label)} is still waiting for its first page.</p><button data-action="new-diary-entry">Write the first page</button></div>`}</div></div>`;
     this.focusStage();
   }
 
@@ -2018,12 +2074,20 @@ export class WalkBackHomeApp {
   }
 
   private async renderJournalCoverPage(month: JournalMonth): Promise<MonthlyJournalPdfPage> {
+    const cover = this.monthlyCovers?.[month.key] ?? defaultMonthlyCover(month.key);
     const canvas = this.makePdfCanvas();
     const ctx = canvas.getContext("2d")!;
     ctx.fillStyle = "#efe1c3";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#31433a";
-    ctx.fillRect(0, 0, canvas.width, 240);
+    const coverImage = cover.src.startsWith("data:") ? await this.loadCanvasImage(cover.src) : null;
+    if (coverImage) {
+      this.drawPdfImage(ctx, coverImage, 0, 0, canvas.width, 520);
+      ctx.fillStyle = "rgba(21, 16, 11, 0.42)";
+      ctx.fillRect(0, 0, canvas.width, 520);
+    } else {
+      ctx.fillStyle = "#31433a";
+      ctx.fillRect(0, 0, canvas.width, 240);
+    }
     ctx.fillStyle = "#f6edcf";
     ctx.font = "700 64px serif";
     ctx.fillText("Walk Back Home", 100, 140);
@@ -2217,8 +2281,37 @@ export class WalkBackHomeApp {
     else this.showToast(this.currentForestMonth().label);
   }
 
+  private showDiaryReader(entryId = ""): void {
+    const entry = this.diaryEntries.find((item) => item.id === entryId) ?? this.diaryEntries[0];
+    if (!entry) return this.showTimeline();
+    const date = new Date(`${entry.date}T00:00:00`);
+    const day = Number.isNaN(date.getTime()) ? entry.date.slice(-2) : String(date.getDate()).padStart(2, "0");
+    const month = Number.isNaN(date.getTime()) ? entry.date : date.toLocaleDateString("en-US", { month: "long", year: "numeric" }).toUpperCase();
+    const weekday = formatDiaryWeekday(entry.date);
+    const paragraphs = (entry.body || "Empty draft").split(/\n{2,}|\r?\n/).filter(Boolean).map((line) => `<p>${this.escapeHtml(line)}</p>`).join("");
+    const media = diaryMediaItems(entry);
+    const mediaHtml = media.length ? `<div class="journal-reading-media count-${Math.min(media.length, 4)}">${media.map((item) => item.type === "video"
+      ? `<video class="journal-video-block" controls preload="metadata" src="${this.escapeHtml(item.src)}" aria-label="${this.escapeHtml(item.caption ?? "Journal video")}"></video>`
+      : `<figure><img src="${this.escapeHtml(item.src)}" alt=""><figcaption>${this.escapeHtml(item.caption ?? "")}</figcaption></figure>`).join("")}</div>` : "";
+    this.overlay.innerHTML = `
+      <div class="modal game-panel journal-reading-page mood-${entry.mood ?? "calm"}">
+        <header class="journal-reading-header"><button data-action="open-timeline" aria-label="Back to timeline">‹</button><button data-action="journal-more-menu" data-id="${this.escapeHtml(entry.id)}" aria-label="Journal more menu">⋮</button></header>
+        <div class="journal-reader-more ${this.journalMoreMenuOpen ? "open" : ""}"><button data-action="journal-edit-current" data-id="${this.escapeHtml(entry.id)}">Edit Journal</button><button data-action="delete-diary-entry" data-id="${this.escapeHtml(entry.id)}">Delete Journal</button><button data-action="journal-books">Books</button></div>
+        <article class="journal-reading-sheet">
+          <aside class="journal-reading-date"><strong>${this.escapeHtml(day)}</strong><span>${this.escapeHtml(month)}</span><small>${this.escapeHtml(weekday)}</small></aside>
+          <h2>${this.escapeHtml(entry.title)}</h2>
+          <div class="journal-reading-meta">${[entry.location, entry.weather, entry.mood].filter(Boolean).map((item) => this.escapeHtml(String(item))).join(" · ")}</div>
+          <div class="journal-reading-body">${paragraphs}</div>
+          ${mediaHtml}
+          <footer>${this.escapeHtml(entry.date)}</footer>
+        </article>
+      </div>`;
+    this.focusStage();
+  }
+
   private showDiaryEditor(editId = ""): void {
     if (!editId) return this.showTimeline();
+    const moreOpen = this.journalMoreMenuOpen;
     const editing = this.diaryEntries.find((entry) => entry.id === editId) ?? this.diaryEntries[0];
     const today = new Date().toISOString().slice(0, 10);
     const dateValue = editing?.date ?? today;
@@ -2258,9 +2351,16 @@ export class WalkBackHomeApp {
             <div><h2>Walk Back Home</h2><p>Diary · Muji Edition</p></div>
           </div>
           <div class="journal-actions">
+            <button class="journal-icon-button" data-action="journal-more-menu" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="Journal more menu">⋮</button>
             <label class="journal-upload">＋<input id="diary-photo-input" type="file" accept="image/*"></label>
             <button class="journal-done" data-action="save-diary-entry" data-id="${this.escapeHtml(editing?.id ?? "")}">✓ 完成</button>
           </div>
+        </div>
+        <div class="journal-more-panel ${moreOpen ? "open" : ""}">
+          <strong>Mood</strong>
+          <div class="journal-more-moods">${moodButtons}</div>
+          <button data-action="show-import-diary">Import Existing Diary</button>
+          <button data-action="delete-diary-entry" data-id="${this.escapeHtml(editing?.id ?? "")}">Delete Journal</button>
         </div>
         <section class="diary-paper scrapbook-page journal-sheet" aria-label="Diary page">
           <div class="paper-rings" aria-hidden="true"></div>
@@ -2291,6 +2391,7 @@ export class WalkBackHomeApp {
         <div class="integrated-tools journal-photo-dock">
           <aside class="photo-tray">${photos}</aside>
         </div>
+        <div class="mobile-editor-toolbar"><label class="journal-upload" title="Add image">＋<input id="diary-mobile-photo-input" type="file" accept="image/*"></label><label class="journal-upload" title="Add video">▶<input id="diary-video-input" type="file" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"></label><button data-action="journal-more-menu" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="More journal options">⋮</button><button data-action="save-diary-entry" data-id="${this.escapeHtml(editing?.id ?? "")}">Done</button></div>
         <div class="journal-lower-tools"><p class="autosave-state" id="diary-save-state">Saved</p><label class="journal-kind">Memory<select id="diary-memory-kind"><option value="diary" ${editing?.memoryKind === "diary" ? "selected" : ""}>Diary only</option><option value="fragment" ${editing?.memoryKind === "fragment" ? "selected" : ""}>Memory Fragment</option><option value="chapter" ${editing?.memoryKind === "chapter" ? "selected" : ""}>Memory Chapter</option></select></label><button data-action="show-import-diary">Import Existing Diary</button><button data-action="open-timeline">Timeline</button><button data-action="journal-books">Books</button><button data-action="open-map">Walk Back Home</button><button data-action="close">Close</button></div>
       </div>`;
     this.focusStage();
@@ -2302,7 +2403,8 @@ export class WalkBackHomeApp {
     const index = this.diaryEntries.findIndex((item) => item.id === entry.id);
     this.applyDiaryLibrary(upsertDiaryPageDraft(this.makeDiaryLibrary(), entry));
     this.selectedChapter = entry.title;
-    this.showTimeline();
+    this.journalMoreMenuOpen = false;
+    this.showDiaryReader(entry.id);
     this.showToast(index >= 0 ? "Diary updated" : "Diary entry added");
     this.autosave();
   }
@@ -2332,6 +2434,7 @@ export class WalkBackHomeApp {
       weather: weatherInput?.value.trim(),
       mood,
       photos: existing?.photos ?? [],
+      media: existing?.media ?? [],
       scrapbookLayout: existing?.scrapbookLayout ?? { elements: [] }
     };
   }
@@ -2654,6 +2757,14 @@ export class WalkBackHomeApp {
       await this.handleRestoreBackupInput(input);
       return;
     }
+    if (input.id === "diary-video-input") {
+      await this.handleDiaryVideoInput(input);
+      return;
+    }
+    if (input.id === "month-cover-input") {
+      await this.handleMonthCoverInput(input);
+      return;
+    }
     if (input.id === "music-sort") {
       this.personalPlayer.librarySort = input.value as MusicSort;
       void this.showRecords();
@@ -2664,7 +2775,7 @@ export class WalkBackHomeApp {
       await this.handleDiaryImportFile(input);
       return;
     }
-    if (input.id !== "scrapbook-photo-input" && input.id !== "diary-photo-input") return;
+    if (input.id !== "scrapbook-photo-input" && input.id !== "diary-photo-input" && input.id !== "diary-mobile-photo-input") return;
     if (!input.files?.[0]) return;
     const entry = this.activeScrapbookEntry();
     if (!entry) return;
@@ -2679,9 +2790,48 @@ export class WalkBackHomeApp {
     const photo = { id: photoId, storageKey, src, caption: file.name };
     const withPhoto = addPhotoAttachment(draft, photo);
     this.updateDiaryEntry(withPhoto);
-    if (input.id === "diary-photo-input") this.showDiaryEditor(entry.id);
+    if (input.id === "diary-photo-input" || input.id === "diary-mobile-photo-input") this.showDiaryEditor(entry.id);
     else this.showScrapbookComposer(entry.id);
     this.showToast("Photo attached");
+  }
+
+  private async handleDiaryVideoInput(input: HTMLInputElement): Promise<void> {
+    const file = input.files?.[0];
+    const entry = this.activeScrapbookEntry();
+    if (!file || !entry) return;
+    if (!file.type.startsWith("video/") && !/\.(mp4|webm|mov)$/i.test(file.name)) {
+      this.showToast("This browser may not support that video format.");
+      return;
+    }
+    const draft = input.closest(".diary-page-editor") ? (this.readDiaryDraftFromOverlay(entry.id) ?? entry) : entry;
+    const src = await this.readFileAsDataUrl(file);
+    const mediaId = `video-${Date.now()}`;
+    const withVideo = addJournalMedia(draft, {
+      id: mediaId,
+      type: "video",
+      storageKey: `diary-videos/${entry.id}/${mediaId}`,
+      src,
+      caption: file.name,
+      mimeType: file.type || "video/mp4"
+    });
+    this.updateDiaryEntry(withVideo);
+    this.showDiaryEditor(entry.id);
+    this.showToast("Video attached");
+  }
+
+  private async handleMonthCoverInput(input: HTMLInputElement): Promise<void> {
+    const file = input.files?.[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    const src = await this.readFileAsDataUrl(file);
+    const monthKey = this.currentJournalMonth().key;
+    this.applyDiaryLibrary(upsertMonthlyCover(this.makeDiaryLibrary(), monthKey, {
+      src,
+      caption: file.name,
+      updatedAt: new Date().toISOString()
+    }));
+    this.save.saveDiaryLibrary(this.makeDiaryLibrary());
+    this.openMonthlyBook(monthKey);
+    this.showToast("Monthly cover changed");
   }
 
   private async handleDiaryImportFile(input: HTMLInputElement): Promise<void> {
@@ -3720,7 +3870,8 @@ export class WalkBackHomeApp {
       version: 1,
       savedAt: new Date().toISOString(),
       entries: this.diaryEntries,
-      legacyArtifacts: this.legacyArtifacts
+      legacyArtifacts: this.legacyArtifacts,
+      monthlyCovers: this.monthlyCovers
     };
   }
 
@@ -3745,6 +3896,7 @@ export class WalkBackHomeApp {
   private applyDiaryLibrary(state: DiaryLibraryState): void {
     this.diaryEntries = seedAuthoredChapterDiaryEntries(state).entries;
     this.legacyArtifacts = state.legacyArtifacts;
+    this.monthlyCovers = state.monthlyCovers ?? {};
   }
 
   private normalizePersonalPlayerToggles(): void {
