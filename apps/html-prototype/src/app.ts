@@ -2413,7 +2413,7 @@ export class WalkBackHomeApp {
     const media = diaryMediaItems(entry);
     const mediaHtml = media.length ? `<div class="journal-reading-media count-${Math.min(media.length, 4)}">${media.map((item) => item.type === "video"
       ? `<video class="journal-video-block" controls preload="metadata" src="${this.escapeHtml(item.src)}" aria-label="${this.escapeHtml(item.caption ?? "Journal video")}"></video>`
-      : `<figure><span class="journal-reading-photo-frame" style="${this.journalMediaCropStyle(item.crop)}${this.journalMediaCropAspectStyle(item.crop)}"><img class="journal-inline-photo" src="${this.escapeHtml(item.src)}" alt=""></span></figure>`).join("")}</div>` : "";
+      : `<figure><span class="journal-reading-photo-frame" style="${this.journalMediaCropRenderStyle(item)}"><img class="journal-inline-photo" src="${this.escapeHtml(item.src)}" alt="" onload="this.parentElement.style.setProperty('--crop-source-aspect', this.naturalWidth / Math.max(1, this.naturalHeight));this.parentElement.style.setProperty('--crop-aspect', (this.naturalWidth / Math.max(1, this.naturalHeight)) * (Number(this.parentElement.style.getPropertyValue('--crop-img-width')) / Math.max(1, Number(this.parentElement.style.getPropertyValue('--crop-img-height')))))"></span></figure>`).join("")}</div>` : "";
     const moodMeta = entry.mood ? `心情：${entry.mood}` : "";
     this.overlay.innerHTML = `
       <div class="modal game-panel journal-reading-page mood-${entry.mood ?? "calm"}">
@@ -2546,10 +2546,9 @@ export class WalkBackHomeApp {
     return `<div class="journal-inline-media">${media.map((item) => {
       const selected = this.selectedJournalMediaId === item.id;
       const crop = this.normalizeJournalMediaCrop(item.crop);
-      const frameRatio = item.type === "image" ? this.journalMediaCropAspectStyle(crop) : "";
       const mediaNode = item.type === "video"
         ? `<span class="journal-video-select-frame"><video class="journal-inline-photo journal-inline-video" preload="metadata" muted playsinline src="${this.escapeHtml(item.src)}" aria-label="${this.escapeHtml(item.caption ?? "Journal video")}"></video><span class="journal-video-select-shield" data-action="journal-media-select" data-media="${this.escapeHtml(item.id)}" aria-hidden="true">Tap for tools</span></span>`
-        : `<span class="journal-inline-photo-frame" style="${this.journalMediaCropStyle(crop)}${frameRatio}"><img class="journal-inline-photo" src="${this.escapeHtml(item.src)}" alt=""></span>`;
+        : `<span class="journal-inline-photo-frame" style="${this.journalMediaCropRenderStyle(item)}"><img class="journal-inline-photo" src="${this.escapeHtml(item.src)}" alt="" onload="this.parentElement.style.setProperty('--crop-source-aspect', this.naturalWidth / Math.max(1, this.naturalHeight));this.parentElement.style.setProperty('--crop-aspect', (this.naturalWidth / Math.max(1, this.naturalHeight)) * (Number(this.parentElement.style.getPropertyValue('--crop-img-width')) / Math.max(1, Number(this.parentElement.style.getPropertyValue('--crop-img-height')))))"></span>`;
       const tools = item.type === "image"
         ? `<button data-action="journal-media-crop" data-media="${this.escapeHtml(item.id)}" data-crop-mode="custom">Edit Crop</button><button data-action="journal-media-remove" data-media="${this.escapeHtml(item.id)}">Remove</button>`
         : `<span class="journal-media-type">Video</span><button data-action="journal-media-remove" data-media="${this.escapeHtml(item.id)}">Remove</button>`;
@@ -2583,6 +2582,24 @@ export class WalkBackHomeApp {
   private journalMediaCropAspectStyle(crop: unknown): string {
     const next = this.normalizeJournalMediaCrop(crop);
     return `--crop-aspect:${Math.max(0.1, next.width / Math.max(1, next.height)).toFixed(3)};`;
+  }
+
+  private journalMediaCropRenderStyle(media: DiaryMedia): string {
+    const crop = this.normalizeJournalMediaCrop(media.crop);
+    const sourceAspect = media.width && media.height ? Math.max(0.1, media.width / media.height) : 1;
+    const cropAspect = Math.max(0.1, sourceAspect * crop.width / Math.max(1, crop.height));
+    return [
+      `--crop-x:${crop.x.toFixed(2)}`,
+      `--crop-y:${crop.y.toFixed(2)}`,
+      `--crop-img-width:${crop.width.toFixed(2)}`,
+      `--crop-img-height:${crop.height.toFixed(2)}`,
+      `--crop-left:${(-crop.x / Math.max(1, crop.width) * 100).toFixed(2)}%`,
+      `--crop-top:${(-crop.y / Math.max(1, crop.height) * 100).toFixed(2)}%`,
+      `--crop-render-width:${(10000 / Math.max(1, crop.width)).toFixed(2)}%`,
+      `--crop-render-height:${(10000 / Math.max(1, crop.height)).toFixed(2)}%`,
+      `--crop-source-aspect:${sourceAspect.toFixed(4)}`,
+      `--crop-aspect:${cropAspect.toFixed(4)}`
+    ].join(";") + ";";
   }
 
   private journalCropImageAspectStyle(media: DiaryMedia): string {

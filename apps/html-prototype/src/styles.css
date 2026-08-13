@@ -3389,10 +3389,10 @@ canvas {
 }
 .journal-reading-photo-frame .journal-inline-photo {
   position: absolute;
-  left: calc(var(--crop-x, 0%) * -1);
-  top: calc(var(--crop-y, 0%) * -1);
-  width: calc(10000% / var(--crop-width, 100));
-  height: 100%;
+  left: var(--crop-left, 0%);
+  top: var(--crop-top, 0%);
+  width: var(--crop-render-width, 100%);
+  height: var(--crop-render-height, 100%);
   max-height: none;
   border-radius: 0;
 }
@@ -4217,10 +4217,10 @@ canvas {
   }
   .journal-inline-photo {
     position: absolute;
-    left: calc(var(--crop-x, 0%) * -1);
-    top: calc(var(--crop-y, 0%) * -1);
-    width: calc(10000% / var(--crop-width, 100));
-    height: 100%;
+    left: var(--crop-left, 0%);
+    top: var(--crop-top, 0%);
+    width: var(--crop-render-width, 100%);
+    height: var(--crop-render-height, 100%);
     max-height: none;
     border-radius: 8px;
     object-fit: cover;

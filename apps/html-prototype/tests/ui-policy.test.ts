@@ -179,6 +179,9 @@ test("journal mobile uses reading mode and quiet editor controls", () => {
   assert.match(stylesSource, /\.journal-video-select-shield\s*\{[^}]*pointer-events:\s*auto/);
   assert.match(appSource, /data-crop-mode/);
   assert.match(appSource, /journalMediaCropStyle/);
+  assert.match(appSource, /--crop-img-width/);
+  assert.match(appSource, /--crop-source-aspect/);
+  assert.match(appSource, /setProperty\('--crop-source-aspect'/);
   assert.match(appSource, /journal-reading-photo-frame/);
   assert.match(appSource, /journal-media-dock/);
   assert.match(appSource, /journal-media-type">Video/);
