@@ -81,6 +81,8 @@ export type DiaryMedia = {
   caption?: string;
   mimeType?: string;
   posterSrc?: string;
+  width?: number;
+  height?: number;
   crop?: DiaryMediaCrop;
 };
 

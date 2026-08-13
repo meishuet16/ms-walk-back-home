@@ -4293,24 +4293,33 @@ canvas {
     inset: 0;
     z-index: 80;
     display: grid;
-    grid-template-rows: 1fr auto auto;
+    grid-template-rows: minmax(0, 1fr) auto;
     place-items: center;
     gap: 16px;
-    padding: 28px 16px;
+    padding: 28px 16px calc(18px + env(safe-area-inset-bottom));
     background: rgba(0, 0, 0, .9);
     color: #fff;
   }
   .journal-crop-stage {
     position: relative;
     width: min(88vw, 420px);
-    aspect-ratio: 1 / 1;
+    min-height: 0;
+    display: grid;
+    place-items: center;
     overflow: hidden;
     background: #080808;
+  }
+  .journal-crop-image-frame {
+    position: relative;
+    width: min(88vw, 420px);
+    max-height: calc(100dvh - 170px);
+    aspect-ratio: var(--crop-image-aspect, 1);
+    overflow: hidden;
   }
   .journal-crop-preview {
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    object-fit: cover;
   }
   .journal-crop-box {
     position: absolute;
@@ -4347,10 +4356,15 @@ canvas {
   .journal-crop-handle.sw { left: -12px; bottom: -12px; cursor: nesw-resize; }
   .journal-crop-handle.w { left: -12px; top: 50%; transform: translateY(-50%); cursor: ew-resize; }
   .journal-crop-actions {
+    position: relative;
+    z-index: 2;
     width: min(88vw, 420px);
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 10px;
+  }
+  .journal-crop-actions button {
+    pointer-events: auto;
   }
   .mobile-editor-toolbar {
     grid-template-columns: repeat(2, minmax(0, 1fr));

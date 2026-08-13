@@ -2492,7 +2492,7 @@ export class WalkBackHomeApp {
         ${this.renderJournalCropModal(editing)}
         <div class="integrated-tools journal-photo-dock"></div>
         <div class="mobile-editor-toolbar"><button data-action="journal-add-inline-media" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="Add photo">▧<span>图片</span></button><button data-action="journal-add-inline-media" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="Add video">▭<span>视频</span></button></div>
-        <input id="diary-mobile-media-input" class="sr-only" type="file" accept="image/*,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov">
+        <input id="diary-mobile-media-input" class="sr-only" type="file" accept="image/*,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov" multiple>
       </div>`;
     this.focusStage();
   }
@@ -2585,6 +2585,11 @@ export class WalkBackHomeApp {
     return `--crop-aspect:${Math.max(0.1, next.width / Math.max(1, next.height)).toFixed(3)};`;
   }
 
+  private journalCropImageAspectStyle(media: DiaryMedia): string {
+    if (media.width && media.height) return `--crop-image-aspect:${Math.max(0.1, media.width / media.height).toFixed(4)};`;
+    return "--crop-image-aspect:1;";
+  }
+
   private renderJournalCropModal(entry?: DiaryEntry): string {
     if (!entry || !this.journalCropMediaId) return "";
     const media = diaryMediaItems(entry).find((item) => item.id === this.journalCropMediaId && item.type === "image");
@@ -2592,10 +2597,12 @@ export class WalkBackHomeApp {
     const crop = this.normalizeJournalMediaCrop(media.crop);
     return `<div class="journal-crop-modal" role="dialog" aria-label="Crop journal image">
       <div class="journal-crop-stage">
-        <img class="journal-crop-preview" src="${this.escapeHtml(media.src)}" alt="">
-        <div class="journal-crop-box" data-action="journal-crop-drag" data-crop-mode="move" style="${this.journalMediaCropStyle(crop)}" aria-label="Crop box">
-          <span class="journal-crop-grid" aria-hidden="true"></span>
-          ${["nw", "n", "ne", "e", "se", "s", "sw", "w"].map((handle) => `<span class="journal-crop-handle ${handle}" data-action="journal-crop-drag" data-crop-mode="${handle}" aria-hidden="true"></span>`).join("")}
+        <div class="journal-crop-image-frame" style="${this.journalCropImageAspectStyle(media)}">
+          <img class="journal-crop-preview" src="${this.escapeHtml(media.src)}" alt="" onload="this.parentElement.style.setProperty('--crop-image-aspect', this.naturalWidth / Math.max(1, this.naturalHeight))">
+          <div class="journal-crop-box" data-action="journal-crop-drag" data-crop-mode="move" style="${this.journalMediaCropStyle(crop)}" aria-label="Crop box">
+            <span class="journal-crop-grid" aria-hidden="true"></span>
+            ${["nw", "n", "ne", "e", "se", "s", "sw", "w"].map((handle) => `<span class="journal-crop-handle ${handle}" data-action="journal-crop-drag" data-crop-mode="${handle}" aria-hidden="true"></span>`).join("")}
+          </div>
         </div>
       </div>
       <div class="journal-crop-actions">
@@ -3155,30 +3162,37 @@ export class WalkBackHomeApp {
   }
 
   private async handleDiaryInlineMediaInput(input: HTMLInputElement): Promise<void> {
-    const file = input.files?.[0];
+    const files = Array.from(input.files ?? []);
     const entry = this.activeScrapbookEntry();
-    if (!file || !entry) return;
-    const isVideo = file.type.startsWith("video/") || /\.(mp4|webm|mov)$/i.test(file.name);
-    const isImage = file.type.startsWith("image/");
-    if (!isImage && !isVideo) {
+    if (!files.length || !entry) return;
+    const validFiles = files.filter((file) => file.type.startsWith("image/") || file.type.startsWith("video/") || /\.(mp4|webm|mov)$/i.test(file.name));
+    if (!validFiles.length) {
       this.showToast("Choose a photo or browser-supported video.");
       return;
     }
-    const draft = input.closest(".diary-page-editor") ? (this.readDiaryDraftFromOverlay(entry.id) ?? entry) : entry;
-    const src = isImage ? await this.readDiaryImageAsDataUrl(file) : await this.readFileAsDataUrl(file);
-    const mediaId = `${isVideo ? "video" : "photo"}-${Date.now()}`;
-    const withMedia = addJournalMedia(draft, {
-      id: mediaId,
-      type: isVideo ? "video" : "image",
-      storageKey: `diary-media/${entry.id}/${mediaId}`,
-      src,
-      caption: "",
-      mimeType: isVideo ? file.type || "video/mp4" : file.type || "image/jpeg"
-    });
+    let withMedia = input.closest(".diary-page-editor") ? (this.readDiaryDraftFromOverlay(entry.id) ?? entry) : entry;
+    let mediaId = "";
+    for (const [index, file] of validFiles.entries()) {
+      const isVideo = file.type.startsWith("video/") || /\.(mp4|webm|mov)$/i.test(file.name);
+      const isImage = file.type.startsWith("image/");
+      const imageData = isImage ? await this.readDiaryImageData(file) : null;
+      const src = imageData?.src ?? (await this.readFileAsDataUrl(file));
+      mediaId = `${isVideo ? "video" : "photo"}-${Date.now()}-${index}`;
+      withMedia = addJournalMedia(withMedia, {
+        id: mediaId,
+        type: isVideo ? "video" : "image",
+        storageKey: `diary-media/${entry.id}/${mediaId}`,
+        src,
+        caption: "",
+        mimeType: isVideo ? file.type || "video/mp4" : file.type || "image/jpeg",
+        width: imageData?.width,
+        height: imageData?.height
+      });
+    }
     this.selectedJournalMediaId = mediaId;
     this.updateDiaryEntry(withMedia);
     this.showDiaryEditor(withMedia.id);
-    this.showToast(isVideo ? "Video inserted" : "Photo inserted");
+    this.showToast(validFiles.length === 1 ? "Media inserted" : `${validFiles.length} media inserted`);
   }
 
   private async handleMonthCoverInput(input: HTMLInputElement): Promise<void> {
@@ -3230,8 +3244,12 @@ export class WalkBackHomeApp {
   }
 
   private async readDiaryImageAsDataUrl(file: File): Promise<string> {
+    return (await this.readDiaryImageData(file)).src;
+  }
+
+  private async readDiaryImageData(file: File): Promise<{ src: string; width?: number; height?: number }> {
     const original = await this.readFileAsDataUrl(file);
-    if (!file.type.startsWith("image/")) return original;
+    if (!file.type.startsWith("image/")) return { src: original };
     try {
       const image = await new Promise<HTMLImageElement>((resolve, reject) => {
         const img = new Image();
@@ -3241,16 +3259,16 @@ export class WalkBackHomeApp {
       });
       const maxSide = 900;
       const ratio = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
-      if (ratio >= 1) return original;
+      if (ratio >= 1) return { src: original, width: image.naturalWidth, height: image.naturalHeight };
       const canvas = document.createElement("canvas");
       canvas.width = Math.max(1, Math.round(image.naturalWidth * ratio));
       canvas.height = Math.max(1, Math.round(image.naturalHeight * ratio));
       const ctx = canvas.getContext("2d");
-      if (!ctx) return original;
+      if (!ctx) return { src: original, width: image.naturalWidth, height: image.naturalHeight };
       ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-      return canvas.toDataURL("image/jpeg", 0.84);
+      return { src: canvas.toDataURL("image/jpeg", 0.84), width: canvas.width, height: canvas.height };
     } catch {
-      return original;
+      return { src: original };
     }
   }
 
@@ -3559,7 +3577,7 @@ export class WalkBackHomeApp {
 
   private handlePointerMove(event: PointerEvent): void {
     if (this.journalCropDrag) {
-      const stage = this.overlay.querySelector<HTMLElement>(".journal-crop-stage");
+      const stage = this.overlay.querySelector<HTMLElement>(".journal-crop-image-frame");
       const box = this.overlay.querySelector<HTMLElement>(".journal-crop-box");
       if (!stage || !box) return;
       const rect = stage.getBoundingClientRect();
