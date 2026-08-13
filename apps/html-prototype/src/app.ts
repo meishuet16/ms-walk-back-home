@@ -28,6 +28,7 @@ import {
   addJournalMedia,
   addPhotoAttachment,
   addPhotoElement,
+  attachPhotoAndPlaceOnPage,
   createCutoutElement,
   deleteScrapbookElement,
   diaryMediaItems,
@@ -129,7 +130,9 @@ export class WalkBackHomeApp {
   private selectedScrapbookElementId = "";
   private journalMoreMenuOpen = false;
   private journalMoodSheetOpen = false;
+  private journalAddMediaSheetOpen = false;
   private selectedTimelineEntryIds = new Set<string>();
+  private timelineDeleteConfirmOpen = false;
   private timelineSort: DiaryTimelineSort = "date-desc";
   private timelineSearch = "";
   private timelineKindFilter: TimelineMemoryKindFilter = "all";
@@ -155,6 +158,7 @@ export class WalkBackHomeApp {
   private pendingDeleteTrackId = "";
   private lyricsDrag: { offsetX: number; offsetY: number } | null = null;
   private pendingPersonalSeek: number | null = null;
+  private forceTouchControls = false;
   private settings = { rain: true, muted: false, volume: 0.45, compact: false, reducedMotion: false, musicEnabled: true, musicScene: "bakery" as MusicScene };
   private room: RoomJourneyState = createDefaultRoomState();
   private reflectionWall: ReflectionWallState = createReflectionWallState();
@@ -192,7 +196,7 @@ export class WalkBackHomeApp {
         </header>
         <main class="stage-wrap">
           <canvas width="960" height="540" aria-label="Walk Back Home playable scene"></canvas>
-          <div class="rotate-hint">Rotate screen to landscape</div>
+          <div class="rotate-hint" aria-hidden="true"></div>
           <div class="hud"></div>
           <div class="toast" role="status" aria-live="polite"></div>
           <div class="music-player" aria-label="Scene music player"></div>
@@ -269,6 +273,7 @@ export class WalkBackHomeApp {
     if (action === "journal-books") this.showMonthlyBooks();
     if (action === "journal-month-prev") this.moveJournalMonth(-1);
     if (action === "journal-month-next") this.moveJournalMonth(1);
+    if (action === "journal-filter-year") this.filterTimelineYear(target.dataset.year ?? "");
     if (action === "journal-show-more") this.showMoreTimelineEntries();
     if (action === "open-month-book") this.openMonthlyBook(target.dataset.month ?? "");
     if (action === "export-month-pdf") void this.exportMonthlyPdf(target.dataset.month ?? "");
@@ -285,12 +290,20 @@ export class WalkBackHomeApp {
     if (action === "journal-more-menu") {
       this.journalMoreMenuOpen = !this.journalMoreMenuOpen;
       this.journalMoodSheetOpen = false;
+      this.journalAddMediaSheetOpen = false;
       const entryId = target.dataset.id ?? "";
       if (this.overlay.querySelector(".journal-reading-page")) this.showDiaryReader(entryId);
       else this.showDiaryEditor(entryId);
     }
     if (action === "journal-mood-entry") {
       this.journalMoodSheetOpen = !this.journalMoodSheetOpen;
+      this.journalMoreMenuOpen = false;
+      this.journalAddMediaSheetOpen = false;
+      this.showDiaryEditor(target.dataset.id);
+    }
+    if (action === "journal-add-media-menu") {
+      this.journalAddMediaSheetOpen = !this.journalAddMediaSheetOpen;
+      this.journalMoodSheetOpen = false;
       this.journalMoreMenuOpen = false;
       this.showDiaryEditor(target.dataset.id);
     }
@@ -301,7 +314,12 @@ export class WalkBackHomeApp {
     if (action === "timeline-pick-date") this.pickTimelineDate(target.dataset.date ?? "");
     if (action === "timeline-select-all") this.selectAllTimelineEntries();
     if (action === "timeline-clear-selected") this.clearTimelineSelection();
-    if (action === "timeline-delete-selected") this.deleteSelectedTimelineEntries();
+    if (action === "timeline-request-delete-selected") this.requestDeleteSelectedTimelineEntries();
+    if (action === "timeline-cancel-delete-selected") {
+      this.timelineDeleteConfirmOpen = false;
+      this.showTimeline();
+    }
+    if (action === "timeline-confirm-delete-selected") this.deleteSelectedTimelineEntries();
     if (action === "show-import-diary") this.showImportDiary();
     if (action === "import-diary-lines") this.importDiaryLines();
     if (action === "add-photo-to-scrapbook") this.addPhotoToScrapbook(target.dataset.photo ?? "");
@@ -385,6 +403,7 @@ export class WalkBackHomeApp {
     if (action === "fullscreen") this.toggleFullscreen();
     if (action === "rain") this.toggleRain();
     if (action === "music") this.toggleSceneMusic();
+    if (action === "toggle-touch-controls") this.toggleTouchControls();
     if (action === "close") {
       this.overlay.classList.remove("dialogue-open");
       this.overlay.innerHTML = "";
@@ -1637,6 +1656,7 @@ export class WalkBackHomeApp {
 
   private drawHud(): void {
     this.root.dataset.scene = this.scene;
+    this.root.dataset.forceTouch = this.forceTouchControls ? "true" : "false";
     this.root.classList.toggle("overlay-open", Boolean(this.overlay.innerHTML.trim()));
     const labisPrompt = this.scene === "labis" && this.labisCutscene ? "Memory is playing" : this.scene === "labis" && this.activeObject === "exit" ? "Press E · 回到 Memory Forest" : this.scene === "labis" && this.activeObject ? `Press E · ${this.activeObject}` : "";
     const rawText = this.scene === "forest" && this.activeDoor ? `Press E · ${this.activeDoor.date} ${this.activeDoor.title}` : this.scene === "bakery" && this.activeObject ? `Press E · ${this.activeObject}` : labisPrompt || (this.scene === "muji-room" && this.activeRoomInteraction ? `Press E · ${this.activeRoomInteraction.label}` : "WASD / arrows · E / Enter");
@@ -1658,6 +1678,7 @@ export class WalkBackHomeApp {
       <button data-action="open-room">Muji Room</button>
       <button data-action="reflection-wall">Reflection Wall</button>
       <button data-action="music">Music: ${this.settings.musicEnabled ? "On" : "Off"}</button>
+      <button data-action="toggle-touch-controls">Joystick: ${this.forceTouchControls ? "On" : "Auto"}</button>
       <button data-action="settings">Settings</button>`;
     if (this.topNav.innerHTML !== html) this.topNav.innerHTML = html;
   }
@@ -1665,6 +1686,13 @@ export class WalkBackHomeApp {
   private touchActionText(prompt: string): string {
     const match = /Press E ·\s*(.+)$/.exec(prompt);
     return match?.[1] ?? "Interact";
+  }
+
+  private toggleTouchControls(): void {
+    this.forceTouchControls = !this.forceTouchControls;
+    this.renderTopNav();
+    this.drawHud();
+    this.showToast(this.forceTouchControls ? "Joystick shown" : "Joystick auto");
   }
 
   private mobileHudPrompt(prompt: string): string {
@@ -1755,7 +1783,8 @@ export class WalkBackHomeApp {
     const showMore = hasMoreTimelineEntries(month, this.timelineVisibleCount) ? `<button class="show-more" data-action="journal-show-more">Show More</button>` : "";
     const noResult = this.timelineSearch.trim() || this.timelineKindFilter !== "all" || this.timelineDateFilter;
     const empty = `<div class="journal-empty"><p>${noResult ? "No diary matched these filters." : "Nothing was written here."}</p><button data-action="new-diary-entry">Create New Journal</button></div>`;
-    this.overlay.innerHTML = `<div class="modal game-panel timeline-panel journal-panel">${this.journalHeader("Timeline", month)}${this.renderMobileWeekStrip(month)}${this.renderTimelineFilters(month)}<div class="timeline-list">${this.renderTimelineDateGroups(visibleEntries, rows) || empty}</div>${showMore}</div>`;
+    const confirm = this.timelineDeleteConfirmOpen ? this.renderTimelineDeleteConfirmation() : "";
+    this.overlay.innerHTML = `<div class="modal game-panel timeline-panel journal-panel">${this.journalHeader("Timeline", month)}${this.renderMobileWeekStrip(month)}${this.renderTimelineFilters(month)}<div class="timeline-list">${this.renderTimelineDateGroups(visibleEntries, rows) || empty}</div>${showMore}${confirm}</div>`;
     if (options.restoreScrollTop !== undefined) {
       requestAnimationFrame(() => {
         const panel = this.overlay.querySelector<HTMLElement>(".journal-panel");
@@ -1825,8 +1854,16 @@ export class WalkBackHomeApp {
       <span>${this.selectedTimelineEntryIds.size} selected</span>
       <button data-action="timeline-select-all">Select All</button>
       <button data-action="timeline-clear-selected">Clear Selection</button>
-      <button data-action="timeline-delete-selected">Delete Selected</button>
+      <button data-action="timeline-request-delete-selected">Delete Selected</button>
     </div>${this.renderTimelineDatePicker(selectedDate)}`;
+  }
+
+  private renderTimelineDeleteConfirmation(): string {
+    const count = this.selectedTimelineEntryIds.size;
+    return `<div class="timeline-delete-confirmation delete-confirmation" role="dialog" aria-modal="true" aria-label="Confirm diary deletion">
+      <div><strong>Delete selected journals?</strong><p>This removes ${count} journal ${count === 1 ? "entry" : "entries"} from the app timeline.</p></div>
+      <div class="delete-confirmation-actions"><button data-action="timeline-cancel-delete-selected">Cancel</button><button class="danger" data-action="timeline-confirm-delete-selected">Delete</button></div>
+    </div>`;
   }
 
   private renderMobileWeekStrip(month: JournalMonth): string {
@@ -1914,7 +1951,8 @@ export class WalkBackHomeApp {
   }
 
   private journalHeader(active: "Timeline" | "Books" | "Reader", month: JournalMonth): string {
-    return `<div class="journal-archive-header"><div><h2>Journal</h2><p>${this.escapeHtml(active)} · ${this.escapeHtml(month.label)}</p></div><div class="journal-tabs"><button class="${active === "Timeline" ? "selected" : ""}" data-action="journal-timeline">Timeline</button><button class="${active === "Books" || active === "Reader" ? "selected" : ""}" data-action="journal-books">Books</button></div><div class="journal-header-actions"><button data-action="new-diary-entry">Create New Journal</button><button data-action="close">Close</button></div></div><div class="month-nav"><button data-action="journal-month-prev">‹</button><strong>${this.escapeHtml(month.label)}</strong><button data-action="journal-month-next">›</button></div>`;
+    const navLabel = active === "Books" ? month.label.slice(-4) : month.label;
+    return `<div class="journal-archive-header"><div><h2>Journal</h2><p>${this.escapeHtml(active)} · ${this.escapeHtml(navLabel)}</p></div><button class="journal-close-button" data-action="close" aria-label="Close Journal">×</button><div class="journal-tabs"><button class="${active === "Timeline" ? "selected" : ""}" data-action="journal-timeline">Timeline</button><button class="${active === "Books" || active === "Reader" ? "selected" : ""}" data-action="journal-books">Books</button><button data-action="new-diary-entry">Create New Journal</button></div></div><div class="month-nav"><button data-action="journal-month-prev">‹</button><strong>${this.escapeHtml(navLabel)}</strong><button data-action="journal-month-next">›</button></div>`;
   }
 
   private renderDiaryPreview(entry: DiaryEntry): string {
@@ -1951,10 +1989,24 @@ export class WalkBackHomeApp {
   private showMonthlyBooks(): void {
     this.journalMode = "books";
     const month = this.currentJournalMonth();
-    const books = monthlyBookSummaries(this.diaryEntries, this.monthlyCovers).map((book) => `<button class="monthly-book theme-${book.theme}" data-action="open-month-book" data-month="${book.key}"><span class="book-cover-thumb" style="--book-cover:${book.cover?.src.startsWith("data:") ? `url('${this.escapeHtml(book.cover.src)}')` : this.escapeHtml(book.cover?.src ?? defaultMonthlyCover(book.key).src)}">${this.escapeHtml(book.label.split(" ")[0].toUpperCase())}</span><strong>${book.year}</strong><small>${book.entryCount} entries · ${book.photoCount} photos · ${book.videoCount} videos</small></button>`).join("");
-    const years = [...new Set(monthlyBookSummaries(this.diaryEntries).map((book) => book.year))].map((year) => `<button class="year-book" data-action="journal-timeline">${year}</button>`).join("");
-    this.overlay.innerHTML = `<div class="modal game-panel journal-panel monthly-books">${this.journalHeader("Books", month)}<section class="book-shelf-section"><h3>Time Albums</h3><div class="book-grid">${books || `<div class="journal-empty"><p>Your story starts here.</p><button data-action="new-diary-entry">Write the first page</button></div>`}</div></section><section class="book-shelf-section"><h3>Year Books</h3><div class="book-grid year-grid">${years || "<p>No books yet.</p>"}</div></section></div>`;
+    const summaries = monthlyBookSummaries(this.diaryEntries, this.monthlyCovers);
+    const selectedYear = month.key.slice(0, 4);
+    const yearOptions = [...new Set(summaries.map((book) => book.year))];
+    const yearFilter = `<div class="journal-year-filter" aria-label="Filter books by year">${yearOptions.map((year) => `<button class="${String(year) === selectedYear ? "selected" : ""}" data-action="journal-filter-year" data-year="${year}">${year}</button>`).join("")}</div>`;
+    const books = summaries
+      .filter((book) => String(book.year) === selectedYear)
+      .map((book) => `<button class="monthly-book theme-${book.theme}" data-action="open-month-book" data-month="${book.key}"><span class="book-cover-thumb" style="--book-cover:${book.cover?.src.startsWith("data:") ? `url('${this.escapeHtml(book.cover.src)}')` : this.escapeHtml(book.cover?.src ?? defaultMonthlyCover(book.key).src)}">${this.escapeHtml(book.label.split(" ")[0].toUpperCase())}</span><strong>${book.year}</strong><small>${book.entryCount} entries · ${book.photoCount} photos · ${book.videoCount} videos</small></button>`).join("");
+    this.overlay.innerHTML = `<div class="modal game-panel journal-panel monthly-books">${this.journalHeader("Books", month)}${yearFilter}<section class="book-shelf-section"><h3>Time Albums</h3><div class="book-grid">${books || `<div class="journal-empty"><p>Your story starts here.</p><button data-action="new-diary-entry">Write the first page</button></div>`}</div></section></div>`;
     this.focusStage();
+  }
+
+  private filterTimelineYear(year: string): void {
+    if (!/^\d{4}$/.test(year)) return;
+    this.selectedJournalMonthKey = `${year}-01`;
+    this.timelineDateScope = "year";
+    this.timelineDateFilter = "";
+    this.timelineFilterAppliedMessage = `Year ${year}`;
+    this.showTimeline();
   }
 
   private openMonthlyBook(monthKey: string): void {
@@ -2325,6 +2377,7 @@ export class WalkBackHomeApp {
     if (!editId) return this.showTimeline();
     const moreOpen = this.journalMoreMenuOpen;
     const moodSheetOpen = this.journalMoodSheetOpen;
+    const addMediaOpen = this.journalAddMediaSheetOpen;
     const editing = this.diaryEntries.find((entry) => entry.id === editId) ?? this.diaryEntries[0];
     const today = new Date().toISOString().slice(0, 10);
     const dateValue = editing?.date ?? today;
@@ -2370,14 +2423,16 @@ export class WalkBackHomeApp {
           </div>
         </div>
         <div class="journal-more-panel ${moreOpen ? "open" : ""}">
-          <strong>Mood</strong>
-          <div class="journal-more-moods">${moodButtons}</div>
           <button data-action="show-import-diary">Import Existing Diary</button>
-          <button data-action="delete-diary-entry" data-id="${this.escapeHtml(editing?.id ?? "")}">Delete Journal</button>
+          <button class="danger" data-action="delete-diary-entry" data-id="${this.escapeHtml(editing?.id ?? "")}">Delete Journal</button>
+          <button data-action="journal-timeline">Timeline</button>
+          <button data-action="journal-books">Books</button>
+          <button data-action="close">Close</button>
         </div>
         <section class="diary-paper scrapbook-page journal-sheet" aria-label="Diary page">
           <div class="paper-rings" aria-hidden="true"></div>
-          <div class="journal-page-inner">
+            <div class="journal-page-inner">
+            <div class="journal-mobile-top-meta"><p class="autosave-state" id="diary-save-state">Saved</p><label class="journal-kind">Memory<select id="diary-memory-kind"><option value="diary" ${editing?.memoryKind === "diary" ? "selected" : ""}>Diary only</option><option value="fragment" ${editing?.memoryKind === "fragment" ? "selected" : ""}>Memory Fragment</option><option value="chapter" ${editing?.memoryKind === "chapter" ? "selected" : ""}>Memory Chapter</option></select></label></div>
             <div class="journal-sticker-title">今日记录</div>
             <div class="journal-meta-card">
               <label><span>▣ 日期：</span><input id="diary-date" type="date" value="${this.escapeHtml(dateValue)}"></label>
@@ -2404,9 +2459,10 @@ export class WalkBackHomeApp {
         <div class="integrated-tools journal-photo-dock">
           <aside class="photo-tray">${photos}</aside>
         </div>
-        <div class="mobile-editor-toolbar"><button data-action="journal-mood-entry" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="Choose mood">${this.escapeHtml(selectedMood)}</button><label class="journal-upload" title="Add image">＋<input id="diary-mobile-photo-input" type="file" accept="image/*"></label><label class="journal-upload" title="Add video">▶<input id="diary-video-input" type="file" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"></label><button data-action="journal-more-menu" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="More journal options">⋮</button><button data-action="save-diary-entry" data-id="${this.escapeHtml(editing?.id ?? "")}">Done</button></div>
+        <div class="mobile-editor-toolbar"><button class="journal-mobile-muji-button" data-action="journal-mood-entry" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="Choose mood"><span class="journal-mascot mood-${selectedMood}" aria-hidden="true"></span></button><button data-action="journal-add-media-menu" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="Add media">＋</button><button data-action="journal-more-menu" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="More journal options">⋮</button><button class="journal-done" data-action="save-diary-entry" data-id="${this.escapeHtml(editing?.id ?? "")}">✓ 完成</button></div>
         <div class="journal-mood-sheet ${moodSheetOpen ? "open" : ""}" aria-label="Choose journal mood">${moodButtons}</div>
-        <div class="journal-lower-tools"><p class="autosave-state" id="diary-save-state">Saved</p><label class="journal-kind">Memory<select id="diary-memory-kind"><option value="diary" ${editing?.memoryKind === "diary" ? "selected" : ""}>Diary only</option><option value="fragment" ${editing?.memoryKind === "fragment" ? "selected" : ""}>Memory Fragment</option><option value="chapter" ${editing?.memoryKind === "chapter" ? "selected" : ""}>Memory Chapter</option></select></label><button data-action="show-import-diary">Import Existing Diary</button><button data-action="open-timeline">Timeline</button><button data-action="journal-books">Books</button><button data-action="open-map">Walk Back Home</button><button data-action="close">Close</button></div>
+        <div class="journal-add-media-sheet ${addMediaOpen ? "open" : ""}" aria-label="Add journal media"><label class="journal-upload" title="Add image">Image<input id="diary-mobile-photo-input" type="file" accept="image/*"></label><label class="journal-upload" title="Add video">Video<input id="diary-video-input" type="file" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"></label></div>
+        <div class="journal-lower-tools"><p class="autosave-state">Saved</p><button data-action="show-import-diary">Import Existing Diary</button><button data-action="open-timeline">Timeline</button><button data-action="journal-books">Books</button><button data-action="open-map">Walk Back Home</button><button data-action="close">Close</button></div>
       </div>`;
     this.focusStage();
   }
@@ -2637,6 +2693,16 @@ export class WalkBackHomeApp {
 
   private clearTimelineSelection(): void {
     this.selectedTimelineEntryIds.clear();
+    this.timelineDeleteConfirmOpen = false;
+    this.showTimeline();
+  }
+
+  private requestDeleteSelectedTimelineEntries(): void {
+    if (!this.selectedTimelineEntryIds.size) {
+      this.showToast("No diary selected");
+      return;
+    }
+    this.timelineDeleteConfirmOpen = true;
     this.showTimeline();
   }
 
@@ -2654,6 +2720,7 @@ export class WalkBackHomeApp {
       if (this.currentDoor?.id === id) this.currentDoor = null;
     }
     this.selectedTimelineEntryIds.clear();
+    this.timelineDeleteConfirmOpen = false;
     this.showTimeline();
     this.showToast(`Deleted ${selected.size} diary entries`);
     this.autosave();
@@ -2753,6 +2820,13 @@ export class WalkBackHomeApp {
       this.handleInput(event);
       return;
     }
+    if (input.id === "floating-lyrics-width") {
+      const width = Math.max(180, Math.min(520, Number(input.value) || (this.personalPlayer.lyricsOverlay.width ?? 280)));
+      this.personalPlayer.lyricsOverlay = { ...this.personalPlayer.lyricsOverlay, width };
+      this.save.savePersonalPlayer(this.personalPlayer);
+      this.updatePersonalMusicOverlay();
+      return;
+    }
     if (input.id === "vinyl-cover-input") {
       await this.handlePersonalCoverInput(input);
       return;
@@ -2805,7 +2879,10 @@ export class WalkBackHomeApp {
     const storageKey = `diary-images/${entry.id}/${photoId}`;
     const photo = { id: photoId, storageKey, src, caption: file.name };
     const withPhoto = addPhotoAttachment(draft, photo);
-    this.updateDiaryEntry(withPhoto);
+    const nextEntry = input.id === "diary-mobile-photo-input" || input.id === "diary-photo-input"
+      ? attachPhotoAndPlaceOnPage(draft, photo, `element-${Date.now()}`)
+      : withPhoto;
+    this.updateDiaryEntry(nextEntry);
     if (input.id === "diary-photo-input" || input.id === "diary-mobile-photo-input") this.showDiaryEditor(entry.id);
     else this.showScrapbookComposer(entry.id);
     this.showToast("Photo attached");
@@ -3289,11 +3366,13 @@ export class WalkBackHomeApp {
     return `<div class="reflection-wall-toolbar">
       <div><h2>Reflection Wall</h2><p>${count} note${count === 1 ? "" : "s"}</p></div>
       <label>Search<input id="reflection-search" type="search" value="${this.escapeHtml(this.reflectionWallSearch)}"></label>
-      <div class="reflection-chip-row">${filters.map(([filter, label]) => `<button class="${this.reflectionWallFilter === filter ? "selected" : ""}" data-action="reflection-wall-filter" data-filter="${filter}">${label}</button>`).join("")}</div>
-      <div class="reflection-chip-row">${views.map(([view, label]) => `<button class="${this.reflectionWallView === view ? "selected" : ""}" data-action="reflection-wall-view" data-view="${view}">${label}</button>`).join("")}</div>
-      <div class="reflection-chip-row">${sorts.map(([sort, label]) => `<button class="${this.reflectionWallSort === sort ? "selected" : ""}" data-action="reflection-wall-sort" data-sort="${sort}">${label}</button>`).join("")}</div>
+      <details class="reflection-wall-filter-menu"><summary>Filter</summary>
+        <div class="reflection-chip-row">${filters.map(([filter, label]) => `<button class="${this.reflectionWallFilter === filter ? "selected" : ""}" data-action="reflection-wall-filter" data-filter="${filter}">${label}</button>`).join("")}</div>
+        <div class="reflection-chip-row">${views.map(([view, label]) => `<button class="${this.reflectionWallView === view ? "selected" : ""}" data-action="reflection-wall-view" data-view="${view}">${label}</button>`).join("")}</div>
+        <div class="reflection-chip-row">${sorts.map(([sort, label]) => `<button class="${this.reflectionWallSort === sort ? "selected" : ""}" data-action="reflection-wall-sort" data-sort="${sort}">${label}</button>`).join("")}</div>
+      </details>
       <button data-action="reflection-note-new">Leave a note</button>
-      <button data-action="close">Close</button>
+      <button class="reflection-wall-close-button" data-action="close" aria-label="Close Reflection Wall">×</button>
     </div>`;
   }
 
@@ -3494,6 +3573,7 @@ export class WalkBackHomeApp {
       ? `<div class="cover-visual ${cover ? "has-cover" : ""}" style="${visualStyle}">${coverInitials}</div>`
       : `<div class="record-disc personal ${cover ? "has-cover" : ""} ${this.personalPlayer.playing && !this.settings.reducedMotion ? "playing" : ""}" style="${visualStyle}"><span></span></div><div class="tone-arm personal"></div>`;
     const maxTime = Math.max(1, duration || current?.duration || 1);
+    const lyricWidth = Math.round(this.personalPlayer.lyricsOverlay.width ?? 280);
     const searchSortControls = `
       <input data-music-search id="music-search" type="search" placeholder="Search songs..." value="${this.escapeHtml(this.personalPlayer.librarySearch)}" aria-label="Search songs">
       <label>Sort<select id="music-sort" aria-label="Sort music"><option value="recently-added" ${this.personalPlayer.librarySort === "recently-added" ? "selected" : ""}>Recently Added</option><option value="recently-played" ${this.personalPlayer.librarySort === "recently-played" ? "selected" : ""}>Recently Played</option><option value="title" ${this.personalPlayer.librarySort === "title" ? "selected" : ""}>Title A-Z</option><option value="artist" ${this.personalPlayer.librarySort === "artist" ? "selected" : ""}>Artist A-Z</option></select></label>`;
@@ -3526,6 +3606,8 @@ export class WalkBackHomeApp {
           <label class="file-control">Change Background<input id="music-background-input" type="file" accept="image/*" aria-label="Change player background"></label>
           ${background ? `<button data-action="remove-player-background">Remove Background</button>` : ""}
           <label class="file-control">Import / Change Lyrics<input id="music-lyrics-input" type="file" accept=".lrc,text/plain" aria-label="Add lyrics"></label>
+          <button data-action="toggle-floating-lyrics">${this.personalPlayer.lyricsVisible ? "Hide Floating Lyrics" : "Show Floating Lyrics"}</button>
+          <label class="metadata-edit">Floating Lyrics Size<input data-floating-lyrics-width id="floating-lyrics-width" type="range" min="180" max="520" step="10" value="${lyricWidth}" aria-label="Floating lyrics width"></label>
           <label class="metadata-edit">Song Title<input data-music-title data-music-field="title" id="music-title" value="${this.escapeHtml(current?.title ?? "")}" aria-label="Edit song title"></label>
           <label class="metadata-edit">Artist<input data-music-artist data-music-field="artist" id="music-artist" value="${this.escapeHtml(current?.artist ?? "")}" aria-label="Edit artist"></label>
         </div>
