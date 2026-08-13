@@ -2288,6 +2288,17 @@ canvas {
 .records-header p {
   color: #cdb78f;
 }
+.records-header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.records-mobile-more-button,
+.records-mobile-player,
+.records-mobile-more,
+.records-song-sheet {
+  display: none;
+}
 .records-grid {
   display: grid;
   grid-template-columns: minmax(220px, 280px) minmax(260px, 1fr) minmax(240px, 310px);
@@ -2448,9 +2459,52 @@ canvas {
   max-height: 310px;
   overflow: auto;
 }
-.personal-list button {
+.record-list-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 38px;
+  gap: 6px;
+  align-items: center;
+}
+.personal-list button,
+.record-select {
   min-height: 52px;
   border-radius: 6px;
+}
+.record-select {
+  width: 100%;
+  text-align: left;
+}
+.record-row-menu-button {
+  min-width: 38px;
+  padding: 0;
+}
+.records-song-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 46px;
+  z-index: 4;
+  min-width: 190px;
+  padding: 8px;
+  border: 1px solid rgba(224, 185, 117, .36);
+  border-radius: 8px;
+  background: rgba(35, 25, 17, .96);
+  box-shadow: 0 18px 40px rgba(0,0,0,.36);
+}
+.records-song-menu.open {
+  display: grid;
+  gap: 6px;
+}
+.records-song-menu span {
+  padding: 8px;
+  color: rgba(245, 222, 184, .62);
+  font-size: 12px;
+}
+.danger {
+  color: #ffd2ca;
+  border-color: rgba(255, 112, 93, .55);
+  background: rgba(126, 35, 31, .62);
 }
 .records-transport {
   display: grid;
@@ -2497,9 +2551,273 @@ canvas {
   color: #2d2117;
   background: #d5aa69;
 }
+.delete-confirmation {
+  position: fixed;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 8;
+  display: grid;
+  gap: 14px;
+  width: min(460px, calc(100vw - 28px));
+  padding: 22px;
+  border: 1px solid rgba(141, 78, 48, .24);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #fff8eb, #f7ecdc);
+  color: #2d2117;
+  box-shadow: 0 22px 70px rgba(0,0,0,.42);
+  transform: translateX(-50%);
+}
+.delete-confirmation strong {
+  display: block;
+  color: #bd2d2d;
+  text-align: center;
+}
+.delete-confirmation p {
+  margin: 8px 0 0;
+  text-align: center;
+}
+.delete-confirmation-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(76, 52, 32, .18);
+}
+.delete-confirmation-actions button {
+  min-height: 46px;
+}
 @media (prefers-reduced-motion: reduce) {
   .record-disc.playing {
     animation: none;
+  }
+}
+@media (max-width: 700px) {
+  .records-panel.personal-records {
+    top: 0;
+    width: 100vw;
+    max-height: 100dvh;
+    min-height: 100dvh;
+    border-radius: 0;
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+    overflow-x: hidden;
+    background:
+      radial-gradient(circle at 50% 28%, rgba(187, 119, 39, .26), transparent 40%),
+      linear-gradient(180deg, rgba(35, 20, 10, .98), rgba(13, 9, 5, .98));
+  }
+  .records-panel.personal-records.has-bg::after {
+    background:
+      radial-gradient(circle at 50% 34%, rgba(244, 198, 111, .2), transparent 35%),
+      linear-gradient(180deg, rgba(20, 10, 4, .62), rgba(9, 6, 3, .86));
+  }
+  .records-header {
+    padding: 18px 22px 10px;
+    border-bottom: 0;
+    background: transparent;
+  }
+  .records-header h2 {
+    font-size: 29px;
+  }
+  .records-header p {
+    font-size: 14px;
+  }
+  .records-header-actions > button:not(.records-mobile-more-button) {
+    display: none;
+  }
+  .records-mobile-more-button {
+    display: inline-grid;
+    place-items: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    border-color: transparent;
+    background: transparent;
+    color: #fff2c8;
+    font-size: 28px;
+  }
+  .records-grid,
+  .records-transport {
+    display: none;
+  }
+  .records-mobile-player {
+    display: grid;
+    gap: clamp(12px, 2.6vh, 22px);
+    min-height: calc(100dvh - 112px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    padding: 10px clamp(18px, 6vw, 30px) 22px;
+    align-content: center;
+    overflow-x: hidden;
+  }
+  .records-mobile-title {
+    display: grid;
+    gap: 2px;
+    text-align: center;
+  }
+  .records-mobile-title small,
+  .records-mobile-title p {
+    margin: 0;
+    color: rgba(245, 222, 184, .72);
+  }
+  .records-mobile-title h3 {
+    margin: 0;
+    color: #fff0c8;
+    font-size: clamp(23px, 7vw, 34px);
+    line-height: 1.08;
+    overflow-wrap: anywhere;
+  }
+  .records-mobile-artwork {
+    position: relative;
+    display: grid;
+    place-items: center;
+    justify-self: center;
+    width: min(78vw, 340px);
+    min-height: min(78vw, 340px);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    touch-action: manipulation;
+    transition: transform .22s ease, opacity .22s ease;
+  }
+  .records-mobile-artwork:active {
+    transform: scale(.98);
+  }
+  .records-mobile-artwork .record-disc.personal,
+  .records-mobile-artwork .cover-visual {
+    width: min(78vw, 330px);
+    height: min(78vw, 330px);
+  }
+  .records-mobile-artwork .tone-arm.personal {
+    right: 10px;
+    top: 42px;
+  }
+  .records-mobile-lyrics {
+    display: grid;
+    gap: 6px;
+    min-height: 96px;
+    align-content: center;
+    text-align: center;
+  }
+  .records-mobile-lyrics p {
+    min-height: 1.35em;
+    margin: 0;
+    color: rgba(245, 222, 184, .58);
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+  .records-mobile-lyrics p.active {
+    color: #fff0c8;
+    font-size: clamp(20px, 5.5vw, 27px);
+    font-weight: 700;
+    text-shadow: 0 0 18px rgba(244, 198, 111, .26);
+  }
+  .records-mobile-progress {
+    grid-template-columns: 48px minmax(0, 1fr) 48px;
+    font-size: 14px;
+  }
+  .records-mobile-progress input {
+    min-width: 0;
+    min-height: 32px;
+  }
+  .records-mobile-controls {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(44px, 1fr));
+    gap: 4px;
+    align-items: center;
+  }
+  .records-mobile-controls .icon-button {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0;
+    font-size: 20px;
+  }
+  .records-mobile-controls .icon-button.primary {
+    min-height: 58px;
+    min-width: 58px;
+    border-radius: 50%;
+    font-size: 26px;
+  }
+  .records-mobile-more {
+    position: fixed;
+    top: max(78px, calc(env(safe-area-inset-top) + 58px));
+    right: 14px;
+    z-index: 6;
+    width: min(260px, calc(100vw - 28px));
+    padding: 12px;
+    border: 1px solid rgba(224, 185, 117, .4);
+    border-radius: 8px;
+    background: rgba(38, 27, 16, .94);
+    box-shadow: 0 20px 50px rgba(0,0,0,.38);
+    backdrop-filter: blur(8px);
+  }
+  .records-mobile-more.open {
+    display: grid;
+    gap: 10px;
+  }
+  .records-song-sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
+    max-height: min(78dvh, 680px);
+    padding: 10px 18px max(18px, env(safe-area-inset-bottom));
+    border: 1px solid rgba(224, 185, 117, .38);
+    border-bottom: 0;
+    border-radius: 22px 22px 0 0;
+    background: rgba(31, 20, 10, .96);
+    box-shadow: 0 -24px 60px rgba(0,0,0,.46);
+    backdrop-filter: blur(10px);
+    overflow: auto;
+  }
+  .records-song-sheet.open {
+    display: grid;
+    gap: 12px;
+  }
+  .sheet-handle {
+    justify-self: center;
+    width: 58px;
+    height: 5px;
+    border-radius: 999px;
+    background: rgba(245, 222, 184, .28);
+  }
+  .records-song-sheet-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+  }
+  .records-song-sheet-head h3 {
+    margin: 0;
+    color: #fff0c8;
+    font-size: 24px;
+  }
+  .records-song-tools {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+  }
+  .records-song-sheet .personal-list {
+    max-height: none;
+    display: grid;
+    gap: 8px;
+  }
+  .record-list-row {
+    grid-template-columns: minmax(0, 1fr) 44px;
+  }
+  .record-row-menu-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .records-song-menu {
+    top: 42px;
+    max-width: calc(100vw - 44px);
+  }
+  .records-library input[type="search"],
+  .records-library select,
+  .metadata-edit input,
+  .records-song-tools input,
+  .records-song-tools select {
+    min-width: 0;
+    max-width: 100%;
   }
 }
 @media (max-width: 860px) {
