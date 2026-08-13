@@ -128,6 +128,7 @@ export class WalkBackHomeApp {
   private activeScrapbookEntryId = "";
   private selectedScrapbookElementId = "";
   private journalMoreMenuOpen = false;
+  private journalMoodSheetOpen = false;
   private selectedTimelineEntryIds = new Set<string>();
   private timelineSort: DiaryTimelineSort = "date-desc";
   private timelineSearch = "";
@@ -149,6 +150,7 @@ export class WalkBackHomeApp {
   private recordsPanelOpen = false;
   private recordsSongSheetOpen = false;
   private recordsMoreMenuOpen = false;
+  private recordsScrollTop = 0;
   private activeRecordMenuTrackId = "";
   private pendingDeleteTrackId = "";
   private lyricsDrag: { offsetX: number; offsetY: number } | null = null;
@@ -282,9 +284,15 @@ export class WalkBackHomeApp {
     if (action === "journal-edit-current") this.showDiaryEditor(target.dataset.id);
     if (action === "journal-more-menu") {
       this.journalMoreMenuOpen = !this.journalMoreMenuOpen;
+      this.journalMoodSheetOpen = false;
       const entryId = target.dataset.id ?? "";
       if (this.overlay.querySelector(".journal-reading-page")) this.showDiaryReader(entryId);
       else this.showDiaryEditor(entryId);
+    }
+    if (action === "journal-mood-entry") {
+      this.journalMoodSheetOpen = !this.journalMoodSheetOpen;
+      this.journalMoreMenuOpen = false;
+      this.showDiaryEditor(target.dataset.id);
     }
     if (action === "change-month-cover") this.overlay.querySelector<HTMLInputElement>("#month-cover-input")?.click();
     if (action === "delete-diary-entry") this.deleteDiaryEntry(target.dataset.id ?? "");
@@ -326,6 +334,7 @@ export class WalkBackHomeApp {
     if (action === "reflection-wall-filter") this.setReflectionWallFilter(target.dataset.filter as ReflectionWallFilter);
     if (action === "room-diary") this.roomDiary();
     if (action === "room-records") this.showRecords();
+    if (action === "close-records") this.closeRecords();
     if (action === "room-residue") this.inspectRoomResidue();
     if (action === "select-vinyl") void this.selectVinyl(target.dataset.record ?? "");
     if (action === "vinyl-pause") void this.pauseVinyl();
@@ -336,17 +345,20 @@ export class WalkBackHomeApp {
     if (action === "music-visual") this.setMusicVisualMode(target.dataset.mode === "cover" ? "cover" : "vinyl");
     if (action === "toggle-record-artwork") this.toggleMusicVisualMode();
     if (action === "toggle-records-more-menu") {
+      this.preserveRecordsScroll();
       this.recordsMoreMenuOpen = !this.recordsMoreMenuOpen;
       this.activeRecordMenuTrackId = "";
       void this.showRecords();
     }
     if (action === "toggle-records-song-sheet") {
+      this.preserveRecordsScroll();
       this.recordsSongSheetOpen = !this.recordsSongSheetOpen;
       this.recordsMoreMenuOpen = false;
       this.activeRecordMenuTrackId = "";
       void this.showRecords();
     }
     if (action === "toggle-record-song-menu") {
+      this.preserveRecordsScroll();
       const trackId = target.dataset.track ?? "";
       this.activeRecordMenuTrackId = this.activeRecordMenuTrackId === trackId ? "" : trackId;
       this.recordsMoreMenuOpen = false;
@@ -2312,6 +2324,7 @@ export class WalkBackHomeApp {
   private showDiaryEditor(editId = ""): void {
     if (!editId) return this.showTimeline();
     const moreOpen = this.journalMoreMenuOpen;
+    const moodSheetOpen = this.journalMoodSheetOpen;
     const editing = this.diaryEntries.find((entry) => entry.id === editId) ?? this.diaryEntries[0];
     const today = new Date().toISOString().slice(0, 10);
     const dateValue = editing?.date ?? today;
@@ -2391,7 +2404,8 @@ export class WalkBackHomeApp {
         <div class="integrated-tools journal-photo-dock">
           <aside class="photo-tray">${photos}</aside>
         </div>
-        <div class="mobile-editor-toolbar"><label class="journal-upload" title="Add image">＋<input id="diary-mobile-photo-input" type="file" accept="image/*"></label><label class="journal-upload" title="Add video">▶<input id="diary-video-input" type="file" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"></label><button data-action="journal-more-menu" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="More journal options">⋮</button><button data-action="save-diary-entry" data-id="${this.escapeHtml(editing?.id ?? "")}">Done</button></div>
+        <div class="mobile-editor-toolbar"><button data-action="journal-mood-entry" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="Choose mood">${this.escapeHtml(selectedMood)}</button><label class="journal-upload" title="Add image">＋<input id="diary-mobile-photo-input" type="file" accept="image/*"></label><label class="journal-upload" title="Add video">▶<input id="diary-video-input" type="file" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"></label><button data-action="journal-more-menu" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="More journal options">⋮</button><button data-action="save-diary-entry" data-id="${this.escapeHtml(editing?.id ?? "")}">Done</button></div>
+        <div class="journal-mood-sheet ${moodSheetOpen ? "open" : ""}" aria-label="Choose journal mood">${moodButtons}</div>
         <div class="journal-lower-tools"><p class="autosave-state" id="diary-save-state">Saved</p><label class="journal-kind">Memory<select id="diary-memory-kind"><option value="diary" ${editing?.memoryKind === "diary" ? "selected" : ""}>Diary only</option><option value="fragment" ${editing?.memoryKind === "fragment" ? "selected" : ""}>Memory Fragment</option><option value="chapter" ${editing?.memoryKind === "chapter" ? "selected" : ""}>Memory Chapter</option></select></label><button data-action="show-import-diary">Import Existing Diary</button><button data-action="open-timeline">Timeline</button><button data-action="journal-books">Books</button><button data-action="open-map">Walk Back Home</button><button data-action="close">Close</button></div>
       </div>`;
     this.focusStage();
@@ -2404,6 +2418,7 @@ export class WalkBackHomeApp {
     this.applyDiaryLibrary(upsertDiaryPageDraft(this.makeDiaryLibrary(), entry));
     this.selectedChapter = entry.title;
     this.journalMoreMenuOpen = false;
+    this.journalMoodSheetOpen = false;
     this.showDiaryReader(entry.id);
     this.showToast(index >= 0 ? "Diary updated" : "Diary entry added");
     this.autosave();
@@ -2651,6 +2666,7 @@ export class WalkBackHomeApp {
     const draft = this.readDiaryDraftFromOverlay(entryId);
     if (!draft) return;
     this.applyDiaryLibrary(upsertDiaryPageDraft(this.makeDiaryLibrary(), { ...draft, mood }));
+    this.journalMoodSheetOpen = false;
     this.showDiaryEditor(draft.id);
     this.autosave();
   }
@@ -3430,6 +3446,30 @@ export class WalkBackHomeApp {
     this.focusStage();
   }
 
+  private preserveRecordsScroll(): void {
+    const panel = this.overlay.querySelector<HTMLElement>(".records-panel");
+    this.recordsScrollTop = panel?.scrollTop ?? this.recordsScrollTop;
+  }
+
+  private restoreRecordsScroll(): void {
+    const scrollTop = this.recordsScrollTop;
+    requestAnimationFrame(() => {
+      const panel = this.overlay.querySelector<HTMLElement>(".records-panel");
+      if (panel) panel.scrollTop = scrollTop;
+    });
+  }
+
+  private closeRecords(): void {
+    this.overlay.innerHTML = "";
+    this.recordsPanelOpen = false;
+    this.recordsSongSheetOpen = false;
+    this.recordsMoreMenuOpen = false;
+    this.activeRecordMenuTrackId = "";
+    this.pendingDeleteTrackId = "";
+    this.recordsScrollTop = 0;
+    this.updatePersonalMusicOverlay();
+  }
+
   private async showRecords(): Promise<void> {
     this.recordsPanelOpen = true;
     const current = this.currentPersonalTrack();
@@ -3460,7 +3500,7 @@ export class WalkBackHomeApp {
     const deleteTrack = this.pendingDeleteTrackId ? this.musicLibrary.tracks.find((track) => track.id === this.pendingDeleteTrackId) : undefined;
     this.overlay.innerHTML = `
       <div class="modal game-panel records-panel personal-records ${background ? "has-bg" : ""}" ${bgStyle}>
-        <header class="records-header"><div><h2>My Records</h2><p>Personal songs for the room and forest.</p></div><div class="records-header-actions"><button class="records-mobile-more-button" data-action="toggle-records-more-menu" aria-label="More Records actions">⋮</button><button data-action="close" aria-label="Close Records">Close</button></div></header>
+        <header class="records-header"><div><h2>My Records</h2><p>Personal songs for the room and forest.</p></div><div class="records-header-actions"><button class="records-mobile-more-button" data-action="toggle-records-more-menu" aria-label="More Records actions">⋮</button><button class="records-mobile-close-button" data-action="close-records" aria-label="Close Records">×</button><button data-action="close" aria-label="Close Records">Close</button></div></header>
         <section class="records-mobile-player" aria-label="Mobile Records player">
           <div class="records-mobile-title">
             <small>${current?.source === "user" ? "My Music" : "Walk Back Home"}</small>
@@ -3535,6 +3575,7 @@ export class WalkBackHomeApp {
         </div>` : ""}
       </div>`;
     this.focusStage();
+    this.restoreRecordsScroll();
   }
 
   private renderRecordsLibraryRows(currentId?: string): string {
@@ -3563,7 +3604,7 @@ export class WalkBackHomeApp {
     this.personalPlayer.selectedTrackId = recordId;
     this.personalPlayer.playing = true;
     this.personalPlayer.playbackPosition = startPosition;
-    this.recordsSongSheetOpen = false;
+    this.preserveRecordsScroll();
     this.recordsMoreMenuOpen = false;
     this.activeRecordMenuTrackId = "";
     this.pendingPersonalSeek = null;
@@ -3577,6 +3618,7 @@ export class WalkBackHomeApp {
   }
 
   private async pauseVinyl(): Promise<void> {
+    this.preserveRecordsScroll();
     if (!this.personalPlayer.selectedTrackId) this.personalPlayer.selectedTrackId = this.availableVinylRecords[0]?.id;
     this.personalPlayer.playing = !this.personalPlayer.playing;
     this.room.vinylPlaying = this.personalPlayer.playing;
@@ -3672,6 +3714,7 @@ export class WalkBackHomeApp {
   }
 
   private async playAdjacentPersonalTrack(direction: -1 | 1): Promise<void> {
+    this.preserveRecordsScroll();
     const tracks = this.visibleMusicTracks();
     if (!tracks.length) return;
     const current = this.currentPersonalTrack();
@@ -3681,6 +3724,7 @@ export class WalkBackHomeApp {
 
   private toggleMusicShuffle(): void {
     this.personalPlayer.shuffleEnabled = !this.personalPlayer.shuffleEnabled;
+    this.preserveRecordsScroll();
     if (this.recordsPanelOpen) void this.showRecords();
     this.updatePersonalMusicOverlay();
     this.autosave();
@@ -3689,24 +3733,28 @@ export class WalkBackHomeApp {
   private toggleMusicRepeatOne(): void {
     this.personalPlayer.repeatOne = !this.personalPlayer.repeatOne;
     this.audio.setLoop(this.personalPlayer.repeatOne);
+    this.preserveRecordsScroll();
     if (this.recordsPanelOpen) void this.showRecords();
     this.updatePersonalMusicOverlay();
     this.autosave();
   }
 
   private setMusicVisualMode(mode: "vinyl" | "cover"): void {
+    this.preserveRecordsScroll();
     this.personalPlayer.visualMode = mode;
     void this.showRecords();
     this.autosave();
   }
 
   private toggleMusicVisualMode(): void {
+    this.preserveRecordsScroll();
     this.personalPlayer.visualMode = this.personalPlayer.visualMode === "vinyl" ? "cover" : "vinyl";
     void this.showRecords();
     this.autosave();
   }
 
   private toggleFloatingLyrics(): void {
+    this.preserveRecordsScroll();
     this.personalPlayer.lyricsVisible = !this.personalPlayer.lyricsVisible;
     void this.showRecords();
     this.updatePersonalMusicOverlay();
