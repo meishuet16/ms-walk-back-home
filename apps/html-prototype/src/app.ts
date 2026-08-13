@@ -1874,7 +1874,7 @@ export class WalkBackHomeApp {
       <button data-action="timeline-select-all">Select All</button>
       <button data-action="timeline-clear-selected">Clear Selection</button>
       <button data-action="timeline-request-delete-selected">Delete Selected</button>
-    </div></details>`;
+    </div></details>${this.renderTimelineDatePicker(selectedDate)}`;
   }
 
   private renderTimelineDeleteConfirmation(): string {
@@ -1902,6 +1902,23 @@ export class WalkBackHomeApp {
     const weekday = parsed.toLocaleDateString("en-US", { weekday: "long" });
     const month = parsed.toLocaleDateString("en-US", { month: "long", year: "numeric" });
     return `${day} ${weekday} · ${month}`;
+  }
+
+  private renderTimelineDatePicker(selectedDate: string): string {
+    if (this.timelineDateScope === "all") return "";
+    const monthKey = /^\d{4}-\d{2}-\d{2}$/.test(selectedDate) ? selectedDate.slice(0, 7) : this.timelineCursorMonth().key;
+    const [yearText, monthText] = monthKey.split("-");
+    const year = Number(yearText);
+    const month = Number(monthText);
+    const days = new Date(year, month, 0).getDate();
+    const buttons = Array.from({ length: days }, (_, index) => {
+      const day = index + 1;
+      const date = `${monthKey}-${String(day).padStart(2, "0")}`;
+      const hasEntries = this.timelineDateHasEntries(date);
+      const selected = selectedDate === date;
+      return `<button class="${selected ? "selected" : ""} ${hasEntries ? "" : "no-result"}" data-action="timeline-pick-date" data-date="${date}" ${hasEntries ? "" : "disabled"}>${day}</button>`;
+    }).join("");
+    return `<div class="timeline-date-picker" aria-label="Dates with diary results"><span>${this.escapeHtml(monthLabel(year, month))}</span><div>${buttons}</div></div>`;
   }
 
   private timelineDateHasEntries(date: string): boolean {
@@ -2395,7 +2412,7 @@ export class WalkBackHomeApp {
     const media = diaryMediaItems(entry);
     const mediaHtml = media.length ? `<div class="journal-reading-media count-${Math.min(media.length, 4)}">${media.map((item) => item.type === "video"
       ? `<video class="journal-video-block" controls preload="metadata" src="${this.escapeHtml(item.src)}" aria-label="${this.escapeHtml(item.caption ?? "Journal video")}"></video>`
-      : `<figure><img src="${this.escapeHtml(item.src)}" alt=""></figure>`).join("")}</div>` : "";
+      : `<figure><span class="journal-reading-photo-frame" style="${this.journalMediaCropStyle(item.crop)}${this.journalMediaCropAspectStyle(item.crop)}"><img class="journal-inline-photo" src="${this.escapeHtml(item.src)}" alt=""></span></figure>`).join("")}</div>` : "";
     const moodMeta = entry.mood ? `心情：${entry.mood}` : "";
     this.overlay.innerHTML = `
       <div class="modal game-panel journal-reading-page mood-${entry.mood ?? "calm"}">
@@ -2465,7 +2482,8 @@ export class WalkBackHomeApp {
               <label><span>心情：</span><input id="diary-mood-text" value="${this.escapeHtml(selectedMood)}" placeholder="自定义心情"></label>
               <div class="journal-weekday">${this.escapeHtml(weekday)}</div>
             </div>
-            <label class="journal-body-field"><textarea id="diary-body" rows="12">${this.escapeHtml(editing?.body ?? "")}</textarea><span class="journal-photo-insert-marker">Media inserts at your writing line</span>${inlineMedia}</label>
+            <label class="journal-body-field"><textarea id="diary-body" rows="12">${this.escapeHtml(editing?.body ?? "")}</textarea></label>
+            ${inlineMedia ? `<section class="journal-media-dock"><span class="journal-photo-insert-marker">Media inserts at your writing line</span>${inlineMedia}</section>` : ""}
             <input id="diary-mood" type="hidden" value="${this.escapeHtml(selectedMood)}">
           </div>
           ${elements}
