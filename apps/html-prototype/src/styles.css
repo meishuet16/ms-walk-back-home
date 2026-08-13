@@ -2294,6 +2294,7 @@ canvas {
   align-items: center;
 }
 .records-mobile-more-button,
+.records-mobile-close-button,
 .records-mobile-player,
 .records-mobile-more,
 .records-song-sheet {
@@ -2937,7 +2938,15 @@ canvas {
   .top-menu nav { justify-content: flex-start; }
   .top-menu nav button { padding: 6px 8px; font-size: 14px; }
   .module-grid { grid-template-columns: 1fr; }
-  .touch-controls { display: flex; }
+  .touch-controls { display: none; }
+  #app[data-scene="forest"] .touch-controls,
+  #app[data-scene="labis"] .touch-controls,
+  #app[data-scene="muji-room"] .touch-controls {
+    display: flex;
+  }
+  #app.overlay-open .touch-controls {
+    display: none;
+  }
   .hud {
     align-items: stretch;
     flex-direction: column;
@@ -3540,4 +3549,153 @@ canvas {
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
+@media (max-width: 700px) {
+  .overlay {
+    position: fixed;
+    padding: 0;
+    place-items: stretch;
+  }
+  .overlay:empty {
+    display: none;
+  }
+  .records-panel.personal-records,
+  .journal-panel,
+  .journal-modal,
+  .journal-reading-page,
+  .reflection-wall-modal {
+    inset: 0;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    max-width: none;
+    min-height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    transform: none;
+    overflow: auto;
+  }
+  .monthly-reader,
+  .monthly-books,
+  .timeline-panel {
+    min-height: 100dvh;
+  }
+  .records-panel.personal-records {
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+  .records-header {
+    position: sticky;
+    top: 0;
+    z-index: 7;
+  }
+  .records-mobile-close-button {
+    display: inline-grid;
+    place-items: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    border-radius: 50%;
+    border-color: rgba(255, 235, 194, .28);
+    background: rgba(255, 247, 232, .12);
+    color: #fff2c8;
+    font-size: 30px;
+    line-height: 1;
+  }
+  .records-mobile-controls .icon-button.selected {
+    color: #2d2117;
+    background: #ffd184;
+    box-shadow: 0 0 0 2px rgba(255, 238, 202, .72), 0 0 22px rgba(255, 209, 132, .42);
+  }
+  .records-mobile-more.open {
+    position: fixed;
+    top: max(70px, calc(env(safe-area-inset-top) + 56px));
+    right: 12px;
+    left: auto;
+    z-index: 44;
+    display: grid;
+    max-height: calc(100dvh - 96px);
+    overflow: auto;
+  }
+  .records-song-sheet.open {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 44;
+    display: grid;
+    max-height: min(74dvh, 680px);
+    overflow: auto;
+  }
+  .records-song-menu.open {
+    position: fixed;
+    top: max(112px, calc(env(safe-area-inset-top) + 92px));
+    right: 14px;
+    z-index: 45;
+    display: grid;
+    max-width: calc(100vw - 28px);
+  }
+  .journal-panel {
+    padding: env(safe-area-inset-top) 18px max(24px, env(safe-area-inset-bottom));
+    background: linear-gradient(180deg, #fbf8ef, #f1e7d8);
+    color: #2a2118;
+  }
+  .journal-archive-header {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    margin: calc(env(safe-area-inset-top) * -1) -18px 18px;
+    padding: calc(14px + env(safe-area-inset-top)) 18px 12px;
+    background: rgba(251, 248, 239, .94);
+    backdrop-filter: blur(10px);
+  }
+  .monthly-reader .pdf-cover-preview {
+    min-height: min(56dvh, 520px);
+  }
+  .reflection-wall-modal {
+    padding: env(safe-area-inset-top) 14px max(18px, env(safe-area-inset-bottom));
+    background: linear-gradient(180deg, #fbf8ef, #ede0cc);
+  }
+  .reflection-wall-surface {
+    min-width: 100%;
+    min-height: calc(100dvh - 180px);
+  }
+  .mobile-editor-toolbar {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .journal-mood-sheet {
+    display: none;
+    position: fixed;
+    left: 50%;
+    bottom: calc(88px + env(safe-area-inset-bottom));
+    z-index: 45;
+    transform: translateX(-50%);
+    width: min(82vw, 420px);
+    padding: 14px;
+    border-radius: 30px;
+    background: rgba(255, 253, 239, .96);
+    box-shadow: 0 18px 60px rgba(35, 27, 18, .22);
+  }
+  .journal-mood-sheet.open {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .journal-mood-sheet .mood-option {
+    min-height: 74px;
+    padding: 6px 4px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    color: #6b5b48;
+  }
+  .touch-stick {
+    width: 116px;
+    height: 116px;
+  }
+  .touch-action {
+    width: 66px;
+    height: 66px;
+  }
 }
