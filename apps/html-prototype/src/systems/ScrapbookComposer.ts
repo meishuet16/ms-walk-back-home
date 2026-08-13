@@ -1,4 +1,4 @@
-import type { DiaryEntry, DiaryPhoto, ScrapbookElement, ScrapbookLayout } from "../types.js";
+import type { DiaryEntry, DiaryMedia, DiaryPhoto, ScrapbookElement, ScrapbookLayout } from "../types.js";
 
 const defaultLayout = (): ScrapbookLayout => ({ elements: [] });
 
@@ -10,6 +10,7 @@ function withLayout(entry: DiaryEntry): DiaryEntry {
   return {
     ...entry,
     photos: entry.photos ?? [],
+    media: entry.media ?? [],
     scrapbookLayout: entry.scrapbookLayout ?? defaultLayout()
   };
 }
@@ -70,6 +71,30 @@ export function addPhotoElement(entry: DiaryEntry, photoId: string, elementId: s
       ]
     }
   };
+}
+
+export function addJournalMedia(entry: DiaryEntry, media: DiaryMedia): DiaryEntry {
+  const base = withLayout(entry);
+  const nextMedia = base.media!.some((item) => item.id === media.id)
+    ? base.media!.map((item) => item.id === media.id ? media : item)
+    : [...base.media!, media];
+  return { ...base, media: nextMedia };
+}
+
+export function removeJournalMedia(entry: DiaryEntry, mediaId: string): DiaryEntry {
+  const base = withLayout(entry);
+  return { ...base, media: base.media!.filter((media) => media.id !== mediaId) };
+}
+
+export function diaryMediaItems(entry: DiaryEntry): DiaryMedia[] {
+  const photos = (entry.photos ?? []).map((photo): DiaryMedia => ({
+    id: photo.id,
+    type: "image",
+    storageKey: photo.storageKey,
+    src: photo.src,
+    caption: photo.caption
+  }));
+  return [...photos, ...(entry.media ?? [])];
 }
 
 export function attachPhotoAndPlaceOnPage(entry: DiaryEntry, photo: DiaryPhoto, elementId: string): DiaryEntry {

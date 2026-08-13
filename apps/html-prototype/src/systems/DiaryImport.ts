@@ -143,6 +143,7 @@ export function normalizeDiaryEntry(entry: Partial<DiaryEntry> & Pick<DiaryEntry
     mood: normalizeDiaryMood(entry.mood),
     chapterId: entry.memoryKind === "chapter" ? entry.chapterId || entry.id : undefined,
     photos: entry.photos ?? [],
+    media: entry.media ?? [],
     scrapbookLayout: entry.scrapbookLayout ?? { elements: [] }
   };
 }

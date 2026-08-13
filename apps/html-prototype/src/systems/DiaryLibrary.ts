@@ -9,7 +9,8 @@ export function createDiaryLibrary(entries: DiaryEntry[] = [], legacyArtifacts: 
     version: 1,
     savedAt: new Date().toISOString(),
     entries,
-    legacyArtifacts
+    legacyArtifacts,
+    monthlyCovers: {}
   };
 }
 

@@ -51,6 +51,7 @@ export type DiaryEntry = {
   mood?: DiaryMood;
   chapterId?: string;
   photos?: DiaryPhoto[];
+  media?: DiaryMedia[];
   scrapbookLayout?: ScrapbookLayout;
 };
 
@@ -62,6 +63,23 @@ export type DiaryPhoto = {
   storageKey?: string;
   src: string;
   caption?: string;
+};
+
+export type DiaryMedia = {
+  id: string;
+  type: "image" | "video";
+  storageKey?: string;
+  src: string;
+  caption?: string;
+  mimeType?: string;
+  posterSrc?: string;
+};
+
+export type JournalBookCover = {
+  storageKey?: string;
+  src: string;
+  caption?: string;
+  updatedAt: string;
 };
 
 export type CropData = {
@@ -200,6 +218,7 @@ export type DiaryLibraryState = {
   savedAt: string;
   entries: DiaryEntry[];
   legacyArtifacts: string[];
+  monthlyCovers?: Record<string, JournalBookCover>;
 };
 
 export type JourneyState = {
