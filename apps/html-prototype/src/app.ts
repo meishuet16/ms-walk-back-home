@@ -20,7 +20,7 @@ import { adjacentMonthKey, hasMoreTimelineEntries, journalBatchSize, makeMonthly
 import { createBackupBundle, parseBackupBundle, walkBackupFilename, type BackupBlobEntry } from "./systems/BackupManager.js";
 import { MusicBlobStore } from "./systems/MusicBlobStore.js";
 import { ParticleSystem } from "./systems/ParticleSystem.js";
-import { activeLyricIndexAt, adjacentTrackIdForControl, clampLyricsOverlay, createDefaultPersonalPlayerState, filterAndSortMusic, isBuiltInTrackId, nextTrackIdForPlayback, normalizePlaybackMode, parseLrc, personalMusicShouldPlayInScene } from "./systems/PersonalMusic.js";
+import { activeLyricIndexAt, adjacentTrackIdForControl, clampLyricsOverlay, createDefaultPersonalPlayerState, filterAndSortMusic, isBuiltInTrackId, lyricWindowForTime, nextTrackIdForPlayback, normalizePlaybackMode, parseLrc, personalMusicShouldPlayInScene, removeUserMusicTrack } from "./systems/PersonalMusic.js";
 import { changeReflectionPaper, createChapterReflectionNote, createReflectionNote, createReflectionWallState, deleteReflectionNote, migrateLegacyReflectionWall, moveReflectionNote, reflectionPaperStyles, toggleReflectionNoteFlag, updateReflectionNote, visibleReflectionNotes } from "./systems/ReflectionWall.js";
 import { drawSceneActor } from "./systems/SceneActorRenderer.js";
 import { applyChoice } from "./systems/TendencySystem.js";
@@ -143,6 +143,10 @@ export class WalkBackHomeApp {
   private personalPlayer: PersonalPlayerState = createDefaultPersonalPlayerState();
   private musicBlobStore = new MusicBlobStore();
   private recordsPanelOpen = false;
+  private recordsSongSheetOpen = false;
+  private recordsMoreMenuOpen = false;
+  private activeRecordMenuTrackId = "";
+  private pendingDeleteTrackId = "";
   private lyricsDrag: { offsetX: number; offsetY: number } | null = null;
   private pendingPersonalSeek: number | null = null;
   private settings = { rain: true, muted: false, volume: 0.45, compact: false, reducedMotion: false, musicEnabled: true, musicScene: "bakery" as MusicScene };
@@ -318,8 +322,32 @@ export class WalkBackHomeApp {
     if (action === "music-shuffle") this.toggleMusicShuffle();
     if (action === "music-repeat-one") this.toggleMusicRepeatOne();
     if (action === "music-visual") this.setMusicVisualMode(target.dataset.mode === "cover" ? "cover" : "vinyl");
+    if (action === "toggle-record-artwork") this.toggleMusicVisualMode();
+    if (action === "toggle-records-more-menu") {
+      this.recordsMoreMenuOpen = !this.recordsMoreMenuOpen;
+      this.activeRecordMenuTrackId = "";
+      void this.showRecords();
+    }
+    if (action === "toggle-records-song-sheet") {
+      this.recordsSongSheetOpen = !this.recordsSongSheetOpen;
+      this.recordsMoreMenuOpen = false;
+      this.activeRecordMenuTrackId = "";
+      void this.showRecords();
+    }
+    if (action === "toggle-record-song-menu") {
+      const trackId = target.dataset.track ?? "";
+      this.activeRecordMenuTrackId = this.activeRecordMenuTrackId === trackId ? "" : trackId;
+      this.recordsMoreMenuOpen = false;
+      void this.showRecords();
+    }
+    if (action === "request-delete-user-track") this.requestDeleteUserTrack(target.dataset.track ?? "");
+    if (action === "cancel-delete-user-track") {
+      this.pendingDeleteTrackId = "";
+      void this.showRecords();
+    }
+    if (action === "confirm-delete-user-track") void this.confirmDeleteUserTrack();
     if (action === "toggle-floating-lyrics") this.toggleFloatingLyrics();
-    if (action === "delete-user-track") void this.deleteUserTrack(target.dataset.track ?? "");
+    if (action === "delete-user-track") this.requestDeleteUserTrack(target.dataset.track ?? "");
     if (action === "remove-player-background") void this.removePlayerBackground();
     if (action === "backup-sync") this.showBackupSync();
     if (action === "download-backup") void this.downloadBackup();
@@ -337,6 +365,10 @@ export class WalkBackHomeApp {
       this.overlay.classList.remove("dialogue-open");
       this.overlay.innerHTML = "";
       this.recordsPanelOpen = false;
+      this.recordsSongSheetOpen = false;
+      this.recordsMoreMenuOpen = false;
+      this.activeRecordMenuTrackId = "";
+      this.pendingDeleteTrackId = "";
       this.labisLessonChoiceIndex = -1;
       this.labisLessonLeadLines = [];
       this.updatePersonalMusicOverlay();
@@ -2315,17 +2347,17 @@ export class WalkBackHomeApp {
       target.classList.toggle("no-results", !this.timelineDateInputHasEntries(target.value));
       return;
     }
-    if (target instanceof HTMLInputElement && target.id === "music-search") {
+    if (target instanceof HTMLInputElement && target.dataset.musicSearch !== undefined) {
       this.personalPlayer.librarySearch = target.value;
       void this.showRecords();
       this.save.savePersonalPlayer(this.personalPlayer);
       return;
     }
-    if (target instanceof HTMLInputElement && target.id === "music-seek") {
+    if (target instanceof HTMLInputElement && target.dataset.musicSeek !== undefined) {
       this.seekPersonalMusic(Number(target.value));
       return;
     }
-    if (target instanceof HTMLInputElement && (target.id === "music-title" || target.id === "music-artist")) {
+    if (target instanceof HTMLInputElement && (target.dataset.musicTitle !== undefined || target.dataset.musicArtist !== undefined)) {
       this.updateCurrentUserTrackMetadata();
       return;
     }
@@ -2811,8 +2843,8 @@ export class WalkBackHomeApp {
   private updateCurrentUserTrackMetadata(): void {
     const trackId = this.personalPlayer.selectedTrackId;
     if (!trackId) return;
-    const title = this.overlay.querySelector<HTMLInputElement>("#music-title")?.value.trim() || "Untitled Song";
-    const artist = this.overlay.querySelector<HTMLInputElement>("#music-artist")?.value.trim() || "My Music";
+    const title = Array.from(this.overlay.querySelectorAll<HTMLInputElement>('[data-music-field="title"]')).find((input) => input.matches(":focus") || input.offsetParent !== null)?.value.trim() || "Untitled Song";
+    const artist = Array.from(this.overlay.querySelectorAll<HTMLInputElement>('[data-music-field="artist"]')).find((input) => input.matches(":focus") || input.offsetParent !== null)?.value.trim() || "My Music";
     if (this.currentPersonalTrack()?.source === "user") {
       this.musicLibrary = {
         ...this.musicLibrary,
@@ -2828,21 +2860,35 @@ export class WalkBackHomeApp {
     this.autosave();
   }
 
-  private async deleteUserTrack(trackId: string): Promise<void> {
+  private requestDeleteUserTrack(trackId: string): void {
     const track = this.musicLibrary.tracks.find((item) => item.id === trackId);
     if (!track) return;
-    if (!confirm(`Delete "${track.title}" from My Music?`)) return;
-    await this.musicBlobStore.deleteBlob(track.audioBlobKey);
-    if (track.coverBlobKey) await this.musicBlobStore.deleteBlob(track.coverBlobKey);
-    this.musicLibrary = { ...this.musicLibrary, tracks: this.musicLibrary.tracks.filter((item) => item.id !== trackId) };
+    this.pendingDeleteTrackId = track.id;
+    this.activeRecordMenuTrackId = "";
+    this.recordsMoreMenuOpen = false;
+    void this.showRecords();
+  }
+
+  private async confirmDeleteUserTrack(): Promise<void> {
+    const trackId = this.pendingDeleteTrackId;
+    const fallbackIds = this.availableVinylRecords.map((record) => record.id);
+    const result = removeUserMusicTrack(this.musicLibrary, trackId, fallbackIds);
+    if (!result.removed) return;
+    for (const key of result.blobKeysToDelete) await this.musicBlobStore.deleteBlob(key);
+    this.musicLibrary = result.library;
     this.save.saveMusicLibrary(this.musicLibrary);
     if (this.personalPlayer.selectedTrackId === trackId) {
-      this.personalPlayer.selectedTrackId = this.availableVinylRecords[0]?.id;
-      this.personalPlayer.playing = false;
       this.audio.pause();
+      this.personalPlayer.playbackPosition = 0;
+      this.personalPlayer.playing = false;
+      this.personalPlayer.selectedTrackId = result.nextTrackId;
+      this.room.vinylPlaying = false;
+      if (result.nextTrackId) this.room.selectedVinylId = result.nextTrackId;
     }
+    this.pendingDeleteTrackId = "";
+    this.activeRecordMenuTrackId = "";
     await this.showRecords();
-    this.showToast("Imported song deleted");
+    this.showToast("Record removed from this app");
     this.autosave();
   }
 
@@ -3246,20 +3292,56 @@ export class WalkBackHomeApp {
     const lyricRows = lyrics.length
       ? lyrics.map((line, index) => `<p class="${index === activeLyric ? "active" : Math.abs(index - activeLyric) <= 2 ? "near" : ""}">${this.escapeHtml(line.text)}</p>`).join("")
       : `<p class="empty-lyrics">Add .lrc lyrics to let words drift with the room.</p>`;
-    const libraryRows = this.visibleMusicTracks().map((track) => {
-      const selected = track.id === current?.id;
-      const source = track.source === "user" ? "My Music" : "Walk Back Home";
-      return `<button class="${selected ? "selected" : ""}" data-action="select-vinyl" data-record="${this.escapeHtml(track.id)}"><span>${selected && this.personalPlayer.playing ? "◉ " : ""}${this.escapeHtml(track.title)}</span><small>${this.escapeHtml(track.artist || source)}</small></button>`;
-    }).join("");
+    const mobileLyricRows = lyrics.length
+      ? lyricWindowForTime(lyrics, currentTime).map((item) => `<p class="${item.state}">${this.escapeHtml(item.line?.text ?? "")}</p>`).join("")
+      : `<p class="empty-lyrics">Add lyrics from the More menu.</p>`;
+    const libraryRows = this.renderRecordsLibraryRows(current?.id);
     const visualStyle = cover ? `--cover:url('${this.escapeHtml(cover)}')` : "";
     const bgStyle = background ? `style="--player-bg:url('${this.escapeHtml(background)}')"` : "";
     const coverInitials = cover ? "" : `<span>${this.escapeHtml(this.trackInitials(current?.title ?? "Music"))}</span>`;
+    const isCoverMode = this.personalPlayer.visualMode === "cover";
+    const artworkHtml = isCoverMode
+      ? `<div class="cover-visual ${cover ? "has-cover" : ""}" style="${visualStyle}">${coverInitials}</div>`
+      : `<div class="record-disc personal ${cover ? "has-cover" : ""} ${this.personalPlayer.playing && !this.settings.reducedMotion ? "playing" : ""}" style="${visualStyle}"><span></span></div><div class="tone-arm personal"></div>`;
+    const maxTime = Math.max(1, duration || current?.duration || 1);
+    const searchSortControls = `
+      <input data-music-search id="music-search" type="search" placeholder="Search songs..." value="${this.escapeHtml(this.personalPlayer.librarySearch)}" aria-label="Search songs">
+      <label>Sort<select id="music-sort" aria-label="Sort music"><option value="recently-added" ${this.personalPlayer.librarySort === "recently-added" ? "selected" : ""}>Recently Added</option><option value="recently-played" ${this.personalPlayer.librarySort === "recently-played" ? "selected" : ""}>Recently Played</option><option value="title" ${this.personalPlayer.librarySort === "title" ? "selected" : ""}>Title A-Z</option><option value="artist" ${this.personalPlayer.librarySort === "artist" ? "selected" : ""}>Artist A-Z</option></select></label>`;
+    const deleteTrack = this.pendingDeleteTrackId ? this.musicLibrary.tracks.find((track) => track.id === this.pendingDeleteTrackId) : undefined;
     this.overlay.innerHTML = `
       <div class="modal game-panel records-panel personal-records ${background ? "has-bg" : ""}" ${bgStyle}>
-        <header class="records-header"><div><h2>My Records</h2><p>Personal songs for the room and forest.</p></div><button data-action="close" aria-label="Close Records">Close</button></header>
+        <header class="records-header"><div><h2>My Records</h2><p>Personal songs for the room and forest.</p></div><div class="records-header-actions"><button class="records-mobile-more-button" data-action="toggle-records-more-menu" aria-label="More Records actions">⋮</button><button data-action="close" aria-label="Close Records">Close</button></div></header>
+        <section class="records-mobile-player" aria-label="Mobile Records player">
+          <div class="records-mobile-title">
+            <small>${current?.source === "user" ? "My Music" : "Walk Back Home"}</small>
+            <h3>${this.escapeHtml(current?.title ?? "Choose a record")}</h3>
+            <p>${this.escapeHtml(current?.artist ?? "No artist set")}</p>
+          </div>
+          <button class="records-mobile-artwork ${this.personalPlayer.visualMode}" data-action="toggle-record-artwork" aria-label="Toggle vinyl or cover artwork">
+            ${artworkHtml}
+          </button>
+          <div class="records-mobile-lyrics" aria-live="off">${mobileLyricRows}</div>
+          <div class="time-row records-mobile-progress"><span data-music-current>${this.formatTime(currentTime)}</span><input data-music-seek id="music-seek" type="range" min="0" max="${maxTime}" step="0.1" value="${Math.min(currentTime, maxTime)}" aria-label="Seek"><span data-music-duration>${this.formatTime(duration || current?.duration || 0)}</span></div>
+          <div class="records-mobile-controls">
+            <button class="icon-button ${this.personalPlayer.shuffleEnabled ? "selected" : ""}" data-action="music-shuffle" aria-label="Shuffle" title="Shuffle">⤨</button>
+            <button class="icon-button" data-action="music-prev" aria-label="Previous" title="Previous">⏮</button>
+            <button class="icon-button primary" data-action="vinyl-pause" aria-label="${this.personalPlayer.playing ? "Pause" : "Play"}" title="${this.personalPlayer.playing ? "Pause" : "Play"}">${this.personalPlayer.playing ? "⏸" : "▶"}</button>
+            <button class="icon-button" data-action="music-next" aria-label="Next" title="Next">⏭</button>
+            <button class="icon-button ${this.personalPlayer.repeatOne ? "selected" : ""}" data-action="music-repeat-one" aria-label="Repeat one" title="Repeat one">↻</button>
+            <button class="icon-button" data-action="toggle-records-song-sheet" aria-label="Open Records song list" title="Song list">☰</button>
+          </div>
+        </section>
+        <div class="records-mobile-more ${this.recordsMoreMenuOpen ? "open" : ""}" role="menu" aria-label="Records customization actions">
+          <label class="file-control">Change Cover<input id="vinyl-cover-input" type="file" accept="image/*" aria-label="Change cover"></label>
+          <label class="file-control">Change Background<input id="music-background-input" type="file" accept="image/*" aria-label="Change player background"></label>
+          ${background ? `<button data-action="remove-player-background">Remove Background</button>` : ""}
+          <label class="file-control">Import / Change Lyrics<input id="music-lyrics-input" type="file" accept=".lrc,text/plain" aria-label="Add lyrics"></label>
+          <label class="metadata-edit">Song Title<input data-music-title data-music-field="title" id="music-title" value="${this.escapeHtml(current?.title ?? "")}" aria-label="Edit song title"></label>
+          <label class="metadata-edit">Artist<input data-music-artist data-music-field="artist" id="music-artist" value="${this.escapeHtml(current?.artist ?? "")}" aria-label="Edit artist"></label>
+        </div>
         <div class="records-grid">
           <section class="record-visual ${this.personalPlayer.visualMode}">
-            ${this.personalPlayer.visualMode === "cover" ? `<div class="cover-visual ${cover ? "has-cover" : ""}" style="${visualStyle}">${coverInitials}</div>` : `<div class="record-disc personal ${cover ? "has-cover" : ""} ${this.personalPlayer.playing && !this.settings.reducedMotion ? "playing" : ""}" style="${visualStyle}"><span></span></div><div class="tone-arm personal"></div>`}
+            ${artworkHtml}
             <div class="visual-tabs"><button class="${this.personalPlayer.visualMode === "vinyl" ? "selected" : ""}" data-action="music-visual" data-mode="vinyl">Vinyl</button><button class="${this.personalPlayer.visualMode === "cover" ? "selected" : ""}" data-action="music-visual" data-mode="cover">Cover</button></div>
             <label class="file-control">Change Cover<input id="vinyl-cover-input" type="file" accept="image/*" aria-label="Change cover"></label>
             <label class="file-control">Change Background<input id="music-background-input" type="file" accept="image/*" aria-label="Change player background"></label>
@@ -3272,23 +3354,57 @@ export class WalkBackHomeApp {
             <div class="lyrics-pane" aria-live="off">${lyricRows}</div>
           </section>
           <aside class="records-library">
-            <input id="music-search" type="search" placeholder="Search songs..." value="${this.escapeHtml(this.personalPlayer.librarySearch)}" aria-label="Search songs">
-            <label>Sort<select id="music-sort" aria-label="Sort music"><option value="recently-added" ${this.personalPlayer.librarySort === "recently-added" ? "selected" : ""}>Recently Added</option><option value="recently-played" ${this.personalPlayer.librarySort === "recently-played" ? "selected" : ""}>Recently Played</option><option value="title" ${this.personalPlayer.librarySort === "title" ? "selected" : ""}>Title A-Z</option><option value="artist" ${this.personalPlayer.librarySort === "artist" ? "selected" : ""}>Artist A-Z</option></select></label>
+            ${searchSortControls}
             <div class="record-list personal-list">${libraryRows || `<p>Add your own song.</p>`}</div>
             <label class="file-control add-record">+ Add My Record<input id="music-audio-input" type="file" accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/mp4,audio/aac,.mp3,.wav,.ogg,.m4a,.aac" aria-label="Add my record"></label>
             ${current?.source === "user" ? `<button data-action="delete-user-track" data-track="${this.escapeHtml(current.id)}">Delete Imported Song</button>` : ""}
           </aside>
         </div>
         <footer class="records-transport">
-          <label class="metadata-edit">Title<input id="music-title" value="${this.escapeHtml(current?.title ?? "")}" aria-label="Edit song title"></label>
-          <label class="metadata-edit">Artist<input id="music-artist" value="${this.escapeHtml(current?.artist ?? "")}" aria-label="Edit artist"></label>
+          <label class="metadata-edit">Title<input data-music-title data-music-field="title" id="music-title" value="${this.escapeHtml(current?.title ?? "")}" aria-label="Edit song title"></label>
+          <label class="metadata-edit">Artist<input data-music-artist data-music-field="artist" id="music-artist" value="${this.escapeHtml(current?.artist ?? "")}" aria-label="Edit artist"></label>
           <label class="file-control">Add Lyrics<input id="music-lyrics-input" type="file" accept=".lrc,text/plain" aria-label="Add lyrics"></label>
           <button data-action="toggle-floating-lyrics">${this.personalPlayer.lyricsVisible ? "Hide Lyrics" : "Show Lyrics"}</button>
-          <div class="time-row"><span data-music-current>${this.formatTime(currentTime)}</span><input id="music-seek" type="range" min="0" max="${Math.max(1, duration || current?.duration || 1)}" step="0.1" value="${Math.min(currentTime, Math.max(1, duration || current?.duration || 1))}" aria-label="Seek"><span data-music-duration>${this.formatTime(duration || current?.duration || 0)}</span></div>
+          <div class="time-row"><span data-music-current>${this.formatTime(currentTime)}</span><input data-music-seek id="music-seek" type="range" min="0" max="${maxTime}" step="0.1" value="${Math.min(currentTime, maxTime)}" aria-label="Seek"><span data-music-duration>${this.formatTime(duration || current?.duration || 0)}</span></div>
           <div class="transport-controls"><div class="vinyl-controls"><button class="icon-button" data-action="music-prev" aria-label="Previous" title="Previous">⏮</button><button class="icon-button primary" data-action="vinyl-pause" aria-label="${this.personalPlayer.playing ? "Pause" : "Play"}" title="${this.personalPlayer.playing ? "Pause" : "Play"}">${this.personalPlayer.playing ? "⏸" : "▶"}</button><button class="icon-button" data-action="music-next" aria-label="Next" title="Next">⏭</button></div><div class="playback-modes" aria-label="Playback toggles"><button class="icon-button ${this.personalPlayer.repeatOne ? "selected" : ""}" data-action="music-repeat-one" aria-label="Repeat one" title="Repeat one">↻1</button><button class="icon-button ${this.personalPlayer.shuffleEnabled ? "selected" : ""}" data-action="music-shuffle" aria-label="Shuffle" title="Shuffle">⤨</button></div></div>
         </footer>
+        <section class="records-song-sheet ${this.recordsSongSheetOpen ? "open" : ""}" aria-label="Records song list">
+          <div class="sheet-handle"></div>
+          <div class="records-song-sheet-head"><h3>My Records</h3><button data-action="toggle-records-song-sheet" aria-label="Close Records song list">Close</button></div>
+          <div class="records-song-tools">${searchSortControls}</div>
+          <label class="file-control add-record">+ Add My Record<input id="music-audio-input" type="file" accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/mp4,audio/aac,.mp3,.wav,.ogg,.m4a,.aac" aria-label="Add my record"></label>
+          <div class="record-list personal-list">${libraryRows || `<p>Add your own song.</p>`}</div>
+        </section>
+        ${deleteTrack ? `<div class="delete-confirmation" role="dialog" aria-modal="true" aria-label="Delete from My Records">
+          <div>
+            <strong>Delete from My Records?</strong>
+            <p>Remove “${this.escapeHtml(deleteTrack.title)}” from Walk Back Home?</p>
+            <p>This removes the copy and information stored by this app. Your original audio file on your device will not be changed.</p>
+          </div>
+          <div class="delete-confirmation-actions"><button data-action="cancel-delete-user-track">Cancel</button><button class="danger" data-action="confirm-delete-user-track">Delete</button></div>
+        </div>` : ""}
       </div>`;
     this.focusStage();
+  }
+
+  private renderRecordsLibraryRows(currentId?: string): string {
+    return this.visibleMusicTracks().map((track) => {
+      const selected = track.id === currentId;
+      const source = track.source === "user" ? "My Music" : "Walk Back Home";
+      const menuOpen = this.activeRecordMenuTrackId === track.id;
+      return `
+        <div class="record-list-row ${selected ? "selected" : ""}">
+          <button class="record-select" data-action="select-vinyl" data-record="${this.escapeHtml(track.id)}">
+            <span>${selected && this.personalPlayer.playing ? "◉ " : ""}${this.escapeHtml(track.title)}</span>
+            <small>${this.escapeHtml(track.artist || source)}</small>
+          </button>
+          <button class="record-row-menu-button" data-action="toggle-record-song-menu" data-track="${this.escapeHtml(track.id)}" aria-label="More actions for ${this.escapeHtml(track.title)}">⋮</button>
+          <div class="records-song-menu ${menuOpen ? "open" : ""}" role="menu">
+            <button data-action="select-vinyl" data-record="${this.escapeHtml(track.id)}">Play this record</button>
+            ${track.source === "user" ? `<button class="danger" data-action="request-delete-user-track" data-track="${this.escapeHtml(track.id)}">Delete from My Records</button>` : `<span>Walk Back Home record</span>`}
+          </div>
+        </div>`;
+    }).join("");
   }
 
   private async selectVinyl(recordId: string, announce = true): Promise<void> {
@@ -3297,6 +3413,9 @@ export class WalkBackHomeApp {
     this.personalPlayer.selectedTrackId = recordId;
     this.personalPlayer.playing = true;
     this.personalPlayer.playbackPosition = startPosition;
+    this.recordsSongSheetOpen = false;
+    this.recordsMoreMenuOpen = false;
+    this.activeRecordMenuTrackId = "";
     this.pendingPersonalSeek = null;
     if (isBuiltInTrackId(recordId)) this.room = this.selectAvailableVinylRecord(recordId);
     else this.room = { ...this.room, selectedVinylId: recordId, vinylPlaying: true, musicOn: true };
@@ -3427,6 +3546,12 @@ export class WalkBackHomeApp {
 
   private setMusicVisualMode(mode: "vinyl" | "cover"): void {
     this.personalPlayer.visualMode = mode;
+    void this.showRecords();
+    this.autosave();
+  }
+
+  private toggleMusicVisualMode(): void {
+    this.personalPlayer.visualMode = this.personalPlayer.visualMode === "vinyl" ? "cover" : "vinyl";
     void this.showRecords();
     this.autosave();
   }
