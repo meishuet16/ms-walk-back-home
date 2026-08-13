@@ -103,3 +103,26 @@ test("mobile portrait and landscape layouts have explicit touch behavior", () =>
   assert.match(stylesSource, /@media\s*\(orientation:\s*landscape\)\s*and\s*\(max-height:\s*520px\)/);
   assert.match(stylesSource, /\.paper-fields[\s\S]*position:\s*static/);
 });
+
+test("journal mobile uses reading mode and quiet editor controls", () => {
+  assert.match(appSource, /showDiaryReader/);
+  assert.match(appSource, /journal-reading-page/);
+  assert.match(appSource, /data-action="journal-more-menu"/);
+  assert.match(appSource, /data-action="journal-edit-current"/);
+  assert.match(appSource, /id="diary-video-input"/);
+  assert.match(appSource, /accept="video\/mp4,video\/webm,video\/quicktime/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-mood-picker[\s\S]*display:\s*none/);
+  assert.match(stylesSource, /\.mobile-editor-toolbar/);
+});
+
+test("journal mobile timeline books and pdf expose editorial structures", () => {
+  assert.match(appSource, /mobile-week-strip/);
+  assert.match(appSource, /timeline-date-group/);
+  assert.match(appSource, /timeline-media-grid/);
+  assert.match(appSource, /book-shelf-section/);
+  assert.match(appSource, /data-action="change-month-cover"/);
+  assert.match(appSource, /id="month-cover-input"/);
+  assert.match(appSource, /pdf-cover-preview/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-entry[\s\S]*border-radius:\s*0/);
+  assert.match(stylesSource, /\.journal-video-block/);
+});
