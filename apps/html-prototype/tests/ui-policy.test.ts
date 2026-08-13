@@ -101,6 +101,9 @@ test("records mobile menus stay in viewport and preserve scroll while selecting"
   assert.doesNotMatch(appSource, /private async selectVinyl[\s\S]*recordsSongSheetOpen = false/);
   assert.match(appSource, /data-action="toggle-floating-lyrics"/);
   assert.match(appSource, /data-floating-lyrics-width/);
+  assert.match(appSource, /floating-resize-handle/);
+  assert.match(appSource, /lyricsResize/);
+  assert.match(appSource, /resumeAfterRecordsClose/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.records-mobile-more\.open[\s\S]*position:\s*fixed/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.records-song-sheet\.open[\s\S]*position:\s*fixed/);
   assert.match(stylesSource, /\.records-header-actions\s*>\s*button:not\(\.records-mobile-more-button\):not\(\.records-mobile-close-button\)/);
@@ -142,8 +145,11 @@ test("journal mobile uses reading mode and quiet editor controls", () => {
   assert.match(appSource, /data-action="journal-add-media-menu"/);
   assert.match(appSource, /journal-add-media-sheet/);
   assert.match(appSource, /journal-mood-sheet/);
-  assert.match(appSource, /id="diary-video-input"/);
-  assert.match(appSource, /accept="video\/mp4,video\/webm,video\/quicktime/);
+  assert.doesNotMatch(appSource, /id="diary-video-input"/);
+  assert.match(appSource, /journal-inline-photo/);
+  assert.match(appSource, /journal-photo-insert-marker/);
+  assert.match(appSource, /心情：/);
+  assert.doesNotMatch(appSource, /<figcaption>\$\{this\.escapeHtml\(item\.caption/);
   assert.match(appSource, /journal-mobile-top-meta/);
   assert.match(appSource, /journal-mobile-muji-button/);
   assert.doesNotMatch(appSource, /journal-more-moods/);
@@ -153,6 +159,8 @@ test("journal mobile uses reading mode and quiet editor controls", () => {
   assert.match(stylesSource, /\.mobile-editor-toolbar/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-actions[\s\S]*display:\s*none/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-photo-dock[\s\S]*display:\s*none/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-meta-card[\s\S]*grid-template-columns:\s*1fr 1fr/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-inline-photo[\s\S]*max-height:\s*180px/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-mood-sheet\.open[\s\S]*display:\s*grid/);
 });
 
@@ -165,7 +173,14 @@ test("journal mobile timeline books and pdf expose editorial structures", () => 
   assert.doesNotMatch(appSource, /Year Books/);
   assert.match(appSource, /data-action="timeline-request-delete-selected"/);
   assert.match(appSource, /data-action="timeline-confirm-delete-selected"/);
+  assert.doesNotMatch(appSource, /data-action="delete-diary-entry" data-id="\$\{this\.escapeHtml\(entry\.id\)\}">Delete/);
+  assert.match(appSource, /timeline-filter-menu/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-toolbar[\s\S]*display:\s*none/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-filter-menu\[open\]\s+\.timeline-toolbar[\s\S]*display:\s*grid/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-media-grid[\s\S]*max-height:\s*124px/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-card-actions[\s\S]*grid-column:\s*3/);
   assert.match(appSource, /data-action="change-month-cover"/);
+  assert.match(appSource, /month-cover-crop-control/);
   assert.match(appSource, /id="month-cover-input"/);
   assert.match(appSource, /pdf-cover-preview/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-archive-header[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s*auto/);
@@ -177,12 +192,15 @@ test("journal mobile timeline books and pdf expose editorial structures", () => 
 test("mobile journal reflection and pdf surfaces fill the portrait viewport", () => {
   assert.match(appSource, /reflection-wall-filter-menu/);
   assert.match(appSource, /reflection-wall-close-button/);
+  assert.match(appSource, /refreshReflectionWallOnly/);
+  assert.doesNotMatch(appSource, /target instanceof HTMLInputElement && target\.id === "reflection-search"[\s\S]{0,120}this\.openReflectionWall\(\)/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-panel[\s\S]*min-height:\s*100dvh/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.monthly-reader[\s\S]*min-height:\s*100dvh/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.reflection-wall-modal[\s\S]*min-height:\s*100dvh/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.reflection-chip-row[\s\S]*display:\s*none/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.reflection-wall-filter-menu\[open\]\s+\.reflection-chip-row[\s\S]*display:\s*flex/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.wall-note[\s\S]*max-width:\s*calc\(100vw - 48px\)/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.wall-note[\s\S]*transform:\s*none\s*!important/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.overlay[\s\S]*padding:\s*0/);
 }
 );
