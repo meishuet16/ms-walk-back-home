@@ -105,6 +105,7 @@ test("records mobile menus stay in viewport and preserve scroll while selecting"
   assert.match(appSource, /floating-lyrics-reset/);
   assert.match(appSource, /rehomeFloatingLyrics/);
   assert.match(appSource, /if \(this\.personalPlayer\.lyricsVisible\) \{[\s\S]*this\.rehomeFloatingLyrics\(false\)/);
+  assert.match(appSource, /private mobileLyricsOverlayDefault\(\): PersonalPlayerState\["lyricsOverlay"\] \{[\s\S]*x:\s*12,[\s\S]*y:\s*12,/);
   assert.match(appSource, /lyricsResize/);
   assert.match(appSource, /lyricsResize.startWidth/);
   assert.match(appSource, /lyricsResize.startHeight/);
@@ -174,6 +175,8 @@ test("journal mobile uses reading mode and quiet editor controls", () => {
   assert.match(appSource, /multiple/);
   assert.match(appSource, /journal-media-tools/);
   assert.match(appSource, /journal-video-select-shield/);
+  assert.match(appSource, /journal-video-select-shield" data-action="journal-media-select"/);
+  assert.match(stylesSource, /\.journal-video-select-shield\s*\{[^}]*pointer-events:\s*auto/);
   assert.match(appSource, /data-crop-mode/);
   assert.match(appSource, /journalMediaCropStyle/);
   assert.match(appSource, /journal-reading-photo-frame/);

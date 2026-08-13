@@ -2548,7 +2548,7 @@ export class WalkBackHomeApp {
       const crop = this.normalizeJournalMediaCrop(item.crop);
       const frameRatio = item.type === "image" ? this.journalMediaCropAspectStyle(crop) : "";
       const mediaNode = item.type === "video"
-        ? `<span class="journal-video-select-frame"><video class="journal-inline-photo journal-inline-video" controls preload="metadata" src="${this.escapeHtml(item.src)}" aria-label="${this.escapeHtml(item.caption ?? "Journal video")}"></video><span class="journal-video-select-shield" aria-hidden="true">Tap for tools</span></span>`
+        ? `<span class="journal-video-select-frame"><video class="journal-inline-photo journal-inline-video" preload="metadata" muted playsinline src="${this.escapeHtml(item.src)}" aria-label="${this.escapeHtml(item.caption ?? "Journal video")}"></video><span class="journal-video-select-shield" data-action="journal-media-select" data-media="${this.escapeHtml(item.id)}" aria-hidden="true">Tap for tools</span></span>`
         : `<span class="journal-inline-photo-frame" style="${this.journalMediaCropStyle(crop)}${frameRatio}"><img class="journal-inline-photo" src="${this.escapeHtml(item.src)}" alt=""></span>`;
       const tools = item.type === "image"
         ? `<button data-action="journal-media-crop" data-media="${this.escapeHtml(item.id)}" data-crop-mode="custom">Edit Crop</button><button data-action="journal-media-remove" data-media="${this.escapeHtml(item.id)}">Remove</button>`
@@ -4263,9 +4263,8 @@ export class WalkBackHomeApp {
     const width = Math.min(240, Math.max(96, this.canvas.width - 24));
     const height = Math.min(96, Math.max(44, this.canvas.height - 48));
     return clampLyricsOverlay({
-      ...this.personalPlayer.lyricsOverlay,
       x: 12,
-      y: Math.max(12, this.canvas.height - height - 110),
+      y: 12,
       width,
       height
     }, this.canvas.width, this.canvas.height);

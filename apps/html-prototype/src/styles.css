@@ -4253,6 +4253,7 @@ canvas {
     position: static;
     display: block;
     width: 100%;
+    pointer-events: none;
   }
   .journal-video-select-shield {
     position: absolute;
@@ -4263,7 +4264,7 @@ canvas {
     color: rgba(255, 247, 226, .84);
     font-size: 12px;
     background: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,.38));
-    pointer-events: none;
+    pointer-events: auto;
   }
   .journal-inline-media-item.selected .journal-video-select-shield {
     display: none;
