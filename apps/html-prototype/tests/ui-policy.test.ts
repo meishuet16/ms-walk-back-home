@@ -104,6 +104,7 @@ test("records mobile menus stay in viewport and preserve scroll while selecting"
   assert.match(appSource, /floating-resize-handle/);
   assert.match(appSource, /floating-lyrics-reset/);
   assert.match(appSource, /rehomeFloatingLyrics/);
+  assert.match(appSource, /if \(this\.personalPlayer\.lyricsVisible\) \{[\s\S]*this\.rehomeFloatingLyrics\(false\)/);
   assert.match(appSource, /lyricsResize/);
   assert.match(appSource, /lyricsResize.startWidth/);
   assert.match(appSource, /lyricsResize.startHeight/);
@@ -167,6 +168,7 @@ test("journal mobile uses reading mode and quiet editor controls", () => {
   assert.doesNotMatch(appSource, /id="journal-crop-y"/);
   assert.match(appSource, /selectedJournalMediaId = mediaId/);
   assert.match(appSource, /journal-media-tools/);
+  assert.match(appSource, /journal-video-select-shield/);
   assert.match(appSource, /data-crop-mode/);
   assert.match(appSource, /journalMediaCropStyle/);
   assert.match(appSource, /journal-media-type">Video/);
@@ -210,12 +212,14 @@ test("journal mobile timeline books and pdf expose editorial structures", () => 
   assert.match(appSource, /data-action="timeline-confirm-delete-selected"/);
   assert.doesNotMatch(appSource, /data-action="delete-diary-entry" data-id="\$\{this\.escapeHtml\(entry\.id\)\}">Delete/);
   assert.match(appSource, /timeline-filter-menu/);
+  assert.doesNotMatch(appSource, /renderTimelineDatePicker/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.month-nav[\s\S]*grid-template-columns:\s*auto\s*minmax\(0,\s*1fr\)\s*auto\s*auto/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-toolbar[\s\S]*display:\s*none/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-filter-menu\[open\]\s+\.timeline-toolbar[\s\S]*position:\s*fixed/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-filter-menu\[open\]\s+\.timeline-toolbar[\s\S]*right:\s*12px/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-filter-menu\[open\]\s+\.timeline-toolbar[\s\S]*display:\s*grid|@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-filter-menu\[open\]\s+\.timeline-toolbar[\s\S]*display:\s*grid/);
   assert.match(stylesSource, /\.timeline-filter-menu\[open\] \.timeline-toolbar[\s\S]*display:\s*grid/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-month-nav[\s\S]*min-width:\s*0/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-media-grid[\s\S]*max-height:\s*124px/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-card-actions[\s\S]*grid-column:\s*1 \/ -1/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-delete-confirmation[\s\S]*width:\s*min\(332px,\s*calc\(100vw - 32px\)\)/);

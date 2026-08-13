@@ -1874,7 +1874,7 @@ export class WalkBackHomeApp {
       <button data-action="timeline-select-all">Select All</button>
       <button data-action="timeline-clear-selected">Clear Selection</button>
       <button data-action="timeline-request-delete-selected">Delete Selected</button>
-    </div></details>${this.renderTimelineDatePicker(selectedDate)}`;
+    </div></details>`;
   }
 
   private renderTimelineDeleteConfirmation(): string {
@@ -1902,23 +1902,6 @@ export class WalkBackHomeApp {
     const weekday = parsed.toLocaleDateString("en-US", { weekday: "long" });
     const month = parsed.toLocaleDateString("en-US", { month: "long", year: "numeric" });
     return `${day} ${weekday} · ${month}`;
-  }
-
-  private renderTimelineDatePicker(selectedDate: string): string {
-    if (this.timelineDateScope === "all") return "";
-    const monthKey = /^\d{4}-\d{2}-\d{2}$/.test(selectedDate) ? selectedDate.slice(0, 7) : this.timelineCursorMonth().key;
-    const [yearText, monthText] = monthKey.split("-");
-    const year = Number(yearText);
-    const month = Number(monthText);
-    const days = new Date(year, month, 0).getDate();
-    const buttons = Array.from({ length: days }, (_, index) => {
-      const day = index + 1;
-      const date = `${monthKey}-${String(day).padStart(2, "0")}`;
-      const hasEntries = this.timelineDateHasEntries(date);
-      const selected = selectedDate === date;
-      return `<button class="${selected ? "selected" : ""} ${hasEntries ? "" : "no-result"}" data-action="timeline-pick-date" data-date="${date}" ${hasEntries ? "" : "disabled"}>${day}</button>`;
-    }).join("");
-    return `<div class="timeline-date-picker" aria-label="Dates with diary results"><span>${this.escapeHtml(monthLabel(year, month))}</span><div>${buttons}</div></div>`;
   }
 
   private timelineDateHasEntries(date: string): boolean {
@@ -2546,7 +2529,7 @@ export class WalkBackHomeApp {
       const crop = this.normalizeJournalMediaCrop(item.crop);
       const frameRatio = item.type === "image" ? this.journalMediaCropAspectStyle(crop) : "";
       const mediaNode = item.type === "video"
-        ? `<video class="journal-inline-photo journal-inline-video" controls preload="metadata" src="${this.escapeHtml(item.src)}" aria-label="${this.escapeHtml(item.caption ?? "Journal video")}"></video>`
+        ? `<span class="journal-video-select-frame"><video class="journal-inline-photo journal-inline-video" controls preload="metadata" src="${this.escapeHtml(item.src)}" aria-label="${this.escapeHtml(item.caption ?? "Journal video")}"></video><span class="journal-video-select-shield" aria-hidden="true">Tap for tools</span></span>`
         : `<span class="journal-inline-photo-frame" style="${this.journalMediaCropStyle(crop)}${frameRatio}"><img class="journal-inline-photo" src="${this.escapeHtml(item.src)}" alt=""></span>`;
       const tools = item.type === "image"
         ? `<button data-action="journal-media-crop" data-media="${this.escapeHtml(item.id)}" data-crop-mode="custom">Edit Crop</button><button data-action="journal-media-remove" data-media="${this.escapeHtml(item.id)}">Remove</button>`
@@ -4220,17 +4203,20 @@ export class WalkBackHomeApp {
   private toggleFloatingLyrics(): void {
     this.preserveRecordsScroll();
     this.personalPlayer.lyricsVisible = !this.personalPlayer.lyricsVisible;
-    if (this.personalPlayer.lyricsVisible) this.personalPlayer.lyricsOverlay = this.mobileLyricsOverlayDefault();
+    if (this.personalPlayer.lyricsVisible) {
+      this.personalPlayer.lyricsOverlay = this.mobileLyricsOverlayDefault();
+      this.rehomeFloatingLyrics(false);
+    }
     void this.showRecords();
     this.updatePersonalMusicOverlay();
     this.autosave();
   }
 
-  private rehomeFloatingLyrics(): void {
+  private rehomeFloatingLyrics(showToast = true): void {
     this.personalPlayer.lyricsOverlay = this.mobileLyricsOverlayDefault();
     this.save.savePersonalPlayer(this.personalPlayer);
     this.updatePersonalMusicOverlay();
-    this.showToast("Floating lyrics moved back into view");
+    if (showToast) this.showToast("Floating lyrics moved back into view");
   }
 
   private mobileLyricsOverlayDefault(): PersonalPlayerState["lyricsOverlay"] {
