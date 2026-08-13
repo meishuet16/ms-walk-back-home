@@ -67,9 +67,10 @@ export type DiaryPhoto = {
 };
 
 export type DiaryMediaCrop = {
-  zoom: number;
   x: number;
   y: number;
+  width: number;
+  height: number;
 };
 
 export type DiaryMedia = {

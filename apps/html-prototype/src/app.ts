@@ -131,6 +131,7 @@ export class WalkBackHomeApp {
   private journalMoreMenuOpen = false;
   private selectedJournalMediaId = "";
   private journalCropMediaId = "";
+  private journalCropDrag: { mode: string; startX: number; startY: number; startCrop: DiaryMediaCrop } | null = null;
   private selectedReflectionNoteId = "";
   private selectedTimelineEntryIds = new Set<string>();
   private timelineDeleteConfirmOpen = false;
@@ -227,6 +228,7 @@ export class WalkBackHomeApp {
     root.addEventListener("pointerdown", (event) => this.handlePointerDown(event));
     root.addEventListener("pointermove", (event) => this.handlePointerMove(event));
     root.addEventListener("pointerup", () => {
+      this.journalCropDrag = null;
       this.scrapbookDrag = null;
       this.overlay.querySelector<HTMLElement>(".wall-note[data-dragging=\"true\"]")?.removeAttribute("data-dragging");
       this.reflectionWallDrag = null;
@@ -315,6 +317,8 @@ export class WalkBackHomeApp {
     if (action === "journal-crop-apply") this.applyJournalCrop(target.dataset.media ?? "");
     if (action === "journal-crop-cancel") this.closeJournalCropModal();
     if (action === "journal-crop-reset") this.resetJournalCrop(target.dataset.media ?? "");
+    if (action === "journal-crop-ratio-original") this.setJournalCropOriginalRatio();
+    if (action === "journal-crop-ratio-free") this.showToast("Free crop mode enabled");
     if (action === "change-month-cover") this.overlay.querySelector<HTMLInputElement>("#month-cover-input")?.click();
     if (action === "delete-diary-entry") this.deleteDiaryEntry(target.dataset.id ?? "");
     if (action === "timeline-request-delete-entry") this.requestDeleteTimelineEntry(target.dataset.id ?? "");
@@ -2208,9 +2212,6 @@ export class WalkBackHomeApp {
       const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
       pages.push({ dataUrl, width: canvas.width, height: canvas.height });
       pageIndex += 1;
-      if (isLastTextPage && photosDrawn < photos.length) {
-        pages.push(...await this.renderDiaryPhotoContinuationPages(entry, canvas, photosDrawn));
-      }
     }
     canvas.width = 1;
     canvas.height = 1;
@@ -2219,6 +2220,89 @@ export class WalkBackHomeApp {
 
   private entryPdfImages(entry: DiaryEntry): DiaryMedia[] {
     return diaryMediaItems(entry).filter((media) => media.type === "image");
+  }
+
+  private async renderMonthlyPdfFlowPages(month: JournalMonth): Promise<MonthlyJournalPdfPage[]> {
+    const canvas = this.makePdfCanvas();
+    const pages: MonthlyJournalPdfPage[] = [];
+    let ctx = this.beginMonthlyPdfFlowPage(canvas);
+    let cursorY = 130;
+    for (const entry of [...month.entries].reverse()) {
+      const result = await this.appendDiaryEntryToPdfFlow(canvas, ctx, pages, entry, cursorY);
+      ctx = result.ctx;
+      cursorY = result.cursorY;
+    }
+    pages.push({ dataUrl: canvas.toDataURL("image/jpeg", 0.9), width: canvas.width, height: canvas.height });
+    canvas.width = 1;
+    canvas.height = 1;
+    return pages;
+  }
+
+  private beginMonthlyPdfFlowPage(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
+    canvas.width = 1240;
+    canvas.height = 1754;
+    const ctx = canvas.getContext("2d")!;
+    ctx.fillStyle = "#f4e7c8";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#fff8dc";
+    ctx.fillRect(88, 78, canvas.width - 176, canvas.height - 156);
+    ctx.strokeStyle = "rgba(116, 82, 48, 0.4)";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(88, 78, canvas.width - 176, canvas.height - 156);
+    ctx.fillStyle = "rgba(128, 95, 57, 0.18)";
+    for (let y = 126; y < 1600; y += 50) ctx.fillRect(150, y, canvas.width - 300, 2);
+    return ctx;
+  }
+
+  private pushMonthlyPdfFlowPage(canvas: HTMLCanvasElement, pages: MonthlyJournalPdfPage[]): CanvasRenderingContext2D {
+    pages.push({ dataUrl: canvas.toDataURL("image/jpeg", 0.9), width: canvas.width, height: canvas.height });
+    return this.beginMonthlyPdfFlowPage(canvas);
+  }
+
+  private async appendDiaryEntryToPdfFlow(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, pages: MonthlyJournalPdfPage[], entry: DiaryEntry, cursorY: number): Promise<{ ctx: CanvasRenderingContext2D; cursorY: number }> {
+    ctx.font = "400 28px sans-serif";
+    const compactBody = (entry.body || "Empty draft").replace(/\n{2,}/g, "\n").trim();
+    const bodyLines = this.canvasTextLines(ctx, compactBody, 880);
+    const headerHeight = 130;
+    if (cursorY + headerHeight > 1500) {
+      ctx = this.pushMonthlyPdfFlowPage(canvas, pages);
+      cursorY = 130;
+    }
+    ctx.fillStyle = "#755330";
+    ctx.font = "600 24px sans-serif";
+    ctx.fillText(entry.date, 150, cursorY);
+    ctx.font = "700 34px serif";
+    cursorY = this.wrapCanvasText(ctx, entry.title || "Untitled Memory", 150, cursorY + 44, 880, 42, 2) + 12;
+    const meta = [entry.location, entry.weather, entry.mood ? `Mood: ${entry.mood}` : "", entry.memoryKind].filter(Boolean).join(" · ");
+    if (meta) {
+      ctx.fillStyle = "rgba(88, 60, 35, 0.72)";
+      ctx.font = "400 20px sans-serif";
+      cursorY = this.wrapCanvasText(ctx, meta, 150, cursorY, 880, 28, 2) + 12;
+    }
+    ctx.fillStyle = "#4f3a28";
+    ctx.font = "400 28px sans-serif";
+    for (const line of bodyLines) {
+      if (cursorY > 1510) {
+        ctx = this.pushMonthlyPdfFlowPage(canvas, pages);
+        cursorY = 130;
+        ctx.fillStyle = "#4f3a28";
+        ctx.font = "400 28px sans-serif";
+      }
+      ctx.fillText(line, 150, cursorY);
+      cursorY += 42;
+    }
+    cursorY += 24;
+    const photos = this.entryPdfImages(entry);
+    for (let index = 0; index < photos.length; index += 2) {
+      if (cursorY + 300 > 1510) {
+        ctx = this.pushMonthlyPdfFlowPage(canvas, pages);
+        cursorY = 130;
+      }
+      const row = photos.slice(index, index + 2);
+      await this.drawDiaryPhotosOnPdfPage(ctx, row, 150, cursorY, 2, 260, 36);
+      cursorY += 320;
+    }
+    return { ctx, cursorY: cursorY + 34 };
   }
 
   private drawDiaryEntryPdfPage(ctx: CanvasRenderingContext2D, entry: DiaryEntry, bodyLines: string[], firstPage: boolean, footerNote = ""): void {
@@ -2259,34 +2343,6 @@ export class WalkBackHomeApp {
     ctx.restore();
   }
 
-  private async renderDiaryPhotoContinuationPages(entry: DiaryEntry, canvas: HTMLCanvasElement, startIndex: number): Promise<MonthlyJournalPdfPage[]> {
-    const photos = this.entryPdfImages(entry);
-    if (startIndex >= photos.length) return [];
-    const pages: MonthlyJournalPdfPage[] = [];
-    for (let offset = startIndex; offset < photos.length; offset += 4) {
-      canvas.width = 1240;
-      canvas.height = 1754;
-      const ctx = canvas.getContext("2d")!;
-      ctx.fillStyle = "#f4e7c8";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#fff8dc";
-      ctx.fillRect(88, 78, canvas.width - 176, canvas.height - 156);
-      ctx.strokeStyle = "rgba(116, 82, 48, 0.4)";
-      ctx.lineWidth = 4;
-      ctx.strokeRect(88, 78, canvas.width - 176, canvas.height - 156);
-      ctx.fillStyle = "#755330";
-      ctx.font = "700 44px serif";
-      ctx.fillText(entry.title || "Untitled Memory", 150, 170);
-      const pagePhotos = photos.slice(offset, offset + 4);
-      await this.drawDiaryPhotosOnPdfPage(ctx, pagePhotos, 150, 260, 2, 390, 64);
-      ctx.fillStyle = "rgba(88, 60, 35, 0.55)";
-      ctx.font = "400 22px sans-serif";
-      ctx.fillText(`${offset + 1}-${offset + pagePhotos.length} of ${photos.length} imported photos`, 150, 1535);
-      pages.push({ dataUrl: canvas.toDataURL("image/jpeg", 0.9), width: canvas.width, height: canvas.height });
-    }
-    return pages;
-  }
-
   private async drawDiaryPhotosOnPdfPage(ctx: CanvasRenderingContext2D, photos: DiaryMedia[], x: number, y: number, columns: number, size: number, gap: number): Promise<void> {
     if (!photos?.length) return;
     for (const [index, photo] of photos.entries()) {
@@ -2303,9 +2359,7 @@ export class WalkBackHomeApp {
   }
 
   private async renderMonthlyPdfPages(month: JournalMonth): Promise<MonthlyJournalPdfPage[]> {
-    const pages: MonthlyJournalPdfPage[] = [await this.renderJournalCoverPage(month)];
-    for (const entry of [...month.entries].reverse()) pages.push(...await this.renderDiaryEntryPdfPages(entry));
-    return pages;
+    return [await this.renderJournalCoverPage(month), ...await this.renderMonthlyPdfFlowPages(month)];
   }
 
   private async exportMonthlyPdf(monthKey: string): Promise<void> {
@@ -2490,9 +2544,10 @@ export class WalkBackHomeApp {
     return `<div class="journal-inline-media">${media.map((item) => {
       const selected = this.selectedJournalMediaId === item.id;
       const crop = this.normalizeJournalMediaCrop(item.crop);
+      const frameRatio = item.type === "image" ? this.journalMediaCropAspectStyle(crop) : "";
       const mediaNode = item.type === "video"
         ? `<video class="journal-inline-photo journal-inline-video" controls preload="metadata" src="${this.escapeHtml(item.src)}" aria-label="${this.escapeHtml(item.caption ?? "Journal video")}"></video>`
-        : `<span class="journal-inline-photo-frame" style="${this.journalMediaCropStyle(crop)}"><img class="journal-inline-photo" src="${this.escapeHtml(item.src)}" alt=""></span>`;
+        : `<span class="journal-inline-photo-frame" style="${this.journalMediaCropStyle(crop)}${frameRatio}"><img class="journal-inline-photo" src="${this.escapeHtml(item.src)}" alt=""></span>`;
       const tools = item.type === "image"
         ? `<button data-action="journal-media-crop" data-media="${this.escapeHtml(item.id)}" data-crop-mode="custom">Edit Crop</button><button data-action="journal-media-remove" data-media="${this.escapeHtml(item.id)}">Remove</button>`
         : `<span class="journal-media-type">Video</span><button data-action="journal-media-remove" data-media="${this.escapeHtml(item.id)}">Remove</button>`;
@@ -2506,18 +2561,26 @@ export class WalkBackHomeApp {
   private normalizeJournalMediaCrop(crop: unknown): DiaryMediaCrop {
     if (crop && typeof crop === "object") {
       const candidate = crop as Partial<DiaryMediaCrop>;
+      const width = this.clampNumber(candidate.width, 8, 100, 100);
+      const height = this.clampNumber(candidate.height, 8, 100, 100);
       return {
-        zoom: this.clampNumber(candidate.zoom, 1, 3, 1),
-        x: this.clampNumber(candidate.x, -45, 45, 0),
-        y: this.clampNumber(candidate.y, -45, 45, 0)
+        x: this.clampNumber(candidate.x, 0, 100 - width, 0),
+        y: this.clampNumber(candidate.y, 0, 100 - height, 0),
+        width,
+        height
       };
     }
-    return { zoom: 1, x: 0, y: 0 };
+    return { x: 0, y: 0, width: 100, height: 100 };
   }
 
   private journalMediaCropStyle(crop: unknown): string {
     const next = this.normalizeJournalMediaCrop(crop);
-    return `--crop-zoom:${next.zoom.toFixed(2)};--crop-x:${next.x.toFixed(0)}%;--crop-y:${next.y.toFixed(0)}%;`;
+    return `--crop-x:${next.x.toFixed(2)}%;--crop-y:${next.y.toFixed(2)}%;--crop-width:${next.width.toFixed(2)}%;--crop-height:${next.height.toFixed(2)}%;`;
+  }
+
+  private journalMediaCropAspectStyle(crop: unknown): string {
+    const next = this.normalizeJournalMediaCrop(crop);
+    return `--crop-aspect:${Math.max(0.1, next.width / Math.max(1, next.height)).toFixed(3)};`;
   }
 
   private renderJournalCropModal(entry?: DiaryEntry): string {
@@ -2527,17 +2590,17 @@ export class WalkBackHomeApp {
     const crop = this.normalizeJournalMediaCrop(media.crop);
     return `<div class="journal-crop-modal" role="dialog" aria-label="Crop journal image">
       <div class="journal-crop-stage">
-        <img class="journal-crop-preview" src="${this.escapeHtml(media.src)}" alt="" style="${this.journalMediaCropStyle(crop)}">
-        <div class="journal-crop-frame" aria-hidden="true"></div>
-      </div>
-      <div class="journal-crop-controls">
-        <label>Zoom<input id="journal-crop-zoom" type="range" min="1" max="3" step="0.05" value="${crop.zoom}"></label>
-        <label>X<input id="journal-crop-x" type="range" min="-45" max="45" step="1" value="${crop.x}"></label>
-        <label>Y<input id="journal-crop-y" type="range" min="-45" max="45" step="1" value="${crop.y}"></label>
+        <img class="journal-crop-preview" src="${this.escapeHtml(media.src)}" alt="">
+        <div class="journal-crop-box" data-action="journal-crop-drag" data-crop-mode="move" style="${this.journalMediaCropStyle(crop)}" aria-label="Crop box">
+          <span class="journal-crop-grid" aria-hidden="true"></span>
+          ${["nw", "n", "ne", "e", "se", "s", "sw", "w"].map((handle) => `<span class="journal-crop-handle ${handle}" data-action="journal-crop-drag" data-crop-mode="${handle}" aria-hidden="true"></span>`).join("")}
+        </div>
       </div>
       <div class="journal-crop-actions">
         <button data-action="journal-crop-cancel">Cancel</button>
         <button data-action="journal-crop-reset" data-media="${this.escapeHtml(media.id)}">Reset</button>
+        <button data-action="journal-crop-ratio-original" data-media="${this.escapeHtml(media.id)}">Original ratio</button>
+        <button data-action="journal-crop-ratio-free" data-media="${this.escapeHtml(media.id)}">Free</button>
         <button data-action="journal-crop-apply" data-media="${this.escapeHtml(media.id)}">Crop</button>
       </div>
     </div>`;
@@ -2838,7 +2901,7 @@ export class WalkBackHomeApp {
     const entry = this.diaryEntries.find((item) => item.id === entryId);
     if (!entry) return;
     const draft = this.readDiaryDraftFromOverlay(entry.id) ?? entry;
-    const next = this.updateJournalMediaCrop(draft, mediaId, { zoom: 1, x: 0, y: 0 });
+    const next = this.updateJournalMediaCrop(draft, mediaId, { x: 0, y: 0, width: 100, height: 100 });
     this.journalCropMediaId = mediaId;
     this.selectedJournalMediaId = mediaId;
     this.updateDiaryEntry(next);
@@ -2846,16 +2909,69 @@ export class WalkBackHomeApp {
   }
 
   private refreshJournalCropPreviewFromInputs(): void {
-    const preview = this.overlay.querySelector<HTMLElement>(".journal-crop-preview");
-    if (!preview) return;
-    preview.setAttribute("style", this.journalMediaCropStyle(this.readJournalCropInputs()));
+    const box = this.overlay.querySelector<HTMLElement>(".journal-crop-box");
+    if (!box) return;
+    box.setAttribute("style", this.journalMediaCropStyle(this.readJournalCropInputs()));
   }
 
   private readJournalCropInputs(): DiaryMediaCrop {
-    const zoom = Number(this.overlay.querySelector<HTMLInputElement>("#journal-crop-zoom")?.value);
-    const x = Number(this.overlay.querySelector<HTMLInputElement>("#journal-crop-x")?.value);
-    const y = Number(this.overlay.querySelector<HTMLInputElement>("#journal-crop-y")?.value);
-    return this.normalizeJournalMediaCrop({ zoom, x, y });
+    const box = this.overlay.querySelector<HTMLElement>(".journal-crop-box");
+    return box ? this.cropFromBoxStyle(box) : { x: 0, y: 0, width: 100, height: 100 };
+  }
+
+  private cropFromBoxStyle(box: HTMLElement): DiaryMediaCrop {
+    const value = (name: string, fallback: number) => Number.parseFloat(box.style.getPropertyValue(name)) || fallback;
+    return this.normalizeJournalMediaCrop({
+      x: value("--crop-x", 0),
+      y: value("--crop-y", 0),
+      width: value("--crop-width", 100),
+      height: value("--crop-height", 100)
+    });
+  }
+
+  private resizeJournalCrop(start: DiaryMediaCrop, mode: string, dx: number, dy: number): DiaryMediaCrop {
+    let { x, y, width, height } = start;
+    if (mode === "move") {
+      x += dx;
+      y += dy;
+      return this.normalizeJournalMediaCrop({ x, y, width, height });
+    }
+    if (mode.includes("w")) {
+      x += dx;
+      width -= dx;
+    }
+    if (mode.includes("e")) width += dx;
+    if (mode.includes("n")) {
+      y += dy;
+      height -= dy;
+    }
+    if (mode.includes("s")) height += dy;
+    width = Math.max(8, width);
+    height = Math.max(8, height);
+    x = Math.max(0, Math.min(100 - width, x));
+    y = Math.max(0, Math.min(100 - height, y));
+    return this.normalizeJournalMediaCrop({ x, y, width, height });
+  }
+
+  private setJournalCropOriginalRatio(): void {
+    const stage = this.overlay.querySelector<HTMLElement>(".journal-crop-stage");
+    const box = this.overlay.querySelector<HTMLElement>(".journal-crop-box");
+    const image = this.overlay.querySelector<HTMLImageElement>(".journal-crop-preview");
+    if (!stage || !box || !image) return;
+    const ratio = Math.max(0.05, (image.naturalWidth || 1) / Math.max(1, image.naturalHeight || 1));
+    let width = 86;
+    let height = width / ratio;
+    if (height > 86) {
+      height = 86;
+      width = height * ratio;
+    }
+    const crop = this.normalizeJournalMediaCrop({
+      x: (100 - width) / 2,
+      y: (100 - height) / 2,
+      width,
+      height
+    });
+    box.setAttribute("style", this.journalMediaCropStyle(crop));
   }
 
   private clampNumber(value: unknown, min: number, max: number, fallback: number): number {
@@ -3057,8 +3173,9 @@ export class WalkBackHomeApp {
       caption: "",
       mimeType: isVideo ? file.type || "video/mp4" : file.type || "image/jpeg"
     });
+    this.selectedJournalMediaId = mediaId;
     this.updateDiaryEntry(withMedia);
-    this.showDiaryEditor(entry.id);
+    this.showDiaryEditor(withMedia.id);
     this.showToast(isVideo ? "Video inserted" : "Photo inserted");
   }
 
@@ -3371,6 +3488,18 @@ export class WalkBackHomeApp {
   }
 
   private handlePointerDown(event: PointerEvent): void {
+    const cropTarget = (event.target as HTMLElement).closest<HTMLElement>("[data-action=\"journal-crop-drag\"]");
+    const cropBox = cropTarget?.closest<HTMLElement>(".journal-crop-box");
+    if (cropTarget && cropBox) {
+      this.journalCropDrag = {
+        mode: cropTarget.dataset.cropMode ?? "move",
+        startX: event.clientX,
+        startY: event.clientY,
+        startCrop: this.cropFromBoxStyle(cropBox)
+      };
+      event.preventDefault();
+      return;
+    }
     const resizeHandle = (event.target as HTMLElement).closest<HTMLElement>(".floating-resize-handle");
     const resizingLyrics = resizeHandle?.closest<HTMLElement>(".floating-lyrics");
     if (resizeHandle && resizingLyrics) {
@@ -3427,6 +3556,18 @@ export class WalkBackHomeApp {
   }
 
   private handlePointerMove(event: PointerEvent): void {
+    if (this.journalCropDrag) {
+      const stage = this.overlay.querySelector<HTMLElement>(".journal-crop-stage");
+      const box = this.overlay.querySelector<HTMLElement>(".journal-crop-box");
+      if (!stage || !box) return;
+      const rect = stage.getBoundingClientRect();
+      const dx = ((event.clientX - this.journalCropDrag.startX) / Math.max(1, rect.width)) * 100;
+      const dy = ((event.clientY - this.journalCropDrag.startY) / Math.max(1, rect.height)) * 100;
+      const next = this.resizeJournalCrop(this.journalCropDrag.startCrop, this.journalCropDrag.mode, dx, dy);
+      box.setAttribute("style", this.journalMediaCropStyle(next));
+      event.preventDefault();
+      return;
+    }
     if (this.lyricsResize) {
       const stageRect = this.stage.getBoundingClientRect();
       const scaleX = this.canvas.width / stageRect.width;
