@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { addPhotoAttachment, addPhotoElement, attachPhotoAndPlaceOnPage, createCutoutElement, diaryTextFrame, moveScrapbookElement, removePhotoAttachment } from "../src/systems/ScrapbookComposer.js";
+import { addJournalMedia, addPhotoAttachment, addPhotoElement, attachPhotoAndPlaceOnPage, createCutoutElement, diaryMediaItems, diaryTextFrame, moveScrapbookElement, removeJournalMedia, removePhotoAttachment } from "../src/systems/ScrapbookComposer.js";
 import { createDiaryLibrary, createNewDiaryPage, formatDiaryWeekday, openDiaryPageForDate, upsertDiaryPageDraft } from "../src/systems/DiaryLibrary.js";
 import { makeDiaryEntry, normalizeDiaryEntry, parseDiaryImport } from "../src/systems/DiaryImport.js";
 import { diaryMoodOptions } from "../src/systems/DiaryMood.js";
@@ -202,6 +202,28 @@ test("removing an attached photo clears its placed page elements", () => {
 
   assert.equal(cleared.photos?.length, 0);
   assert.deepEqual(cleared.scrapbookLayout?.elements, []);
+});
+
+test("journal media supports local video without replacing photo attachments", () => {
+  const entry = addPhotoAttachment(makeDiaryEntry("2026-08-10", "Media", "Fictional text."), {
+    id: "photo-1",
+    storageKey: "diary-images/photo-1",
+    src: "data:image/png;base64,photo",
+    caption: "desk"
+  });
+  const withVideo = addJournalMedia(entry, {
+    id: "video-1",
+    type: "video",
+    storageKey: "diary-videos/video-1",
+    src: "data:video/mp4;base64,video",
+    caption: "shore.mp4",
+    mimeType: "video/mp4"
+  });
+
+  assert.deepEqual(diaryMediaItems(withVideo).map((item) => item.type), ["image", "video"]);
+  assert.equal(withVideo.photos?.length, 1);
+  assert.equal(removeJournalMedia(withVideo, "video-1").media?.length, 0);
+  assert.equal(removeJournalMedia(withVideo, "video-1").photos?.length, 1);
 });
 
 test("cutout elements stay attached to the current diary page", () => {
