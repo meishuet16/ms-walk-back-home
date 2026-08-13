@@ -2,7 +2,7 @@ import { bakeryChapter } from "./fixtures/chapterPlan.js";
 import { canStartLabisMotorMemory, labisBlockers, labisDiaryMemorySpot, labisInteractionForPoint, labisMotorMemoryActions, labisSpawn } from "./fixtures/labisMotorMemory.js";
 import { labisAssetManifest, labisAssetPath, labisProductionAssetPaths } from "./fixtures/labisAssetRegistry.js";
 import { labisChoicePoints, labisEchoes, resolveLabisMemoryReflection, type LabisChoicePoint, type LabisEcho } from "./fixtures/labisMemoryEchoes.js";
-import type { ChapterProgress, Choice, DiaryEntry, DiaryLibraryState, JourneyState, MemoryKind, MusicSort, PersonalMusicLibraryState, PersonalPlayerState, ReflectionNote, ReflectionWallFilter, ReflectionWallSort, ReflectionWallState, ReflectionWallView, RoomJourneyState, SceneId, Tendencies, UserMusicTrack } from "./types.js";
+import type { ChapterProgress, Choice, DiaryEntry, DiaryLibraryState, DiaryMedia, DiaryMediaCrop, JournalBookCoverCrop, JourneyState, MemoryKind, MusicSort, PersonalMusicLibraryState, PersonalPlayerState, ReflectionNote, ReflectionWallFilter, ReflectionWallSort, ReflectionWallState, ReflectionWallView, RoomJourneyState, SceneId, Tendencies, UserMusicTrack } from "./types.js";
 import { AudioManager } from "./systems/AudioManager.js";
 import { AccountManager } from "./systems/AccountManager.js";
 import { loadAppConfig } from "./systems/AppConfig.js";
@@ -11,7 +11,6 @@ import { beginChapterVisit, finishChapterWalkthrough, initialChapterProgress, ma
 import { inAnyRect, type Point, type Rect } from "./systems/CollisionSystem.js";
 import { CutsceneSystem } from "./systems/CutsceneSystem.js";
 import { createNewDiaryPage, deleteDiaryEntriesByIds, deleteDiaryEntryById, forestNodesForMonth, formatDiaryWeekday, getDiaryTimeline, openDiaryPageForDate, seedAuthoredChapterDiaryEntries, upsertDiaryEntry, upsertDiaryPageDraft } from "./systems/DiaryLibrary.js";
-import { diaryMoodOptions, isDiaryMood } from "./systems/DiaryMood.js";
 import { makeDiaryEntry, parseDiaryImport, updateDiaryMemoryKind, type DiaryForestMemory, type DiaryTimelineSort } from "./systems/DiaryImport.js";
 import { DialogueSystem } from "./systems/DialogueSystem.js";
 import { resolveChapterReflection, type Ending } from "./systems/EndingResolver.js";
@@ -34,6 +33,7 @@ import {
   diaryMediaItems,
   layerScrapbookElement,
   moveScrapbookElement,
+  removeJournalMedia,
   removePhotoAttachment,
   resizeScrapbookElement,
   rotateScrapbookElement
@@ -129,8 +129,8 @@ export class WalkBackHomeApp {
   private activeScrapbookEntryId = "";
   private selectedScrapbookElementId = "";
   private journalMoreMenuOpen = false;
-  private journalMoodSheetOpen = false;
-  private journalAddMediaSheetOpen = false;
+  private selectedJournalMediaId = "";
+  private selectedReflectionNoteId = "";
   private selectedTimelineEntryIds = new Set<string>();
   private timelineDeleteConfirmOpen = false;
   private timelineSort: DiaryTimelineSort = "date-desc";
@@ -157,7 +157,7 @@ export class WalkBackHomeApp {
   private activeRecordMenuTrackId = "";
   private pendingDeleteTrackId = "";
   private lyricsDrag: { offsetX: number; offsetY: number } | null = null;
-  private lyricsResize: { startX: number; startWidth: number } | null = null;
+  private lyricsResize: { startX: number; startY: number; startWidth: number; startHeight: number } | null = null;
   private pendingPersonalSeek: number | null = null;
   private forceTouchControls = false;
   private settings = { rain: true, muted: false, volume: 0.45, compact: false, reducedMotion: false, musicEnabled: true, musicScene: "bakery" as MusicScene };
@@ -227,6 +227,7 @@ export class WalkBackHomeApp {
     root.addEventListener("pointermove", (event) => this.handlePointerMove(event));
     root.addEventListener("pointerup", () => {
       this.scrapbookDrag = null;
+      this.overlay.querySelector<HTMLElement>(".wall-note[data-dragging=\"true\"]")?.removeAttribute("data-dragging");
       this.reflectionWallDrag = null;
       if (this.lyricsDrag || this.lyricsResize) this.autosave();
       this.lyricsDrag = null;
@@ -292,28 +293,24 @@ export class WalkBackHomeApp {
     if (action === "open-diary-editor") this.showTimeline();
     if (action === "open-diary-page") this.showDiaryReader(target.dataset.id ?? "");
     if (action === "save-diary-entry") this.saveDiaryEntry(target.dataset.id);
-    if (action === "edit-diary-entry") this.showDiaryEditor(target.dataset.id);
-    if (action === "journal-edit-current") this.showDiaryEditor(target.dataset.id);
+    if (action === "edit-diary-entry") {
+      this.journalMoreMenuOpen = false;
+      this.showDiaryEditor(target.dataset.id);
+    }
+    if (action === "journal-edit-current") {
+      this.journalMoreMenuOpen = false;
+      this.showDiaryEditor(target.dataset.id);
+    }
     if (action === "journal-more-menu") {
       this.journalMoreMenuOpen = !this.journalMoreMenuOpen;
-      this.journalMoodSheetOpen = false;
-      this.journalAddMediaSheetOpen = false;
       const entryId = target.dataset.id ?? "";
       if (this.overlay.querySelector(".journal-reading-page")) this.showDiaryReader(entryId);
       else this.showDiaryEditor(entryId);
     }
-    if (action === "journal-mood-entry") {
-      this.journalMoodSheetOpen = !this.journalMoodSheetOpen;
-      this.journalMoreMenuOpen = false;
-      this.journalAddMediaSheetOpen = false;
-      this.showDiaryEditor(target.dataset.id);
-    }
-    if (action === "journal-add-media-menu") {
-      this.journalAddMediaSheetOpen = !this.journalAddMediaSheetOpen;
-      this.journalMoodSheetOpen = false;
-      this.journalMoreMenuOpen = false;
-      this.showDiaryEditor(target.dataset.id);
-    }
+    if (action === "journal-add-inline-media") this.overlay.querySelector<HTMLInputElement>("#diary-mobile-media-input")?.click();
+    if (action === "journal-media-select") this.selectJournalMedia(target.dataset.media ?? "");
+    if (action === "journal-media-remove") this.removeSelectedJournalMedia(target.dataset.media ?? "");
+    if (action === "journal-media-crop") this.cropSelectedJournalMedia(target.dataset.media ?? "");
     if (action === "change-month-cover") this.overlay.querySelector<HTMLInputElement>("#month-cover-input")?.click();
     if (action === "delete-diary-entry") this.deleteDiaryEntry(target.dataset.id ?? "");
     if (action === "timeline-request-delete-entry") this.requestDeleteTimelineEntry(target.dataset.id ?? "");
@@ -339,7 +336,6 @@ export class WalkBackHomeApp {
     if (action === "scrapbook-rotate") this.rotateSelectedScrapbookElement(Number(target.dataset.delta ?? 0));
     if (action === "scrapbook-layer") this.layerSelectedScrapbookElement(target.dataset.direction as "front" | "back");
     if (action === "scrapbook-delete") this.deleteSelectedScrapbookElement();
-    if (action === "set-diary-mood") this.setDiaryMood(target.dataset.mood ?? "");
     if (action === "set-memory-kind") this.setDiaryMemoryKind(target.dataset.id ?? "", target.dataset.kind as MemoryKind);
     if (action === "room-window") this.roomWindow();
     if (action === "room-lamp") this.roomLamp();
@@ -348,9 +344,11 @@ export class WalkBackHomeApp {
     if (action === "reflection-wall") this.openReflectionWall();
     if (action === "reflection-note-new") this.showReflectionComposer();
     if (action === "reflection-note-save") this.saveReflectionComposer(target.dataset.note ?? "");
+    if (action === "reflection-note-select") this.selectReflectionWallNote(target.dataset.note ?? "");
     if (action === "reflection-note-open") this.showReflectionDetail(target.dataset.note ?? "");
     if (action === "reflection-note-edit") this.showReflectionComposer(target.dataset.note ?? "");
     if (action === "reflection-note-delete") this.deleteReflectionWallNote(target.dataset.note ?? "");
+    if (action === "reflection-note-drag") this.showToast("Hold the move handle and drag the note.");
     if (action === "reflection-note-pin") this.toggleReflectionFlag(target.dataset.note ?? "", "pinned");
     if (action === "reflection-note-favorite") this.toggleReflectionFlag(target.dataset.note ?? "", "favorite");
     if (action === "reflection-note-paper") this.changeReflectionNotePaper(target.dataset.note ?? "", target.dataset.style ?? "");
@@ -1796,7 +1794,7 @@ export class WalkBackHomeApp {
     const noResult = this.timelineSearch.trim() || this.timelineKindFilter !== "all" || this.timelineDateFilter;
     const empty = `<div class="journal-empty"><p>${noResult ? "No diary matched these filters." : "Nothing was written here."}</p><button data-action="new-diary-entry">Create New Journal</button></div>`;
     const confirm = this.timelineDeleteConfirmOpen ? this.renderTimelineDeleteConfirmation() : "";
-    this.overlay.innerHTML = `<div class="modal game-panel timeline-panel journal-panel">${this.journalHeader("Timeline", month)}${this.renderMobileWeekStrip(month)}${this.renderTimelineFilters(month)}<div class="timeline-list">${this.renderTimelineDateGroups(visibleEntries, rows) || empty}</div>${showMore}${confirm}</div>`;
+    this.overlay.innerHTML = `<div class="modal game-panel timeline-panel journal-panel">${this.journalHeader("Timeline", month, this.renderTimelineFilters(month))}<div class="timeline-list">${this.renderTimelineDateGroups(visibleEntries, rows) || empty}</div>${showMore}${confirm}</div>`;
     if (options.restoreScrollTop !== undefined) {
       requestAnimationFrame(() => {
         const panel = this.overlay.querySelector<HTMLElement>(".journal-panel");
@@ -1853,7 +1851,7 @@ export class WalkBackHomeApp {
     const selectedDate = this.timelineDateFilter || `${this.timelineCursorMonth().key}-01`;
     const feedback = this.timelineFilterFeedback(month);
     const dateClass = this.timelineDateInputHasEntries(selectedDate) ? "" : " no-results";
-    return `<details class="timeline-filter-menu"><summary>Filter / Sort</summary></details><div class="timeline-toolbar">
+    return `<details class="timeline-filter-menu"><summary>Filter / Sort</summary><div class="timeline-toolbar">
       <label>Sort<select id="timeline-sort"><option value="date-desc" ${this.timelineSort === "date-desc" ? "selected" : ""}>Newest first</option><option value="date-asc" ${this.timelineSort === "date-asc" ? "selected" : ""}>Oldest first</option><option value="title-asc" ${this.timelineSort === "title-asc" ? "selected" : ""}>Title A-Z</option></select></label>
       <label>Filter<select id="timeline-kind-filter"><option value="all" ${this.timelineKindFilter === "all" ? "selected" : ""}>All memories</option><option value="diary" ${this.timelineKindFilter === "diary" ? "selected" : ""}>Diary only</option><option value="fragment" ${this.timelineKindFilter === "fragment" ? "selected" : ""}>Memory Fragment</option><option value="chapter" ${this.timelineKindFilter === "chapter" ? "selected" : ""}>Memory Chapter</option></select></label>
       <label>Range<select id="timeline-date-scope"><option value="all" ${this.timelineDateScope === "all" ? "selected" : ""}>All diary</option><option value="year" ${this.timelineDateScope === "year" ? "selected" : ""}>By year</option><option value="month" ${this.timelineDateScope === "month" ? "selected" : ""}>By month</option><option value="date" ${this.timelineDateScope === "date" ? "selected" : ""}>Exact date</option></select></label>
@@ -1867,7 +1865,7 @@ export class WalkBackHomeApp {
       <button data-action="timeline-select-all">Select All</button>
       <button data-action="timeline-clear-selected">Clear Selection</button>
       <button data-action="timeline-request-delete-selected">Delete Selected</button>
-    </div>${this.renderTimelineDatePicker(selectedDate)}`;
+    </div></details>${this.renderTimelineDatePicker(selectedDate)}`;
   }
 
   private renderTimelineDeleteConfirmation(): string {
@@ -1876,25 +1874,6 @@ export class WalkBackHomeApp {
       <div><strong>Delete selected journals?</strong><p>This removes ${count} journal ${count === 1 ? "entry" : "entries"} from the app timeline.</p></div>
       <div class="delete-confirmation-actions"><button data-action="timeline-cancel-delete-selected">Cancel</button><button class="danger" data-action="timeline-confirm-delete-selected">Delete</button></div>
     </div>`;
-  }
-
-  private renderMobileWeekStrip(month: JournalMonth): string {
-    const baseDate = month.entries[0]?.date ?? `${this.timelineCursorMonth().key}-01`;
-    const parsed = new Date(`${baseDate}T00:00:00`);
-    const day = Number.isNaN(parsed.getTime()) ? new Date().getDay() : parsed.getDay();
-    const mondayOffset = day === 0 ? -6 : 1 - day;
-    const start = new Date(parsed);
-    start.setDate(parsed.getDate() + mondayOffset);
-    const entryDates = new Set(this.diaryEntries.map((entry) => entry.date));
-    const labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    const days = labels.map((label, index) => {
-      const date = new Date(start);
-      date.setDate(start.getDate() + index);
-      const iso = date.toISOString().slice(0, 10);
-      const selected = iso === baseDate;
-      return `<button class="${selected ? "selected" : ""}" data-action="timeline-pick-date" data-date="${iso}" ${entryDates.has(iso) ? "" : "disabled"}><span>${label}</span><strong>${date.getDate()}</strong><i>${entryDates.has(iso) ? "•" : ""}</i></button>`;
-    }).join("");
-    return `<div class="mobile-week-strip" aria-label="Diary week">${days}</div>`;
   }
 
   private renderTimelineDateGroups(entries: DiaryEntry[], rowHtml: string): string {
@@ -1962,9 +1941,9 @@ export class WalkBackHomeApp {
     return `${count} result${count === 1 ? "" : "s"} · ${filters.join(" · ")}`;
   }
 
-  private journalHeader(active: "Timeline" | "Books" | "Reader", month: JournalMonth): string {
+  private journalHeader(active: "Timeline" | "Books" | "Reader", month: JournalMonth, navExtra = ""): string {
     const navLabel = active === "Books" ? month.label.slice(-4) : month.label;
-    return `<div class="journal-archive-header"><div><h2>Journal</h2><p>${this.escapeHtml(active)} · ${this.escapeHtml(navLabel)}</p></div><button class="journal-close-button" data-action="close" aria-label="Close Journal">×</button><div class="journal-tabs"><button class="${active === "Timeline" ? "selected" : ""}" data-action="journal-timeline">Timeline</button><button class="${active === "Books" || active === "Reader" ? "selected" : ""}" data-action="journal-books">Books</button><button data-action="new-diary-entry">Create New Journal</button></div></div><div class="month-nav"><button data-action="journal-month-prev">‹</button><strong>${this.escapeHtml(navLabel)}</strong><button data-action="journal-month-next">›</button></div>`;
+    return `<div class="journal-archive-header"><div><h2>Journal</h2><p>${this.escapeHtml(active)} · ${this.escapeHtml(navLabel)}</p></div><button class="journal-close-button" data-action="close" aria-label="Close Journal">×</button><div class="journal-tabs"><button class="${active === "Timeline" ? "selected" : ""}" data-action="journal-timeline">Timeline</button><button class="${active === "Books" || active === "Reader" ? "selected" : ""}" data-action="journal-books">Books</button><button data-action="new-diary-entry">Create New Journal</button></div></div><div class="month-nav ${navExtra ? "timeline-month-nav" : ""}"><button data-action="journal-month-prev">‹</button><strong>${this.escapeHtml(navLabel)}</strong>${navExtra}<button data-action="journal-month-next">›</button></div>`;
   }
 
   private renderDiaryPreview(entry: DiaryEntry): string {
@@ -2025,10 +2004,12 @@ export class WalkBackHomeApp {
     this.journalMode = "reader";
     const month = this.currentJournalMonth(monthKey);
     const pages = month.entries.map((entry) => `<article class="book-page"><button class="diary-page-preview" data-action="open-diary-page" data-id="${this.escapeHtml(entry.id)}">${this.renderDiaryPreview(entry)}</button><button data-action="open-diary-page" data-id="${this.escapeHtml(entry.id)}">Open Page</button></article>`).join("");
-    const stats = `${month.entries.length} entries · ${month.entries.reduce((sum, entry) => sum + (entry.photos?.length ?? 0), 0)} photos · ${month.entries.reduce((sum, entry) => sum + (entry.media ?? []).filter((media) => media.type === "video").length, 0)} videos`;
+    const stats = `${month.entries.length} entries · ${month.entries.reduce((sum, entry) => sum + diaryMediaItems(entry).filter((media) => media.type === "image").length, 0)} photos · ${month.entries.reduce((sum, entry) => sum + (entry.media ?? []).filter((media) => media.type === "video").length, 0)} videos`;
     const cover = this.monthlyCovers?.[month.key] ?? defaultMonthlyCover(month.key);
-    const coverStyle = cover.src.startsWith("data:") ? `background-image:url('${this.escapeHtml(cover.src)}')` : `background:${this.escapeHtml(cover.src)}`;
-    this.overlay.innerHTML = `<div class="modal game-panel journal-panel monthly-reader">${this.journalHeader("Reader", month)}<div class="reader-actions"><span>${stats}</span><button data-action="export-month-pdf" data-month="${month.key}">Export PDF</button><button data-action="change-month-cover">Change Cover</button><label class="month-cover-crop-control">Cover crop<select id="month-cover-crop"><option value="center">Center crop</option><option value="top">Top crop</option><option value="bottom">Bottom crop</option></select></label><input id="month-cover-input" type="file" accept="image/*" aria-label="Change monthly PDF cover"></div><div class="pdf-cover-preview" style="${coverStyle}"><strong>${this.escapeHtml(month.label)}</strong><small>${this.escapeHtml(cover.caption ?? "Walk Back Home")}</small></div><div class="book-spread">${pages || `<div class="journal-empty"><p>${this.escapeHtml(month.label)} is still waiting for its first page.</p><button data-action="new-diary-entry">Write the first page</button></div>`}</div></div>`;
+    const coverPosition = cover.crop === "top" ? "center top" : cover.crop === "bottom" ? "center bottom" : "center center";
+    const coverSize = cover.crop === "contain" ? "contain" : "cover";
+    const coverStyle = cover.src.startsWith("data:") ? `background-image:url('${this.escapeHtml(cover.src)}');background-size:${coverSize};background-position:${coverPosition};` : `background:${this.escapeHtml(cover.src)}`;
+    this.overlay.innerHTML = `<div class="modal game-panel journal-panel monthly-reader">${this.journalHeader("Reader", month)}<div class="reader-actions"><span>${stats}</span><button data-action="export-month-pdf" data-month="${month.key}">Export PDF</button><button data-action="change-month-cover">Change Cover</button><label class="month-cover-crop-control">Cover crop<select id="month-cover-crop"><option value="center" ${cover.crop === "center" || !cover.crop ? "selected" : ""}>Center crop</option><option value="top" ${cover.crop === "top" ? "selected" : ""}>Top crop</option><option value="bottom" ${cover.crop === "bottom" ? "selected" : ""}>Bottom crop</option><option value="contain" ${cover.crop === "contain" ? "selected" : ""}>Full image</option></select></label><input id="month-cover-input" type="file" accept="image/*" aria-label="Change monthly PDF cover"></div><div class="pdf-cover-preview" style="${coverStyle}"><strong>${this.escapeHtml(month.label)}</strong><small>Monthly Journal</small></div><div class="book-spread">${pages || `<div class="journal-empty"><p>${this.escapeHtml(month.label)} is still waiting for its first page.</p><button data-action="new-diary-entry">Write the first page</button></div>`}</div></div>`;
     this.focusStage();
   }
 
@@ -2157,9 +2138,9 @@ export class WalkBackHomeApp {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     const coverImage = cover.src.startsWith("data:") ? await this.loadCanvasImage(cover.src) : null;
     if (coverImage) {
-      this.drawPdfImage(ctx, coverImage, 0, 0, canvas.width, 520);
+      this.drawPdfImage(ctx, coverImage, 0, 0, canvas.width, canvas.height);
       ctx.fillStyle = "rgba(21, 16, 11, 0.42)";
-      ctx.fillRect(0, 0, canvas.width, 520);
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
     } else {
       ctx.fillStyle = "#31433a";
       ctx.fillRect(0, 0, canvas.width, 240);
@@ -2169,7 +2150,7 @@ export class WalkBackHomeApp {
     ctx.fillText("Walk Back Home", 100, 140);
     ctx.font = "400 34px sans-serif";
     ctx.fillText("Monthly Journal", 104, 194);
-    ctx.fillStyle = "#87643a";
+    ctx.fillStyle = coverImage ? "#fff1c9" : "#87643a";
     ctx.font = "700 72px serif";
     ctx.fillText(month.label, 110, 470);
     ctx.font = "400 30px sans-serif";
@@ -2198,7 +2179,7 @@ export class WalkBackHomeApp {
     const pages: MonthlyJournalPdfPage[] = [];
     let consumedLines = 0;
     let pageIndex = 0;
-    const photos = entry.photos ?? [];
+    const photos = this.entryPdfImages(entry);
     while (consumedLines < bodyLines.length || pageIndex === 0) {
       canvas.width = 1240;
       canvas.height = 1754;
@@ -2231,6 +2212,10 @@ export class WalkBackHomeApp {
     return pages;
   }
 
+  private entryPdfImages(entry: DiaryEntry): DiaryMedia[] {
+    return diaryMediaItems(entry).filter((media) => media.type === "image");
+  }
+
   private drawDiaryEntryPdfPage(ctx: CanvasRenderingContext2D, entry: DiaryEntry, bodyLines: string[], firstPage: boolean, footerNote = ""): void {
     const canvas = ctx.canvas;
     ctx.fillStyle = "#f4e7c8";
@@ -2258,7 +2243,7 @@ export class WalkBackHomeApp {
       if (meta) this.wrapCanvasText(ctx, meta, 150, titleBottom + 20, 900, 34, 2);
     }
 
-    const photos = entry.photos ?? [];
+    const photos = this.entryPdfImages(entry);
     const elements = [...(entry.scrapbookLayout?.elements ?? [])].sort((a, b) => a.zIndex - b.zIndex);
     ctx.fillStyle = "#4f3a28";
     ctx.font = "400 30px sans-serif";
@@ -2270,7 +2255,7 @@ export class WalkBackHomeApp {
   }
 
   private async renderDiaryPhotoContinuationPages(entry: DiaryEntry, canvas: HTMLCanvasElement, startIndex: number): Promise<MonthlyJournalPdfPage[]> {
-    const photos = entry.photos ?? [];
+    const photos = this.entryPdfImages(entry);
     if (startIndex >= photos.length) return [];
     const pages: MonthlyJournalPdfPage[] = [];
     for (let offset = startIndex; offset < photos.length; offset += 9) {
@@ -2297,7 +2282,7 @@ export class WalkBackHomeApp {
     return pages;
   }
 
-  private async drawDiaryPhotosOnPdfPage(ctx: CanvasRenderingContext2D, photos: DiaryEntry["photos"], x: number, y: number, columns: number, size: number, gap: number): Promise<void> {
+  private async drawDiaryPhotosOnPdfPage(ctx: CanvasRenderingContext2D, photos: DiaryMedia[], x: number, y: number, columns: number, size: number, gap: number): Promise<void> {
     if (!photos?.length) return;
     for (const [index, photo] of photos.entries()) {
       const image = await this.loadCanvasImage(photo.src);
@@ -2389,18 +2374,11 @@ export class WalkBackHomeApp {
   private showDiaryEditor(editId = ""): void {
     if (!editId) return this.showTimeline();
     const moreOpen = this.journalMoreMenuOpen;
-    const moodSheetOpen = this.journalMoodSheetOpen;
-    const addMediaOpen = this.journalAddMediaSheetOpen;
     const editing = this.diaryEntries.find((entry) => entry.id === editId) ?? this.diaryEntries[0];
     const today = new Date().toISOString().slice(0, 10);
     const dateValue = editing?.date ?? today;
     const weekday = formatDiaryWeekday(dateValue);
     const selectedMood = editing?.mood ?? "calm";
-    const moodButtons = diaryMoodOptions.map((mood) => `
-      <button class="journal-mood-option ${selectedMood === mood.value ? "selected" : ""}" data-action="set-diary-mood" data-mood="${mood.value}" aria-label="${this.escapeHtml(mood.label)}">
-        <span class="mood-muji mood-${mood.value}" aria-hidden="true"></span>
-        <small>${this.escapeHtml(mood.label)}</small>
-      </button>`).join("");
     this.activeScrapbookEntryId = editing?.id ?? "";
     const elementIds = new Set((editing?.scrapbookLayout?.elements ?? []).map((element) => element.id));
     if (!this.selectedScrapbookElementId || !elementIds.has(this.selectedScrapbookElementId)) this.selectedScrapbookElementId = "";
@@ -2417,56 +2395,42 @@ export class WalkBackHomeApp {
     this.overlay.innerHTML = `
       <div class="modal game-panel diary-editor diary-page-editor journal-modal" data-entry="${this.escapeHtml(editing?.id ?? "")}">
         <div class="journal-toolbar">
-          <button class="journal-icon-button" data-action="settings" aria-label="Back">‹</button>
+          <button class="journal-icon-button" data-action="open-timeline" aria-label="Back to timeline">×</button>
           <div class="journal-brand">
             <span class="journal-mascot mood-${selectedMood}" aria-hidden="true"></span>
-            <div><h2>Walk Back Home</h2><p>Diary · Muji Edition</p></div>
+            <div><h2>Walk Back Home</h2></div>
           </div>
           <div class="journal-actions">
-            <button class="journal-icon-button" data-action="journal-more-menu" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="Journal more menu">⋮</button>
-            <label class="journal-upload">＋<input id="diary-photo-input" type="file" accept="image/*"></label>
             <button class="journal-done" data-action="save-diary-entry" data-id="${this.escapeHtml(editing?.id ?? "")}">✓ 完成</button>
           </div>
         </div>
         <div class="journal-more-panel ${moreOpen ? "open" : ""}">
           <button data-action="show-import-diary">Import Existing Diary</button>
           <button class="danger" data-action="timeline-request-delete-entry" data-id="${this.escapeHtml(editing?.id ?? "")}">Delete Journal</button>
-          <button data-action="journal-timeline">Timeline</button>
-          <button data-action="journal-books">Books</button>
-          <button data-action="close">Close</button>
         </div>
         <section class="diary-paper scrapbook-page journal-sheet" aria-label="Diary page">
           <div class="paper-rings" aria-hidden="true"></div>
             <div class="journal-page-inner">
-            <div class="journal-mobile-top-meta"><strong>今日记录</strong><p class="autosave-state" id="diary-save-state">Saved</p><label class="journal-kind">Memory<select id="diary-memory-kind"><option value="diary" ${editing?.memoryKind === "diary" ? "selected" : ""}>Diary only</option><option value="fragment" ${editing?.memoryKind === "fragment" ? "selected" : ""}>Memory Fragment</option><option value="chapter" ${editing?.memoryKind === "chapter" ? "selected" : ""}>Memory Chapter</option></select></label></div>
-            <div class="journal-sticker-title">今日记录</div>
-            <div class="journal-meta-card">
-              <label><span>▣ 日期：</span><input id="diary-date" type="date" value="${this.escapeHtml(dateValue)}"></label>
-              <div class="journal-weekday">${this.escapeHtml(weekday)}</div>
-              <label><span>▮ 标题：</span><input id="diary-title" value="${this.escapeHtml(editing?.title ?? "今天其实没发生什么特别的")}"></label>
-              <div></div>
-              <label><span>● 地点：</span><input id="diary-location" value="${this.escapeHtml(editing?.location ?? "")}" placeholder="地点"></label>
-              <div></div>
-              <label><span>☁ 天气：</span><input id="diary-weather" value="${this.escapeHtml(editing?.weather ?? "")}" placeholder="天气"></label>
-              <div></div>
+            <div class="journal-mobile-top-meta">
+              <label class="journal-kind"><span>分类：</span><select id="diary-memory-kind"><option value="diary" ${editing?.memoryKind === "diary" ? "selected" : ""}>Diary only</option><option value="fragment" ${editing?.memoryKind === "fragment" ? "selected" : ""}>Memory Fragment</option><option value="chapter" ${editing?.memoryKind === "chapter" ? "selected" : ""}>Memory Chapter</option></select></label>
+              <button class="journal-icon-button" data-action="journal-more-menu" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="Journal more menu">⋯</button>
             </div>
-            <figure class="journal-hero-photo">
-              <div class="journal-hero-scene">
-                <img src="${assets.room}" alt="">
-                <span class="journal-photo-muji mood-${selectedMood}" aria-hidden="true"></span>
-              </div>
-              <figcaption>好好记录，<br>慢慢回家。</figcaption>
-            </figure>
+            <div class="journal-meta-card">
+              <label class="journal-title-row"><span>▮ 标题：</span><input id="diary-title" value="${this.escapeHtml(editing?.title ?? "Untitled Note")}"></label>
+              <label class="journal-date-row"><span>▣ 日期：</span><input id="diary-date" type="date" value="${this.escapeHtml(dateValue)}"></label>
+              <label><span>● 地点：</span><input id="diary-location" value="${this.escapeHtml(editing?.location ?? "")}" placeholder="地点"></label>
+              <label><span>☁ 天气：</span><input id="diary-weather" value="${this.escapeHtml(editing?.weather ?? "")}" placeholder="天气"></label>
+              <label><span>心情：</span><input id="diary-mood-text" value="${this.escapeHtml(selectedMood)}" placeholder="自定义心情"></label>
+              <div class="journal-weekday">${this.escapeHtml(weekday)}</div>
+            </div>
             <label class="journal-body-field"><textarea id="diary-body" rows="12">${this.escapeHtml(editing?.body ?? "")}</textarea><span class="journal-photo-insert-marker">Media inserts at your writing line</span>${inlineMedia}</label>
-            <div class="journal-mood-picker"><input id="diary-mood" type="hidden" value="${selectedMood}">${moodButtons}</div>
+            <input id="diary-mood" type="hidden" value="${this.escapeHtml(selectedMood)}">
           </div>
           ${elements}
         </section>
         <div class="integrated-tools journal-photo-dock"></div>
-        <div class="mobile-editor-toolbar"><button class="journal-mobile-muji-button" data-action="journal-mood-entry" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="Choose mood"><span class="journal-mascot mood-${selectedMood}" aria-hidden="true"></span></button><button data-action="journal-add-media-menu" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="Add media">＋</button><button data-action="journal-more-menu" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="More journal options">⋮</button><button class="journal-done" data-action="save-diary-entry" data-id="${this.escapeHtml(editing?.id ?? "")}">✓ 完成</button></div>
-        <div class="journal-mood-sheet ${moodSheetOpen ? "open" : ""}" aria-label="Choose journal mood">${moodButtons}</div>
-        <div class="journal-add-media-sheet ${addMediaOpen ? "open" : ""}" aria-label="Add journal media"><label class="journal-upload" title="Add photo or video">Photo / Video<input id="diary-mobile-media-input" type="file" accept="image/*,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"></label></div>
-        <div class="journal-lower-tools"><p class="autosave-state">Saved</p><button data-action="show-import-diary">Import Existing Diary</button><button data-action="open-timeline">Timeline</button><button data-action="journal-books">Books</button><button data-action="open-map">Walk Back Home</button><button data-action="close">Close</button></div>
+        <div class="mobile-editor-toolbar"><button data-action="journal-add-inline-media" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="Add photo">▧<span>图片</span></button><button data-action="journal-add-inline-media" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="Add video">▭<span>视频</span></button></div>
+        <input id="diary-mobile-media-input" class="sr-only" type="file" accept="image/*,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov">
       </div>`;
     this.focusStage();
   }
@@ -2478,7 +2442,6 @@ export class WalkBackHomeApp {
     this.applyDiaryLibrary(upsertDiaryPageDraft(this.makeDiaryLibrary(), entry));
     this.selectedChapter = entry.title;
     this.journalMoreMenuOpen = false;
-    this.journalMoodSheetOpen = false;
     this.showDiaryReader(entry.id);
     this.showToast(index >= 0 ? "Diary updated" : "Diary entry added");
     this.autosave();
@@ -2491,7 +2454,7 @@ export class WalkBackHomeApp {
     const weatherInput = this.overlay.querySelector<HTMLInputElement>("#diary-weather");
     const bodyInput = this.overlay.querySelector<HTMLTextAreaElement>("#diary-body");
     const kindInput = this.overlay.querySelector<HTMLSelectElement>("#diary-memory-kind");
-    const moodInput = this.overlay.querySelector<HTMLInputElement>("#diary-mood");
+    const moodInput = this.overlay.querySelector<HTMLInputElement>("#diary-mood-text") ?? this.overlay.querySelector<HTMLInputElement>("#diary-mood");
     const date = dateInput?.value.trim() ?? "";
     const title = titleInput?.value.trim() || "Untitled Memory";
     const body = bodyInput?.value.trim() ?? "";
@@ -2501,8 +2464,8 @@ export class WalkBackHomeApp {
     }
     const existing = this.diaryEntries.find((item) => item.id === id);
     const memoryKind = (kindInput?.value as MemoryKind | undefined) ?? "diary";
-    const moodValue = moodInput?.value ?? "";
-    const mood = isDiaryMood(moodValue) ? moodValue : existing?.mood ?? "calm";
+    const moodValue = moodInput?.value.trim() ?? "";
+    const mood = moodValue || existing?.mood || "calm";
     return {
       ...makeDiaryEntry(date, title, body, id || existing?.id, memoryKind),
       location: locationInput?.value.trim(),
@@ -2518,9 +2481,28 @@ export class WalkBackHomeApp {
     if (!entry) return "";
     const media = diaryMediaItems(entry);
     if (!media.length) return "";
-    return `<div class="journal-inline-media">${media.map((item) => item.type === "video"
-      ? `<video class="journal-inline-photo journal-inline-video" controls preload="metadata" src="${this.escapeHtml(item.src)}" aria-label="${this.escapeHtml(item.caption ?? "Journal video")}"></video>`
-      : `<img class="journal-inline-photo" src="${this.escapeHtml(item.src)}" alt="">`).join("")}</div>`;
+    return `<div class="journal-inline-media">${media.map((item) => {
+      const selected = this.selectedJournalMediaId === item.id;
+      const crop = this.normalizeJournalMediaCrop(item.crop);
+      const mediaNode = item.type === "video"
+        ? `<video class="journal-inline-photo journal-inline-video" controls preload="metadata" src="${this.escapeHtml(item.src)}" aria-label="${this.escapeHtml(item.caption ?? "Journal video")}"></video>`
+        : `<img class="journal-inline-photo crop-${this.escapeHtml(crop)}" src="${this.escapeHtml(item.src)}" alt="">`;
+      return `<figure class="journal-inline-media-item ${selected ? "selected" : ""}" data-media="${this.escapeHtml(item.id)}">
+        <button class="journal-media-select" data-action="journal-media-select" data-media="${this.escapeHtml(item.id)}" aria-label="Select media">${mediaNode}</button>
+        ${selected ? `<figcaption class="journal-media-tools"><button data-action="journal-media-crop" data-media="${this.escapeHtml(item.id)}" data-crop-mode="${this.escapeHtml(crop)}">Crop: ${this.escapeHtml(this.nextJournalCropLabel(crop))}</button><button data-action="journal-media-remove" data-media="${this.escapeHtml(item.id)}">Remove</button></figcaption>` : ""}
+      </figure>`;
+    }).join("")}</div>`;
+  }
+
+  private nextJournalCropLabel(crop: DiaryMediaCrop): string {
+    if (crop === "cover") return "Full";
+    if (crop === "contain") return "Top";
+    if (crop === "top") return "Bottom";
+    return "Cover";
+  }
+
+  private normalizeJournalMediaCrop(crop: unknown): DiaryMediaCrop {
+    return crop === "contain" || crop === "top" || crop === "bottom" ? crop : "cover";
   }
 
   private handleInput(event: Event): void {
@@ -2746,16 +2728,59 @@ export class WalkBackHomeApp {
     this.autosave();
   }
 
-  private setDiaryMood(mood: string): void {
-    if (!isDiaryMood(mood)) return;
+  private selectJournalMedia(mediaId: string): void {
+    this.selectedJournalMediaId = this.selectedJournalMediaId === mediaId ? "" : mediaId;
+    const editor = this.overlay.querySelector<HTMLElement>(".diary-page-editor");
+    this.showDiaryEditorPreservingScroll(editor?.dataset.entry ?? "");
+  }
+
+  private removeSelectedJournalMedia(mediaId: string): void {
     const editor = this.overlay.querySelector<HTMLElement>(".diary-page-editor");
     const entryId = editor?.dataset.entry ?? "";
-    const draft = this.readDiaryDraftFromOverlay(entryId);
-    if (!draft) return;
-    this.applyDiaryLibrary(upsertDiaryPageDraft(this.makeDiaryLibrary(), { ...draft, mood }));
-    this.journalMoodSheetOpen = false;
-    this.showDiaryEditor(draft.id);
-    this.autosave();
+    const entry = this.diaryEntries.find((item) => item.id === entryId);
+    if (!entry || !mediaId) return;
+    const draft = this.readDiaryDraftFromOverlay(entry.id) ?? entry;
+    const photoMatch = draft.photos?.some((photo) => photo.id === mediaId);
+    const next = photoMatch ? removePhotoAttachment(draft, mediaId) : removeJournalMedia(draft, mediaId);
+    this.selectedJournalMediaId = "";
+    this.updateDiaryEntry(next);
+    this.showDiaryEditorPreservingScroll(entry.id);
+    this.showToast("Media removed");
+  }
+
+  private cropSelectedJournalMedia(mediaId: string): void {
+    const editor = this.overlay.querySelector<HTMLElement>(".diary-page-editor");
+    const entryId = editor?.dataset.entry ?? "";
+    const entry = this.diaryEntries.find((item) => item.id === entryId);
+    if (!entry || !mediaId) return;
+    const draft = this.readDiaryDraftFromOverlay(entry.id) ?? entry;
+    const current = diaryMediaItems(draft).find((media) => media.id === mediaId);
+    const currentCrop = this.normalizeJournalMediaCrop(current?.crop);
+    const nextCrop: DiaryMediaCrop = currentCrop === "cover" ? "contain" : currentCrop === "contain" ? "top" : currentCrop === "top" ? "bottom" : "cover";
+    const next = this.updateJournalMediaCrop(draft, mediaId, nextCrop);
+    this.selectedJournalMediaId = mediaId;
+    this.updateDiaryEntry(next);
+    this.showDiaryEditorPreservingScroll(entry.id);
+    this.showToast(`Crop set to ${this.nextJournalCropLabel(nextCrop).toLowerCase()} mode`);
+  }
+
+  private showDiaryEditorPreservingScroll(entryId: string): void {
+    const panel = this.overlay.querySelector<HTMLElement>(".journal-modal");
+    const restoreScrollTop = panel?.scrollTop ?? window.scrollY;
+    this.showDiaryEditor(entryId);
+    window.requestAnimationFrame(() => {
+      const nextPanel = this.overlay.querySelector<HTMLElement>(".journal-modal");
+      if (nextPanel) nextPanel.scrollTop = restoreScrollTop;
+      else window.scrollTo({ top: restoreScrollTop });
+    });
+  }
+
+  private updateJournalMediaCrop(entry: DiaryEntry, mediaId: string, crop: DiaryMediaCrop): DiaryEntry {
+    return {
+      ...entry,
+      photos: entry.photos?.map((photo) => photo.id === mediaId ? { ...photo, crop } : photo),
+      media: entry.media?.map((media) => media.id === mediaId ? { ...media, crop } : media)
+    };
   }
 
   private showScrapbookComposer(id: string): void {
@@ -2875,6 +2900,10 @@ export class WalkBackHomeApp {
       await this.handleMonthCoverInput(input);
       return;
     }
+    if (input.id === "month-cover-crop") {
+      this.setMonthlyCoverCrop(input.value as JournalBookCoverCrop);
+      return;
+    }
     if (input.id === "music-sort") {
       this.personalPlayer.librarySort = input.value as MusicSort;
       void this.showRecords();
@@ -2939,14 +2968,30 @@ export class WalkBackHomeApp {
     if (!file || !file.type.startsWith("image/")) return;
     const src = await this.readFileAsDataUrl(file);
     const monthKey = this.currentJournalMonth().key;
+    const current = this.monthlyCovers?.[monthKey] ?? defaultMonthlyCover(monthKey);
     this.applyDiaryLibrary(upsertMonthlyCover(this.makeDiaryLibrary(), monthKey, {
       src,
-      caption: file.name,
+      caption: undefined,
+      crop: current.crop ?? "center",
       updatedAt: new Date().toISOString()
     }));
     this.save.saveDiaryLibrary(this.makeDiaryLibrary());
     this.openMonthlyBook(monthKey);
     this.showToast("Monthly cover changed");
+  }
+
+  private setMonthlyCoverCrop(crop: JournalBookCoverCrop): void {
+    const monthKey = this.currentJournalMonth().key;
+    const current = this.monthlyCovers?.[monthKey] ?? defaultMonthlyCover(monthKey);
+    const nextCrop: JournalBookCoverCrop = crop === "top" || crop === "bottom" || crop === "contain" ? crop : "center";
+    this.applyDiaryLibrary(upsertMonthlyCover(this.makeDiaryLibrary(), monthKey, {
+      ...current,
+      crop: nextCrop,
+      updatedAt: current.updatedAt === "default" ? new Date().toISOString() : current.updatedAt
+    }));
+    this.save.saveDiaryLibrary(this.makeDiaryLibrary());
+    this.openMonthlyBook(monthKey);
+    this.showToast("Cover crop updated");
   }
 
   private async handleDiaryImportFile(input: HTMLInputElement): Promise<void> {
@@ -3230,16 +3275,21 @@ export class WalkBackHomeApp {
     const resizeHandle = (event.target as HTMLElement).closest<HTMLElement>(".floating-resize-handle");
     const resizingLyrics = resizeHandle?.closest<HTMLElement>(".floating-lyrics");
     if (resizeHandle && resizingLyrics) {
+      const rect = resizingLyrics.getBoundingClientRect();
       this.lyricsResize = {
         startX: event.clientX,
-        startWidth: resizingLyrics.getBoundingClientRect().width
+        startY: event.clientY,
+        startWidth: rect.width,
+        startHeight: rect.height
       };
       event.preventDefault();
       return;
     }
-    const note = (event.target as HTMLElement).closest<HTMLElement>(".wall-note");
+    const pointerTarget = event.target as HTMLElement;
+    const note = pointerTarget.closest<HTMLElement>(".wall-note");
     const wall = (event.target as HTMLElement).closest<HTMLElement>(".reflection-wall-surface");
-    if (note && wall && !(event.target as HTMLElement).closest("button,input,select,textarea")) {
+    const noteDragHandle = pointerTarget.closest(".reflection-note-drag-handle");
+    if (note && wall && noteDragHandle) {
       const wallRect = wall.getBoundingClientRect();
       const noteData = this.reflectionWall.notes.find((item) => item.id === note.dataset.note);
       if (noteData) {
@@ -3248,6 +3298,7 @@ export class WalkBackHomeApp {
           offsetX: ((event.clientX - wallRect.left) / wallRect.width) * 100 - noteData.x,
           offsetY: ((event.clientY - wallRect.top) / wallRect.height) * 100 - noteData.y
         };
+        note.dataset.dragging = "true";
         event.preventDefault();
       }
       return;
@@ -3280,10 +3331,19 @@ export class WalkBackHomeApp {
     if (this.lyricsResize) {
       const stageRect = this.stage.getBoundingClientRect();
       const scaleX = this.canvas.width / stageRect.width;
-      const width = Math.max(180, Math.min(520, this.lyricsResize.startWidth * scaleX + (event.clientX - this.lyricsResize.startX) * scaleX));
+      const scaleY = this.canvas.height / stageRect.height;
+      const startWidth = this.lyricsResize.startWidth * scaleX;
+      const startHeight = this.lyricsResize.startHeight * scaleY;
+      const deltaX = (event.clientX - this.lyricsResize.startX) * scaleX;
+      const deltaY = (event.clientY - this.lyricsResize.startY) * scaleY;
+      const delta = (deltaX + deltaY) / 2;
+      const width = Math.max(120, Math.min(520, startWidth + delta));
+      const ratio = width / Math.max(1, startWidth);
+      const height = Math.max(48, Math.min(260, startHeight * ratio));
       this.personalPlayer.lyricsOverlay = clampLyricsOverlay({
         ...this.personalPlayer.lyricsOverlay,
-        width
+        width,
+        height
       }, this.canvas.width, this.canvas.height);
       this.save.savePersonalPlayer(this.personalPlayer);
       this.updatePersonalMusicOverlay();
@@ -3303,6 +3363,7 @@ export class WalkBackHomeApp {
       if (note && next) {
         note.style.left = `${next.x}%`;
         note.style.top = `${next.y}%`;
+        note.dataset.dragging = "true";
       }
       event.preventDefault();
       return;
@@ -3449,12 +3510,25 @@ export class WalkBackHomeApp {
     if (replacement) currentBody.replaceWith(replacement);
   }
 
+  private selectReflectionWallNote(noteId: string): void {
+    this.selectedReflectionNoteId = this.selectedReflectionNoteId === noteId ? "" : noteId;
+    this.refreshReflectionWallOnly();
+  }
+
   private renderWallNote(note: ReflectionNote, visible: boolean): string {
     const faded = this.reflectionWallSearch.trim() || this.reflectionWallFilter !== "all" ? (visible ? "" : " faded") : "";
-    return `<button class="wall-note paper-${this.escapeHtml(note.styleId)}${faded}" data-note="${this.escapeHtml(note.id)}" data-action="reflection-note-open" style="left:${note.x}%;top:${note.y}%;transform:translate(-50%,-50%) rotate(${note.rotation}deg);">
-      <span>${this.escapeHtml(note.text)}</span>
-      <small>${this.escapeHtml(this.formatReflectionTimestamp(note.createdAt))}${note.updatedAt ? `<br>edited ${this.escapeHtml(this.formatReflectionTimestamp(note.updatedAt))}` : ""}</small>
-    </button>`;
+    const selected = this.selectedReflectionNoteId === note.id;
+    return `<article class="wall-note paper-${this.escapeHtml(note.styleId)}${faded} ${selected ? "selected" : ""}" data-note="${this.escapeHtml(note.id)}" style="left:${note.x}%;top:${note.y}%;transform:translate(-50%,-50%) rotate(${note.rotation}deg);">
+      <button class="wall-note-body" data-action="reflection-note-select" data-note="${this.escapeHtml(note.id)}">
+        <span>${this.escapeHtml(note.text)}</span>
+        <small>${this.escapeHtml(this.formatReflectionTimestamp(note.createdAt))}${note.updatedAt ? `<br>edited ${this.escapeHtml(this.formatReflectionTimestamp(note.updatedAt))}` : ""}</small>
+      </button>
+      <div class="reflection-note-tools" aria-label="Note tools">
+        <button class="reflection-note-drag-handle" data-action="reflection-note-drag" data-note="${this.escapeHtml(note.id)}" aria-label="Drag note">↕</button>
+        <button data-action="reflection-note-edit" data-note="${this.escapeHtml(note.id)}" aria-label="Edit note">🖊</button>
+        <button data-action="reflection-note-delete" data-note="${this.escapeHtml(note.id)}" aria-label="Remove note">×</button>
+      </div>
+    </article>`;
   }
 
   private renderReflectionStack(notes: ReflectionNote[]): string {
@@ -3906,9 +3980,25 @@ export class WalkBackHomeApp {
   private toggleFloatingLyrics(): void {
     this.preserveRecordsScroll();
     this.personalPlayer.lyricsVisible = !this.personalPlayer.lyricsVisible;
+    if (this.personalPlayer.lyricsVisible) this.personalPlayer.lyricsOverlay = this.mobileLyricsOverlayDefault();
     void this.showRecords();
     this.updatePersonalMusicOverlay();
     this.autosave();
+  }
+
+  private mobileLyricsOverlayDefault(): PersonalPlayerState["lyricsOverlay"] {
+    if (!window.matchMedia("(max-width: 700px)").matches) {
+      return clampLyricsOverlay(this.personalPlayer.lyricsOverlay, this.canvas.width, this.canvas.height);
+    }
+    const width = Math.min(260, Math.max(120, this.canvas.width - 24));
+    const height = Math.min(112, Math.max(56, this.canvas.height - 48));
+    return clampLyricsOverlay({
+      ...this.personalPlayer.lyricsOverlay,
+      x: 12,
+      y: Math.max(12, this.canvas.height - height - 96),
+      width,
+      height
+    }, this.canvas.width, this.canvas.height);
   }
 
   private markUserTrackPlayed(id: string): void {
@@ -4048,6 +4138,7 @@ export class WalkBackHomeApp {
     const activeIndex = activeLyricIndexAt(lyrics, this.currentPersonalPlaybackTime());
     const overlay = clampLyricsOverlay(this.personalPlayer.lyricsOverlay, this.canvas.width, this.canvas.height);
     this.personalPlayer.lyricsOverlay = overlay;
+    const overlayHeight = Math.round(overlay.height ?? 116);
     const activeLyric = activeIndex >= 0 ? activeIndex : 0;
     const lyricStart = lyrics.length ? Math.max(0, Math.min(activeLyric - 1, Math.max(0, lyrics.length - 3))) : 0;
     const lyricLines = this.personalPlayer.lyricsVisible ? lyrics.slice(lyricStart, lyricStart + 3) : [];
@@ -4058,7 +4149,7 @@ export class WalkBackHomeApp {
       }).join("")
       : `<span class="muted">${this.escapeHtml(track.title)}</span><span class="active">${this.escapeHtml(track.artist ?? "Now playing")}</span>`;
     const floatingLyrics = this.personalPlayer.lyricsVisible
-      ? `<div class="floating-lyrics" style="left:${overlay.x}px;top:${overlay.y}px;width:${overlay.width}px" aria-live="off"><button class="floating-records-link floating-controls-bar" data-action="room-records">♪ Records</button><div class="floating-lyric-shortcut floating-drag-handle" data-action="room-records" role="button" tabindex="0" aria-label="Open records">${lyricHtml}</div><div class="floating-player-controls floating-controls-bar"><button class="icon-button" data-action="music-prev" aria-label="Previous" title="Previous">⏮</button><button class="icon-button primary" data-action="vinyl-pause" aria-label="${this.personalPlayer.playing ? "Pause" : "Play"}" title="${this.personalPlayer.playing ? "Pause" : "Play"}">${this.personalPlayer.playing ? "⏸" : "▶"}</button><button class="icon-button" data-action="music-next" aria-label="Next" title="Next">⏭</button></div><span class="floating-resize-handle" aria-label="Resize floating lyrics" title="Resize floating lyrics">↘</span></div>`
+      ? `<div class="floating-lyrics" style="left:${overlay.x}px;top:${overlay.y}px;width:${overlay.width}px;min-height:${overlayHeight}px" aria-live="off"><button class="floating-records-link floating-controls-bar" data-action="room-records">♪ Records</button><div class="floating-lyric-shortcut floating-drag-handle" data-action="room-records" role="button" tabindex="0" aria-label="Open records">${lyricHtml}</div><div class="floating-player-controls floating-controls-bar"><button class="icon-button" data-action="music-prev" aria-label="Previous" title="Previous">⏮</button><button class="icon-button primary" data-action="vinyl-pause" aria-label="${this.personalPlayer.playing ? "Pause" : "Play"}" title="${this.personalPlayer.playing ? "Pause" : "Play"}">${this.personalPlayer.playing ? "⏸" : "▶"}</button><button class="icon-button" data-action="music-next" aria-label="Next" title="Next">⏭</button></div><span class="floating-resize-handle" aria-label="Resize floating lyrics" title="Resize floating lyrics">↘</span></div>`
       : "";
     this.musicPlayer.innerHTML = `<button class="mini-now-playing" data-action="room-records">♪ ${this.escapeHtml(track.title)}</button>${floatingLyrics}`;
   }

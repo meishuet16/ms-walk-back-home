@@ -56,14 +56,17 @@ export type DiaryEntry = {
 };
 
 export type MemoryKind = "diary" | "fragment" | "chapter";
-export type DiaryMood = "calm" | "sad" | "blank" | "happy" | "excited";
+export type DiaryMood = string;
 
 export type DiaryPhoto = {
   id: string;
   storageKey?: string;
   src: string;
   caption?: string;
+  crop?: DiaryMediaCrop;
 };
+
+export type DiaryMediaCrop = "cover" | "contain" | "top" | "bottom";
 
 export type DiaryMedia = {
   id: string;
@@ -73,12 +76,16 @@ export type DiaryMedia = {
   caption?: string;
   mimeType?: string;
   posterSrc?: string;
+  crop?: DiaryMediaCrop;
 };
+
+export type JournalBookCoverCrop = "center" | "top" | "bottom" | "contain";
 
 export type JournalBookCover = {
   storageKey?: string;
   src: string;
   caption?: string;
+  crop?: JournalBookCoverCrop;
   updatedAt: string;
 };
 
@@ -193,6 +200,7 @@ export type LyricsOverlayState = {
   x: number;
   y: number;
   width?: number;
+  height?: number;
 };
 
 export type PersonalPlayerState = {

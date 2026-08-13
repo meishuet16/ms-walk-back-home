@@ -103,6 +103,8 @@ test("records mobile menus stay in viewport and preserve scroll while selecting"
   assert.match(appSource, /data-floating-lyrics-width/);
   assert.match(appSource, /floating-resize-handle/);
   assert.match(appSource, /lyricsResize/);
+  assert.match(appSource, /lyricsResize.startWidth/);
+  assert.match(appSource, /lyricsResize.startHeight/);
   assert.match(appSource, /resumeAfterRecordsClose/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.records-mobile-more\.open[\s\S]*position:\s*fixed/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.records-song-sheet\.open[\s\S]*position:\s*fixed/);
@@ -137,35 +139,52 @@ test("mobile touch controls are large and hidden behind non-game portrait sheets
 );
 
 test("journal mobile uses reading mode and quiet editor controls", () => {
+  const editorMorePanel = appSource.match(/<div class="journal-more-panel \$\{moreOpen \? "open" : ""\}">[\s\S]*?<\/div>/)?.[0] ?? "";
+
   assert.match(appSource, /showDiaryReader/);
   assert.match(appSource, /journal-reading-page/);
   assert.match(appSource, /data-action="journal-more-menu"/);
   assert.match(appSource, /data-action="journal-edit-current"/);
-  assert.match(appSource, /data-action="journal-mood-entry"/);
-  assert.match(appSource, /data-action="journal-add-media-menu"/);
-  assert.match(appSource, /journal-add-media-sheet/);
-  assert.match(appSource, /journal-mood-sheet/);
+  assert.doesNotMatch(appSource, /data-action="journal-mood-entry"/);
+  assert.doesNotMatch(appSource, /data-action="journal-add-media-menu"/);
+  assert.doesNotMatch(appSource, /journal-add-media-sheet/);
+  assert.match(appSource, /id="diary-mood-text"/);
+  assert.match(appSource, /data-action="journal-media-select"/);
+  assert.match(appSource, /data-action="journal-media-remove"/);
+  assert.match(appSource, /data-action="journal-media-crop"/);
+  assert.match(appSource, /journal-media-tools/);
+  assert.match(appSource, /data-crop-mode/);
   assert.doesNotMatch(appSource, /id="diary-video-input"/);
   assert.match(appSource, /journal-inline-photo/);
   assert.match(appSource, /journal-photo-insert-marker/);
   assert.match(appSource, /心情：/);
   assert.doesNotMatch(appSource, /<figcaption>\$\{this\.escapeHtml\(item\.caption/);
   assert.match(appSource, /journal-mobile-top-meta/);
-  assert.match(appSource, /journal-mobile-muji-button/);
+  assert.match(appSource, /data-action="open-timeline" aria-label="Back to timeline"/);
+  assert.doesNotMatch(appSource, /data-action="change-journal-cover"/);
+  assert.doesNotMatch(appSource, /data-action="journal-tags"/);
+  assert.doesNotMatch(editorMorePanel, /data-action="journal-timeline"/);
+  assert.doesNotMatch(appSource, /data-action="journal-settings"/);
+  assert.doesNotMatch(appSource, /data-action="journal-text-tools"/);
+  assert.doesNotMatch(appSource, /data-action="journal-list-tools"/);
+  assert.doesNotMatch(appSource, /data-action="journal-undo"/);
+  assert.doesNotMatch(appSource, /data-action="journal-redo"/);
+  assert.doesNotMatch(appSource, /journal-mobile-muji-button/);
   assert.doesNotMatch(appSource, /journal-more-moods/);
   assert.match(appSource, /data-action="journal-books">Books/);
   assert.match(appSource, /data-action="close">Close/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-mood-picker[\s\S]*display:\s*none/);
   assert.match(stylesSource, /\.mobile-editor-toolbar/);
-  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-actions[\s\S]*display:\s*none/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-actions[\s\S]*display:\s*block/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-photo-dock[\s\S]*display:\s*none/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-meta-card[\s\S]*grid-template-columns:\s*1fr 1fr/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-inline-photo[\s\S]*max-height:\s*180px/);
-  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-mood-sheet\.open[\s\S]*display:\s*grid/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-more-panel\.open[\s\S]*position:\s*fixed/);
+  assert.match(appSource, /this\.journalMoreMenuOpen = false;[\s\S]*this\.showDiaryEditor\(target\.dataset\.id\)/);
 });
 
 test("journal mobile timeline books and pdf expose editorial structures", () => {
-  assert.match(appSource, /mobile-week-strip/);
+  assert.doesNotMatch(appSource, /mobile-week-strip/);
   assert.match(appSource, /timeline-date-group/);
   assert.match(appSource, /timeline-media-grid/);
   assert.match(appSource, /book-shelf-section/);
@@ -175,16 +194,23 @@ test("journal mobile timeline books and pdf expose editorial structures", () => 
   assert.match(appSource, /data-action="timeline-confirm-delete-selected"/);
   assert.doesNotMatch(appSource, /data-action="delete-diary-entry" data-id="\$\{this\.escapeHtml\(entry\.id\)\}">Delete/);
   assert.match(appSource, /timeline-filter-menu/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.month-nav[\s\S]*grid-template-columns:\s*auto\s*minmax\(0,\s*1fr\)\s*auto\s*auto/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-toolbar[\s\S]*display:\s*none/);
-  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-filter-menu\[open\]\s+\.timeline-toolbar[\s\S]*display:\s*grid/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-filter-menu\[open\]\s+\.timeline-toolbar[\s\S]*position:\s*fixed/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-filter-menu\[open\]\s+\.timeline-toolbar[\s\S]*right:\s*12px/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-filter-menu\[open\]\s+\.timeline-toolbar[\s\S]*display:\s*grid|@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-filter-menu\[open\]\s+\.timeline-toolbar[\s\S]*display:\s*grid/);
+  assert.match(stylesSource, /\.timeline-filter-menu\[open\] \.timeline-toolbar[\s\S]*display:\s*grid/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-media-grid[\s\S]*max-height:\s*124px/);
-  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-card-actions[\s\S]*grid-column:\s*3/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-card-actions[\s\S]*grid-column:\s*1 \/ -1/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-delete-confirmation[\s\S]*width:\s*min\(332px,\s*calc\(100vw - 32px\)\)/);
   assert.match(appSource, /data-action="change-month-cover"/);
   assert.match(appSource, /month-cover-crop-control/);
+  assert.match(appSource, /setMonthlyCoverCrop/);
   assert.match(appSource, /id="month-cover-input"/);
   assert.match(appSource, /pdf-cover-preview/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-archive-header[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s*auto/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-card[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s*auto/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.diary-page-preview[\s\S]*grid-column:\s*1 \/ -1/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-entry[\s\S]*border-radius:\s*0/);
   assert.match(stylesSource, /\.journal-video-block/);
 });
@@ -192,6 +218,11 @@ test("journal mobile timeline books and pdf expose editorial structures", () => 
 test("mobile journal reflection and pdf surfaces fill the portrait viewport", () => {
   assert.match(appSource, /reflection-wall-filter-menu/);
   assert.match(appSource, /reflection-wall-close-button/);
+  assert.match(appSource, /reflection-note-tools/);
+  assert.match(appSource, /selectedReflectionNoteId/);
+  assert.match(appSource, /data-action="reflection-note-select"/);
+  assert.match(appSource, /data-action="reflection-note-drag"/);
+  assert.match(appSource, /data-action="reflection-note-delete"/);
   assert.match(appSource, /refreshReflectionWallOnly/);
   assert.doesNotMatch(appSource, /target instanceof HTMLInputElement && target\.id === "reflection-search"[\s\S]{0,120}this\.openReflectionWall\(\)/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-panel[\s\S]*min-height:\s*100dvh/);
@@ -201,6 +232,8 @@ test("mobile journal reflection and pdf surfaces fill the portrait viewport", ()
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.reflection-wall-filter-menu\[open\]\s+\.reflection-chip-row[\s\S]*display:\s*flex/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.wall-note[\s\S]*max-width:\s*calc\(100vw - 48px\)/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.wall-note[\s\S]*transform:\s*none\s*!important/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.wall-note\[data-dragging="true"\][\s\S]*outline/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.game-panel[\s\S]*color:\s*#3c2b1c/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.overlay[\s\S]*padding:\s*0/);
 }
 );

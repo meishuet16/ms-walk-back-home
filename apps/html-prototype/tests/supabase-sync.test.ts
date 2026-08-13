@@ -9,7 +9,8 @@ test("app config defaults to local mode without Supabase credentials", () => {
 
   assert.equal(config.authProvider, "local");
   assert.equal(sync.isConfigured(), false);
-  assert.match(sync.statusLabel(), /not configured/i);
+  assert.match(sync.statusLabel(), /not connected/i);
+  assert.match(sync.statusLabel(), /Portable backup remains available/i);
 });
 
 test("Supabase sync enables only when URL and anon key are present", () => {

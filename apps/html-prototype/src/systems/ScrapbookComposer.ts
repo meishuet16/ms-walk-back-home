@@ -92,7 +92,8 @@ export function diaryMediaItems(entry: DiaryEntry): DiaryMedia[] {
     type: "image",
     storageKey: photo.storageKey,
     src: photo.src,
-    caption: photo.caption
+    caption: photo.caption,
+    crop: photo.crop
   }));
   return [...photos, ...(entry.media ?? [])];
 }

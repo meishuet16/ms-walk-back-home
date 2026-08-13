@@ -52,7 +52,7 @@ export class SupabaseSync {
   }
 
   statusLabel(): string {
-    if (!this.isConfigured()) return "Supabase is not configured. Portable backup remains local-first.";
+    if (!this.isConfigured()) return "Cloud sync is not connected in this local build. Portable backup remains available.";
     return "Supabase is configured. Google sign-in and private sync are available.";
   }
 

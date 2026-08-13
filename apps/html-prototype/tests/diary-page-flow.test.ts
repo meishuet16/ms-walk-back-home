@@ -3,7 +3,7 @@ import test from "node:test";
 import { addJournalMedia, addPhotoAttachment, addPhotoElement, attachPhotoAndPlaceOnPage, createCutoutElement, diaryMediaItems, diaryTextFrame, moveScrapbookElement, removeJournalMedia, removePhotoAttachment } from "../src/systems/ScrapbookComposer.js";
 import { createDiaryLibrary, createNewDiaryPage, formatDiaryWeekday, openDiaryPageForDate, upsertDiaryPageDraft } from "../src/systems/DiaryLibrary.js";
 import { makeDiaryEntry, normalizeDiaryEntry, parseDiaryImport } from "../src/systems/DiaryImport.js";
-import { diaryMoodOptions } from "../src/systems/DiaryMood.js";
+import { diaryMoodOptions, normalizeDiaryMood } from "../src/systems/DiaryMood.js";
 
 test("write today creates a diary page draft for the requested date", () => {
   const opened = openDiaryPageForDate(createDiaryLibrary(), "2026-08-10");
@@ -24,17 +24,17 @@ test("diary page mood is normalized and preserved on entries", () => {
     location: "Desk",
     weather: "Clear rain"
   });
-  const invalid = normalizeDiaryEntry({
+  const custom = normalizeDiaryEntry({
     date: "2026-08-11",
-    title: "Mood fallback",
+    title: "Mood custom",
     body: "Another page.",
-    mood: "stormy" as never
+    mood: "stormy"
   });
 
   assert.equal(entry.mood, "excited");
   assert.equal(entry.location, "Desk");
   assert.equal(entry.weather, "Clear rain");
-  assert.equal(invalid.mood, "calm");
+  assert.equal(custom.mood, "stormy");
 });
 
 test("journal mood options have distinct gentle expressions", () => {
@@ -59,6 +59,17 @@ test("markdown diary imports support metadata and body text", () => {
   assert.equal(entry.location, "Desk");
   assert.equal(entry.weather, "Rain turning clear");
   assert.equal(entry.body, "A small fictional note.\nSecond line.");
+});
+
+test("custom diary mood survives draft normalization", () => {
+  const saved = upsertDiaryPageDraft(createDiaryLibrary(), {
+    ...makeDiaryEntry("2026-08-13", "Mood", "Fictional text."),
+    mood: "homesick but okay"
+  });
+
+  assert.equal(normalizeDiaryMood("homesick but okay"), "homesick but okay");
+  assert.equal(saved.entries[0].mood, "homesick but okay");
+  assert.equal(normalizeDiaryMood(""), "calm");
 });
 
 test("markdown diary imports can split clean heading blocks into multiple diary entries", () => {

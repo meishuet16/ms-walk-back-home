@@ -143,7 +143,8 @@ export function makeTimelineMonthView(month: JournalMonth, sort: DiaryTimelineSo
 export function defaultMonthlyCover(monthKey: string): JournalBookCover {
   return {
     src: `linear-gradient(145deg, #f5e4bd, #b98242 54%, #4f5f43)`,
-    caption: `Walk Back Home ${monthKey}`,
+    caption: undefined,
+    crop: "center",
     updatedAt: "default"
   };
 }
@@ -187,8 +188,7 @@ export type MonthlyPdfPlanItem =
   | { type: "cover"; monthKey: string; cover: JournalBookCover }
   | { type: "overview"; entryCount: number; daysWritten: number }
   | { type: "entry"; id: string; title: string; date: string }
-  | { type: "image"; id: string; caption?: string }
-  | { type: "video-poster"; id: string; caption?: string };
+  | { type: "image"; id: string; caption?: string };
 
 export function monthlyPdfPagePlan(month: JournalMonth, cover = defaultMonthlyCover(month.key)): MonthlyPdfPlanItem[] {
   const items: MonthlyPdfPlanItem[] = [
@@ -200,7 +200,6 @@ export function monthlyPdfPagePlan(month: JournalMonth, cover = defaultMonthlyCo
     for (const photo of entry.photos ?? []) items.push({ type: "image", id: photo.id, caption: photo.caption });
     for (const media of entry.media ?? []) {
       if (media.type === "image") items.push({ type: "image", id: media.id, caption: media.caption });
-      if (media.type === "video") items.push({ type: "video-poster", id: media.id, caption: media.caption });
     }
   }
   return items;

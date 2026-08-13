@@ -76,23 +76,27 @@ test("monthly books account for video media and local cover metadata", () => {
   }]);
   const withCover = upsertMonthlyCover(library, "2026-07", {
     src: "data:image/jpeg;base64,cover",
-    caption: "cover.jpg",
+    crop: "top",
     updatedAt: "2026-08-13T00:00:00.000Z"
   });
   const books = monthlyBookSummaries(withCover.entries, withCover.monthlyCovers);
 
   assert.equal(books[0].photoCount, 1);
   assert.equal(books[0].videoCount, 1);
-  assert.equal(books[0].cover?.caption, "cover.jpg");
+  assert.equal(books[0].cover?.crop, "top");
+  assert.equal(books[0].cover?.caption, undefined);
   assert.equal(defaultMonthlyCover("2026-07").src.startsWith("linear-gradient"), true);
 });
 
-test("monthly pdf plan represents videos as posters instead of embedding raw video", () => {
+test("monthly pdf plan includes image media and excludes raw videos", () => {
   const plan = monthlyPdfPagePlan(selectedOrLatestMonth([{
     ...entry("2026-07-19", "Video"),
-    media: [{ id: "video-1", type: "video", src: "data:video/mp4;base64,raw-video", caption: "ride.mp4" }]
+    media: [
+      { id: "image-1", type: "image", src: "data:image/jpeg;base64,image", caption: "inline" },
+      { id: "video-1", type: "video", src: "data:video/mp4;base64,raw-video", caption: "ride.mp4" }
+    ]
   }], "2026-07"));
 
-  assert.equal(plan.some((item) => item.type === "video-poster" && item.caption === "ride.mp4"), true);
-  assert.equal(plan.map((item) => String(item.type)).includes("raw-video"), false);
+  assert.equal(plan.some((item) => item.type === "image" && item.id === "image-1"), true);
+  assert.equal(plan.map((item) => String(item.type)).includes("video-poster"), false);
 });
