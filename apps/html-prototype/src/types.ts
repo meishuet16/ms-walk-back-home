@@ -66,7 +66,11 @@ export type DiaryPhoto = {
   crop?: DiaryMediaCrop;
 };
 
-export type DiaryMediaCrop = "cover" | "contain" | "top" | "bottom";
+export type DiaryMediaCrop = {
+  zoom: number;
+  x: number;
+  y: number;
+};
 
 export type DiaryMedia = {
   id: string;

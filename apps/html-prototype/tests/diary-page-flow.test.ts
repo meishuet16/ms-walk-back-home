@@ -237,6 +237,17 @@ test("journal media supports local video without replacing photo attachments", (
   assert.equal(removeJournalMedia(withVideo, "video-1").photos?.length, 1);
 });
 
+test("journal image crop stores custom framing numbers", () => {
+  const entry = addJournalMedia(makeDiaryEntry("2026-08-13", "Crop", "Fictional text."), {
+    id: "photo-1",
+    type: "image",
+    src: "data:image/jpeg;base64,photo",
+    crop: { zoom: 1.55, x: -12, y: 18 }
+  });
+
+  assert.deepEqual(diaryMediaItems(entry)[0].crop, { zoom: 1.55, x: -12, y: 18 });
+});
+
 test("cutout elements stay attached to the current diary page", () => {
   const entry = createCutoutElement(makeDiaryEntry("2026-08-10", "Sticker", "Fictional text."), "photo-1", "cutout-1", "circle");
 

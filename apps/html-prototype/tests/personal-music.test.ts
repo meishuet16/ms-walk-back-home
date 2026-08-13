@@ -108,8 +108,8 @@ test("those bygone years lrc excerpt aligns active lyric to playback time", () =
 });
 
 test("floating lyrics clamp within the stage", () => {
-  assert.deepEqual(clampLyricsOverlay({ x: -50, y: 999, width: 900, height: 180 }, 960, 540), { x: 0, y: 360, width: 520, height: 180 });
-  assert.deepEqual(clampLyricsOverlay({ x: 900, y: 500, width: 40, height: 12 }, 960, 540), { x: 840, y: 492, width: 120, height: 48 });
+  assert.deepEqual(clampLyricsOverlay({ x: -50, y: 999, width: 900, height: 180 }, 960, 540), { x: 0, y: 352, width: 520, height: 180 });
+  assert.deepEqual(clampLyricsOverlay({ x: 900, y: 500, width: 40, height: 12 }, 960, 540), { x: 856, y: 488, width: 96, height: 44 });
 });
 
 test("personal music belongs to room and forest but yields to memory chapters", () => {

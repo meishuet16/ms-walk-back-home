@@ -80,11 +80,13 @@ export function lyricWindowForTime(lines: SyncedLyricLine[], currentTime: number
 }
 
 export function clampLyricsOverlay(overlay: LyricsOverlayState, stageWidth: number, stageHeight: number): LyricsOverlayState {
-  const width = Math.max(120, Math.min(520, overlay.width ?? 280));
-  const height = Math.max(48, Math.min(260, overlay.height ?? 116));
+  const width = Math.max(96, Math.min(520, overlay.width ?? 280));
+  const height = Math.max(44, Math.min(260, overlay.height ?? 116));
+  const maxX = Math.max(0, stageWidth - width - 8);
+  const maxY = Math.max(0, stageHeight - height - 8);
   return {
-    x: Math.max(0, Math.min(stageWidth - width, overlay.x)),
-    y: Math.max(0, Math.min(stageHeight - height, overlay.y)),
+    x: Math.max(0, Math.min(maxX, overlay.x)),
+    y: Math.max(0, Math.min(maxY, overlay.y)),
     width,
     height
   };

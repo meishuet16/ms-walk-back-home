@@ -130,6 +130,7 @@ export class WalkBackHomeApp {
   private selectedScrapbookElementId = "";
   private journalMoreMenuOpen = false;
   private selectedJournalMediaId = "";
+  private journalCropMediaId = "";
   private selectedReflectionNoteId = "";
   private selectedTimelineEntryIds = new Set<string>();
   private timelineDeleteConfirmOpen = false;
@@ -311,6 +312,9 @@ export class WalkBackHomeApp {
     if (action === "journal-media-select") this.selectJournalMedia(target.dataset.media ?? "");
     if (action === "journal-media-remove") this.removeSelectedJournalMedia(target.dataset.media ?? "");
     if (action === "journal-media-crop") this.cropSelectedJournalMedia(target.dataset.media ?? "");
+    if (action === "journal-crop-apply") this.applyJournalCrop(target.dataset.media ?? "");
+    if (action === "journal-crop-cancel") this.closeJournalCropModal();
+    if (action === "journal-crop-reset") this.resetJournalCrop(target.dataset.media ?? "");
     if (action === "change-month-cover") this.overlay.querySelector<HTMLInputElement>("#month-cover-input")?.click();
     if (action === "delete-diary-entry") this.deleteDiaryEntry(target.dataset.id ?? "");
     if (action === "timeline-request-delete-entry") this.requestDeleteTimelineEntry(target.dataset.id ?? "");
@@ -395,6 +399,7 @@ export class WalkBackHomeApp {
     }
     if (action === "confirm-delete-user-track") void this.confirmDeleteUserTrack();
     if (action === "toggle-floating-lyrics") this.toggleFloatingLyrics();
+    if (action === "floating-lyrics-reset") this.rehomeFloatingLyrics();
     if (action === "delete-user-track") this.requestDeleteUserTrack(target.dataset.track ?? "");
     if (action === "remove-player-background") void this.removePlayerBackground();
     if (action === "backup-sync") this.showBackupSync();
@@ -2193,10 +2198,10 @@ export class WalkBackHomeApp {
       if (isLastTextPage && photos.length) {
         const bodyY = firstPage ? 390 : 150;
         const nextY = bodyY + currentLines.length * 46 + 38;
-        const availableRows = Math.max(0, Math.min(3, Math.floor((1470 - nextY) / 210)));
-        photosDrawn = availableRows > 0 ? Math.min(photos.length, availableRows * 3) : 0;
+        const availableRows = Math.max(0, Math.min(2, Math.floor((1470 - nextY) / 340)));
+        photosDrawn = availableRows > 0 ? Math.min(photos.length, availableRows * 2) : 0;
         this.drawDiaryEntryPdfPage(pageCtx, entry, currentLines, firstPage, photosDrawn ? "" : "photos continue");
-        if (photosDrawn) await this.drawDiaryPhotosOnPdfPage(pageCtx, photos.slice(0, photosDrawn), 150, nextY, 3, 150, 28);
+        if (photosDrawn) await this.drawDiaryPhotosOnPdfPage(pageCtx, photos.slice(0, photosDrawn), 150, nextY, 2, 300, 42);
       } else {
         this.drawDiaryEntryPdfPage(pageCtx, entry, currentLines, firstPage);
       }
@@ -2258,7 +2263,7 @@ export class WalkBackHomeApp {
     const photos = this.entryPdfImages(entry);
     if (startIndex >= photos.length) return [];
     const pages: MonthlyJournalPdfPage[] = [];
-    for (let offset = startIndex; offset < photos.length; offset += 9) {
+    for (let offset = startIndex; offset < photos.length; offset += 4) {
       canvas.width = 1240;
       canvas.height = 1754;
       const ctx = canvas.getContext("2d")!;
@@ -2272,8 +2277,8 @@ export class WalkBackHomeApp {
       ctx.fillStyle = "#755330";
       ctx.font = "700 44px serif";
       ctx.fillText(entry.title || "Untitled Memory", 150, 170);
-      const pagePhotos = photos.slice(offset, offset + 9);
-      await this.drawDiaryPhotosOnPdfPage(ctx, pagePhotos, 150, 260, 3, 250, 46);
+      const pagePhotos = photos.slice(offset, offset + 4);
+      await this.drawDiaryPhotosOnPdfPage(ctx, pagePhotos, 150, 260, 2, 390, 64);
       ctx.fillStyle = "rgba(88, 60, 35, 0.55)";
       ctx.font = "400 22px sans-serif";
       ctx.fillText(`${offset + 1}-${offset + pagePhotos.length} of ${photos.length} imported photos`, 150, 1535);
@@ -2428,6 +2433,7 @@ export class WalkBackHomeApp {
           </div>
           ${elements}
         </section>
+        ${this.renderJournalCropModal(editing)}
         <div class="integrated-tools journal-photo-dock"></div>
         <div class="mobile-editor-toolbar"><button data-action="journal-add-inline-media" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="Add photo">▧<span>图片</span></button><button data-action="journal-add-inline-media" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="Add video">▭<span>视频</span></button></div>
         <input id="diary-mobile-media-input" class="sr-only" type="file" accept="image/*,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov">
@@ -2486,23 +2492,55 @@ export class WalkBackHomeApp {
       const crop = this.normalizeJournalMediaCrop(item.crop);
       const mediaNode = item.type === "video"
         ? `<video class="journal-inline-photo journal-inline-video" controls preload="metadata" src="${this.escapeHtml(item.src)}" aria-label="${this.escapeHtml(item.caption ?? "Journal video")}"></video>`
-        : `<img class="journal-inline-photo crop-${this.escapeHtml(crop)}" src="${this.escapeHtml(item.src)}" alt="">`;
+        : `<span class="journal-inline-photo-frame" style="${this.journalMediaCropStyle(crop)}"><img class="journal-inline-photo" src="${this.escapeHtml(item.src)}" alt=""></span>`;
+      const tools = item.type === "image"
+        ? `<button data-action="journal-media-crop" data-media="${this.escapeHtml(item.id)}" data-crop-mode="custom">Edit Crop</button><button data-action="journal-media-remove" data-media="${this.escapeHtml(item.id)}">Remove</button>`
+        : `<span class="journal-media-type">Video</span><button data-action="journal-media-remove" data-media="${this.escapeHtml(item.id)}">Remove</button>`;
       return `<figure class="journal-inline-media-item ${selected ? "selected" : ""}" data-media="${this.escapeHtml(item.id)}">
         <button class="journal-media-select" data-action="journal-media-select" data-media="${this.escapeHtml(item.id)}" aria-label="Select media">${mediaNode}</button>
-        ${selected ? `<figcaption class="journal-media-tools"><button data-action="journal-media-crop" data-media="${this.escapeHtml(item.id)}" data-crop-mode="${this.escapeHtml(crop)}">Crop: ${this.escapeHtml(this.nextJournalCropLabel(crop))}</button><button data-action="journal-media-remove" data-media="${this.escapeHtml(item.id)}">Remove</button></figcaption>` : ""}
+        ${selected ? `<figcaption class="journal-media-tools">${tools}</figcaption>` : ""}
       </figure>`;
     }).join("")}</div>`;
   }
 
-  private nextJournalCropLabel(crop: DiaryMediaCrop): string {
-    if (crop === "cover") return "Full";
-    if (crop === "contain") return "Top";
-    if (crop === "top") return "Bottom";
-    return "Cover";
+  private normalizeJournalMediaCrop(crop: unknown): DiaryMediaCrop {
+    if (crop && typeof crop === "object") {
+      const candidate = crop as Partial<DiaryMediaCrop>;
+      return {
+        zoom: this.clampNumber(candidate.zoom, 1, 3, 1),
+        x: this.clampNumber(candidate.x, -45, 45, 0),
+        y: this.clampNumber(candidate.y, -45, 45, 0)
+      };
+    }
+    return { zoom: 1, x: 0, y: 0 };
   }
 
-  private normalizeJournalMediaCrop(crop: unknown): DiaryMediaCrop {
-    return crop === "contain" || crop === "top" || crop === "bottom" ? crop : "cover";
+  private journalMediaCropStyle(crop: unknown): string {
+    const next = this.normalizeJournalMediaCrop(crop);
+    return `--crop-zoom:${next.zoom.toFixed(2)};--crop-x:${next.x.toFixed(0)}%;--crop-y:${next.y.toFixed(0)}%;`;
+  }
+
+  private renderJournalCropModal(entry?: DiaryEntry): string {
+    if (!entry || !this.journalCropMediaId) return "";
+    const media = diaryMediaItems(entry).find((item) => item.id === this.journalCropMediaId && item.type === "image");
+    if (!media) return "";
+    const crop = this.normalizeJournalMediaCrop(media.crop);
+    return `<div class="journal-crop-modal" role="dialog" aria-label="Crop journal image">
+      <div class="journal-crop-stage">
+        <img class="journal-crop-preview" src="${this.escapeHtml(media.src)}" alt="" style="${this.journalMediaCropStyle(crop)}">
+        <div class="journal-crop-frame" aria-hidden="true"></div>
+      </div>
+      <div class="journal-crop-controls">
+        <label>Zoom<input id="journal-crop-zoom" type="range" min="1" max="3" step="0.05" value="${crop.zoom}"></label>
+        <label>X<input id="journal-crop-x" type="range" min="-45" max="45" step="1" value="${crop.x}"></label>
+        <label>Y<input id="journal-crop-y" type="range" min="-45" max="45" step="1" value="${crop.y}"></label>
+      </div>
+      <div class="journal-crop-actions">
+        <button data-action="journal-crop-cancel">Cancel</button>
+        <button data-action="journal-crop-reset" data-media="${this.escapeHtml(media.id)}">Reset</button>
+        <button data-action="journal-crop-apply" data-media="${this.escapeHtml(media.id)}">Crop</button>
+      </div>
+    </div>`;
   }
 
   private handleInput(event: Event): void {
@@ -2514,6 +2552,10 @@ export class WalkBackHomeApp {
     }
     if (target instanceof HTMLInputElement && target.id === "timeline-date-input") {
       target.classList.toggle("no-results", !this.timelineDateInputHasEntries(target.value));
+      return;
+    }
+    if (target instanceof HTMLInputElement && target.closest(".journal-crop-modal")) {
+      this.refreshJournalCropPreviewFromInputs();
       return;
     }
     if (target instanceof HTMLInputElement && target.dataset.musicSearch !== undefined) {
@@ -2755,13 +2797,70 @@ export class WalkBackHomeApp {
     if (!entry || !mediaId) return;
     const draft = this.readDiaryDraftFromOverlay(entry.id) ?? entry;
     const current = diaryMediaItems(draft).find((media) => media.id === mediaId);
-    const currentCrop = this.normalizeJournalMediaCrop(current?.crop);
-    const nextCrop: DiaryMediaCrop = currentCrop === "cover" ? "contain" : currentCrop === "contain" ? "top" : currentCrop === "top" ? "bottom" : "cover";
-    const next = this.updateJournalMediaCrop(draft, mediaId, nextCrop);
+    if (current?.type !== "image") {
+      this.selectedJournalMediaId = mediaId;
+      this.showDiaryEditorPreservingScroll(entry.id);
+      this.showToast("Videos can be selected and removed here");
+      return;
+    }
+    this.selectedJournalMediaId = mediaId;
+    this.journalCropMediaId = mediaId;
+    this.updateDiaryEntry(draft);
+    this.showDiaryEditorPreservingScroll(entry.id);
+  }
+
+  private applyJournalCrop(mediaId: string): void {
+    const editor = this.overlay.querySelector<HTMLElement>(".diary-page-editor");
+    const entryId = editor?.dataset.entry ?? "";
+    const entry = this.diaryEntries.find((item) => item.id === entryId);
+    if (!entry || !mediaId) return;
+    const draft = this.readDiaryDraftFromOverlay(entry.id) ?? entry;
+    const crop = this.readJournalCropInputs();
+    const next = this.updateJournalMediaCrop(draft, mediaId, crop);
+    this.selectedJournalMediaId = mediaId;
+    this.journalCropMediaId = "";
+    this.updateDiaryEntry(next);
+    this.showDiaryEditorPreservingScroll(entry.id);
+    this.showToast("Image crop updated");
+  }
+
+  private closeJournalCropModal(): void {
+    const editor = this.overlay.querySelector<HTMLElement>(".diary-page-editor");
+    const entryId = editor?.dataset.entry ?? "";
+    this.journalCropMediaId = "";
+    this.showDiaryEditorPreservingScroll(entryId);
+  }
+
+  private resetJournalCrop(mediaId: string): void {
+    if (!mediaId) return;
+    const editor = this.overlay.querySelector<HTMLElement>(".diary-page-editor");
+    const entryId = editor?.dataset.entry ?? "";
+    const entry = this.diaryEntries.find((item) => item.id === entryId);
+    if (!entry) return;
+    const draft = this.readDiaryDraftFromOverlay(entry.id) ?? entry;
+    const next = this.updateJournalMediaCrop(draft, mediaId, { zoom: 1, x: 0, y: 0 });
+    this.journalCropMediaId = mediaId;
     this.selectedJournalMediaId = mediaId;
     this.updateDiaryEntry(next);
     this.showDiaryEditorPreservingScroll(entry.id);
-    this.showToast(`Crop set to ${this.nextJournalCropLabel(nextCrop).toLowerCase()} mode`);
+  }
+
+  private refreshJournalCropPreviewFromInputs(): void {
+    const preview = this.overlay.querySelector<HTMLElement>(".journal-crop-preview");
+    if (!preview) return;
+    preview.setAttribute("style", this.journalMediaCropStyle(this.readJournalCropInputs()));
+  }
+
+  private readJournalCropInputs(): DiaryMediaCrop {
+    const zoom = Number(this.overlay.querySelector<HTMLInputElement>("#journal-crop-zoom")?.value);
+    const x = Number(this.overlay.querySelector<HTMLInputElement>("#journal-crop-x")?.value);
+    const y = Number(this.overlay.querySelector<HTMLInputElement>("#journal-crop-y")?.value);
+    return this.normalizeJournalMediaCrop({ zoom, x, y });
+  }
+
+  private clampNumber(value: unknown, min: number, max: number, fallback: number): number {
+    const numeric = typeof value === "number" && Number.isFinite(value) ? value : fallback;
+    return Math.max(min, Math.min(max, numeric));
   }
 
   private showDiaryEditorPreservingScroll(entryId: string): void {
@@ -2866,7 +2965,7 @@ export class WalkBackHomeApp {
       return;
     }
     if (input.id === "floating-lyrics-width") {
-      const width = Math.max(180, Math.min(520, Number(input.value) || (this.personalPlayer.lyricsOverlay.width ?? 280)));
+      const width = Math.max(96, Math.min(520, Number(input.value) || (this.personalPlayer.lyricsOverlay.width ?? 280)));
       this.personalPlayer.lyricsOverlay = { ...this.personalPlayer.lyricsOverlay, width };
       this.save.savePersonalPlayer(this.personalPlayer);
       this.updatePersonalMusicOverlay();
@@ -3337,9 +3436,9 @@ export class WalkBackHomeApp {
       const deltaX = (event.clientX - this.lyricsResize.startX) * scaleX;
       const deltaY = (event.clientY - this.lyricsResize.startY) * scaleY;
       const delta = (deltaX + deltaY) / 2;
-      const width = Math.max(120, Math.min(520, startWidth + delta));
+      const width = Math.max(96, Math.min(520, startWidth + delta));
       const ratio = width / Math.max(1, startWidth);
-      const height = Math.max(48, Math.min(260, startHeight * ratio));
+      const height = Math.max(44, Math.min(260, startHeight * ratio));
       this.personalPlayer.lyricsOverlay = clampLyricsOverlay({
         ...this.personalPlayer.lyricsOverlay,
         width,
@@ -3749,7 +3848,7 @@ export class WalkBackHomeApp {
           ${background ? `<button data-action="remove-player-background">Remove Background</button>` : ""}
           <label class="file-control">Import / Change Lyrics<input id="music-lyrics-input" type="file" accept=".lrc,text/plain" aria-label="Add lyrics"></label>
           <button data-action="toggle-floating-lyrics">${this.personalPlayer.lyricsVisible ? "Hide Floating Lyrics" : "Show Floating Lyrics"}</button>
-          <label class="metadata-edit">Floating Lyrics Size<input data-floating-lyrics-width id="floating-lyrics-width" type="range" min="180" max="520" step="10" value="${lyricWidth}" aria-label="Floating lyrics width"></label>
+          <label class="metadata-edit">Floating Lyrics Size<input data-floating-lyrics-width id="floating-lyrics-width" type="range" min="96" max="520" step="10" value="${lyricWidth}" aria-label="Floating lyrics width"></label>
           <label class="metadata-edit">Song Title<input data-music-title data-music-field="title" id="music-title" value="${this.escapeHtml(current?.title ?? "")}" aria-label="Edit song title"></label>
           <label class="metadata-edit">Artist<input data-music-artist data-music-field="artist" id="music-artist" value="${this.escapeHtml(current?.artist ?? "")}" aria-label="Edit artist"></label>
         </div>
@@ -3986,16 +4085,23 @@ export class WalkBackHomeApp {
     this.autosave();
   }
 
+  private rehomeFloatingLyrics(): void {
+    this.personalPlayer.lyricsOverlay = this.mobileLyricsOverlayDefault();
+    this.save.savePersonalPlayer(this.personalPlayer);
+    this.updatePersonalMusicOverlay();
+    this.showToast("Floating lyrics moved back into view");
+  }
+
   private mobileLyricsOverlayDefault(): PersonalPlayerState["lyricsOverlay"] {
     if (!window.matchMedia("(max-width: 700px)").matches) {
       return clampLyricsOverlay(this.personalPlayer.lyricsOverlay, this.canvas.width, this.canvas.height);
     }
-    const width = Math.min(260, Math.max(120, this.canvas.width - 24));
-    const height = Math.min(112, Math.max(56, this.canvas.height - 48));
+    const width = Math.min(240, Math.max(96, this.canvas.width - 24));
+    const height = Math.min(96, Math.max(44, this.canvas.height - 48));
     return clampLyricsOverlay({
       ...this.personalPlayer.lyricsOverlay,
       x: 12,
-      y: Math.max(12, this.canvas.height - height - 96),
+      y: Math.max(12, this.canvas.height - height - 110),
       width,
       height
     }, this.canvas.width, this.canvas.height);
@@ -4149,7 +4255,7 @@ export class WalkBackHomeApp {
       }).join("")
       : `<span class="muted">${this.escapeHtml(track.title)}</span><span class="active">${this.escapeHtml(track.artist ?? "Now playing")}</span>`;
     const floatingLyrics = this.personalPlayer.lyricsVisible
-      ? `<div class="floating-lyrics" style="left:${overlay.x}px;top:${overlay.y}px;width:${overlay.width}px;min-height:${overlayHeight}px" aria-live="off"><button class="floating-records-link floating-controls-bar" data-action="room-records">♪ Records</button><div class="floating-lyric-shortcut floating-drag-handle" data-action="room-records" role="button" tabindex="0" aria-label="Open records">${lyricHtml}</div><div class="floating-player-controls floating-controls-bar"><button class="icon-button" data-action="music-prev" aria-label="Previous" title="Previous">⏮</button><button class="icon-button primary" data-action="vinyl-pause" aria-label="${this.personalPlayer.playing ? "Pause" : "Play"}" title="${this.personalPlayer.playing ? "Pause" : "Play"}">${this.personalPlayer.playing ? "⏸" : "▶"}</button><button class="icon-button" data-action="music-next" aria-label="Next" title="Next">⏭</button></div><span class="floating-resize-handle" aria-label="Resize floating lyrics" title="Resize floating lyrics">↘</span></div>`
+      ? `<div class="floating-lyrics" style="left:${overlay.x}px;top:${overlay.y}px;width:${overlay.width}px;min-height:${overlayHeight}px" aria-live="off"><div class="floating-lyrics-tools"><button class="floating-records-link floating-controls-bar" data-action="room-records">♪ Records</button><button class="floating-lyrics-reset floating-controls-bar" data-action="floating-lyrics-reset" aria-label="Move floating lyrics back into view" title="Move back into view">Reset</button></div><div class="floating-lyric-shortcut floating-drag-handle" data-action="room-records" role="button" tabindex="0" aria-label="Open records">${lyricHtml}</div><div class="floating-player-controls floating-controls-bar"><button class="icon-button" data-action="music-prev" aria-label="Previous" title="Previous">⏮</button><button class="icon-button primary" data-action="vinyl-pause" aria-label="${this.personalPlayer.playing ? "Pause" : "Play"}" title="${this.personalPlayer.playing ? "Pause" : "Play"}">${this.personalPlayer.playing ? "⏸" : "▶"}</button><button class="icon-button" data-action="music-next" aria-label="Next" title="Next">⏭</button></div><span class="floating-resize-handle" aria-label="Resize floating lyrics" title="Resize floating lyrics">↘</span></div>`
       : "";
     this.musicPlayer.innerHTML = `<button class="mini-now-playing" data-action="room-records">♪ ${this.escapeHtml(track.title)}</button>${floatingLyrics}`;
   }

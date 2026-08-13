@@ -25,6 +25,12 @@ test("monthly pdf appends imported photos after diary text on the entry page flo
   assert.match(appSource, /drawDiaryPhotosOnPdfPage/);
 });
 
+test("monthly pdf renders diary photos in large readable slots", () => {
+  assert.match(appSource, /drawDiaryPhotosOnPdfPage\(pageCtx, photos\.slice\(0, photosDrawn\), 150, nextY, 2, 300, 42\)/);
+  assert.match(appSource, /offset \+= 4/);
+  assert.match(appSource, /drawDiaryPhotosOnPdfPage\(ctx, pagePhotos, 150, 260, 2, 390, 64\)/);
+});
+
 test("timeline date filtering uses a calendar-style input instead of month dropdowns", () => {
   assert.match(appSource, /id="timeline-date-input" type="date"/);
   assert.match(appSource, /id="timeline-date-scope"/);

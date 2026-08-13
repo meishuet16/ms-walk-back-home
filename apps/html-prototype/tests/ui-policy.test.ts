@@ -102,6 +102,8 @@ test("records mobile menus stay in viewport and preserve scroll while selecting"
   assert.match(appSource, /data-action="toggle-floating-lyrics"/);
   assert.match(appSource, /data-floating-lyrics-width/);
   assert.match(appSource, /floating-resize-handle/);
+  assert.match(appSource, /floating-lyrics-reset/);
+  assert.match(appSource, /rehomeFloatingLyrics/);
   assert.match(appSource, /lyricsResize/);
   assert.match(appSource, /lyricsResize.startWidth/);
   assert.match(appSource, /lyricsResize.startHeight/);
@@ -111,6 +113,7 @@ test("records mobile menus stay in viewport and preserve scroll while selecting"
   assert.match(stylesSource, /\.records-header-actions\s*>\s*button:not\(\.records-mobile-more-button\):not\(\.records-mobile-close-button\)/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.records-header-actions\s*>\s*\.records-mobile-close-button[\s\S]*display:\s*inline-grid/);
   assert.match(stylesSource, /\.records-mobile-controls\s+\.icon-button\.selected[\s\S]*box-shadow/);
+  assert.match(stylesSource, /\.floating-player-controls[\s\S]*grid-template-columns:\s*repeat\(3,\s*32px\)/);
 }
 );
 
@@ -152,8 +155,14 @@ test("journal mobile uses reading mode and quiet editor controls", () => {
   assert.match(appSource, /data-action="journal-media-select"/);
   assert.match(appSource, /data-action="journal-media-remove"/);
   assert.match(appSource, /data-action="journal-media-crop"/);
+  assert.match(appSource, /journal-crop-modal/);
+  assert.match(appSource, /data-action="journal-crop-apply"/);
+  assert.match(appSource, /id="journal-crop-zoom"/);
+  assert.match(appSource, /id="journal-crop-x"/);
+  assert.match(appSource, /id="journal-crop-y"/);
   assert.match(appSource, /journal-media-tools/);
   assert.match(appSource, /data-crop-mode/);
+  assert.match(appSource, /journalMediaCropStyle/);
   assert.doesNotMatch(appSource, /id="diary-video-input"/);
   assert.match(appSource, /journal-inline-photo/);
   assert.match(appSource, /journal-photo-insert-marker/);
