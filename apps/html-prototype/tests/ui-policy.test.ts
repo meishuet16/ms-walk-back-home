@@ -217,6 +217,8 @@ test("journal mobile timeline books and pdf expose editorial structures", () => 
   assert.doesNotMatch(appSource, /data-action="delete-diary-entry" data-id="\$\{this\.escapeHtml\(entry\.id\)\}">Delete/);
   assert.match(appSource, /timeline-filter-menu/);
   assert.match(appSource, /renderTimelineDatePicker/);
+  assert.match(appSource, /\$\{this\.journalHeader\("Timeline", month, this\.renderTimelineFilters\(month\)\)\}\$\{this\.renderTimelineDatePicker\(/);
+  assert.doesNotMatch(appSource, /<\/details>\$\{this\.renderTimelineDatePicker\(selectedDate\)\}/);
   assert.match(appSource, /timeline-date-picker/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.month-nav[\s\S]*grid-template-columns:\s*auto\s*minmax\(0,\s*1fr\)\s*auto\s*auto/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-toolbar[\s\S]*display:\s*none/);

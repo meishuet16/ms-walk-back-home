@@ -1803,7 +1803,8 @@ export class WalkBackHomeApp {
     const noResult = this.timelineSearch.trim() || this.timelineKindFilter !== "all" || this.timelineDateFilter;
     const empty = `<div class="journal-empty"><p>${noResult ? "No diary matched these filters." : "Nothing was written here."}</p><button data-action="new-diary-entry">Create New Journal</button></div>`;
     const confirm = this.timelineDeleteConfirmOpen ? this.renderTimelineDeleteConfirmation() : "";
-    this.overlay.innerHTML = `<div class="modal game-panel timeline-panel journal-panel">${this.journalHeader("Timeline", month, this.renderTimelineFilters(month))}<div class="timeline-list">${this.renderTimelineDateGroups(visibleEntries, rows) || empty}</div>${showMore}${confirm}</div>`;
+    const selectedDate = this.timelineDateFilter || `${this.timelineCursorMonth().key}-01`;
+    this.overlay.innerHTML = `<div class="modal game-panel timeline-panel journal-panel">${this.journalHeader("Timeline", month, this.renderTimelineFilters(month))}${this.renderTimelineDatePicker(selectedDate)}<div class="timeline-list">${this.renderTimelineDateGroups(visibleEntries, rows) || empty}</div>${showMore}${confirm}</div>`;
     if (options.restoreScrollTop !== undefined) {
       requestAnimationFrame(() => {
         const panel = this.overlay.querySelector<HTMLElement>(".journal-panel");
@@ -1874,7 +1875,7 @@ export class WalkBackHomeApp {
       <button data-action="timeline-select-all">Select All</button>
       <button data-action="timeline-clear-selected">Clear Selection</button>
       <button data-action="timeline-request-delete-selected">Delete Selected</button>
-    </div></details>${this.renderTimelineDatePicker(selectedDate)}`;
+    </div></details>`;
   }
 
   private renderTimelineDeleteConfirmation(): string {
