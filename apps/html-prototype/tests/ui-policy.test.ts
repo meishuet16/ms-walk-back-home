@@ -72,6 +72,27 @@ test("floating records transport is clickable and not part of the lyric drag tar
   assert.match(stylesSource, /touch-action:\s*manipulation/);
 });
 
+test("records keeps desktop composition while adding a dedicated mobile player", () => {
+  assert.match(appSource, /records-mobile-player/);
+  assert.match(appSource, /records-mobile-artwork/);
+  assert.match(appSource, /data-action="toggle-record-artwork"/);
+  assert.match(appSource, /data-action="toggle-records-song-sheet"/);
+  assert.match(stylesSource, /\.records-grid[\s\S]*grid-template-columns:\s*minmax\(220px,\s*280px\)\s*minmax\(260px,\s*1fr\)\s*minmax\(240px,\s*310px\)/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.records-mobile-player[\s\S]*display:\s*grid/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.records-grid[\s\S]*display:\s*none/);
+});
+
+test("records mobile menus expose customization drawer and per-song deletion", () => {
+  assert.match(appSource, /records-mobile-more/);
+  assert.match(appSource, /records-song-sheet/);
+  assert.match(appSource, /records-song-menu/);
+  assert.match(appSource, /data-action="request-delete-user-track"/);
+  assert.match(appSource, /data-action="confirm-delete-user-track"/);
+  assert.match(appSource, /Your original audio file on your device will not be changed/);
+  assert.match(stylesSource, /\.delete-confirmation/);
+  assert.match(stylesSource, /\.records-mobile-controls[\s\S]*min-height:\s*44px/);
+});
+
 test("mobile portrait and landscape layouts have explicit touch behavior", () => {
   assert.match(inputSource, /Virtual joystick/);
   assert.match(stylesSource, /\.touch-controls\s*\{\s*display:\s*flex/s);
