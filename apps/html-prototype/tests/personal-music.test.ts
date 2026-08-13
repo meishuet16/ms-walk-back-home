@@ -8,12 +8,14 @@ import {
   clampLyricsOverlay,
   createDefaultPersonalPlayerState,
   filterAndSortMusic,
+  lyricWindowForTime,
   isBuiltInTrackId,
   nextTrackIdForPlayback,
   normalizePlaybackMode,
   parseLrc,
   personalMusicShouldPlayInScene,
-  personalMusicShouldResumeAfterScene
+  personalMusicShouldResumeAfterScene,
+  removeUserMusicTrack
 } from "../src/systems/PersonalMusic.js";
 
 const tracks: UserMusicTrack[] = [
@@ -76,6 +78,18 @@ test("active lyric follows seek time in both directions", () => {
   assert.equal(activeLyricIndexAt(lines, 0), -1);
 });
 
+test("mobile records lyric window exposes previous active and next lines", () => {
+  const lines = parseLrc("[00:01]first\n[00:05]second\n[00:09]third\n[00:13]fourth");
+
+  assert.deepEqual(lyricWindowForTime(lines, 9.5), [
+    { line: { time: 5, text: "second" }, state: "previous", sourceIndex: 1 },
+    { line: { time: 9, text: "third" }, state: "active", sourceIndex: 2 },
+    { line: { time: 13, text: "fourth" }, state: "next", sourceIndex: 3 }
+  ]);
+  assert.deepEqual(lyricWindowForTime(lines, 0.2).map((item) => item.state), ["previous", "active", "next"]);
+  assert.deepEqual(lyricWindowForTime([], 12), []);
+});
+
 test("those bygone years lrc excerpt aligns active lyric to playback time", () => {
   const lines = parseLrc([
     "[00:18.32]又回到最初的起点",
@@ -94,7 +108,8 @@ test("those bygone years lrc excerpt aligns active lyric to playback time", () =
 });
 
 test("floating lyrics clamp within the stage", () => {
-  assert.deepEqual(clampLyricsOverlay({ x: -50, y: 999, width: 900 }, 960, 540), { x: 0, y: 456, width: 360 });
+  assert.deepEqual(clampLyricsOverlay({ x: -50, y: 999, width: 900, height: 180 }, 960, 540), { x: 0, y: 352, width: 520, height: 180 });
+  assert.deepEqual(clampLyricsOverlay({ x: 900, y: 500, width: 40, height: 12 }, 960, 540), { x: 856, y: 488, width: 96, height: 44 });
 });
 
 test("personal music belongs to room and forest but yields to memory chapters", () => {
@@ -125,4 +140,24 @@ test("manual player controls honor shuffle but can move past repeat-one", () => 
   assert.equal(adjacentTrackIdForControl(ids, "b", -1, { repeatOne: true }), "a");
   assert.equal(adjacentTrackIdForControl(ids, "b", 1, { shuffleEnabled: true }, () => 0), "a");
   assert.equal(adjacentTrackIdForControl(ids, "b", 1, { shuffleEnabled: true }, () => 0.99), "c");
+});
+
+test("removing a user track plans app-owned cleanup and next selection only", () => {
+  const result = removeUserMusicTrack(
+    {
+      version: 1,
+      savedAt: "2026-08-13T00:00:00.000Z",
+      tracks: [
+        { id: "user-1", title: "One", audioBlobKey: "music/audio/user-1", coverBlobKey: "music/cover/user-1", addedAt: 1 },
+        { id: "user-2", title: "Two", audioBlobKey: "music/audio/user-2", addedAt: 2 }
+      ]
+    },
+    "user-1",
+    ["built-in-a"]
+  );
+
+  assert.equal(result.removed?.id, "user-1");
+  assert.deepEqual(result.blobKeysToDelete, ["music/audio/user-1", "music/cover/user-1"]);
+  assert.deepEqual(result.library.tracks.map((track) => track.id), ["user-2"]);
+  assert.equal(result.nextTrackId, "user-2");
 });

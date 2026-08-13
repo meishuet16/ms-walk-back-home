@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { addPhotoAttachment, addPhotoElement, attachPhotoAndPlaceOnPage, createCutoutElement, diaryTextFrame, moveScrapbookElement, removePhotoAttachment } from "../src/systems/ScrapbookComposer.js";
+import { addJournalMedia, addPhotoAttachment, addPhotoElement, attachPhotoAndPlaceOnPage, createCutoutElement, diaryMediaItems, diaryTextFrame, moveScrapbookElement, removeJournalMedia, removePhotoAttachment } from "../src/systems/ScrapbookComposer.js";
 import { createDiaryLibrary, createNewDiaryPage, formatDiaryWeekday, openDiaryPageForDate, upsertDiaryPageDraft } from "../src/systems/DiaryLibrary.js";
 import { makeDiaryEntry, normalizeDiaryEntry, parseDiaryImport } from "../src/systems/DiaryImport.js";
-import { diaryMoodOptions } from "../src/systems/DiaryMood.js";
+import { diaryMoodOptions, normalizeDiaryMood } from "../src/systems/DiaryMood.js";
 
 test("write today creates a diary page draft for the requested date", () => {
   const opened = openDiaryPageForDate(createDiaryLibrary(), "2026-08-10");
@@ -24,17 +24,17 @@ test("diary page mood is normalized and preserved on entries", () => {
     location: "Desk",
     weather: "Clear rain"
   });
-  const invalid = normalizeDiaryEntry({
+  const custom = normalizeDiaryEntry({
     date: "2026-08-11",
-    title: "Mood fallback",
+    title: "Mood custom",
     body: "Another page.",
-    mood: "stormy" as never
+    mood: "stormy"
   });
 
   assert.equal(entry.mood, "excited");
   assert.equal(entry.location, "Desk");
   assert.equal(entry.weather, "Clear rain");
-  assert.equal(invalid.mood, "calm");
+  assert.equal(custom.mood, "stormy");
 });
 
 test("journal mood options have distinct gentle expressions", () => {
@@ -59,6 +59,17 @@ test("markdown diary imports support metadata and body text", () => {
   assert.equal(entry.location, "Desk");
   assert.equal(entry.weather, "Rain turning clear");
   assert.equal(entry.body, "A small fictional note.\nSecond line.");
+});
+
+test("custom diary mood survives draft normalization", () => {
+  const saved = upsertDiaryPageDraft(createDiaryLibrary(), {
+    ...makeDiaryEntry("2026-08-13", "Mood", "Fictional text."),
+    mood: "homesick but okay"
+  });
+
+  assert.equal(normalizeDiaryMood("homesick but okay"), "homesick but okay");
+  assert.equal(saved.entries[0].mood, "homesick but okay");
+  assert.equal(normalizeDiaryMood(""), "calm");
 });
 
 test("markdown diary imports can split clean heading blocks into multiple diary entries", () => {
@@ -202,6 +213,39 @@ test("removing an attached photo clears its placed page elements", () => {
 
   assert.equal(cleared.photos?.length, 0);
   assert.deepEqual(cleared.scrapbookLayout?.elements, []);
+});
+
+test("journal media supports local video without replacing photo attachments", () => {
+  const entry = addPhotoAttachment(makeDiaryEntry("2026-08-10", "Media", "Fictional text."), {
+    id: "photo-1",
+    storageKey: "diary-images/photo-1",
+    src: "data:image/png;base64,photo",
+    caption: "desk"
+  });
+  const withVideo = addJournalMedia(entry, {
+    id: "video-1",
+    type: "video",
+    storageKey: "diary-videos/video-1",
+    src: "data:video/mp4;base64,video",
+    caption: "shore.mp4",
+    mimeType: "video/mp4"
+  });
+
+  assert.deepEqual(diaryMediaItems(withVideo).map((item) => item.type), ["image", "video"]);
+  assert.equal(withVideo.photos?.length, 1);
+  assert.equal(removeJournalMedia(withVideo, "video-1").media?.length, 0);
+  assert.equal(removeJournalMedia(withVideo, "video-1").photos?.length, 1);
+});
+
+test("journal image crop stores a freeform percentage rectangle", () => {
+  const entry = addJournalMedia(makeDiaryEntry("2026-08-13", "Crop", "Fictional text."), {
+    id: "photo-1",
+    type: "image",
+    src: "data:image/jpeg;base64,photo",
+    crop: { x: 8, y: 12, width: 68, height: 42 }
+  });
+
+  assert.deepEqual(diaryMediaItems(entry)[0].crop, { x: 8, y: 12, width: 68, height: 42 });
 });
 
 test("cutout elements stay attached to the current diary page", () => {

@@ -51,17 +51,49 @@ export type DiaryEntry = {
   mood?: DiaryMood;
   chapterId?: string;
   photos?: DiaryPhoto[];
+  media?: DiaryMedia[];
   scrapbookLayout?: ScrapbookLayout;
 };
 
 export type MemoryKind = "diary" | "fragment" | "chapter";
-export type DiaryMood = "calm" | "sad" | "blank" | "happy" | "excited";
+export type DiaryMood = string;
 
 export type DiaryPhoto = {
   id: string;
   storageKey?: string;
   src: string;
   caption?: string;
+  crop?: DiaryMediaCrop;
+};
+
+export type DiaryMediaCrop = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+export type DiaryMedia = {
+  id: string;
+  type: "image" | "video";
+  storageKey?: string;
+  src: string;
+  caption?: string;
+  mimeType?: string;
+  posterSrc?: string;
+  width?: number;
+  height?: number;
+  crop?: DiaryMediaCrop;
+};
+
+export type JournalBookCoverCrop = "center" | "top" | "bottom" | "contain";
+
+export type JournalBookCover = {
+  storageKey?: string;
+  src: string;
+  caption?: string;
+  crop?: JournalBookCoverCrop;
+  updatedAt: string;
 };
 
 export type CropData = {
@@ -175,6 +207,7 @@ export type LyricsOverlayState = {
   x: number;
   y: number;
   width?: number;
+  height?: number;
 };
 
 export type PersonalPlayerState = {
@@ -200,6 +233,7 @@ export type DiaryLibraryState = {
   savedAt: string;
   entries: DiaryEntry[];
   legacyArtifacts: string[];
+  monthlyCovers?: Record<string, JournalBookCover>;
 };
 
 export type JourneyState = {

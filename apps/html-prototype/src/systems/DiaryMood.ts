@@ -19,5 +19,7 @@ export function isDiaryMood(value: string): value is DiaryMood {
 }
 
 export function normalizeDiaryMood(value: unknown): DiaryMood {
-  return typeof value === "string" && isDiaryMood(value) ? value : "calm";
+  if (typeof value !== "string") return "calm";
+  const mood = value.trim();
+  return mood || "calm";
 }

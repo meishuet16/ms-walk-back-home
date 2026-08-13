@@ -1,4 +1,4 @@
-import type { LyricsOverlayState, MusicPlaybackMode, MusicSort, PersonalPlayerState, SceneId, SyncedLyricLine, UserMusicTrack } from "../types.js";
+import type { LyricsOverlayState, MusicPlaybackMode, MusicSort, PersonalMusicLibraryState, PersonalPlayerState, SceneId, SyncedLyricLine, UserMusicTrack } from "../types.js";
 import { vinylRecords } from "./MujiRoom.js";
 
 export const builtInRecordIds = vinylRecords.map((record) => record.id);
@@ -63,12 +63,32 @@ export function activeLyricIndexAt(lines: SyncedLyricLine[], currentTime: number
   return active;
 }
 
+export type LyricWindowLine = {
+  line: SyncedLyricLine | null;
+  state: "previous" | "active" | "next";
+  sourceIndex: number;
+};
+
+export function lyricWindowForTime(lines: SyncedLyricLine[], currentTime: number): LyricWindowLine[] {
+  if (!lines.length) return [];
+  const active = Math.max(0, activeLyricIndexAt(lines, currentTime));
+  return [
+    { line: lines[active - 1] ?? null, state: "previous", sourceIndex: active - 1 },
+    { line: lines[active] ?? null, state: "active", sourceIndex: active },
+    { line: lines[active + 1] ?? null, state: "next", sourceIndex: active + 1 }
+  ];
+}
+
 export function clampLyricsOverlay(overlay: LyricsOverlayState, stageWidth: number, stageHeight: number): LyricsOverlayState {
-  const width = Math.max(180, Math.min(360, overlay.width ?? 280));
+  const width = Math.max(96, Math.min(520, overlay.width ?? 280));
+  const height = Math.max(44, Math.min(260, overlay.height ?? 116));
+  const maxX = Math.max(0, stageWidth - width - 8);
+  const maxY = Math.max(0, stageHeight - height - 8);
   return {
-    x: Math.max(0, Math.min(stageWidth - width, overlay.x)),
-    y: Math.max(0, Math.min(stageHeight - 84, overlay.y)),
-    width
+    x: Math.max(0, Math.min(maxX, overlay.x)),
+    y: Math.max(0, Math.min(maxY, overlay.y)),
+    width,
+    height
   };
 }
 
@@ -103,4 +123,21 @@ export function adjacentTrackIdForControl(ids: string[], currentId: string | und
 
 export function normalizePlaybackMode(value: unknown): MusicPlaybackMode {
   return value === "repeat-one" || value === "shuffle" || value === "next" ? value : "next";
+}
+
+export function removeUserMusicTrack(library: PersonalMusicLibraryState, trackId: string, fallbackTrackIds: string[] = []): {
+  library: PersonalMusicLibraryState;
+  removed?: UserMusicTrack;
+  blobKeysToDelete: string[];
+  nextTrackId?: string;
+} {
+  const removed = library.tracks.find((track) => track.id === trackId);
+  if (!removed) return { library, blobKeysToDelete: [], nextTrackId: library.tracks[0]?.id ?? fallbackTrackIds[0] };
+  const tracks = library.tracks.filter((track) => track.id !== trackId);
+  return {
+    library: { ...library, tracks, savedAt: new Date().toISOString() },
+    removed,
+    blobKeysToDelete: [removed.audioBlobKey, removed.coverBlobKey].filter((key): key is string => Boolean(key)),
+    nextTrackId: tracks[0]?.id ?? fallbackTrackIds[0]
+  };
 }

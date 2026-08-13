@@ -1,4 +1,4 @@
-import type { DiaryEntry, MemoryKind } from "../types.js";
+import type { DiaryEntry, DiaryLibraryState, JournalBookCover, MemoryKind } from "../types.js";
 import { sortDiaryEntriesForTimeline, type DiaryTimelineSort } from "./DiaryImport.js";
 
 export type JournalMonth = {
@@ -16,7 +16,9 @@ export type MonthlyBookSummary = {
   month: number;
   entryCount: number;
   photoCount: number;
+  videoCount: number;
   daysWritten: number;
+  cover?: JournalBookCover;
   theme: "forest" | "cream" | "rain" | "brown" | "yellow" | "rose";
 };
 
@@ -138,7 +140,26 @@ export function makeTimelineMonthView(month: JournalMonth, sort: DiaryTimelineSo
   };
 }
 
-export function monthlyBookSummaries(entries: DiaryEntry[]): MonthlyBookSummary[] {
+export function defaultMonthlyCover(monthKey: string): JournalBookCover {
+  return {
+    src: `linear-gradient(145deg, #f5e4bd, #b98242 54%, #4f5f43)`,
+    caption: undefined,
+    crop: "center",
+    updatedAt: "default"
+  };
+}
+
+export function upsertMonthlyCover(library: DiaryLibraryState, monthKey: string, cover: JournalBookCover): DiaryLibraryState {
+  return {
+    ...library,
+    monthlyCovers: {
+      ...(library.monthlyCovers ?? {}),
+      [monthKey]: cover
+    }
+  };
+}
+
+export function monthlyBookSummaries(entries: DiaryEntry[], covers: Record<string, JournalBookCover> = {}): MonthlyBookSummary[] {
   return deriveJournalMonths(entries).map((month, index) => ({
     key: month.key,
     label: month.label,
@@ -146,7 +167,9 @@ export function monthlyBookSummaries(entries: DiaryEntry[]): MonthlyBookSummary[
     month: month.month,
     entryCount: month.entries.length,
     photoCount: month.entries.reduce((sum, entry) => sum + (entry.photos?.length ?? 0), 0),
+    videoCount: month.entries.reduce((sum, entry) => sum + (entry.media ?? []).filter((media) => media.type === "video").length, 0),
     daysWritten: new Set(month.entries.map((entry) => entry.date)).size,
+    cover: covers[month.key] ?? defaultMonthlyCover(month.key),
     theme: themes[index % themes.length]
   }));
 }
@@ -160,6 +183,27 @@ export type MonthlyJournalPdfPage = {
   width: number;
   height: number;
 };
+
+export type MonthlyPdfPlanItem =
+  | { type: "cover"; monthKey: string; cover: JournalBookCover }
+  | { type: "overview"; entryCount: number; daysWritten: number }
+  | { type: "entry"; id: string; title: string; date: string }
+  | { type: "image"; id: string; caption?: string };
+
+export function monthlyPdfPagePlan(month: JournalMonth, cover = defaultMonthlyCover(month.key)): MonthlyPdfPlanItem[] {
+  const items: MonthlyPdfPlanItem[] = [
+    { type: "cover", monthKey: month.key, cover },
+    { type: "overview", entryCount: month.entries.length, daysWritten: new Set(month.entries.map((entry) => entry.date)).size }
+  ];
+  for (const entry of [...month.entries].reverse()) {
+    items.push({ type: "entry", id: entry.id, title: entry.title, date: entry.date });
+    for (const photo of entry.photos ?? []) items.push({ type: "image", id: photo.id, caption: photo.caption });
+    for (const media of entry.media ?? []) {
+      if (media.type === "image") items.push({ type: "image", id: media.id, caption: media.caption });
+    }
+  }
+  return items;
+}
 
 const textEncoder = new TextEncoder();
 

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createDiaryLibrary } from "../src/systems/DiaryLibrary.js";
 import { makeDiaryEntry } from "../src/systems/DiaryImport.js";
-import { deriveJournalMonths, filterJournalEntries, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, searchJournalEntries, selectedOrLatestMonth, timelineCursorKeyForStep, visibleTimelineEntries } from "../src/systems/JournalModel.js";
+import { defaultMonthlyCover, deriveJournalMonths, filterJournalEntries, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, monthlyPdfPagePlan, searchJournalEntries, selectedOrLatestMonth, timelineCursorKeyForStep, upsertMonthlyCover, visibleTimelineEntries } from "../src/systems/JournalModel.js";
 
 function entry(date: string, title: string) {
   return makeDiaryEntry(date, title, `${title} body`, `entry-${date}-${title}`);
@@ -66,4 +66,37 @@ test("monthly books and pdf export are derived on demand", async () => {
   assert.ok(pdfText.includes("/DCTDecode"));
   assert.ok(pdfBytes.some((byte, index) => byte === 0xff && pdfBytes[index + 1] === 0xd8 && pdfBytes[index + 2] === 0xff));
   assert.equal(JSON.stringify(library), before);
+});
+
+test("monthly books account for video media and local cover metadata", () => {
+  const library = createDiaryLibrary([{
+    ...entry("2026-07-19", "Labis"),
+    photos: [{ id: "photo-1", src: "data:image/png;base64,photo" }],
+    media: [{ id: "video-1", type: "video", src: "data:video/mp4;base64,video", caption: "ride.mp4" }]
+  }]);
+  const withCover = upsertMonthlyCover(library, "2026-07", {
+    src: "data:image/jpeg;base64,cover",
+    crop: "top",
+    updatedAt: "2026-08-13T00:00:00.000Z"
+  });
+  const books = monthlyBookSummaries(withCover.entries, withCover.monthlyCovers);
+
+  assert.equal(books[0].photoCount, 1);
+  assert.equal(books[0].videoCount, 1);
+  assert.equal(books[0].cover?.crop, "top");
+  assert.equal(books[0].cover?.caption, undefined);
+  assert.equal(defaultMonthlyCover("2026-07").src.startsWith("linear-gradient"), true);
+});
+
+test("monthly pdf plan includes image media and excludes raw videos", () => {
+  const plan = monthlyPdfPagePlan(selectedOrLatestMonth([{
+    ...entry("2026-07-19", "Video"),
+    media: [
+      { id: "image-1", type: "image", src: "data:image/jpeg;base64,image", caption: "inline" },
+      { id: "video-1", type: "video", src: "data:video/mp4;base64,raw-video", caption: "ride.mp4" }
+    ]
+  }], "2026-07"));
+
+  assert.equal(plan.some((item) => item.type === "image" && item.id === "image-1"), true);
+  assert.equal(plan.map((item) => String(item.type)).includes("video-poster"), false);
 });

@@ -7,8 +7,6 @@ dist/
 coverage/
 .turbo/
 *.tsbuildinfo
-apps/html-prototype/public/assets/labis/*
-!apps/html-prototype/public/assets/labis/.gitkeep
 .dev-server*.log
 .godot/
 .godot-user-data/
