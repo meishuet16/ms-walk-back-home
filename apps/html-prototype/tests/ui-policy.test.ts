@@ -93,9 +93,22 @@ test("records mobile menus expose customization drawer and per-song deletion", (
   assert.match(stylesSource, /\.records-mobile-controls[\s\S]*min-height:\s*44px/);
 });
 
+test("records mobile menus stay in viewport and preserve scroll while selecting", () => {
+  assert.match(appSource, /data-action="close-records"/);
+  assert.match(appSource, /records-mobile-close-button/);
+  assert.match(appSource, /preserveRecordsScroll/);
+  assert.match(appSource, /restoreRecordsScroll/);
+  assert.doesNotMatch(appSource, /private async selectVinyl[\s\S]*recordsSongSheetOpen = false/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.records-mobile-more\.open[\s\S]*position:\s*fixed/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.records-song-sheet\.open[\s\S]*position:\s*fixed/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.records-mobile-close-button[\s\S]*display:\s*inline-grid/);
+  assert.match(stylesSource, /\.records-mobile-controls\s+\.icon-button\.selected[\s\S]*box-shadow/);
+}
+);
+
 test("mobile portrait and landscape layouts have explicit touch behavior", () => {
   assert.match(inputSource, /Virtual joystick/);
-  assert.match(stylesSource, /\.touch-controls\s*\{\s*display:\s*flex/s);
+  assert.match(stylesSource, /#app\[data-scene="forest"\] \.touch-controls/);
   assert.match(appSource, /rotate-hint/);
   assert.match(stylesSource, /#app\[data-scene="forest"\] \.rotate-hint/);
   assert.match(stylesSource, /\.reflection-wall-surface[\s\S]*touch-action:\s*pan-x pan-y/);
@@ -104,15 +117,27 @@ test("mobile portrait and landscape layouts have explicit touch behavior", () =>
   assert.match(stylesSource, /\.paper-fields[\s\S]*position:\s*static/);
 });
 
+test("mobile touch controls are large and hidden behind non-game portrait sheets", () => {
+  assert.match(stylesSource, /#app\.overlay-open \.touch-controls[\s\S]*display:\s*none/);
+  assert.match(stylesSource, /#app\[data-scene="forest"\] \.touch-controls[\s\S]*display:\s*flex/);
+  assert.match(stylesSource, /#app\[data-scene="labis"\] \.touch-controls[\s\S]*display:\s*flex/);
+  assert.match(stylesSource, /#app\[data-scene="muji-room"\] \.touch-controls[\s\S]*display:\s*flex/);
+  assert.match(stylesSource, /\.touch-stick[\s\S]*width:\s*116px[\s\S]*height:\s*116px/);
+}
+);
+
 test("journal mobile uses reading mode and quiet editor controls", () => {
   assert.match(appSource, /showDiaryReader/);
   assert.match(appSource, /journal-reading-page/);
   assert.match(appSource, /data-action="journal-more-menu"/);
   assert.match(appSource, /data-action="journal-edit-current"/);
+  assert.match(appSource, /data-action="journal-mood-entry"/);
+  assert.match(appSource, /journal-mood-sheet/);
   assert.match(appSource, /id="diary-video-input"/);
   assert.match(appSource, /accept="video\/mp4,video\/webm,video\/quicktime/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-mood-picker[\s\S]*display:\s*none/);
   assert.match(stylesSource, /\.mobile-editor-toolbar/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-mood-sheet\.open[\s\S]*display:\s*grid/);
 });
 
 test("journal mobile timeline books and pdf expose editorial structures", () => {
@@ -126,3 +151,11 @@ test("journal mobile timeline books and pdf expose editorial structures", () => 
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-entry[\s\S]*border-radius:\s*0/);
   assert.match(stylesSource, /\.journal-video-block/);
 });
+
+test("mobile journal reflection and pdf surfaces fill the portrait viewport", () => {
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-panel[\s\S]*min-height:\s*100dvh/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.monthly-reader[\s\S]*min-height:\s*100dvh/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.reflection-wall-modal[\s\S]*min-height:\s*100dvh/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.overlay[\s\S]*padding:\s*0/);
+}
+);
