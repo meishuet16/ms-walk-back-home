@@ -1,13 +1,16 @@
-import { cloneSceneLayout, loadSceneLayoutOverrides, makeDefaultLayout, sceneLayoutManifest, setSceneLayout, type SceneInteraction, type SceneLayout, type SceneOrientation } from "./SceneLayouts.js";
+import { cloneSceneLayout, loadSceneLayoutOverrides, makeDefaultLayout, sceneLayoutManifest, setSceneLayout, type PlacementSlotKind, type SceneLayout, type SceneOrientation } from "./SceneLayouts.js";
+import { labisEchoes } from "../fixtures/labisMemoryEchoes.js";
 import type { Point, Rect } from "./CollisionSystem.js";
 import { inAnyRect } from "./CollisionSystem.js";
 
-type Tool = "select" | "spawn" | "collision" | "interaction" | "trigger" | "preview";
+type Tool = "select" | "spawn" | "collision" | "interaction" | "trigger" | "placement-slot" | "echo-anchor" | "preview";
 type Selection =
   | { kind: "spawn" }
   | { kind: "collision"; index: number }
   | { kind: "interaction"; index: number }
   | { kind: "trigger"; index: number }
+  | { kind: "placement-slot"; index: number }
+  | { kind: "echo-anchor"; key: string }
   | { kind: "anchor"; key: string };
 
 type DraftDrag = { start: Point; current: Point } | null;
@@ -55,8 +58,17 @@ export class SceneDebugEditor {
             <input data-debug-field="asset" value="${this.escape(this.layout.asset)}">
           </label>
           <div class="scene-debug-tools">
-            ${(["select", "spawn", "collision", "interaction", "trigger", "preview"] as const).map((tool) => `<button data-debug-tool="${tool}" class="${this.tool === tool ? "active" : ""}">${this.label(tool)}</button>`).join("")}
+            ${(["select", "spawn", "collision", "interaction", "trigger", ...(this.sceneId === "forest" ? ["placement-slot" as const] : []), ...(this.sceneId === "labis" ? ["echo-anchor" as const] : []), "preview"] as const).map((tool) => `<button data-debug-tool="${tool}" class="${this.tool === tool ? "active" : ""}">${this.label(tool)}</button>`).join("")}
           </div>
+          ${this.sceneId === "forest" && this.tool === "placement-slot" ? `<div class="scene-debug-inline">
+            <label>Type<select data-debug-field="slot-kind">
+              <option value="chapter">Chapter Slot</option>
+              <option value="fragment">Fragment Slot</option>
+            </select></label>
+          </div>` : ""}
+          ${this.sceneId === "labis" && this.tool === "echo-anchor" ? `<div class="scene-debug-inline">
+            <label>Echo<select data-debug-field="echo-id">${labisEchoes.map((echo) => `<option value="${this.escape(echo.id)}">${this.escape(echo.label)} — ${this.escape(echo.id)}</option>`).join("")}</select></label>
+          </div>` : ""}
           <div class="scene-debug-inline">
             <label>ID<input data-debug-field="new-id" value="${this.defaultNewId()}"></label>
             <label>Label<input data-debug-field="new-label" value="${this.defaultNewLabel()}"></label>
@@ -164,6 +176,28 @@ export class SceneDebugEditor {
       this.render();
       return;
     }
+    if (this.tool === "placement-slot" && this.sceneId === "forest") {
+      const kind = this.slotKind();
+      const id = this.value("new-id") || this.nextPlacementSlotId(kind);
+      const existing = this.layout.placementSlots.findIndex((slot) => slot.id === id);
+      const slot = { id, kind, x: point.x, y: point.y, radius: Number(this.value("new-radius")) || (kind === "fragment" ? 44 : 86) };
+      if (existing >= 0) {
+        this.layout.placementSlots[existing] = slot;
+        this.selected = { kind: "placement-slot", index: existing };
+      } else {
+        this.layout.placementSlots.push(slot);
+        this.selected = { kind: "placement-slot", index: this.layout.placementSlots.length - 1 };
+      }
+      this.render();
+      return;
+    }
+    if (this.tool === "echo-anchor" && this.sceneId === "labis") {
+      const echo = this.selectedLabisEcho();
+      this.layout.echoAnchors[echo.id] = { x: point.x, y: point.y, radius: Number(this.value("new-radius")) || echo.radius };
+      this.selected = { kind: "echo-anchor", key: echo.id };
+      this.render();
+      return;
+    }
     if (this.tool === "select") {
       this.selected = this.pick(point);
       if (this.selected) this.moveDrag = { selection: this.selected, offset: this.selectionOffset(this.selected, point) };
@@ -227,6 +261,23 @@ export class SceneDebugEditor {
       line("#79c7ff");
       ctx.strokeRect(rect.x * scale.x, rect.y * scale.y, rect.w * scale.x, rect.h * scale.y);
     });
+    this.layout.placementSlots.forEach((slot, index) => {
+      ctx.strokeStyle = index === this.indexOf("placement-slot") ? "#ffffff" : slot.kind === "chapter" ? "#b2ff8a" : "#c9a9ff";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(slot.x * scale.x, slot.y * scale.y, slot.radius * scale.x, 0, Math.PI * 2);
+      ctx.stroke();
+      this.drawPoint(ctx, slot, scale, slot.kind === "chapter" ? "#b2ff8a" : "#c9a9ff", `${slot.kind} · ${slot.id}`);
+    });
+    for (const [key, anchor] of Object.entries(this.layout.echoAnchors)) {
+      const selected = this.selected?.kind === "echo-anchor" && this.selected.key === key;
+      ctx.strokeStyle = selected ? "#ffffff" : "#ffb4d2";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(anchor.x * scale.x, anchor.y * scale.y, anchor.radius * scale.x, 0, Math.PI * 2);
+      ctx.stroke();
+      this.drawPoint(ctx, anchor, scale, "#ffb4d2", this.echoLabel(key));
+    }
     for (const [key, anchor] of Object.entries(this.layout.anchors)) this.drawPoint(ctx, anchor, scale, "#d7ff91", key);
     this.layout.interactions.forEach((interaction, index) => {
       ctx.strokeStyle = index === this.indexOf("interaction") ? "#fff2a8" : "#f6cf6b";
@@ -293,6 +344,8 @@ export class SceneDebugEditor {
     if (this.selected.kind === "collision") return this.layout.obstacles[this.selected.index] ?? null;
     if (this.selected.kind === "interaction") return this.layout.interactions[this.selected.index] ?? null;
     if (this.selected.kind === "trigger") return this.layout.triggers[this.selected.index] ?? null;
+    if (this.selected.kind === "placement-slot") return this.layout.placementSlots[this.selected.index] ?? null;
+    if (this.selected.kind === "echo-anchor") return this.layout.echoAnchors[this.selected.key] ?? null;
     if (this.selected.kind === "anchor") return this.layout.anchors[this.selected.key] ?? null;
     return null;
   }
@@ -376,6 +429,8 @@ export class SceneDebugEditor {
     if (this.selected.kind === "collision") this.layout.obstacles.splice(this.selected.index, 1);
     if (this.selected.kind === "interaction") this.layout.interactions.splice(this.selected.index, 1);
     if (this.selected.kind === "trigger") this.layout.triggers.splice(this.selected.index, 1);
+    if (this.selected.kind === "placement-slot") this.layout.placementSlots.splice(this.selected.index, 1);
+    if (this.selected.kind === "echo-anchor") delete this.layout.echoAnchors[this.selected.key];
     if (this.selected.kind === "anchor") delete this.layout.anchors[this.selected.key];
     this.selected = null;
     this.render();
@@ -385,6 +440,10 @@ export class SceneDebugEditor {
     if (Math.hypot(point.x - this.layout.spawn.x, point.y - this.layout.spawn.y) < 24) return { kind: "spawn" };
     const interaction = this.layout.interactions.findIndex((item) => Math.hypot(point.x - item.x, point.y - item.y) <= Math.max(18, item.radius));
     if (interaction >= 0) return { kind: "interaction", index: interaction };
+    const slot = this.layout.placementSlots.findIndex((item) => Math.hypot(point.x - item.x, point.y - item.y) <= Math.max(18, item.radius));
+    if (slot >= 0) return { kind: "placement-slot", index: slot };
+    const echoAnchor = Object.entries(this.layout.echoAnchors).find(([, item]) => Math.hypot(point.x - item.x, point.y - item.y) <= Math.max(18, item.radius));
+    if (echoAnchor) return { kind: "echo-anchor", key: echoAnchor[0] };
     const collision = this.layout.obstacles.findIndex((rect) => this.pointInRect(point, rect));
     if (collision >= 0) return { kind: "collision", index: collision };
     const trigger = this.layout.triggers.findIndex((item) => this.pointInRect(point, item.rect));
@@ -397,6 +456,14 @@ export class SceneDebugEditor {
     if (selection.kind === "spawn") this.layout.spawn = point;
     if (selection.kind === "interaction") {
       const item = this.layout.interactions[selection.index];
+      if (item) Object.assign(item, point);
+    }
+    if (selection.kind === "placement-slot") {
+      const item = this.layout.placementSlots[selection.index];
+      if (item) Object.assign(item, point);
+    }
+    if (selection.kind === "echo-anchor") {
+      const item = this.layout.echoAnchors[selection.key];
       if (item) Object.assign(item, point);
     }
     if (selection.kind === "anchor") this.layout.anchors[selection.key] = point;
@@ -416,7 +483,7 @@ export class SceneDebugEditor {
     return origin ? { x: point.x - Number(origin.x), y: point.y - Number(origin.y) } : { x: 0, y: 0 };
   }
 
-  private indexOf(kind: "collision" | "interaction" | "trigger"): number {
+  private indexOf(kind: "collision" | "interaction" | "trigger" | "placement-slot"): number {
     return this.selected?.kind === kind ? this.selected.index : -1;
   }
 
@@ -472,17 +539,47 @@ export class SceneDebugEditor {
   private defaultNewId(): string {
     if (this.tool === "trigger") return "trigger";
     if (this.tool === "interaction") return "interaction";
+    if (this.tool === "placement-slot") return this.nextPlacementSlotId(this.slotKind());
+    if (this.tool === "echo-anchor") return this.selectedLabisEcho().id;
     return "";
   }
 
   private defaultNewLabel(): string {
     if (this.tool === "interaction") return "Interaction";
     if (this.tool === "trigger") return "event-id";
+    if (this.tool === "placement-slot") return this.slotKind() === "chapter" ? "Chapter Slot" : "Fragment Slot";
+    if (this.tool === "echo-anchor") return this.selectedLabisEcho().label;
     return "";
   }
 
   private label(tool: Tool): string {
+    if (tool === "placement-slot") return "Placement Slot";
+    if (tool === "echo-anchor") return "Echo Anchor";
     return tool[0].toUpperCase() + tool.slice(1);
+  }
+
+  private slotKind(): PlacementSlotKind {
+    return this.root.querySelector<HTMLSelectElement>('[data-debug-field="slot-kind"]')?.value === "fragment" ? "fragment" : "chapter";
+  }
+
+  private nextPlacementSlotId(kind: PlacementSlotKind): string {
+    const prefix = `${kind}-slot-`;
+    const used = new Set(this.layout.placementSlots.filter((slot) => slot.kind === kind).map((slot) => slot.id));
+    for (let index = 1; index < 100; index += 1) {
+      const id = `${prefix}${String(index).padStart(2, "0")}`;
+      if (!used.has(id)) return id;
+    }
+    return `${prefix}${this.layout.placementSlots.length + 1}`;
+  }
+
+  private selectedLabisEcho(): typeof labisEchoes[number] {
+    const id = this.root.querySelector<HTMLSelectElement>('[data-debug-field="echo-id"]')?.value;
+    return labisEchoes.find((echo) => echo.id === id) ?? labisEchoes[0];
+  }
+
+  private echoLabel(id: string): string {
+    const echo = labisEchoes.find((item) => item.id === id);
+    return echo ? `${echo.label} · ${echo.id}` : id;
   }
 
   private status(message: string): void {

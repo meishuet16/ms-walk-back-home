@@ -1,7 +1,7 @@
 import { forestDoors } from "../fixtures/chapterPlan.js";
 import { labisBlockers, labisDiaryMemorySpot, labisMemoryTriggers, labisSpawn } from "../fixtures/labisMotorMemory.js";
 import { roomInteractions, roomObstacles, roomSpawn, roomSize } from "./MujiRoom.js";
-import type { Point, Rect } from "./CollisionSystem.js";
+import { inAnyRect, type Point, type Rect } from "./CollisionSystem.js";
 import type { MemoryTrigger } from "./MemoryTrigger.js";
 
 export type SceneOrientation = "landscape" | "portrait";
@@ -14,6 +14,18 @@ export type SceneInteraction = {
   radius: number;
 };
 
+export type PlacementSlotKind = "chapter" | "fragment";
+
+export type PlacementSlot = {
+  id: string;
+  kind: PlacementSlotKind;
+  x: number;
+  y: number;
+  radius: number;
+};
+
+export type EchoAnchor = Point & { radius: number };
+
 export type SceneLayout = {
   sceneId: string;
   label: string;
@@ -24,7 +36,23 @@ export type SceneLayout = {
   obstacles: Rect[];
   interactions: SceneInteraction[];
   triggers: MemoryTrigger[];
+  placementSlots: PlacementSlot[];
+  echoAnchors: Record<string, EchoAnchor>;
   anchors: Record<string, Point>;
+};
+
+export type ForestDynamicNode = {
+  id: string;
+  date: string;
+  title: string;
+  x: number;
+  y: number;
+  kind?: "chapter" | "fragment";
+};
+
+export type ResolvedForestDynamicNode<T extends ForestDynamicNode> = T & {
+  radius: number;
+  placementSlotId: string;
 };
 
 export type SceneLayoutId = "forest" | "muji-room" | "bakery" | "labis";
@@ -47,6 +75,8 @@ function portraitLayout(sceneId: SceneLayoutId, label: string, asset: string): S
     obstacles: [],
     interactions: [],
     triggers: [],
+    placementSlots: [],
+    echoAnchors: {},
     anchors: {}
   };
 }
@@ -68,14 +98,16 @@ export const sceneLayoutManifest: SceneLayoutManifest = {
           { x: 1428, y: 0, w: 108, h: 864 },
           { x: 0, y: 780, w: 1536, h: 125 }
         ],
-        interactions: forestDoors.map((door) => ({
-          id: door.id,
-          label: `${door.date} ${door.title}`,
+        interactions: [],
+        triggers: [],
+        placementSlots: forestDoors.map((door, index) => ({
+          id: `chapter-slot-${String(index + 1).padStart(2, "0")}`,
+          kind: "chapter",
           x: door.x,
           y: door.y,
           radius: 86
         })),
-        triggers: [],
+        echoAnchors: {},
         anchors: {}
       },
       portrait: portraitLayout("forest", "Forest", "assets/forest-potrait.png")
@@ -94,6 +126,8 @@ export const sceneLayoutManifest: SceneLayoutManifest = {
         obstacles: roomObstacles.map((rect) => ({ ...rect })),
         interactions: roomInteractions.map((interaction) => ({ ...interaction })),
         triggers: [],
+        placementSlots: [],
+        echoAnchors: {},
         anchors: {}
       },
       portrait: portraitLayout("muji-room", "Muji Room", "assets/muji-room-potrait.png")
@@ -127,6 +161,8 @@ export const sceneLayoutManifest: SceneLayoutManifest = {
           { id: "exit", label: "exit", x: 80, y: 300, radius: 105 }
         ],
         triggers: [],
+        placementSlots: [],
+        echoAnchors: {},
         anchors: {
           friend: { x: 600, y: 430 },
           "diary-memory": { x: 735, y: 325 }
@@ -159,6 +195,8 @@ export const sceneLayoutManifest: SceneLayoutManifest = {
           { id: "exit", label: "exit", x: 135, y: 735, radius: 90 }
         ],
         triggers: labisMemoryTriggers.map((trigger) => ({ ...trigger, rect: { ...trigger.rect } })),
+        placementSlots: [],
+        echoAnchors: {},
         anchors: {
           "diary-memory": { x: labisDiaryMemorySpot.x, y: labisDiaryMemorySpot.y },
           "motor-spawn": { x: 570, y: 555 },
@@ -187,6 +225,8 @@ export function cloneSceneLayout(layout: SceneLayout): SceneLayout {
     obstacles: layout.obstacles.map((rect) => ({ ...rect })),
     interactions: layout.interactions.map((interaction) => ({ ...interaction })),
     triggers: layout.triggers.map((trigger) => ({ ...trigger, rect: { ...trigger.rect } })),
+    placementSlots: (layout.placementSlots ?? []).map((slot) => ({ ...slot })),
+    echoAnchors: Object.fromEntries(Object.entries(layout.echoAnchors ?? {}).map(([key, anchor]) => [key, { ...anchor }])),
     anchors: Object.fromEntries(Object.entries(layout.anchors).map(([key, point]) => [key, { ...point }]))
   };
 }
@@ -232,6 +272,8 @@ export function makeDefaultLayout(sceneId: string, label: string, orientation: S
     obstacles: [],
     interactions: [],
     triggers: [],
+    placementSlots: [],
+    echoAnchors: {},
     anchors: {}
   };
 }
@@ -262,10 +304,41 @@ export function normalizeSceneLayout(layout: SceneLayout): SceneLayout {
       eventId: safeText(trigger.eventId),
       once: Boolean(trigger.once)
     })) : [],
+    placementSlots: Array.isArray(layout.placementSlots) ? layout.placementSlots.map(normalizePlacementSlot) : [],
+    echoAnchors: layout.echoAnchors && typeof layout.echoAnchors === "object"
+      ? Object.fromEntries(Object.entries(layout.echoAnchors).map(([key, anchor]) => [safeText(key), normalizeEchoAnchor(anchor)]))
+      : {},
     anchors: layout.anchors && typeof layout.anchors === "object"
       ? Object.fromEntries(Object.entries(layout.anchors).map(([key, point]) => [safeText(key), normalizePoint(point, { x: 0, y: 0 })]))
       : {}
   };
+}
+
+export function resolveForestDynamicPlacements<T extends ForestDynamicNode>(
+  nodes: T[],
+  layout: SceneLayout,
+  monthKey: string
+): Array<ResolvedForestDynamicNode<T>> {
+  const occupied: Array<{ x: number; y: number; radius: number }> = layout.interactions.map((interaction) => ({
+    x: interaction.x,
+    y: interaction.y,
+    radius: interaction.radius
+  }));
+  const slots = layout.placementSlots ?? [];
+  return nodes.map((node, index) => {
+    const kind = node.kind === "fragment" ? "fragment" : "chapter";
+    const candidates = slots.filter((slot) => slot.kind === kind);
+    const slot = candidates.find((candidate) => isPlacementAvailable(candidate, occupied, layout.obstacles));
+    const placement = slot ?? overflowPlacement(node.id, kind, layout, monthKey, index, occupied);
+    occupied.push({ x: placement.x, y: placement.y, radius: placement.radius });
+    return {
+      ...node,
+      x: placement.x,
+      y: placement.y,
+      radius: placement.radius,
+      placementSlotId: placement.id
+    };
+  });
 }
 
 export async function loadSceneLayoutOverrides(basePath = "scene-layouts"): Promise<void> {
@@ -332,4 +405,71 @@ function normalizeRect(value: unknown): Rect {
     w: positiveNumber(rect?.w, 1),
     h: positiveNumber(rect?.h, 1)
   };
+}
+
+function normalizePlacementSlot(value: unknown): PlacementSlot {
+  const slot = value as Partial<PlacementSlot> | null | undefined;
+  const kind = slot?.kind === "fragment" ? "fragment" : "chapter";
+  return {
+    id: safeText(slot?.id || `${kind}-slot`),
+    kind,
+    x: finiteNumber(slot?.x, 0),
+    y: finiteNumber(slot?.y, 0),
+    radius: positiveNumber(slot?.radius, kind === "fragment" ? 44 : 86)
+  };
+}
+
+function normalizeEchoAnchor(value: unknown): EchoAnchor {
+  const anchor = value as Partial<EchoAnchor> | null | undefined;
+  return {
+    x: finiteNumber(anchor?.x, 0),
+    y: finiteNumber(anchor?.y, 0),
+    radius: positiveNumber(anchor?.radius, 56)
+  };
+}
+
+function isPlacementAvailable(slot: PlacementSlot, occupied: Array<{ x: number; y: number; radius: number }>, obstacles: Rect[]): boolean {
+  if (inAnyRect(slot, obstacles)) return false;
+  return !occupied.some((item) => Math.hypot(item.x - slot.x, item.y - slot.y) < Math.max(item.radius, slot.radius));
+}
+
+function overflowPlacement(
+  nodeId: string,
+  kind: PlacementSlotKind,
+  layout: SceneLayout,
+  monthKey: string,
+  index: number,
+  occupied: Array<{ x: number; y: number; radius: number }>
+): PlacementSlot {
+  const radius = kind === "fragment" ? 44 : 82;
+  const safe = {
+    x: radius,
+    y: radius,
+    w: Math.max(radius * 2, layout.size.w - radius * 2),
+    h: Math.max(radius * 2, layout.size.h - radius * 2)
+  };
+  const seed = stableHash(`${nodeId}|${monthKey}|${layout.orientation}|${kind}`);
+  for (let attempt = 0; attempt < 48; attempt += 1) {
+    const mixed = stableHash(`${seed}|${attempt}`);
+    const x = safe.x + (mixed % 1000) / 1000 * safe.w;
+    const y = safe.y + (Math.floor(mixed / 1000) % 1000) / 1000 * safe.h;
+    const slot = { id: `overflow-${kind}-${index + 1}`, kind, x, y, radius };
+    if (isPlacementAvailable(slot, occupied, layout.obstacles)) return slot;
+  }
+  return {
+    id: `overflow-${kind}-${index + 1}`,
+    kind,
+    x: Math.min(layout.size.w - radius, radius + (index * radius * 2.7) % safe.w),
+    y: Math.min(layout.size.h - radius, radius + Math.floor(index / 4) * radius * 2.7),
+    radius
+  };
+}
+
+function stableHash(value: string): number {
+  let hash = 2166136261;
+  for (const char of value) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
 }

@@ -117,6 +117,25 @@ function point(value, fallback = { x: 0, y: 0 }) {
   return { x: finite(value?.x, fallback.x), y: finite(value?.y, fallback.y) };
 }
 
+function placementSlot(value) {
+  const kind = value?.kind === "fragment" ? "fragment" : "chapter";
+  return {
+    id: sanitizeSceneId(value?.id ?? `${kind}-slot`),
+    kind,
+    x: finite(value?.x, 0),
+    y: finite(value?.y, 0),
+    radius: Math.max(1, finite(value?.radius, kind === "fragment" ? 44 : 86))
+  };
+}
+
+function echoAnchor(value) {
+  return {
+    x: finite(value?.x, 0),
+    y: finite(value?.y, 0),
+    radius: Math.max(1, finite(value?.radius, 56))
+  };
+}
+
 function sanitizeLayout(value) {
   const sceneId = sanitizeSceneId(value?.sceneId ?? "");
   const orientation = sanitizeOrientation(value?.orientation);
@@ -143,6 +162,10 @@ function sanitizeLayout(value) {
       eventId: sanitizeSceneId(item?.eventId ?? ""),
       once: Boolean(item?.once)
     })) : [],
+    placementSlots: Array.isArray(value?.placementSlots) ? value.placementSlots.map(placementSlot) : [],
+    echoAnchors: value?.echoAnchors && typeof value.echoAnchors === "object"
+      ? Object.fromEntries(Object.entries(value.echoAnchors).map(([key, val]) => [sanitizeSceneId(key), echoAnchor(val)]))
+      : {},
     anchors: value?.anchors && typeof value.anchors === "object"
       ? Object.fromEntries(Object.entries(value.anchors).map(([key, val]) => [sanitizeSceneId(key), point(val)]))
       : {}
@@ -195,6 +218,8 @@ function makeDefaultLayout(sceneId, label, orientation) {
     obstacles: [],
     interactions: [],
     triggers: [],
+    placementSlots: [],
+    echoAnchors: {},
     anchors: {}
   };
 }

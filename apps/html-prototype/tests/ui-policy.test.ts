@@ -64,6 +64,15 @@ test("Muji Room landscape keeps the original dedicated runtime path", () => {
   assert.match(appSource, /for \(const interaction of roomInteractions\)/);
 });
 
+test("Muji Room portrait reuses existing room effect rendering for lamp and window", () => {
+  assert.match(appSource, /if \(this\.room\.lampOn\) this\.drawLampGlow\(scale\)/);
+  assert.match(appSource, /if \(this\.room\.windowFocus\)[\s\S]*this\.drawWindowFocus\(time, scale\)/);
+  assert.match(appSource, /activateRoomInteraction\(this\.activeRoomInteraction\)/);
+  for (const id of ["door", "journal", "lamp", "window", "records", "residue", "reflection"]) {
+    assert.match(appSource, new RegExp(`interaction\\.id === "${id}"`));
+  }
+});
+
 test("mobile controls use contextual interaction copy instead of keyboard-only E", () => {
   assert.equal(inputSource.includes(">E<"), false);
   assert.match(inputSource, /touch-action-label/);
@@ -148,6 +157,9 @@ test("mobile touch controls are large and hidden behind non-game portrait sheets
   assert.match(stylesSource, /#app\[data-scene="labis"\] \.touch-controls[\s\S]*display:\s*flex/);
   assert.match(stylesSource, /#app\[data-scene="muji-room"\] \.touch-controls[\s\S]*display:\s*flex/);
   assert.match(stylesSource, /\.touch-stick[\s\S]*width:\s*116px[\s\S]*height:\s*116px/);
+  assert.match(stylesSource, /\.touch-controls[\s\S]*justify-content:\s*flex-start/);
+  assert.match(stylesSource, /\.touch-stick[\s\S]*background:\s*rgba\(8,21,34,\.12\)/);
+  assert.match(stylesSource, /\.touch-action[\s\S]*margin-left:\s*12px/);
 }
 );
 

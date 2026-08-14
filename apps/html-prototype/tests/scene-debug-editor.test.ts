@@ -14,11 +14,16 @@ test("debug scene mode mounts Scene Debug Editor v2 instead of normal gameplay",
 });
 
 test("Scene Debug Editor exposes required authoring tools and actions", () => {
-  for (const label of ["Scene Debug Editor", "+ Add Scene", "Landscape", "Portrait", "Select", "Spawn", "Collision", "Interaction", "Trigger", "Preview", "Inspector", "Delete Selected", "Save Layout", "Copy JSON", "Download Backup JSON"]) {
+  for (const label of ["Scene Debug Editor", "+ Add Scene", "Landscape", "Portrait", "Select", "Spawn", "Collision", "Interaction", "Trigger", "Placement Slot", "Preview", "Inspector", "Delete Selected", "Save Layout", "Copy JSON", "Download Backup JSON"]) {
     assert.match(editorSource, new RegExp(label.replace(/[+]/g, "\\+"), "i"));
   }
   assert.match(editorSource, /data-debug-field="scene"/);
   assert.match(editorSource, /data-debug-field="orientation"/);
+  assert.match(editorSource, /data-debug-field="slot-kind"/);
+  assert.match(editorSource, /Chapter Slot/);
+  assert.match(editorSource, /Fragment Slot/);
+  assert.match(editorSource, /Echo Anchor/);
+  assert.match(editorSource, /data-debug-field="echo-id"/);
 });
 
 test("debug save flow writes through localhost-only endpoints and never arbitrary paths", () => {
@@ -30,6 +35,8 @@ test("debug save flow writes through localhost-only endpoints and never arbitrar
   assert.match(devServerSource, /asset\.includes\("\.\."\)/);
   assert.match(devServerSource, /resolveSceneFile/);
   assert.match(devServerSource, /public\/scene-layouts/);
+  assert.match(devServerSource, /placementSlots/);
+  assert.match(devServerSource, /placementSlot\(value\)/);
 });
 
 test("saving portrait layout through runtime model does not mutate landscape", () => {
@@ -80,4 +87,11 @@ test("Labis motor cutscene uses orientation-aware anchors without duplicating th
   assert.match(appSource, /motor-mid/);
   assert.match(appSource, /motor-end/);
   assert.doesNotMatch(appSource, /labisMotorPortraitMemoryActions/);
+});
+
+test("Labis echoes resolve through orientation-aware anchors for rendering and proximity", () => {
+  assert.match(appSource, /resolveLabisEchoesForCurrentLayout/);
+  assert.match(appSource, /availableLabisEchoAtPlayer[\s\S]*resolveLabisEchoesForCurrentLayout/);
+  assert.match(appSource, /drawLabisMemoryTells[\s\S]*resolveLabisEchoesForCurrentLayout/);
+  assert.match(appSource, /drawLabisEchoVisual[\s\S]*resolveLabisEchoForCurrentLayout/);
 });

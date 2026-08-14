@@ -3077,8 +3077,9 @@ canvas {
   bottom: 16px;
   z-index: 31;
   display: none;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
+  gap: 12px;
   pointer-events: none;
 }
 .touch-stick {
@@ -3087,7 +3088,8 @@ canvas {
   height: 88px;
   border-radius: 50%;
   border: 1px solid rgba(255,255,255,.28);
-  background: rgba(8,21,34,.45);
+  background: rgba(8,21,34,.12);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
 }
 .touch-action {
   pointer-events: auto;
@@ -3096,6 +3098,8 @@ canvas {
   border-radius: 50%;
   display: grid;
   place-items: center;
+  margin-left: 12px;
+  background: rgba(8,21,34,.28);
 }
 .touch-action-label {
   display: block;

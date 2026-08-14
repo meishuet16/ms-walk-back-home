@@ -22,7 +22,7 @@ import { ParticleSystem } from "./systems/ParticleSystem.js";
 import { activeLyricIndexAt, adjacentTrackIdForControl, clampLyricsOverlay, createDefaultPersonalPlayerState, filterAndSortMusic, isBuiltInTrackId, lyricWindowForTime, nextTrackIdForPlayback, normalizePlaybackMode, parseLrc, personalMusicShouldPlayInScene, removeUserMusicTrack } from "./systems/PersonalMusic.js";
 import { changeReflectionPaper, createChapterReflectionNote, createReflectionNote, createReflectionWallState, deleteReflectionNote, migrateLegacyReflectionWall, moveReflectionNote, reflectionPaperStyles, toggleReflectionNoteFlag, updateReflectionNote, visibleReflectionNotes } from "./systems/ReflectionWall.js";
 import { drawSceneActor } from "./systems/SceneActorRenderer.js";
-import { getSceneLayout, loadSceneLayoutOverrides, selectSceneOrientation, type SceneInteraction, type SceneLayout, type SceneLayoutId, type SceneOrientation } from "./systems/SceneLayouts.js";
+import { getSceneLayout, loadSceneLayoutOverrides, resolveForestDynamicPlacements, selectSceneOrientation, type SceneInteraction, type SceneLayout, type SceneLayoutId, type SceneOrientation } from "./systems/SceneLayouts.js";
 import { applyChoice } from "./systems/TendencySystem.js";
 import {
   addJournalMedia,
@@ -60,7 +60,7 @@ import type { MusicScene } from "./systems/SceneMusic.js";
 import { SupabaseSync } from "./systems/SupabaseSync.js";
 import { emptyTendencies } from "./systems/TendencySystem.js";
 
-type ForestNode = AuthoredForestEntry | DiaryForestMemory;
+type ForestNode = (AuthoredForestEntry | DiaryForestMemory) & { radius?: number; placementSlotId?: string };
 type LabisDialogueLine = { speaker: string; text: string };
 type LabisDialogueAfter = "motor-choice" | "photo-choice" | "filter-choice" | "finish-echo" | "show-reflection" | "finish-chicken-cake" | null;
 type LabisOverlayMode = "dialogue" | "choice" | "vignette" | "reflection" | null;
@@ -691,8 +691,7 @@ export class WalkBackHomeApp {
   private updateForest(x: number, y: number, dt: number): void {
     const layout = this.currentSceneLayout("forest");
     this.moveInLayout(x, y, dt, layout);
-    const interaction = layout.interactions.find((item) => Math.hypot(this.player.x - item.x, this.player.y - item.y) < item.radius);
-    this.activeDoor = interaction ? this.allDoors().find((door) => door.id === interaction.id) ?? null : null;
+    this.activeDoor = this.allDoors().find((door) => Math.hypot(this.player.x - door.x, this.player.y - door.y) < (door.radius ?? 86)) ?? null;
   }
 
   private updateBakery(x: number, y: number, dt: number): void {
@@ -895,7 +894,7 @@ export class WalkBackHomeApp {
 
   private allDoors(): ForestNode[] {
     const selectedMonth = this.currentForestMonth();
-    return forestNodesForMonth(forestEntries, this.makeDiaryLibrary(), selectedMonth.key);
+    return resolveForestDynamicPlacements(forestNodesForMonth(forestEntries, this.makeDiaryLibrary(), selectedMonth.key), this.currentSceneLayout("forest"), selectedMonth.key);
   }
 
   private isChapterNode(node: ForestNode): node is AuthoredForestEntry | Extract<DiaryForestMemory, { kind: "chapter" }> {
@@ -995,8 +994,8 @@ export class WalkBackHomeApp {
     const chapterId = this.chapterIdFor(door);
     this.readMemories.add(chapterId);
     this.chapterProgress.set(chapterId, markChapterMemoryRead(this.progressFor(chapterId)));
-    const memoryText = "memoryText" in door ? door.memoryText : (chapterRegistry[chapterId]?.memoryText ?? bakeryChapter.memoryText ?? []);
-    const lines = memoryText.map((line, index) => index === 0 ? `<h2>${this.escapeHtml(door.date)} · ${this.escapeHtml(door.title)}</h2>` : `<p>${this.escapeHtml(line)}</p>`).join("");
+    const memoryText: string[] = "memoryText" in door && Array.isArray(door.memoryText) ? door.memoryText : (chapterRegistry[chapterId]?.memoryText ?? bakeryChapter.memoryText ?? []);
+    const lines = memoryText.map((line: string, index: number) => index === 0 ? `<h2>${this.escapeHtml(door.date)} · ${this.escapeHtml(door.title)}</h2>` : `<p>${this.escapeHtml(line)}</p>`).join("");
     this.overlay.innerHTML = `<div class="modal diary-memory"><div class="diary-memory-scroll">${lines}</div><div class="memory-actions"><button data-action="close">Close</button><button data-action="forest">Exit to forest</button></div></div>`;
     this.showToast("Diary memory read");
     this.focusStage();
@@ -1146,8 +1145,23 @@ export class WalkBackHomeApp {
   }
 
   private availableLabisEchoAtPlayer(): LabisEcho | null {
-    const nearby = labisEchoes.filter((echo) => this.canUseLabisEcho(echo) && Math.hypot(this.player.x - echo.x, this.player.y - echo.y) < echo.radius);
+    const nearby = this.resolveLabisEchoesForCurrentLayout().filter((echo) => this.canUseLabisEcho(echo) && Math.hypot(this.player.x - echo.x, this.player.y - echo.y) < echo.radius);
     return nearby.sort((a, b) => this.labisEchoPriority(b) - this.labisEchoPriority(a))[0] ?? null;
+  }
+
+  private resolveLabisEchoesForCurrentLayout(): LabisEcho[] {
+    const layout = this.currentSceneLayout("labis");
+    if (layout.orientation === "portrait") {
+      return labisEchoes
+        .filter((echo) => Boolean(layout.echoAnchors[echo.id]))
+        .map((echo) => this.resolveLabisEchoForCurrentLayout(echo));
+    }
+    return labisEchoes.map((echo) => this.resolveLabisEchoForCurrentLayout(echo));
+  }
+
+  private resolveLabisEchoForCurrentLayout(echo: LabisEcho): LabisEcho {
+    const anchor = this.currentSceneLayout("labis").echoAnchors[echo.id];
+    return anchor ? { ...echo, x: anchor.x, y: anchor.y, radius: anchor.radius } : echo;
   }
 
   private canUseLabisEcho(echo: LabisEcho): boolean {
@@ -1457,7 +1471,7 @@ export class WalkBackHomeApp {
       this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
     if (layout.orientation === "landscape" && !this.labisCutscene && !this.labisOverlayMode) this.drawLabisDiaryBookProp(cameraX, cameraY, scale, time);
-    if (layout.orientation === "landscape" && !this.labisCutscene && !this.labisOverlayMode) this.drawLabisMemoryTells(cameraX, cameraY, scale, time);
+    if (!this.labisCutscene && !this.labisOverlayMode) this.drawLabisMemoryTells(cameraX, cameraY, scale, time);
     if (this.labisActiveEcho) this.drawLabisEchoVisual(this.labisActiveEcho, cameraX, cameraY, scale, time);
 
     const actorList = this.labisCutscene ? [...this.labisCutscene.actors.values()] : [];
@@ -1528,7 +1542,7 @@ export class WalkBackHomeApp {
   }
 
   private drawLabisMemoryTells(cameraX: number, cameraY: number, scale: number, time: number): void {
-    for (const echo of labisEchoes) {
+    for (const echo of this.resolveLabisEchoesForCurrentLayout()) {
       if (!this.canUseLabisEcho(echo)) continue;
       const x = (echo.x - cameraX) * scale;
       const y = (echo.y - cameraY) * scale;
@@ -1580,6 +1594,7 @@ export class WalkBackHomeApp {
   }
 
   private drawLabisEchoVisual(echo: LabisEcho, cameraX: number, cameraY: number, scale: number, time: number): void {
+    echo = this.resolveLabisEchoForCurrentLayout(echo);
     const x = (echo.x - cameraX) * scale;
     const y = (echo.y - cameraY) * scale;
     const age = Math.max(0, (time - this.labisVignetteStartedAt) / 1000);
@@ -1674,12 +1689,11 @@ export class WalkBackHomeApp {
     this.ctx.closePath();
   }
 
-  private drawDoors(layout: SceneLayout, cameraX: number, cameraY: number, scale: number): void {
-    for (const interaction of layout.interactions) {
-      const door = this.allDoors().find((item) => item.id === interaction.id);
-      if (!door) continue;
-      const x = (interaction.x - cameraX) * scale;
-      const y = (interaction.y - cameraY) * scale;
+  private drawDoors(_layout: SceneLayout, cameraX: number, cameraY: number, scale: number): void {
+    for (const door of this.allDoors()) {
+      const x = (door.x - cameraX) * scale;
+      const y = (door.y - cameraY) * scale;
+      if (x < -90 || y < -90 || x > this.canvas.width + 90 || y > this.canvas.height + 90) continue;
       const active = this.activeDoor?.id === door.id;
       const state = this.isChapterNode(door) ? this.progressFor(this.chapterIdFor(door)).state : "fragment";
       const baseRadius = state === "fragment" ? 24 : state === "walkedThrough" ? 34 : state === "visited" ? 44 : 50;
@@ -1727,7 +1741,14 @@ export class WalkBackHomeApp {
     const scale = this.canvas.width / viewport.w;
     this.ctx.drawImage(image, 0, 0, viewport.w, viewport.h, 0, 0, this.canvas.width, this.canvas.height);
     if (!image.complete || image.naturalWidth === 0) this.drawRoomFallback(scale);
+    this.drawRoomResidue(scale);
+    if (this.room.lampOn) this.drawLampGlow(scale);
     this.drawMuji({ x: this.player.x * scale, y: this.player.y * scale }, time, scale);
+    if (this.room.windowFocus) {
+      this.ctx.fillStyle = "rgba(8, 14, 24, .22)";
+      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      this.drawWindowFocus(time, scale);
+    }
     for (const interaction of layout.interactions) {
       if (interaction.id === "residue" && !this.room.residueIds?.length) continue;
       this.drawRoomInteractionHint(interaction, this.activeRoomInteraction?.id === interaction.id, time, scale);
