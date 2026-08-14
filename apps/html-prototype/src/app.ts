@@ -196,7 +196,7 @@ export class WalkBackHomeApp {
     root.innerHTML = `
       <div class="game-shell">
         <header class="top-menu">
-          <div><strong>Walk Back Home</strong><span>A gentle walk through memories that still glow.</span></div>
+          <div class="top-menu-title"><strong>Walk Back Home</strong><span>A gentle walk through memories that still glow.</span></div>
           <nav class="top-actions"></nav>
         </header>
         <main class="stage-wrap">
@@ -292,7 +292,7 @@ export class WalkBackHomeApp {
     if (action === "journal-show-more") this.showMoreTimelineEntries();
     if (action === "open-month-book") this.openMonthlyBook(target.dataset.month ?? "");
     if (action === "export-month-pdf") void this.exportMonthlyPdf(target.dataset.month ?? "");
-    if (action === "open-map") this.showMap();
+    if (action === "open-map") this.returnToForest();
     if (action === "forest-month-prev") this.moveForestMonth(-1);
     if (action === "forest-month-next") this.moveForestMonth(1);
     if (action === "open-room") this.enterMujiRoom();
@@ -575,6 +575,10 @@ export class WalkBackHomeApp {
     if (next === this.sceneOrientation) return;
     const previousLayout = layoutSceneIds.has(this.scene) ? this.currentSceneLayout() : null;
     this.sceneOrientation = next;
+    if (this.scene === "title" && next === "portrait") {
+      this.scene = "forest";
+      this.player = { ...this.currentSceneLayout("forest").spawn };
+    }
     if (layoutSceneIds.has(this.scene) && previousLayout) {
       const nextLayout = this.currentSceneLayout();
       this.player = this.safeMappedPoint(this.player, previousLayout, nextLayout);
@@ -1917,14 +1921,19 @@ export class WalkBackHomeApp {
 
   private renderTopNav(): void {
     const html = `
-      <button data-action="home">Today</button>
-      <button data-action="open-timeline">Timeline</button>
-      <button data-action="forest">Forest</button>
-      <button data-action="open-room">Muji Room</button>
-      <button data-action="reflection-wall">Reflection Wall</button>
-      <button data-action="music">Music: ${this.settings.musicEnabled ? "On" : "Off"}</button>
-      <button data-action="toggle-touch-controls">Joystick: ${this.forceTouchControls ? "On" : "Auto"}</button>
-      <button data-action="settings">Settings</button>`;
+      <details class="top-actions-menu">
+        <summary class="menu-toggle" aria-label="Open menu">☰</summary>
+        <div class="menu-panel">
+          <button data-action="home">Today</button>
+          <button data-action="open-timeline">Timeline</button>
+          <button data-action="forest">Forest</button>
+          <button data-action="open-room">Muji Room</button>
+          <button data-action="reflection-wall">Reflection Wall</button>
+          <button data-action="music">Music: ${this.settings.musicEnabled ? "On" : "Off"}</button>
+          <button data-action="toggle-touch-controls">Joystick: ${this.forceTouchControls ? "On" : "Auto"}</button>
+          <button data-action="settings">Settings</button>
+        </div>
+      </details>`;
     if (this.topNav.innerHTML !== html) this.topNav.innerHTML = html;
   }
 
@@ -5063,7 +5072,8 @@ export class WalkBackHomeApp {
         this.showToast("Fullscreen off");
         return;
       }
-      await document.documentElement.requestFullscreen?.();
+      const shell = this.root.querySelector<HTMLElement>(".game-shell") ?? document.documentElement;
+      await shell.requestFullscreen?.();
       this.showToast("Fullscreen on");
     } catch {
       this.showToast("Fullscreen unavailable here");

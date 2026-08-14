@@ -1,0 +1,88 @@
+{
+  "sceneId": "forest",
+  "label": "Forest",
+  "orientation": "landscape",
+  "asset": "assets/forest.png",
+  "size": {
+    "w": 1536,
+    "h": 1024
+  },
+  "spawn": {
+    "x": 613.5273796245444,
+    "y": 778.4681603402324
+  },
+  "obstacles": [
+    {
+      "x": 1.163591934079534,
+      "y": 32.043535755501125,
+      "w": 1536,
+      "h": 88
+    },
+    {
+      "x": -31.418180728628656,
+      "y": 112.84903093763171,
+      "w": 120,
+      "h": 864
+    },
+    {
+      "x": 1437.3090550748977,
+      "y": 115.63551061624048,
+      "w": 108,
+      "h": 864
+    },
+    {
+      "x": -20.945533719651053,
+      "y": 977.8340303953219,
+      "w": 1536,
+      "h": 125
+    }
+  ],
+  "interactions": [],
+  "triggers": [],
+  "placementSlots": [
+    {
+      "id": "chapter-slot-01",
+      "kind": "chapter",
+      "x": 930,
+      "y": 520,
+      "radius": 86
+    },
+    {
+      "id": "chapter-slot-02",
+      "kind": "chapter",
+      "x": 700,
+      "y": 260,
+      "radius": 86
+    },
+    {
+      "id": "chapter-slot-03",
+      "kind": "chapter",
+      "x": 1120,
+      "y": 210,
+      "radius": 86
+    },
+    {
+      "id": "chapter-slot-04",
+      "kind": "chapter",
+      "x": 430,
+      "y": 300,
+      "radius": 86
+    },
+    {
+      "id": "chapter-slot-05",
+      "kind": "chapter",
+      "x": 1240,
+      "y": 660,
+      "radius": 86
+    },
+    {
+      "id": "fragment-slot-01",
+      "kind": "fragment",
+      "x": 479.12733601215234,
+      "y": 506.3510720498555,
+      "radius": 56
+    }
+  ],
+  "echoAnchors": {},
+  "anchors": {}
+}
