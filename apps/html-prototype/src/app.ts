@@ -528,6 +528,26 @@ export class WalkBackHomeApp {
     return getSceneLayout(id, this.sceneOrientation);
   }
 
+  private sceneInteractionById(layout: SceneLayout, id: string): SceneInteraction | null {
+    return layout.interactions.find((interaction) => interaction.id === id) ?? null;
+  }
+
+  private roomInteractionById(layout: SceneLayout, id: RoomInteraction["id"]): SceneInteraction | RoomInteraction | null {
+    const interactions = layout.orientation === "landscape" ? roomInteractions : layout.interactions;
+    return interactions.find((interaction) => interaction.id === id) ?? null;
+  }
+
+  private labisDiaryMemoryInteraction(layout: SceneLayout): SceneInteraction | null {
+    if (layout.orientation !== "landscape") return this.sceneInteractionById(layout, "diary-memory");
+    return this.sceneInteractionById(layout, "diary-memory") ?? {
+      id: "diary-memory",
+      label: "diary memory",
+      x: labisDiaryMemorySpot.x,
+      y: labisDiaryMemorySpot.y,
+      radius: labisDiaryMemorySpot.radius
+    };
+  }
+
   private sceneImage(layout: SceneLayout): HTMLImageElement {
     const existing = this.sceneImages.get(layout.asset);
     if (existing) return existing;
@@ -1013,8 +1033,9 @@ export class WalkBackHomeApp {
     if (!node) return;
     const choices = node.choices?.map((choice) => `<button data-action="choice" data-choice="${choice.id}"><span>${choice.label}</span><small>${this.choiceEffectLabel(choice)}</small></button>`).join("") ?? `<button data-action="choice" data-choice="next">Continue</button>`;
     const portrait = node.portrait === "friend" ? assets.friend : node.portrait === "muji" ? assets.muji : "";
+    const portraitMarkup = portrait ? `<img ${node.portrait === "friend" ? `class="friend-portrait"` : ""} src="${portrait}" alt="">` : "";
     this.overlay.classList.add("dialogue-open");
-    this.overlay.innerHTML = `<div class="vn"><div class="vn-portrait">${portrait ? `<img src="${portrait}" alt="">` : ""}</div><div><h3>${node.speaker}</h3><p>${node.text}</p>${this.dialogue.lastResponse ? `<p class="memory-line">${this.dialogue.lastResponse}</p>` : ""}<div class="choices">${choices}</div></div></div>`;
+    this.overlay.innerHTML = `<div class="vn"><div class="vn-portrait">${portraitMarkup}</div><div><h3>${node.speaker}</h3><p>${node.text}</p>${this.dialogue.lastResponse ? `<p class="memory-line">${this.dialogue.lastResponse}</p>` : ""}<div class="choices">${choices}</div></div></div>`;
     this.focusStage();
   }
 
@@ -1442,10 +1463,12 @@ export class WalkBackHomeApp {
       this.drawDoors(layout, cameraX, cameraY, scale);
     }
     if (kind === "bakery") {
-      const memorySpot = layout.anchors["diary-memory"];
-      const friend = layout.anchors.friend;
+      const memorySpot = this.sceneInteractionById(layout, "diary-memory");
+      const friend = this.sceneInteractionById(layout, "friend-a");
+      const pastry = this.sceneInteractionById(layout, "pastry");
       if (memorySpot) this.drawMemorySpot(memorySpot, cameraX, cameraY, scale, time);
-      if (friend) this.ctx.drawImage(this.images.friend, (friend.x - cameraX) * scale - 21 * scale, (friend.y - cameraY) * scale - 68 * scale, 42 * scale, 68 * scale);
+      if (pastry) this.drawBakeryPastry(pastry, cameraX, cameraY, scale, time);
+      if (friend) this.drawFriendA(friend, cameraX, cameraY, scale);
     }
     this.drawMuji({ x: (this.player.x - cameraX) * scale, y: (this.player.y - cameraY) * scale }, time, scale);
     const vignette = this.ctx.createRadialGradient(this.canvas.width / 2, this.canvas.height / 2, 120, this.canvas.width / 2, this.canvas.height / 2, this.canvas.height * 0.72);
@@ -1470,7 +1493,8 @@ export class WalkBackHomeApp {
       this.ctx.fillStyle = "rgba(226, 181, 109, .10)";
       this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
-    if (layout.orientation === "landscape" && !this.labisCutscene && !this.labisOverlayMode) this.drawLabisDiaryBookProp(cameraX, cameraY, scale, time);
+    const diaryMemory = this.labisDiaryMemoryInteraction(layout);
+    if (diaryMemory && !this.labisCutscene && !this.labisOverlayMode) this.drawLabisDiaryBookProp(diaryMemory, cameraX, cameraY, scale, time);
     if (!this.labisCutscene && !this.labisOverlayMode) this.drawLabisMemoryTells(cameraX, cameraY, scale, time);
     if (this.labisActiveEcho) this.drawLabisEchoVisual(this.labisActiveEcho, cameraX, cameraY, scale, time);
 
@@ -1524,9 +1548,9 @@ export class WalkBackHomeApp {
     drawSceneActor(this.ctx, actor, cameraX, cameraY, scale);
   }
 
-  private drawLabisDiaryBookProp(cameraX: number, cameraY: number, scale: number, time: number): void {
-    const x = (labisDiaryMemorySpot.x - cameraX) * scale;
-    const y = (labisDiaryMemorySpot.y - cameraY) * scale;
+  private drawLabisDiaryBookProp(diaryMemory: SceneInteraction, cameraX: number, cameraY: number, scale: number, time: number): void {
+    const x = (diaryMemory.x - cameraX) * scale;
+    const y = (diaryMemory.y - cameraY) * scale;
     const pulse = Math.sin(time / 460) * 0.5 + 0.5;
     this.ctx.save();
     this.ctx.globalAlpha = 0.56 + pulse * 0.24;
@@ -1675,6 +1699,26 @@ export class WalkBackHomeApp {
     this.ctx.fillText("Diary", x - 16 * scale, y - 34 * scale);
   }
 
+  private drawBakeryPastry(pastry: SceneInteraction, cameraX: number, cameraY: number, scale: number, time: number): void {
+    const x = (pastry.x - cameraX) * scale;
+    const y = (pastry.y - cameraY) * scale;
+    const pulse = Math.sin(time / 310) * 0.5 + 0.5;
+    const glow = this.ctx.createRadialGradient(x, y - 8 * scale, 3 * scale, x, y - 8 * scale, (34 + pulse * 8) * scale);
+    glow.addColorStop(0, "rgba(255, 224, 145, .5)");
+    glow.addColorStop(1, "rgba(255, 196, 92, 0)");
+    this.ctx.fillStyle = glow;
+    this.ctx.beginPath();
+    this.ctx.arc(x, y - 8 * scale, (34 + pulse * 8) * scale, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.drawFoodFallback(x, y - 3 * scale, scale * 0.92, false);
+  }
+
+  private drawFriendA(friend: SceneInteraction, cameraX: number, cameraY: number, scale: number): void {
+    const x = (friend.x - cameraX) * scale;
+    const y = (friend.y - cameraY) * scale;
+    this.ctx.drawImage(this.images.friend, x - 63 * scale, y - 204 * scale, 126 * scale, 204 * scale);
+  }
+
   private roundRect(x: number, y: number, width: number, height: number, radius: number): void {
     this.ctx.beginPath();
     this.ctx.moveTo(x + radius, y);
@@ -1718,17 +1762,20 @@ export class WalkBackHomeApp {
 
   private drawMujiRoomScene(time: number): void {
     const layout = this.currentSceneLayout("muji-room");
+    const lamp = this.roomInteractionById(layout, "lamp");
+    const windowInteraction = this.roomInteractionById(layout, "window");
+    const residue = this.roomInteractionById(layout, "residue");
     if (layout.orientation === "landscape") {
       const scale = this.canvas.width / 960;
       this.ctx.drawImage(this.images.room, 0, 0, this.canvas.width, this.canvas.height);
       if (!this.images.room.complete || this.images.room.naturalWidth === 0) this.drawRoomFallback(scale);
-      this.drawRoomResidue(scale);
-      if (this.room.lampOn) this.drawLampGlow(scale);
+      if (residue) this.drawRoomResidue(residue, scale);
+      if (this.room.lampOn && lamp) this.drawLampGlow(lamp, scale);
       this.drawMuji({ x: this.player.x * scale, y: this.player.y * scale }, time, scale);
-      if (this.room.windowFocus) {
+      if (this.room.windowFocus && windowInteraction) {
         this.ctx.fillStyle = "rgba(8, 14, 24, .22)";
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        this.drawWindowFocus(time, scale);
+        this.drawWindowFocus(windowInteraction, time, scale);
       }
       for (const interaction of roomInteractions) {
         if (interaction.id === "residue" && !this.room.residueIds?.length) continue;
@@ -1741,13 +1788,13 @@ export class WalkBackHomeApp {
     const scale = this.canvas.width / viewport.w;
     this.ctx.drawImage(image, 0, 0, viewport.w, viewport.h, 0, 0, this.canvas.width, this.canvas.height);
     if (!image.complete || image.naturalWidth === 0) this.drawRoomFallback(scale);
-    this.drawRoomResidue(scale);
-    if (this.room.lampOn) this.drawLampGlow(scale);
+    if (residue) this.drawRoomResidue(residue, scale);
+    if (this.room.lampOn && lamp) this.drawLampGlow(lamp, scale);
     this.drawMuji({ x: this.player.x * scale, y: this.player.y * scale }, time, scale);
-    if (this.room.windowFocus) {
+    if (this.room.windowFocus && windowInteraction) {
       this.ctx.fillStyle = "rgba(8, 14, 24, .22)";
       this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-      this.drawWindowFocus(time, scale);
+      this.drawWindowFocus(windowInteraction, time, scale);
     }
     for (const interaction of layout.interactions) {
       if (interaction.id === "residue" && !this.room.residueIds?.length) continue;
@@ -1803,9 +1850,9 @@ export class WalkBackHomeApp {
     this.ctx.fillRect(706 * scale, 314 * scale, 132 * scale, 112 * scale);
   }
 
-  private drawWindowFocus(time: number, scale: number): void {
-    const x = 286 * scale;
-    const y = 56 * scale;
+  private drawWindowFocus(interaction: SceneInteraction | RoomInteraction, time: number, scale: number): void {
+    const x = (interaction.x - 200) * scale;
+    const y = (interaction.y - 108) * scale;
     const w = 292 * scale;
     const h = 176 * scale;
     const glow = this.ctx.createRadialGradient(x + w / 2, y + h / 2, 20 * scale, x + w / 2, y + h / 2, 210 * scale);
@@ -1824,20 +1871,22 @@ export class WalkBackHomeApp {
     }
   }
 
-  private drawLampGlow(scale: number): void {
-    const glow = this.ctx.createRadialGradient(220 * scale, 166 * scale, 8 * scale, 220 * scale, 166 * scale, 170 * scale);
+  private drawLampGlow(interaction: SceneInteraction | RoomInteraction, scale: number): void {
+    const x = (interaction.x + 2) * scale;
+    const y = (interaction.y - 44) * scale;
+    const glow = this.ctx.createRadialGradient(x, y, 8 * scale, x, y, 170 * scale);
     glow.addColorStop(0, "rgba(255, 221, 141, .46)");
     glow.addColorStop(1, "rgba(255, 193, 98, 0)");
     this.ctx.fillStyle = glow;
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
-  private drawRoomResidue(scale: number): void {
+  private drawRoomResidue(interaction: SceneInteraction | RoomInteraction, scale: number): void {
     if (!this.room.residueIds?.length) return;
     this.ctx.fillStyle = "#d5b06d";
-    this.ctx.fillRect(542 * scale, 300 * scale, 38 * scale, 18 * scale);
+    this.ctx.fillRect((interaction.x - 20) * scale, (interaction.y - 16) * scale, 38 * scale, 18 * scale);
     this.ctx.fillStyle = "#7f5937";
-    this.ctx.fillRect(550 * scale, 306 * scale, 48 * scale, 10 * scale);
+    this.ctx.fillRect((interaction.x - 12) * scale, (interaction.y - 10) * scale, 48 * scale, 10 * scale);
   }
 
   private drawEnding(): void {

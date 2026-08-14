@@ -65,12 +65,31 @@ test("Muji Room landscape keeps the original dedicated runtime path", () => {
 });
 
 test("Muji Room portrait reuses existing room effect rendering for lamp and window", () => {
-  assert.match(appSource, /if \(this\.room\.lampOn\) this\.drawLampGlow\(scale\)/);
-  assert.match(appSource, /if \(this\.room\.windowFocus\)[\s\S]*this\.drawWindowFocus\(time, scale\)/);
+  assert.match(appSource, /this\.roomInteractionById\(layout, "lamp"\)/);
+  assert.match(appSource, /this\.roomInteractionById\(layout, "window"\)/);
+  assert.match(appSource, /if \(this\.room\.lampOn && lamp\) this\.drawLampGlow\(lamp, scale\)/);
+  assert.match(appSource, /if \(this\.room\.windowFocus && windowInteraction\)[\s\S]*this\.drawWindowFocus\(windowInteraction, time, scale\)/);
   assert.match(appSource, /activateRoomInteraction\(this\.activeRoomInteraction\)/);
   for (const id of ["door", "journal", "lamp", "window", "records", "residue", "reflection"]) {
     assert.match(appSource, new RegExp(`interaction\\.id === "${id}"`));
   }
+});
+
+test("Bakery and Labis portrait visuals resolve from authored interactions", () => {
+  assert.match(appSource, /private sceneInteractionById\(layout: SceneLayout, id: string\): SceneInteraction \| null/);
+  assert.match(appSource, /this\.sceneInteractionById\(layout, "diary-memory"\)/);
+  assert.match(appSource, /this\.sceneInteractionById\(layout, "friend-a"\)/);
+  assert.match(appSource, /this\.sceneInteractionById\(layout, "pastry"\)/);
+  assert.match(appSource, /this\.drawBakeryPastry\(pastry, cameraX, cameraY, scale, time\)/);
+  assert.match(appSource, /this\.drawLabisDiaryBookProp\(diaryMemory, cameraX, cameraY, scale, time\)/);
+});
+
+test("Friend A scene and dialogue portraits are scaled proportionally", () => {
+  assert.match(appSource, /this\.drawFriendA\(friend, cameraX, cameraY, scale\)/);
+  assert.match(appSource, /class="friend-portrait"/);
+  assert.match(stylesSource, /\.vn-portrait img\.friend-portrait[\s\S]*max-width:\s*246px/);
+  assert.match(stylesSource, /\.vn-portrait img\.friend-portrait[\s\S]*max-height:\s*336px/);
+  assert.match(stylesSource, /\.vn[\s\S]*grid-template-columns:\s*minmax\(88px,\s*260px\)\s+1fr/);
 });
 
 test("mobile controls use contextual interaction copy instead of keyboard-only E", () => {
