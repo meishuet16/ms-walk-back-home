@@ -47,13 +47,21 @@ test("secondary actions live inside settings instead of the forest HUD", () => {
 
 test("re-entering Muji Room from the top nav preserves the current room position", () => {
   assert.match(appSource, /const alreadyInRoom = this\.scene === "muji-room"/);
-  assert.match(appSource, /this\.player = alreadyInRoom \? this\.player : \{ \.\.\.roomSpawn \}/);
+  assert.match(appSource, /layout\.orientation === "landscape"[\s\S]*alreadyInRoom \? this\.player : \{ \.\.\.roomSpawn \}/);
 });
 
 test("Muji Room objects can be activated by tapping their scene positions", () => {
   assert.match(appSource, /this\.canvas\.addEventListener\("click", \(event\) => this\.handleCanvasClick\(event\)\)/);
   assert.match(appSource, /private handleCanvasClick\(event: MouseEvent\): void/);
-  assert.match(appSource, /private activateRoomInteraction\(interaction: RoomInteraction\): void/);
+  assert.match(appSource, /private activateRoomInteraction\(interaction: SceneInteraction \| RoomInteraction\): void/);
+  assert.match(appSource, /this\.currentSceneLayout\("muji-room"\)\.orientation === "landscape" \? roomInteractions : this\.currentSceneLayout\("muji-room"\)\.interactions/);
+});
+
+test("Muji Room landscape keeps the original dedicated runtime path", () => {
+  assert.match(appSource, /if \(layout\.orientation === "landscape"\)[\s\S]*moveRoomPlayer\(this\.player, x, y, dt\)/);
+  assert.match(appSource, /if \(layout\.orientation === "landscape"\)[\s\S]*nearestRoomInteraction\(this\.player\)/);
+  assert.match(appSource, /if \(layout\.orientation === "landscape"\)[\s\S]*this\.ctx\.drawImage\(this\.images\.room, 0, 0, this\.canvas\.width, this\.canvas\.height\)/);
+  assert.match(appSource, /for \(const interaction of roomInteractions\)/);
 });
 
 test("mobile controls use contextual interaction copy instead of keyboard-only E", () => {
