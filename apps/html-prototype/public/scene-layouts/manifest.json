@@ -1,0 +1,20 @@
+{
+  "scenes": [
+    {
+      "id": "forest",
+      "label": "Forest"
+    },
+    {
+      "id": "labis",
+      "label": "Labis Memory Chapter"
+    },
+    {
+      "id": "muji-room",
+      "label": "Muji Room"
+    },
+    {
+      "id": "bakery",
+      "label": "Yumido Bakery"
+    }
+  ]
+}

@@ -47,13 +47,49 @@ test("secondary actions live inside settings instead of the forest HUD", () => {
 
 test("re-entering Muji Room from the top nav preserves the current room position", () => {
   assert.match(appSource, /const alreadyInRoom = this\.scene === "muji-room"/);
-  assert.match(appSource, /this\.player = alreadyInRoom \? this\.player : \{ \.\.\.roomSpawn \}/);
+  assert.match(appSource, /layout\.orientation === "landscape"[\s\S]*alreadyInRoom \? this\.player : \{ \.\.\.roomSpawn \}/);
 });
 
 test("Muji Room objects can be activated by tapping their scene positions", () => {
   assert.match(appSource, /this\.canvas\.addEventListener\("click", \(event\) => this\.handleCanvasClick\(event\)\)/);
   assert.match(appSource, /private handleCanvasClick\(event: MouseEvent\): void/);
-  assert.match(appSource, /private activateRoomInteraction\(interaction: RoomInteraction\): void/);
+  assert.match(appSource, /private activateRoomInteraction\(interaction: SceneInteraction \| RoomInteraction\): void/);
+  assert.match(appSource, /this\.currentSceneLayout\("muji-room"\)\.orientation === "landscape" \? roomInteractions : this\.currentSceneLayout\("muji-room"\)\.interactions/);
+});
+
+test("Muji Room landscape keeps the original dedicated runtime path", () => {
+  assert.match(appSource, /if \(layout\.orientation === "landscape"\)[\s\S]*moveRoomPlayer\(this\.player, x, y, dt\)/);
+  assert.match(appSource, /if \(layout\.orientation === "landscape"\)[\s\S]*nearestRoomInteraction\(this\.player\)/);
+  assert.match(appSource, /if \(layout\.orientation === "landscape"\)[\s\S]*this\.ctx\.drawImage\(this\.images\.room, 0, 0, this\.canvas\.width, this\.canvas\.height\)/);
+  assert.match(appSource, /for \(const interaction of roomInteractions\)/);
+});
+
+test("Muji Room portrait reuses existing room effect rendering for lamp and window", () => {
+  assert.match(appSource, /this\.roomInteractionById\(layout, "lamp"\)/);
+  assert.match(appSource, /this\.roomInteractionById\(layout, "window"\)/);
+  assert.match(appSource, /if \(this\.room\.lampOn && lamp\) this\.drawLampGlow\(lamp, scale\)/);
+  assert.match(appSource, /if \(this\.room\.windowFocus && windowInteraction\)[\s\S]*this\.drawWindowFocus\(windowInteraction, time, scale\)/);
+  assert.match(appSource, /activateRoomInteraction\(this\.activeRoomInteraction\)/);
+  for (const id of ["door", "journal", "lamp", "window", "records", "residue", "reflection"]) {
+    assert.match(appSource, new RegExp(`interaction\\.id === "${id}"`));
+  }
+});
+
+test("Bakery and Labis portrait visuals resolve from authored interactions", () => {
+  assert.match(appSource, /private sceneInteractionById\(layout: SceneLayout, id: string\): SceneInteraction \| null/);
+  assert.match(appSource, /this\.sceneInteractionById\(layout, "diary-memory"\)/);
+  assert.match(appSource, /this\.sceneInteractionById\(layout, "friend-a"\)/);
+  assert.match(appSource, /this\.sceneInteractionById\(layout, "pastry"\)/);
+  assert.match(appSource, /this\.drawBakeryPastry\(pastry, cameraX, cameraY, scale, time\)/);
+  assert.match(appSource, /this\.drawLabisDiaryBookProp\(diaryMemory, cameraX, cameraY, scale, time\)/);
+});
+
+test("Friend A scene and dialogue portraits are scaled proportionally", () => {
+  assert.match(appSource, /this\.drawFriendA\(friend, cameraX, cameraY, scale\)/);
+  assert.match(appSource, /class="friend-portrait"/);
+  assert.match(stylesSource, /\.vn-portrait img\.friend-portrait[\s\S]*max-width:\s*246px/);
+  assert.match(stylesSource, /\.vn-portrait img\.friend-portrait[\s\S]*max-height:\s*336px/);
+  assert.match(stylesSource, /\.vn[\s\S]*grid-template-columns:\s*minmax\(88px,\s*260px\)\s+1fr/);
 });
 
 test("mobile controls use contextual interaction copy instead of keyboard-only E", () => {
@@ -140,6 +176,9 @@ test("mobile touch controls are large and hidden behind non-game portrait sheets
   assert.match(stylesSource, /#app\[data-scene="labis"\] \.touch-controls[\s\S]*display:\s*flex/);
   assert.match(stylesSource, /#app\[data-scene="muji-room"\] \.touch-controls[\s\S]*display:\s*flex/);
   assert.match(stylesSource, /\.touch-stick[\s\S]*width:\s*116px[\s\S]*height:\s*116px/);
+  assert.match(stylesSource, /\.touch-controls[\s\S]*justify-content:\s*flex-start/);
+  assert.match(stylesSource, /\.touch-stick[\s\S]*background:\s*rgba\(8,21,34,\.12\)/);
+  assert.match(stylesSource, /\.touch-action[\s\S]*margin-left:\s*12px/);
 }
 );
 

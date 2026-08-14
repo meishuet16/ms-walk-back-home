@@ -16,6 +16,121 @@ button {
   box-shadow: inset 0 1px rgba(255,255,255,.12), 0 2px 0 rgba(0,0,0,.35);
 }
 button:hover, button:focus-visible { outline: 1px solid #ffd184; filter: brightness(1.1); }
+.scene-debug-root {
+  min-height: 100dvh;
+  background: #111820;
+  color: #f5ecd7;
+  font-family: system-ui, sans-serif;
+}
+.scene-debug {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  min-height: 100dvh;
+}
+.scene-debug-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-right: 1px solid #314455;
+  background: #17222c;
+  overflow: auto;
+}
+.scene-debug-panel h1 {
+  margin: 0;
+  font-size: 20px;
+}
+.scene-debug-panel h2,
+.scene-debug-panel h3 {
+  margin: 8px 0 4px;
+  font-size: 14px;
+}
+.scene-debug-panel label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: #cbd7df;
+}
+.scene-debug-panel input,
+.scene-debug-panel select {
+  width: 100%;
+  padding: 7px;
+  border: 1px solid #415568;
+  border-radius: 4px;
+  background: #0d141b;
+  color: #fff5da;
+}
+.scene-debug-tools {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+.scene-debug-tools .active,
+.scene-debug-panel .primary {
+  background: #70612b;
+  border-color: #e6cb6a;
+}
+.scene-debug-inline {
+  display: grid;
+  grid-template-columns: 1fr 1fr 72px;
+  gap: 6px;
+}
+.scene-debug-inspector {
+  display: grid;
+  gap: 7px;
+  padding: 9px;
+  border: 1px solid #314455;
+  background: #101820;
+}
+.scene-debug-inspector fieldset {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 0;
+  padding: 7px;
+  border: 1px solid #33495c;
+}
+.scene-debug-status {
+  min-height: 44px;
+  margin: 0;
+  white-space: pre-wrap;
+  color: #9edfb8;
+}
+.scene-debug-stage {
+  min-width: 0;
+  overflow: auto;
+  padding: 18px;
+}
+.scene-debug-artboard {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  background: #05080c;
+}
+.scene-debug-artboard img {
+  display: block;
+  max-width: min(100%, 980px);
+  max-height: calc(100dvh - 40px);
+  object-fit: contain;
+}
+.scene-debug-artboard canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  image-rendering: auto;
+  cursor: crosshair;
+}
+@media (max-width: 860px) {
+  .scene-debug {
+    grid-template-columns: 1fr;
+  }
+  .scene-debug-panel {
+    border-right: 0;
+    border-bottom: 1px solid #314455;
+  }
+}
 .sr-only {
   position: absolute !important;
   width: 1px !important;
@@ -82,6 +197,13 @@ canvas {
   width: 100%;
   aspect-ratio: 16 / 9;
   image-rendering: pixelated;
+}
+#app[data-orientation="portrait"] canvas {
+  aspect-ratio: 941 / 1672;
+}
+#app[data-orientation="portrait"] .stage-wrap {
+  width: min(560px, calc(100vw - 12px));
+  max-height: calc(100dvh - 88px);
 }
 .compact .stage-wrap { width: min(480px, 100%); }
 .hud {
@@ -405,7 +527,7 @@ canvas {
 .modal button, .vn button { margin: 4px; }
 .vn {
   display: grid;
-  grid-template-columns: 88px 1fr;
+  grid-template-columns: minmax(88px, 260px) 1fr;
   gap: 14px;
   max-height: min(420px, 58vh);
   overflow: auto;
@@ -415,12 +537,17 @@ canvas {
   min-height: 96px;
   display: grid;
   place-items: end center;
+  overflow: hidden;
 }
 .vn-portrait img {
   max-width: 82px;
   max-height: 112px;
   object-fit: contain;
   image-rendering: pixelated;
+}
+.vn-portrait img.friend-portrait {
+  max-width: 246px;
+  max-height: 336px;
 }
 .rpg-dialogue {
   pointer-events: auto;
@@ -2955,8 +3082,9 @@ canvas {
   bottom: 16px;
   z-index: 31;
   display: none;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
+  gap: 12px;
   pointer-events: none;
 }
 .touch-stick {
@@ -2965,7 +3093,8 @@ canvas {
   height: 88px;
   border-radius: 50%;
   border: 1px solid rgba(255,255,255,.28);
-  background: rgba(8,21,34,.45);
+  background: rgba(8,21,34,.12);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
 }
 .touch-action {
   pointer-events: auto;
@@ -2974,6 +3103,8 @@ canvas {
   border-radius: 50%;
   display: grid;
   place-items: center;
+  margin-left: 12px;
+  background: rgba(8,21,34,.28);
 }
 .touch-action-label {
   display: block;
@@ -3024,13 +3155,17 @@ canvas {
     padding: 10px 8px clamp(176px, 22vh, 204px);
   }
   .vn {
-    grid-template-columns: 56px 1fr;
+    grid-template-columns: minmax(56px, min(35vw, 180px)) 1fr;
     gap: 10px;
     max-height: min(430px, 58vh);
   }
   .vn-portrait img {
     max-width: 52px;
     max-height: 74px;
+  }
+  .vn-portrait img.friend-portrait {
+    max-width: min(35vw, 180px);
+    max-height: min(34vh, 260px);
   }
   .choices button {
     width: 100%;
