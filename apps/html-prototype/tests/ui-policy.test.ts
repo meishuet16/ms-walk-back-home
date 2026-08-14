@@ -27,12 +27,23 @@ test("forest HUD exposes month switch controls outside the Walk Back Home modal"
 
 test("primary navigation is consolidated at the top and HUD has no button row", () => {
   assert.match(appSource, /renderTopNav/);
+  assert.match(appSource, /class="menu-toggle"/);
+  assert.match(appSource, /class="menu-panel"/);
   assert.match(appSource, /data-action="open-room">Muji Room/);
   assert.match(appSource, /data-action="reflection-wall">Reflection Wall/);
   assert.match(appSource, /data-action="music">Music:/);
   assert.doesNotMatch(appSource, /<button data-action="new">Begin Journey<\/button>/);
   assert.doesNotMatch(appSource, /hud-actions/);
   assert.doesNotMatch(stylesSource, /\.hud-actions/);
+});
+
+test("mobile portrait entry and fullscreen use the playable scene shell", () => {
+  assert.match(appSource, /if \(action === "open-map"\) this\.returnToForest\(\)/);
+  assert.match(appSource, /this\.scene = "forest"/);
+  assert.match(stylesSource, /\.game-shell:fullscreen[\s\S]*padding:\s*0/);
+  assert.match(stylesSource, /\.game-shell:fullscreen \.top-menu-title[\s\S]*display:\s*none/);
+  assert.match(stylesSource, /\.game-shell:fullscreen \.stage-wrap[\s\S]*width:\s*100vw/);
+  assert.match(stylesSource, /#app\[data-orientation="portrait"\] \.stage-wrap[\s\S]*height:\s*calc\(100dvh - 12px\)/);
 });
 
 test("secondary actions live inside settings instead of the forest HUD", () => {
@@ -95,10 +106,19 @@ test("Friend A scene and dialogue portraits are scaled proportionally", () => {
 test("mobile controls use contextual interaction copy instead of keyboard-only E", () => {
   assert.equal(inputSource.includes(">E<"), false);
   assert.match(inputSource, /touch-action-label/);
+  assert.match(inputSource, /data-touch-control="stick"/);
+  assert.match(inputSource, /data-touch-control="action"/);
+  assert.match(inputSource, /localStorage\.setItem\("walk-back-home-touch-controls"/);
   assert.match(appSource, /setTouchInteractionLabel/);
   assert.match(appSource, /mobileHudPrompt/);
   assert.match(appSource, /Virtual joystick · A/);
   assert.match(inputSource, />A</);
+});
+
+test("forest month is positioned at the mobile portrait top right", () => {
+  assert.match(stylesSource, /@media\s*\(max-width:\s*860px\)[\s\S]*\.forest-month-hud[\s\S]*top:\s*10px/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*860px\)[\s\S]*\.forest-month-hud[\s\S]*right:\s*10px/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*860px\)[\s\S]*\.forest-month-hud[\s\S]*bottom:\s*auto/);
 });
 
 test("floating records transport is clickable and not part of the lyric drag target", () => {
@@ -176,9 +196,10 @@ test("mobile touch controls are large and hidden behind non-game portrait sheets
   assert.match(stylesSource, /#app\[data-scene="labis"\] \.touch-controls[\s\S]*display:\s*flex/);
   assert.match(stylesSource, /#app\[data-scene="muji-room"\] \.touch-controls[\s\S]*display:\s*flex/);
   assert.match(stylesSource, /\.touch-stick[\s\S]*width:\s*116px[\s\S]*height:\s*116px/);
-  assert.match(stylesSource, /\.touch-controls[\s\S]*justify-content:\s*flex-start/);
+  assert.match(stylesSource, /\.touch-controls[\s\S]*inset:\s*0/);
+  assert.match(stylesSource, /\.touch-stick[\s\S]*position:\s*fixed/);
   assert.match(stylesSource, /\.touch-stick[\s\S]*background:\s*rgba\(8,21,34,\.12\)/);
-  assert.match(stylesSource, /\.touch-action[\s\S]*margin-left:\s*12px/);
+  assert.match(stylesSource, /\.touch-action[\s\S]*position:\s*fixed/);
 }
 );
 

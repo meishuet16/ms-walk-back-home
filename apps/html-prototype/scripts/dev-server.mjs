@@ -39,8 +39,9 @@ createServer(async (req, res) => {
   const body = await readFile(file);
   res.writeHead(200, { "content-type": mime[extname(file)] ?? "application/octet-stream" });
   res.end(body);
-}).listen(port, () => {
+}).listen(port, "0.0.0.0", () => {
   console.log(`Walk Back Home HTML prototype running at http://localhost:${port}`);
+  console.log(`LAN: http://192.168.1.187:${port}`);
 });
 
 async function handleDebugRequest(req, res, url) {
