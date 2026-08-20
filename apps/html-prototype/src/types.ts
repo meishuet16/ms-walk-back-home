@@ -1,4 +1,5 @@
-export type SceneId = "title" | "forest" | "bakery" | "labis" | "muji-room" | "ending";
+export type CoreSceneId = "title" | "forest" | "bakery" | "labis" | "muji-room" | "ending";
+export type SceneId = CoreSceneId | (string & {});
 export type TendencyKey =
   | "acceptance"
   | "avoidance"
@@ -284,7 +285,7 @@ export type ChapterReflection = {
 };
 
 export type ChapterDefinition = HtmlChapterScene & {
-  runtimeScene: "bakery" | "labis";
+  runtimeScene: SceneId;
   canonicalClosure: {
     historicalEventId: string;
     lines: string[];

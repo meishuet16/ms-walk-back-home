@@ -14,7 +14,7 @@ test("debug scene mode mounts Scene Debug Editor v2 instead of normal gameplay",
 });
 
 test("Scene Debug Editor exposes required authoring tools and actions", () => {
-  for (const label of ["Scene Debug Editor", "+ Add Scene", "Landscape", "Portrait", "Select", "Spawn", "Collision", "Interaction", "Trigger", "Placement Slot", "Preview", "Inspector", "Delete Selected", "Save Layout", "Copy JSON", "Download Backup JSON"]) {
+  for (const label of ["Scene Debug Editor", "+ Add Scene", "Landscape", "Portrait", "Select", "Spawn", "Collision", "Interaction", "Trigger", "Placement Slot", "Anchor", "Echo Anchor", "Preview", "Inspector", "Delete Selected", "Save Layout", "Copy JSON", "Download Backup JSON"]) {
     assert.match(editorSource, new RegExp(label.replace(/[+]/g, "\\+"), "i"));
   }
   assert.match(editorSource, /data-debug-field="scene"/);
@@ -23,7 +23,9 @@ test("Scene Debug Editor exposes required authoring tools and actions", () => {
   assert.match(editorSource, /Chapter Slot/);
   assert.match(editorSource, /Fragment Slot/);
   assert.match(editorSource, /Echo Anchor/);
-  assert.match(editorSource, /data-debug-field="echo-id"/);
+  assert.match(editorSource, /data-debug-field="echo-key"/);
+  assert.doesNotMatch(editorSource, /labisEchoes/);
+  assert.doesNotMatch(editorSource, /sceneId === "labis"/);
 });
 
 test("debug save flow writes through localhost-only endpoints and never arbitrary paths", () => {

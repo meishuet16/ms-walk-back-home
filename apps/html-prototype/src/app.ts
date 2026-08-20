@@ -24,7 +24,7 @@ import { ParticleSystem } from "./systems/ParticleSystem.js";
 import { activeLyricIndexAt, adjacentTrackIdForControl, clampLyricsOverlay, createDefaultPersonalPlayerState, filterAndSortMusic, isBuiltInTrackId, lyricWindowForTime, nextTrackIdForPlayback, normalizePlaybackMode, parseLrc, personalMusicShouldPlayInScene, removeUserMusicTrack } from "./systems/PersonalMusic.js";
 import { changeReflectionPaper, createChapterReflectionNote, createReflectionNote, createReflectionWallState, deleteReflectionNote, migrateLegacyReflectionWall, moveReflectionNote, reflectionPaperStyles, toggleReflectionNoteFlag, updateReflectionNote, visibleReflectionNotes } from "./systems/ReflectionWall.js";
 import { drawSceneActor } from "./systems/SceneActorRenderer.js";
-import { getSceneLayout, loadSceneLayoutOverrides, resolveForestDynamicPlacements, selectSceneOrientation, type SceneInteraction, type SceneLayout, type SceneLayoutId, type SceneOrientation } from "./systems/SceneLayouts.js";
+import { getSceneLayout, loadSceneLayoutOverrides, resolveForestDynamicPlacements, sceneLayoutManifest, selectSceneOrientation, type SceneInteraction, type SceneLayout, type SceneLayoutId, type SceneOrientation } from "./systems/SceneLayouts.js";
 import { applyChoice } from "./systems/TendencySystem.js";
 import {
   addJournalMedia,
@@ -78,8 +78,6 @@ const assets = {
   map: "assets/map-panel.jpg",
   timeline: "assets/timeline-panel.jpg"
 };
-
-const layoutSceneIds = new Set<string>(["forest", "bakery", "labis", "muji-room"]);
 
 function img(src: string): HTMLImageElement {
   const image = new Image();
@@ -197,6 +195,7 @@ export class WalkBackHomeApp {
   private labisImages = new Map<string, HTMLImageElement>();
   private sceneImages = new Map<string, HTMLImageElement>();
   private sceneOrientation: SceneOrientation = "landscape";
+  private sceneLayoutLoadPromise: Promise<void> = Promise.resolve();
   private completedMemoryEvents = new Set<string>();
   private ending: Ending | null = null;
 
@@ -263,7 +262,7 @@ export class WalkBackHomeApp {
     this.images.room.src = assets.room;
     this.preloadLabisAssets();
     this.preloadSceneLayoutAssets();
-    void this.loadSavedSceneLayouts();
+    this.sceneLayoutLoadPromise = this.loadSavedSceneLayouts();
     this.audio.setVolume(this.settings.volume);
     this.audio.onTimeUpdate(() => this.handlePersonalTimeUpdate());
     this.audio.onDurationChange(() => this.refreshRecordsPlaybackUI());
@@ -507,7 +506,7 @@ export class WalkBackHomeApp {
     if (action === "enter-door") {
       const doorId = target.dataset.door;
       if (doorId) this.currentDoor = this.allDoors().find((door) => door.id === doorId) ?? this.currentDoor;
-      this.enterCurrentMemory();
+      void this.enterCurrentMemory();
     }
     if (action === "labis-replay") this.startLabisMemory(true);
     if (action === "labis-dialogue-next") this.advanceLabisDialogue();
@@ -579,7 +578,7 @@ export class WalkBackHomeApp {
   }
 
   private preloadSceneLayoutAssets(): void {
-    for (const sceneId of layoutSceneIds) {
+    for (const sceneId of Object.keys(sceneLayoutManifest)) {
       this.sceneImage(getSceneLayout(sceneId, "landscape"));
       this.sceneImage(getSceneLayout(sceneId, "portrait"));
     }
@@ -588,12 +587,20 @@ export class WalkBackHomeApp {
   private async loadSavedSceneLayouts(): Promise<void> {
     await loadSceneLayoutOverrides();
     this.preloadSceneLayoutAssets();
-    this.player = this.safeLayoutPoint(this.player, layoutSceneIds.has(this.scene) ? this.currentSceneLayout() : this.currentSceneLayout("forest"));
+    this.player = this.safeLayoutPoint(this.player, this.hasSceneLayout(this.scene) ? this.currentSceneLayout() : this.currentSceneLayout("forest"));
   }
 
   private currentSceneLayout(sceneId: SceneId | SceneLayoutId = this.scene): SceneLayout {
-    const id = layoutSceneIds.has(sceneId) ? sceneId : "forest";
+    const id = this.hasSceneLayout(sceneId) ? sceneId : "forest";
     return getSceneLayout(id, this.sceneOrientation);
+  }
+
+  private hasSceneLayout(sceneId: string): boolean {
+    return Boolean(sceneLayoutManifest[sceneId]);
+  }
+
+  private isAuthoredRuntimeScene(): boolean {
+    return !["title", "forest", "bakery", "labis", "muji-room", "ending"].includes(this.scene) && this.hasSceneLayout(this.scene);
   }
 
   private sceneInteractionById(layout: SceneLayout, id: string): SceneInteraction | null {
@@ -641,13 +648,13 @@ export class WalkBackHomeApp {
   private syncSceneOrientation(): void {
     const next = selectSceneOrientation({ width: window.innerWidth, height: window.innerHeight });
     if (next === this.sceneOrientation) return;
-    const previousLayout = layoutSceneIds.has(this.scene) ? this.currentSceneLayout() : null;
+    const previousLayout = this.hasSceneLayout(this.scene) ? this.currentSceneLayout() : null;
     this.sceneOrientation = next;
     if (this.scene === "title" && next === "portrait") {
       this.scene = "forest";
       this.player = { ...this.currentSceneLayout("forest").spawn };
     }
-    if (layoutSceneIds.has(this.scene) && previousLayout) {
+    if (this.hasSceneLayout(this.scene) && previousLayout) {
       const nextLayout = this.currentSceneLayout();
       this.player = this.safeMappedPoint(this.player, previousLayout, nextLayout);
     }
@@ -680,6 +687,7 @@ export class WalkBackHomeApp {
     if (this.scene === "bakery") this.updateBakery(input.x, input.y, dt);
     if (this.scene === "labis") this.updateLabis(input.x, input.y, dt);
     if (this.scene === "muji-room") this.updateMujiRoom(input.x, input.y, dt);
+    if (this.isAuthoredRuntimeScene()) this.updateAuthoredScene(input.x, input.y, dt);
     this.draw(time);
     this.syncPersonalPlaybackState();
     if (this.recordsPanelOpen) this.refreshRecordsPlaybackUI();
@@ -792,6 +800,17 @@ export class WalkBackHomeApp {
     this.moveInLayout(x, y, dt, layout);
     const interaction = layout.interactions.find((item) => Math.hypot(this.player.x - item.x, this.player.y - item.y) < item.radius);
     this.activeObject = interaction?.label ?? "";
+  }
+
+  private updateAuthoredScene(x: number, y: number, dt: number): void {
+    const layout = this.currentSceneLayout();
+    this.moveInLayout(x, y, dt, layout);
+    const interaction = layout.interactions.find((item) => Math.hypot(this.player.x - item.x, this.player.y - item.y) < item.radius);
+    const trigger = layout.triggers.find((item) => {
+      const rect = item.rect;
+      return this.player.x >= rect.x && this.player.x <= rect.x + rect.w && this.player.y >= rect.y && this.player.y <= rect.y + rect.h;
+    });
+    this.activeObject = interaction?.id ?? trigger?.id ?? "";
   }
 
   private updateLabis(x: number, y: number, dt: number): void {
@@ -978,6 +997,11 @@ export class WalkBackHomeApp {
       if (!this.activeRoomInteraction) return this.showToast("Walk closer");
       return this.activateRoomInteraction(this.activeRoomInteraction);
     }
+    if (this.isAuthoredRuntimeScene()) {
+      if (this.activeObject === "exit") return this.returnToForest();
+      if (this.activeObject) return this.showToast("This authored memory scene is ready for its future chapter");
+      return this.showToast("Walk through the authored scene");
+    }
     if (this.scene === "ending") this.returnToForest();
   }
 
@@ -1039,19 +1063,17 @@ export class WalkBackHomeApp {
       return;
     }
     const route = "kind" in door ? { kind: door.implemented ? "implemented-chapter" : "stub" as const } : routeForestEntry(door);
-    const state = this.progressFor(this.chapterIdFor(door)).state;
     if (route.kind === "stub") {
       this.overlay.innerHTML = `<div class="modal"><h2>${this.escapeHtml(door.date)} · ${this.escapeHtml(door.title)}</h2><p>This memory is not yet authored.</p><p>The forest keeps the door, but it will not borrow Yumido Bread's scene.</p><button data-action="open-timeline">Open Timeline</button><button data-action="close">Stay in forest</button></div>`;
       this.autosave();
       this.focusStage();
       return;
     }
-    const action = state === "walkedThrough" ? "Remember" : state === "visited" ? "Return to memory" : "Enter memory";
-    this.overlay.innerHTML = `<div class="modal"><h2>${this.escapeHtml(door.date)} · ${this.escapeHtml(door.title)}</h2><p>A memory hums inside the branches.</p><p>Muji does not go back to fix it. Muji goes back to walk beside it.</p><button data-action="enter-door" data-door="${this.escapeHtml(door.id)}">${action}</button><button data-action="forest">Return to Forest</button><button data-action="close">Stay in forest</button></div>`;
+    this.overlay.innerHTML = `<div class="modal"><h2>${this.escapeHtml(door.date)} · ${this.escapeHtml(door.title)}</h2><p>A memory hums inside the branches.</p><p>Muji does not go back to fix it. Muji goes back to walk beside it.</p><button data-action="enter-door" data-door="${this.escapeHtml(door.id)}">Enter memory</button><button data-action="forest">Return to Forest</button><button data-action="close">Stay in forest</button></div>`;
     this.focusStage();
   }
 
-  private enterCurrentMemory(): void {
+  private async enterCurrentMemory(): Promise<void> {
     this.currentDoor ??= this.activeDoor ?? forestEntries[1];
     if (!this.isChapterNode(this.currentDoor)) return this.previewDoor(this.currentDoor);
     const route = "kind" in this.currentDoor ? { kind: this.currentDoor.implemented ? "implemented-chapter" : "stub" as const } : routeForestEntry(this.currentDoor);
@@ -1063,6 +1085,11 @@ export class WalkBackHomeApp {
     this.chapterProgress.set(chapterId, beginChapterVisit(this.progressFor(chapterId)));
     this.visitedMemories.add(this.currentDoor.id);
     const chapter = chapterRegistry[chapterId];
+    if (!this.hasSceneLayout(chapter.runtimeScene)) await this.sceneLayoutLoadPromise;
+    if (!this.hasSceneLayout(chapter.runtimeScene)) {
+      this.showToast(`Scene layout unavailable: ${chapter.runtimeScene}`);
+      return;
+    }
     this.interruptPersonalMusicForMemory();
     this.scene = chapter.runtimeScene;
     this.player = { ...this.currentSceneLayout(chapter.runtimeScene).spawn };
@@ -1466,7 +1493,7 @@ export class WalkBackHomeApp {
   }
 
   private finishReturnToForest(): void {
-    const leavingDoor = this.scene === "bakery" || this.scene === "labis" ? this.currentDoor : null;
+    const leavingDoor = this.scene === "bakery" || this.scene === "labis" || this.isAuthoredRuntimeScene() ? this.currentDoor : null;
     const leavingRoom = this.scene === "muji-room";
     const keepPersonalMusic = personalMusicShouldPlayInScene(this.scene) && this.personalPlayer.playing && Boolean(this.personalPlayer.selectedTrackId);
     this.syncPersonalPlaybackState();
@@ -1492,7 +1519,7 @@ export class WalkBackHomeApp {
 
   private draw(time: number): void {
     const compact = this.settings.compact;
-    const activeLayout = layoutSceneIds.has(this.scene) ? this.currentSceneLayout() : null;
+    const activeLayout = this.hasSceneLayout(this.scene) ? this.currentSceneLayout() : null;
     if (activeLayout?.orientation === "portrait") {
       this.canvas.width = activeLayout.size.w;
       this.canvas.height = activeLayout.size.h;
@@ -1507,6 +1534,7 @@ export class WalkBackHomeApp {
     if (this.scene === "bakery") this.drawScene(this.currentSceneLayout("bakery"), time, "bakery");
     if (this.scene === "labis") this.drawLabisScene(time);
     if (this.scene === "muji-room") this.drawMujiRoomScene(time);
+    if (this.isAuthoredRuntimeScene()) this.drawAuthoredScene(time);
     if (this.scene === "ending") this.drawEnding();
     this.drawHud();
   }
@@ -1523,7 +1551,11 @@ export class WalkBackHomeApp {
     this.drawMuji({ x: this.canvas.width * 0.52, y: this.canvas.height * 0.82 }, time, this.canvas.width / 960);
   }
 
-  private drawScene(layout: SceneLayout, time: number, kind: "forest" | "bakery"): void {
+  private drawAuthoredScene(time: number): void {
+    this.drawScene(this.currentSceneLayout(), time, "authored");
+  }
+
+  private drawScene(layout: SceneLayout, time: number, kind: "forest" | "bakery" | "authored"): void {
     const image = this.sceneImage(layout);
     const viewport = this.sceneViewport(layout);
     const scale = this.canvas.width / viewport.w;
@@ -2009,7 +2041,7 @@ export class WalkBackHomeApp {
   }
 
   private isGameplayScene(): boolean {
-    return this.scene === "forest" || this.scene === "bakery" || this.scene === "labis" || this.scene === "muji-room";
+    return this.scene === "forest" || this.scene === "bakery" || this.scene === "labis" || this.scene === "muji-room" || this.isAuthoredRuntimeScene();
   }
 
   private syncGameplayChromeVisibility(): void {
@@ -2825,8 +2857,7 @@ export class WalkBackHomeApp {
   private showMap(): void {
     const month = this.currentForestMonth();
     const doors = this.allDoors().map((door) => {
-      const state = this.isChapterNode(door) ? this.progressFor(this.chapterIdFor(door)).state : "fragment";
-      return `<button data-action="enter-door" data-door="${this.escapeHtml(door.id)}">${this.escapeHtml(door.date)} ${this.escapeHtml(door.title)}<span>${state === "walkedThrough" ? "Remember" : state}</span></button>`;
+      return `<button data-action="enter-door" data-door="${this.escapeHtml(door.id)}">${this.escapeHtml(door.date)} ${this.escapeHtml(door.title)}<span>Replayable memory</span></button>`;
     }).join("");
     this.overlay.innerHTML = `<div class="modal game-panel walk-map-panel"><h2>Walk Back Home</h2><p>Public authored doors stay here. Private Memory Fragment lights are showing ${this.escapeHtml(month.label)}.</p><div class="month-nav"><button data-action="forest-month-prev">‹</button><strong>${this.escapeHtml(month.label)}</strong><button data-action="forest-month-next">›</button></div><div class="settings-row">${doors || "<p>No forest-visible diary entries yet.</p>"}</div><button data-action="open-timeline">Timeline</button><button data-action="settings">Back</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
     this.focusStage();
@@ -4911,8 +4942,10 @@ export class WalkBackHomeApp {
     this.room = { ...this.room, ...state.room };
     this.personalPlayer = { ...this.personalPlayer, ...(state.personalPlayer ?? this.save.loadPersonalPlayer() ?? {}) };
     this.normalizePersonalPlayerToggles();
+    if (this.isAuthoredRuntimeScene()) {
+      this.currentDoor = this.allDoors().find((door) => this.isChapterNode(door) && chapterRegistry[door.chapterId]?.runtimeScene === this.scene) ?? this.currentDoor;
+    }
     if (this.scene === "labis") {
-      this.currentDoor = this.allDoors().find((door) => this.isChapterNode(door) && chapterRegistry[door.chapterId]?.runtimeScene === "labis") ?? this.currentDoor;
       this.labisCutscene = null;
       this.labisDialogueOpen = false;
       this.labisReplayMode = false;

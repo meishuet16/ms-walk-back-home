@@ -1,9 +1,8 @@
 import { cloneSceneLayout, loadSceneLayoutOverrides, makeDefaultLayout, sceneLayoutManifest, setSceneLayout, type PlacementSlotKind, type SceneLayout, type SceneOrientation } from "./SceneLayouts.js";
-import { labisEchoes } from "../fixtures/labisMemoryEchoes.js";
 import type { Point, Rect } from "./CollisionSystem.js";
 import { inAnyRect } from "./CollisionSystem.js";
 
-type Tool = "select" | "spawn" | "collision" | "interaction" | "trigger" | "placement-slot" | "echo-anchor" | "preview";
+type Tool = "select" | "spawn" | "collision" | "interaction" | "trigger" | "placement-slot" | "anchor" | "echo-anchor" | "preview";
 type Selection =
   | { kind: "spawn" }
   | { kind: "collision"; index: number }
@@ -58,7 +57,7 @@ export class SceneDebugEditor {
             <input data-debug-field="asset" value="${this.escape(this.layout.asset)}">
           </label>
           <div class="scene-debug-tools">
-            ${(["select", "spawn", "collision", "interaction", "trigger", ...(this.sceneId === "forest" ? ["placement-slot" as const] : []), ...(this.sceneId === "labis" ? ["echo-anchor" as const] : []), "preview"] as const).map((tool) => `<button data-debug-tool="${tool}" class="${this.tool === tool ? "active" : ""}">${this.label(tool)}</button>`).join("")}
+            ${(["select", "spawn", "collision", "interaction", "trigger", ...(this.sceneId === "forest" ? ["placement-slot" as const] : []), "anchor", "echo-anchor", "preview"] as const).map((tool) => `<button data-debug-tool="${tool}" class="${this.tool === tool ? "active" : ""}">${this.label(tool)}</button>`).join("")}
           </div>
           ${this.sceneId === "forest" && this.tool === "placement-slot" ? `<div class="scene-debug-inline">
             <label>Type<select data-debug-field="slot-kind">
@@ -66,8 +65,8 @@ export class SceneDebugEditor {
               <option value="fragment">Fragment Slot</option>
             </select></label>
           </div>` : ""}
-          ${this.sceneId === "labis" && this.tool === "echo-anchor" ? `<div class="scene-debug-inline">
-            <label>Echo<select data-debug-field="echo-id">${labisEchoes.map((echo) => `<option value="${this.escape(echo.id)}">${this.escape(echo.label)} — ${this.escape(echo.id)}</option>`).join("")}</select></label>
+          ${this.tool === "echo-anchor" ? `<div class="scene-debug-inline">
+            <label>Echo Key<input data-debug-field="echo-key" value="${this.defaultNewId()}"></label>
           </div>` : ""}
           <div class="scene-debug-inline">
             <label>ID<input data-debug-field="new-id" value="${this.defaultNewId()}"></label>
@@ -191,10 +190,17 @@ export class SceneDebugEditor {
       this.render();
       return;
     }
-    if (this.tool === "echo-anchor" && this.sceneId === "labis") {
-      const echo = this.selectedLabisEcho();
-      this.layout.echoAnchors[echo.id] = { x: point.x, y: point.y, radius: Number(this.value("new-radius")) || echo.radius };
-      this.selected = { kind: "echo-anchor", key: echo.id };
+    if (this.tool === "anchor") {
+      const key = this.value("new-id") || "anchor";
+      this.layout.anchors[key] = point;
+      this.selected = { kind: "anchor", key };
+      this.render();
+      return;
+    }
+    if (this.tool === "echo-anchor") {
+      const key = this.value("echo-key") || this.value("new-id") || "echo-anchor";
+      this.layout.echoAnchors[key] = { x: point.x, y: point.y, radius: Number(this.value("new-radius")) || 56 };
+      this.selected = { kind: "echo-anchor", key };
       this.render();
       return;
     }
@@ -325,17 +331,16 @@ export class SceneDebugEditor {
 
   private inspectorHtml(): string {
     const target = this.selectedTarget();
-    const anchorRows = ["motor-spawn", "ms-spawn", "motor-mid", "ms-mid", "motor-end"].map((key) => {
-      const point = this.layout.anchors[key] ?? { x: 0, y: 0 };
+    const anchorRows = Object.entries(this.layout.anchors).map(([key, point]) => {
       return `<fieldset><legend>${key}</legend><label>X<input data-anchor-field="${key}:x" type="number" value="${point.x}"></label><label>Y<input data-anchor-field="${key}:y" type="number" value="${point.y}"></label></fieldset>`;
     }).join("");
-    if (!target) return `<h2>Inspector</h2><p>Select an object to edit exact values.</p><h3>Labis Anchors</h3>${this.sceneId === "labis" ? anchorRows : ""}`;
+    if (!target) return `<h2>Inspector</h2><p>Select an object to edit exact values.</p><h3>Scene Anchors</h3>${anchorRows || "<p>No normal anchors yet.</p>"}`;
     const fields = Object.entries(target).map(([key, value]) => {
       if (!value || typeof value === "object") return "";
       return `<label>${this.escape(key)}<input data-inspector-field="${this.escape(key)}" value="${this.escape(String(value))}"></label>`;
     }).join("");
     const rect = "rect" in target ? Object.entries((target as { rect: Rect }).rect).map(([key, value]) => `<label>rect.${key}<input data-inspector-field="rect.${key}" type="number" value="${value}"></label>`).join("") : "";
-    return `<h2>Inspector</h2>${fields}${rect}<h3>Labis Anchors</h3>${this.sceneId === "labis" ? anchorRows : ""}`;
+    return `<h2>Inspector</h2>${fields}${rect}<h3>Scene Anchors</h3>${anchorRows || "<p>No normal anchors yet.</p>"}`;
   }
 
   private selectedTarget(): Record<string, unknown> | null {
@@ -540,7 +545,8 @@ export class SceneDebugEditor {
     if (this.tool === "trigger") return "trigger";
     if (this.tool === "interaction") return "interaction";
     if (this.tool === "placement-slot") return this.nextPlacementSlotId(this.slotKind());
-    if (this.tool === "echo-anchor") return this.selectedLabisEcho().id;
+    if (this.tool === "anchor") return "anchor";
+    if (this.tool === "echo-anchor") return "echo-anchor";
     return "";
   }
 
@@ -548,7 +554,7 @@ export class SceneDebugEditor {
     if (this.tool === "interaction") return "Interaction";
     if (this.tool === "trigger") return "event-id";
     if (this.tool === "placement-slot") return this.slotKind() === "chapter" ? "Chapter Slot" : "Fragment Slot";
-    if (this.tool === "echo-anchor") return this.selectedLabisEcho().label;
+    if (this.tool === "echo-anchor") return "Echo Anchor";
     return "";
   }
 
@@ -572,14 +578,8 @@ export class SceneDebugEditor {
     return `${prefix}${this.layout.placementSlots.length + 1}`;
   }
 
-  private selectedLabisEcho(): typeof labisEchoes[number] {
-    const id = this.root.querySelector<HTMLSelectElement>('[data-debug-field="echo-id"]')?.value;
-    return labisEchoes.find((echo) => echo.id === id) ?? labisEchoes[0];
-  }
-
   private echoLabel(id: string): string {
-    const echo = labisEchoes.find((item) => item.id === id);
-    return echo ? `${echo.label} · ${echo.id}` : id;
+    return `Echo · ${id}`;
   }
 
   private status(message: string): void {

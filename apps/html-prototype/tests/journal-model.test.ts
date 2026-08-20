@@ -56,6 +56,12 @@ test("timeline month view filters by keyword before batching", () => {
   assert.deepEqual(makeTimelineMonthView(month, "date-desc", "", "all", "2026-07-01").entries.map((item) => item.id), ["entry-market"]);
 });
 
+test("selected empty months remain navigable for public Forest chapters", () => {
+  const month = selectedOrLatestMonth([], "2026-03");
+  assert.equal(month.key, "2026-03");
+  assert.deepEqual(month.entries, []);
+});
+
 test("timeline keyword matching is literal for Chinese phrases", () => {
   assert.equal(matchesLiteralJournalQuery("欢喜", "喜欢"), false);
   assert.equal(matchesLiteralJournalQuery("欢喜", "欢"), true);

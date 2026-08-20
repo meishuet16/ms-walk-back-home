@@ -55,7 +55,7 @@ export type ResolvedForestDynamicNode<T extends ForestDynamicNode> = T & {
   placementSlotId: string;
 };
 
-export type SceneLayoutId = "forest" | "muji-room" | "bakery" | "labis";
+export type SceneLayoutId = string;
 export type SceneLayoutManifestEntry = { label: string; layouts: Record<SceneOrientation, SceneLayout> };
 export type SceneLayoutManifest = Record<string, SceneLayoutManifestEntry>;
 

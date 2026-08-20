@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
-import { getSceneLayout, loadSceneLayoutOverrides, setSceneLayout } from "../src/systems/SceneLayouts.js";
+import { getSceneLayout, loadSceneLayoutOverrides, sceneLayoutManifest, setSceneLayout } from "../src/systems/SceneLayouts.js";
 import { makeDiaryEntry } from "../src/systems/DiaryImport.js";
 import { makeTimelineMonthView, selectedOrLatestMonth, selectAllTimelineEntryIds } from "../src/systems/JournalModel.js";
 
@@ -50,11 +50,14 @@ test("production build copies authored scene layouts to the runtime URL", () => 
     "scene-layouts/forest/portrait.json",
     "scene-layouts/muji-room/portrait.json",
     "scene-layouts/bakery/portrait.json",
-    "scene-layouts/labis/portrait.json"
+    "scene-layouts/labis/portrait.json",
+    "scene-layouts/330-corridor/landscape.json",
+    "scene-layouts/330-corridor/portrait.json"
   ];
   for (const relative of required) {
     assert.equal(existsSync(join("dist", relative)), true, "missing dist/" + relative);
   }
+  assert.match(readFileSync("public/scene-layouts/manifest.json", "utf8"), /330-corridor/);
 });
 
 test("committed portrait overrides load authored fields instead of empty defaults", async () => {
@@ -88,6 +91,32 @@ test("committed portrait overrides load authored fields instead of empty default
   }
 });
 
+test("330 corridor runtime path loads its authored portrait and landscape layout data", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalEntry = sceneLayoutManifest["330-corridor"];
+  const manifest = readFileSync("public/scene-layouts/manifest.json", "utf8");
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = String(input).split("?")[0];
+    const source = url.endsWith("manifest.json")
+      ? manifest
+      : readFileSync(join("public", url), "utf8");
+    return new Response(source, { status: 200 });
+  }) as typeof fetch;
+  try {
+    await loadSceneLayoutOverrides();
+    const portrait = getSceneLayout("330-corridor", "portrait");
+    const landscape = getSceneLayout("330-corridor", "landscape");
+    assert.deepEqual(portrait.spawn, JSON.parse(readFileSync("public/scene-layouts/330-corridor/portrait.json", "utf8")).spawn);
+    assert.equal(portrait.interactions.length, 3);
+    assert.equal(portrait.triggers[0].chapterId, "march30-too-fated");
+    assert.equal(landscape.obstacles.length, 11);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalEntry) sceneLayoutManifest["330-corridor"] = originalEntry;
+    else delete sceneLayoutManifest["330-corridor"];
+  }
+});
+
 test("Select All selects every entry in the filtered result, not only the first page", () => {
   const entries = Array.from({ length: 8 }, (_, index) => makeDiaryEntry(
     "2026-07-" + String(index + 1).padStart(2, "0"),
@@ -109,4 +138,13 @@ test("journal exit and async journal surfaces have explicit immediate-state hand
   assert.match(appSource, /updateDiaryEditorImmediately/);
   assert.match(appSource, /clearDiaryAutosaveTimer/);
   assert.match(appSource, /this\.showDiaryEditorPreservingScroll\(entry\.id\)/);
+});
+
+test("authored chapters use a generic SceneLayout runtime path and remain replayable", () => {
+  assert.match(appSource, /private updateAuthoredScene/);
+  assert.match(appSource, /private drawAuthoredScene/);
+  assert.match(appSource, /chapter\.runtimeScene/);
+  assert.match(appSource, /This authored memory scene is ready/);
+  assert.match(appSource, /if \(action === "forest"\)/);
+  assert.doesNotMatch(appSource, /const action = state === "walkedThrough" \? "Remember"/);
 });
