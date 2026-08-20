@@ -1,4 +1,5 @@
 import { bakeryChapter } from "./fixtures/chapterPlan.js";
+import { march30Assets, march30EchoActions, march30EchoReflectionChoices, march30MainMemoryActions, march30ReflectionChoices, resolveMarch30Closing, resolveMarch30CutsceneActions } from "./fixtures/march30Memory.js";
 import { canStartLabisMotorMemory, labisDiaryMemorySpot, labisInteractionForPoint, labisMotorMemoryActions } from "./fixtures/labisMotorMemory.js";
 import { labisAssetManifest, labisAssetPath, labisProductionAssetPaths } from "./fixtures/labisAssetRegistry.js";
 import { labisChoicePoints, labisEchoes, resolveLabisMemoryReflection, type LabisChoicePoint, type LabisEcho } from "./fixtures/labisMemoryEchoes.js";
@@ -66,6 +67,18 @@ type ForestNode = (AuthoredForestEntry | DiaryForestMemory) & { radius?: number;
 type LabisDialogueLine = { speaker: string; text: string };
 type LabisDialogueAfter = "motor-choice" | "photo-choice" | "filter-choice" | "finish-echo" | "show-reflection" | "finish-chicken-cake" | null;
 type LabisOverlayMode = "dialogue" | "choice" | "vignette" | "reflection" | null;
+type March30OverlayMode = "dialogue" | "reflection" | "response" | "closing" | null;
+type March30PortraitPropId = "gift" | "waterGun" | "ordinaryKeychain" | "phoneCharm";
+
+const propPortraitSheetDimensions: Record<March30PortraitPropId, { w: number; h: number }> = {
+  gift: { w: 1536, h: 1024 },
+  waterGun: { w: 1280, h: 1229 },
+  ordinaryKeychain: { w: 1278, h: 1230 },
+  phoneCharm: { w: 1024, h: 1536 }
+};
+
+const MARCH30_MATERIAL_SCALE = 1.2;
+const MARCH30_LARGE_MATERIAL_SCALE = 2;
 
 const assets = {
   forest: "assets/forest.png",
@@ -193,6 +206,13 @@ export class WalkBackHomeApp {
   private labisReflectionLines: string[] = [];
   private labisExitAfterReflection = false;
   private labisImages = new Map<string, HTMLImageElement>();
+  private march30Images = new Map<string, HTMLImageElement>();
+  private march30Cutscene: CutsceneSystem | null = null;
+  private march30Mode: "main" | "echo" | null = null;
+  private march30ReplayMode = false;
+  private march30OverlayMode: March30OverlayMode = null;
+  private march30ReflectionIndex = 0;
+  private march30ReflectionResponse = "";
   private sceneImages = new Map<string, HTMLImageElement>();
   private sceneOrientation: SceneOrientation = "landscape";
   private sceneLayoutLoadPromise: Promise<void> = Promise.resolve();
@@ -261,6 +281,7 @@ export class WalkBackHomeApp {
     }, { once: true });
     this.images.room.src = assets.room;
     this.preloadLabisAssets();
+    this.preloadMarch30Assets();
     this.preloadSceneLayoutAssets();
     this.sceneLayoutLoadPromise = this.loadSavedSceneLayouts();
     this.audio.setVolume(this.settings.volume);
@@ -513,6 +534,14 @@ export class WalkBackHomeApp {
     if (action === "labis-choice") this.chooseLabisChoice(target.dataset.choice ?? "");
     if (action === "labis-vignette-close") this.closeLabisKeyframeVignette();
     if (action === "labis-reflection-close") this.closeLabisReflection();
+    if (action === "march30-dialogue-next") this.advanceMarch30Dialogue();
+    if (action === "march30-reflection-choice") this.chooseMarch30Reflection(target.dataset.choice ?? "");
+    if (action === "march30-reflection-next") this.advanceMarch30Reflection();
+    if (action === "march30-closing-close") {
+      this.march30OverlayMode = null;
+      this.overlay.innerHTML = "";
+      this.autosave();
+    }
     if (action === "finish-memory") this.finishBakery();
     if (action === "choice") this.choose(target.dataset.choice ?? "");
   }
@@ -574,6 +603,14 @@ export class WalkBackHomeApp {
         this.labisImages.delete(src);
       }, { once: true });
       this.labisImages.set(src, image);
+    }
+  }
+
+  private preloadMarch30Assets(): void {
+    for (const asset of Object.values(march30Assets)) {
+      const image = img(asset.path);
+      image.addEventListener("error", () => this.march30Images.delete(asset.path), { once: true });
+      this.march30Images.set(asset.path, image);
     }
   }
 
@@ -687,7 +724,8 @@ export class WalkBackHomeApp {
     if (this.scene === "bakery") this.updateBakery(input.x, input.y, dt);
     if (this.scene === "labis") this.updateLabis(input.x, input.y, dt);
     if (this.scene === "muji-room") this.updateMujiRoom(input.x, input.y, dt);
-    if (this.isAuthoredRuntimeScene()) this.updateAuthoredScene(input.x, input.y, dt);
+    if (this.scene === "330-corridor") this.updateMarch30Scene(input.x, input.y, dt);
+    else if (this.isAuthoredRuntimeScene()) this.updateAuthoredScene(input.x, input.y, dt);
     this.draw(time);
     this.syncPersonalPlaybackState();
     if (this.recordsPanelOpen) this.refreshRecordsPlaybackUI();
@@ -813,6 +851,148 @@ export class WalkBackHomeApp {
     this.activeObject = interaction?.id ?? trigger?.id ?? "";
   }
 
+  private updateMarch30Scene(x: number, y: number, dt: number): void {
+    const layout = this.currentSceneLayout();
+    if (this.march30Cutscene) {
+      this.march30Cutscene.update(dt);
+      if (this.march30Cutscene.currentDialogue) this.showMarch30Dialogue();
+      if (this.march30Cutscene.completed) this.finishMarch30Cutscene();
+      this.activeObject = "";
+      return;
+    }
+    if (this.march30OverlayMode) {
+      this.activeObject = "";
+      return;
+    }
+    const mainTrigger = layout.triggers.find((trigger) => {
+      if (trigger.id !== "main-memory" || (trigger.once && this.completedMemoryEvents.has(trigger.eventId))) return false;
+      return this.player.x >= trigger.rect.x && this.player.x <= trigger.rect.x + trigger.rect.w && this.player.y >= trigger.rect.y && this.player.y <= trigger.rect.y + trigger.rect.h;
+    });
+    if (mainTrigger) {
+      this.startMarch30Memory(false);
+      return;
+    }
+    this.moveInLayout(x, y, dt, layout);
+    const interaction = layout.interactions.find((item) => Math.hypot(this.player.x - item.x, this.player.y - item.y) < item.radius);
+    const mainSeen = this.completedMemoryEvents.has("march30-bench-memory");
+    this.activeObject = (interaction?.id === "bench-memory" || interaction?.id === "elevator") && !mainSeen ? "" : interaction?.id ?? "";
+  }
+
+  private startMarch30Memory(replay: boolean): void {
+    const layout = this.currentSceneLayout();
+    this.march30Cutscene = new CutsceneSystem(resolveMarch30CutsceneActions(layout, march30MainMemoryActions));
+    this.march30Mode = "main";
+    this.march30ReplayMode = replay;
+    this.march30OverlayMode = null;
+    this.overlay.classList.remove("dialogue-open");
+    this.overlay.innerHTML = "";
+    this.showToast(replay ? "Replaying the quiet morning" : "The morning begins to return");
+  }
+
+  private startMarch30Echo(replay: boolean): void {
+    const layout = this.currentSceneLayout();
+    this.march30Cutscene = new CutsceneSystem(resolveMarch30CutsceneActions(layout, march30EchoActions));
+    this.march30Mode = "echo";
+    this.march30ReplayMode = replay;
+    this.march30OverlayMode = null;
+    this.overlay.classList.remove("dialogue-open");
+    this.overlay.innerHTML = "";
+    this.showToast("The next elevator opens");
+  }
+
+  private showMarch30Dialogue(): void {
+    const dialogue = this.march30Cutscene?.currentDialogue;
+    if (!dialogue || this.march30OverlayMode === "dialogue") return;
+    this.march30OverlayMode = "dialogue";
+    this.overlay.classList.add("dialogue-open");
+    this.overlay.innerHTML = `<div class="vn"><div class="vn-portrait">${this.march30PortraitMarkup(dialogue)}</div><div><h3>${this.escapeHtml(dialogue.speaker)}</h3><p>${this.escapeHtml(dialogue.text)}</p><div class="choices"><button data-action="march30-dialogue-next">Continue</button></div></div></div>`;
+    this.focusStage();
+  }
+
+  private march30PortraitMarkup(dialogue: { speaker: string; portrait?: string }): string {
+    if (dialogue.portrait === "gift") {
+      return `<div class="march30-prop-portrait gift" role="img" aria-label="Xiaoba fish charm gift">${this.march30PropPortraitCrop("gift")}</div>`;
+    }
+    if (dialogue.portrait === "waterGun") {
+      return `<div class="march30-prop-portrait water-gun" role="img" aria-label="Xiaoba water gun">${this.march30PropPortraitCrop("waterGun")}</div>`;
+    }
+    if (dialogue.portrait === "keychains") {
+      return `<div class="march30-prop-portrait keychains" role="img" aria-label="Two Xiaoba candied-haw keychains">${this.march30PropPortraitCrop("ordinaryKeychain")}${this.march30PropPortraitCrop("phoneCharm")}</div>`;
+    }
+    const character = dialogue.speaker === "MS" ? "ms" : "et";
+    return `<div class="march30-portrait ${character}" role="img" aria-label="${character === "ms" ? "MS" : "ET"}"></div>`;
+  }
+
+  private march30PropPortraitCrop(assetId: March30PortraitPropId): string {
+    const asset = march30Assets[assetId];
+    const source = asset.source;
+    const sheet = propPortraitSheetDimensions[assetId];
+    const displayHeight = 150;
+    const displayScale = displayHeight / source.h;
+    const displayWidth = source.w * displayScale;
+    const sheetWidth = sheet.w * displayScale;
+    const sheetHeight = sheet.h * displayScale;
+    const left = -source.x * displayScale;
+    const top = -source.y * displayScale;
+    return `<span class="march30-prop-crop" aria-hidden="true" style="width:${displayWidth}px;height:${displayHeight}px;background-size:${sheetWidth}px ${sheetHeight}px;background-position:${left}px ${top}px;background-image:url('${asset.path}')"></span>`;
+  }
+
+  private finishMarch30Cutscene(): void {
+    if (!this.march30Cutscene || !this.march30Mode) return;
+    const mode = this.march30Mode;
+    this.march30Cutscene = null;
+    this.march30Mode = null;
+    this.march30ReplayMode = false;
+    this.march30OverlayMode = null;
+    this.overlay.classList.remove("dialogue-open");
+    this.overlay.innerHTML = "";
+    if (mode === "main") {
+      this.completedMemoryEvents.add("march30-bench-memory");
+      this.readMemories.add("march30-bench-memory");
+      this.chapterProgress.set("march30-too-fated", markChapterMemoryRead(this.progressFor("march30-too-fated")));
+      this.showMarch30ReflectionChoice(1);
+    } else {
+      this.completedMemoryEvents.add("march30-elevator-echo");
+      this.showMarch30ReflectionChoice(2);
+    }
+    this.autosave();
+  }
+
+  private showMarch30ReflectionChoice(index: number): void {
+    this.march30ReflectionIndex = index;
+    this.march30OverlayMode = "reflection";
+    const choices = index === 1 ? march30ReflectionChoices : march30EchoReflectionChoices;
+    const buttons = choices.map((choice) => `<button data-action="march30-reflection-choice" data-choice="${choice.id}"><span>${this.escapeHtml(choice.label)}</span><small>reflection</small></button>`).join("");
+    this.overlay.classList.remove("dialogue-open");
+    this.overlay.innerHTML = `<div class="modal reflection-choice"><span class="ending-kicker">A quiet afterimage</span><h2>你想怎样记住这一段？</h2><div class="choices">${buttons}</div></div>`;
+    this.focusStage();
+  }
+
+  private chooseMarch30Reflection(choiceId: string): void {
+    const choices = this.march30ReflectionIndex === 1 ? march30ReflectionChoices : march30EchoReflectionChoices;
+    const choice = choices.find((item) => item.id === choiceId);
+    if (!choice) return;
+    this.tendencies = applyChoice(this.tendencies, choice);
+    this.choices.push(choice.id);
+    this.chapterProgress.set("march30-too-fated", recordChapterChoice(this.progressFor("march30-too-fated"), choice.id, this.tendencies));
+    this.march30ReflectionResponse = choice.response ?? "";
+    this.march30OverlayMode = "response";
+    this.overlay.innerHTML = `<div class="modal reflection-choice"><p class="memory-line">${this.escapeHtml(this.march30ReflectionResponse)}</p><button data-action="march30-reflection-next">Continue walking</button></div>`;
+    this.autosave();
+  }
+
+  private advanceMarch30Reflection(): void {
+    if (this.march30ReflectionIndex === 2) {
+      this.march30OverlayMode = "closing";
+      const quote = resolveMarch30Closing(this.tendencies);
+      this.overlay.innerHTML = `<div class="modal ending-quote"><span class="ending-kicker">March 30 · 330 corridor</span><p>${this.escapeHtml(quote).replace(/\n/g, "<br>")}</p><button data-action="reflection-keep-chapter" data-chapter="march30-too-fated" data-text="${this.escapeHtml(quote)}">Keep this</button><button data-action="march30-closing-close">Continue walking</button></div>`;
+    } else {
+      this.march30OverlayMode = null;
+      this.overlay.innerHTML = "";
+    }
+    this.autosave();
+  }
+
   private updateLabis(x: number, y: number, dt: number): void {
     const layout = this.currentSceneLayout("labis");
     if (this.labisCutscene) {
@@ -920,6 +1100,15 @@ export class WalkBackHomeApp {
     this.autosave();
   }
 
+  private resetMarch30Runtime(): void {
+    this.march30Cutscene = null;
+    this.march30Mode = null;
+    this.march30ReplayMode = false;
+    this.march30OverlayMode = null;
+    this.march30ReflectionIndex = 0;
+    this.march30ReflectionResponse = "";
+  }
+
   private updateMujiRoom(x: number, y: number, dt: number): void {
     const layout = this.currentSceneLayout("muji-room");
     if (layout.orientation === "landscape") {
@@ -997,12 +1186,38 @@ export class WalkBackHomeApp {
       if (!this.activeRoomInteraction) return this.showToast("Walk closer");
       return this.activateRoomInteraction(this.activeRoomInteraction);
     }
+    if (this.scene === "330-corridor") return this.interactMarch30();
     if (this.isAuthoredRuntimeScene()) {
       if (this.activeObject === "exit") return this.returnToForest();
-      if (this.activeObject) return this.showToast("This authored memory scene is ready for its future chapter");
+      if (this.activeObject) return this.showToast("This authored scene is not playable yet");
       return this.showToast("Walk through the authored scene");
     }
     if (this.scene === "ending") this.returnToForest();
+  }
+
+  private interactMarch30(): void {
+    if (this.march30OverlayMode === "dialogue") return this.advanceMarch30Dialogue();
+    if (this.march30OverlayMode === "response") return this.advanceMarch30Reflection();
+    if (this.march30OverlayMode === "closing") {
+      this.march30OverlayMode = null;
+      this.overlay.innerHTML = "";
+      return;
+    }
+    if (this.march30OverlayMode === "reflection") return;
+    if (this.march30Cutscene?.currentDialogue) return this.advanceMarch30Dialogue();
+    if (this.march30Cutscene) return;
+    if (this.activeObject === "exit") return this.returnToForest();
+    if (this.activeObject === "diary") return this.showDiaryMemory();
+    if (this.activeObject === "bench-memory") return this.startMarch30Memory(true);
+    if (this.activeObject === "elevator" && this.completedMemoryEvents.has("march30-bench-memory")) return this.startMarch30Echo(false);
+    return this.showToast("Walk through the quiet corridor");
+  }
+
+  private advanceMarch30Dialogue(): void {
+    this.march30Cutscene?.advanceDialogue();
+    this.march30OverlayMode = null;
+    this.overlay.classList.remove("dialogue-open");
+    this.overlay.innerHTML = "";
   }
 
   private currentMemoryKey(): string {
@@ -1096,6 +1311,7 @@ export class WalkBackHomeApp {
     this.dialogue = new DialogueSystem(chapter.dialogue);
     this.labisCutscene = null;
     this.labisDialogueOpen = false;
+    this.resetMarch30Runtime();
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
     this.focusStage();
@@ -1114,8 +1330,13 @@ export class WalkBackHomeApp {
     const chapterId = this.chapterIdFor(door);
     this.readMemories.add(chapterId);
     this.chapterProgress.set(chapterId, markChapterMemoryRead(this.progressFor(chapterId)));
-    const memoryText: string[] = "memoryText" in door && Array.isArray(door.memoryText) ? door.memoryText : (chapterRegistry[chapterId]?.memoryText ?? bakeryChapter.memoryText ?? []);
-    const lines = memoryText.map((line: string, index: number) => index === 0 ? `<h2>${this.escapeHtml(door.date)} · ${this.escapeHtml(door.title)}</h2>` : `<p>${this.escapeHtml(line)}</p>`).join("");
+    const editableDiary = this.diaryEntries.find((entry) => entry.chapterId === chapterId);
+    const memoryText: string[] = editableDiary
+      ? editableDiary.body.split(/\r?\n/).filter(Boolean)
+      : "memoryText" in door && Array.isArray(door.memoryText) ? door.memoryText : (chapterRegistry[chapterId]?.memoryText ?? bakeryChapter.memoryText ?? []);
+    const diaryDate = editableDiary?.date ?? door.date;
+    const diaryTitle = editableDiary?.title ?? door.title;
+    const lines = memoryText.map((line: string, index: number) => index === 0 ? `<h2>${this.escapeHtml(diaryDate)} · ${this.escapeHtml(diaryTitle)}</h2><p>${this.escapeHtml(line)}</p>` : `<p>${this.escapeHtml(line)}</p>`).join("");
     this.overlay.innerHTML = `<div class="modal diary-memory"><div class="diary-memory-scroll">${lines}</div><div class="memory-actions"><button data-action="close">Close</button><button data-action="forest">Exit to forest</button></div></div>`;
     this.showToast("Diary memory read");
     this.focusStage();
@@ -1502,6 +1723,7 @@ export class WalkBackHomeApp {
     this.labisReplayMode = false;
     this.labisLessonChoiceIndex = -1;
     this.labisLessonLeadLines = [];
+    this.resetMarch30Runtime();
     this.scene = "forest";
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
@@ -1552,7 +1774,186 @@ export class WalkBackHomeApp {
   }
 
   private drawAuthoredScene(time: number): void {
+    if (this.scene === "330-corridor") return this.drawMarch30Scene(time);
     this.drawScene(this.currentSceneLayout(), time, "authored");
+  }
+
+  private drawMarch30Scene(time: number): void {
+    const layout = this.currentSceneLayout();
+    const image = this.sceneImage(layout);
+    const viewport = this.sceneViewport(layout);
+    const scale = this.canvas.width / viewport.w;
+    const camera = this.sceneCamera(layout, viewport.w, viewport.h);
+    this.ctx.drawImage(image, camera.x, camera.y, viewport.w, viewport.h, 0, 0, this.canvas.width, this.canvas.height);
+    if (!image.complete || image.naturalWidth === 0) this.ctx.fillStyle = "rgba(20,16,28,.18)";
+    if (this.march30Cutscene) {
+      this.ctx.fillStyle = "rgba(226, 181, 109, .10)";
+      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+    const actors = this.march30Cutscene ? [...this.march30Cutscene.actors.values()] : [];
+    const mujiScreen = { x: (this.player.x - camera.x) * scale, y: (this.player.y - camera.y) * scale };
+    const drawables = [
+      ...actors.map((actor) => ({ y: actor.y, draw: () => this.drawMarch30Actor(actor, camera.x, camera.y, scale) })),
+      { y: this.player.y, draw: () => { this.ctx.save(); this.ctx.globalAlpha = this.march30Cutscene ? 0.34 : 1; this.drawMuji(mujiScreen, time, scale); this.ctx.restore(); } }
+    ].sort((a, b) => a.y - b.y);
+    drawables.forEach((item) => item.draw());
+    if (this.march30Cutscene) {
+      for (const prop of this.march30Cutscene.props.values()) if (prop.visible) this.drawMarch30Prop(prop, camera.x, camera.y, scale);
+      for (const effect of this.march30Cutscene.effects.values()) this.drawMarch30Effect(effect, camera.x, camera.y, scale);
+    } else if (!this.march30OverlayMode) {
+      this.drawMarch30InteractionTells(layout, camera.x, camera.y, scale, time);
+    }
+    const vignette = this.ctx.createRadialGradient(this.canvas.width / 2, this.canvas.height / 2, 160, this.canvas.width / 2, this.canvas.height / 2, this.canvas.height * 0.82);
+    vignette.addColorStop(0, "rgba(0,0,0,0)");
+    vignette.addColorStop(1, "rgba(0,0,0,.28)");
+    this.ctx.fillStyle = vignette;
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+  }
+
+  private drawMarch30InteractionTells(layout: SceneLayout, cameraX: number, cameraY: number, scale: number, time: number): void {
+    const diaryAssetPath = "assets/labis/book-with-ms-photos.png";
+    const diaryImage = this.labisImages.get(diaryAssetPath);
+    for (const interaction of layout.interactions) {
+      const x = (interaction.x - cameraX) * scale;
+      const y = (interaction.y - cameraY) * scale;
+      const active = this.activeObject === interaction.id;
+      const pulse = Math.sin(time / 360) * 0.5 + 0.5;
+      const baseRadius = (active ? 22 + pulse * 4 : 14 + pulse * 2) * scale;
+      const glowRadius = (active ? 44 : 28) * scale;
+      const glow = this.ctx.createRadialGradient(x, y, 1, x, y, glowRadius);
+      glow.addColorStop(0, active ? "rgba(255, 229, 166, .52)" : "rgba(255, 226, 154, .30)");
+      glow.addColorStop(0.55, active ? "rgba(213, 166, 87, .18)" : "rgba(213, 166, 87, .10)");
+      glow.addColorStop(1, "rgba(213, 166, 87, 0)");
+      this.ctx.fillStyle = glow;
+      this.ctx.beginPath();
+      this.ctx.arc(x, y, glowRadius, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.save();
+      this.ctx.globalAlpha = active ? 0.86 : 0.58;
+      this.ctx.strokeStyle = active ? "rgba(255, 231, 172, .92)" : "rgba(255, 231, 172, .70)";
+      this.ctx.lineWidth = active ? 1.4 * scale : 1 * scale;
+      this.ctx.beginPath();
+      this.ctx.arc(x, y, baseRadius, 0, Math.PI * 2);
+      this.ctx.stroke();
+      this.ctx.restore();
+      if (interaction.id === "diary" && diaryImage?.complete && diaryImage.naturalWidth > 0) {
+        this.ctx.save();
+        this.ctx.imageSmoothingEnabled = false;
+        this.ctx.globalAlpha = 0.84 + pulse * 0.12;
+        const diaryWidth = 128 * MARCH30_MATERIAL_SCALE * scale;
+        const diaryHeight = 104 * MARCH30_MATERIAL_SCALE * scale;
+        this.ctx.drawImage(diaryImage, x - diaryWidth / 2, y - diaryHeight, diaryWidth, diaryHeight);
+        this.ctx.restore();
+      }
+    }
+  }
+
+  private drawMarch30Actor(actor: Parameters<typeof drawSceneActor>[1], cameraX: number, cameraY: number, scale: number): void {
+    const sprite = actor.sprite;
+    const asset = sprite ? march30Assets[sprite.assetId as keyof typeof march30Assets] : undefined;
+    const spriteAsset = asset && "frames" in asset ? asset : undefined;
+    const frame = sprite && spriteAsset ? spriteAsset.frames[sprite.frame] : undefined;
+    const image = spriteAsset ? this.march30Images.get(spriteAsset.path) : undefined;
+    if (!sprite || !spriteAsset || !frame || !image?.complete || image.naturalWidth === 0) {
+      drawSceneActor(this.ctx, actor, cameraX, cameraY, scale);
+      return;
+    }
+    const materialScale = this.march30ScaleForAsset(sprite.assetId);
+    const destinationHeight = 154 * materialScale * scale;
+    const destinationWidth = destinationHeight * frame.source.w / frame.source.h;
+    const feetX = (actor.x - cameraX) * scale;
+    const feetY = (actor.y - cameraY) * scale;
+    const visible = spriteAsset.visibleBounds?.[sprite.frame] ?? { x: 0, y: 0, w: frame.source.w, h: frame.source.h };
+    const visibleLeft = visible.x / frame.source.w * destinationWidth;
+    const visibleTop = visible.y / frame.source.h * destinationHeight;
+    const visibleWidth = visible.w / frame.source.w * destinationWidth;
+    const visibleHeight = visible.h / frame.source.h * destinationHeight;
+    const left = feetX - frame.feet.x / frame.source.w * destinationWidth;
+    const top = feetY - frame.feet.y / frame.source.h * destinationHeight;
+    this.ctx.save();
+    this.ctx.globalAlpha = actor.opacity ?? 1;
+    this.ctx.imageSmoothingEnabled = false;
+    if (spriteAsset.mirrorForLeft && actor.facing === "left") {
+      this.ctx.translate(left + destinationWidth, top);
+      this.ctx.scale(-1, 1);
+      this.ctx.drawImage(image, frame.source.x + visible.x, frame.source.y + visible.y, visible.w, visible.h, visibleLeft, visibleTop, visibleWidth, visibleHeight);
+    } else {
+      this.ctx.drawImage(image, frame.source.x + visible.x, frame.source.y + visible.y, visible.w, visible.h, left + visibleLeft, top + visibleTop, visibleWidth, visibleHeight);
+    }
+    if ((actor.opacity ?? 1) < 1) {
+      const dissolve = march30Assets.dissolve;
+      const dissolveFrame = dissolve.frames[Math.min(7, Math.floor((1 - (actor.opacity ?? 1)) * 8))];
+      const dissolveImage = this.march30Images.get(dissolve.path);
+      if (dissolveImage?.complete && dissolveImage.naturalWidth > 0) {
+        this.ctx.globalAlpha = 0.32;
+        this.ctx.drawImage(dissolveImage, dissolveFrame.source.x, dissolveFrame.source.y, dissolveFrame.source.w, dissolveFrame.source.h, left, top, destinationWidth, destinationHeight);
+      }
+    }
+    this.ctx.restore();
+  }
+
+  private drawMarch30Prop(prop: { id: string; assetId: string; owner?: string; visible: boolean }, cameraX: number, cameraY: number, scale: number): void {
+    const owner = prop.owner ? this.march30Cutscene?.actors.get(prop.owner) : undefined;
+    const asset = Object.values(march30Assets).find((candidate) => candidate.path === prop.assetId);
+    const image = asset && "source" in asset ? this.march30Images.get(asset.path) : undefined;
+    if (!owner || !asset || !("source" in asset) || !image?.complete || image.naturalWidth === 0) return;
+    const side = owner.id === "et" ? -1 : 1;
+    const position = { x: owner.x + side * 19, y: owner.y - 78 };
+    const height = (prop.id === "gift" ? 42 : prop.id === "waterGun" ? 44 : 50) * this.march30ScaleForProp(prop.id) * scale;
+    const width = height * asset.source.w / asset.source.h;
+    this.ctx.save();
+    this.ctx.imageSmoothingEnabled = false;
+    this.ctx.drawImage(image, asset.source.x, asset.source.y, asset.source.w, asset.source.h, (position.x - cameraX) * scale - width / 2, (position.y - cameraY) * scale - height / 2, width, height);
+    this.ctx.restore();
+  }
+
+  private drawMarch30Effect(effect: { kind: "water-vfx" | "dissolve"; actor?: string; target?: string; frame?: number; progress: number }, cameraX: number, cameraY: number, scale: number): void {
+    if (effect.kind !== "water-vfx") return;
+    const sourceAsset = march30Assets.waterVfx;
+    const frameIndex = effect.frame ?? 0;
+    const frame = sourceAsset.frames[frameIndex];
+    const bounds = sourceAsset.visibleBounds?.[frameIndex];
+    const actor = effect.actor ? this.march30Cutscene?.actors.get(effect.actor) : undefined;
+    const target = effect.target ? this.march30Cutscene?.actors.get(effect.target) : undefined;
+    const actorSprite = actor?.sprite ? march30Assets[actor.sprite.assetId as keyof typeof march30Assets] : undefined;
+    const actorFrame = actor?.sprite && actorSprite && "frames" in actorSprite ? actorSprite.frames[actor.sprite.frame] : undefined;
+    const image = this.march30Images.get(sourceAsset.path);
+    if (!frame || !bounds || !actor || !target || !actorFrame || !actorSprite || !("frames" in actorSprite) || !image?.complete || image.naturalWidth === 0) return;
+    const actorMaterialScale = actor.sprite ? this.march30ScaleForAsset(actor.sprite.assetId) : MARCH30_MATERIAL_SCALE;
+    const actorHeight = 154 * actorMaterialScale * scale;
+    const actorWidth = actorHeight * actorFrame.source.w / actorFrame.source.h;
+    const actorLeft = (actor.x - cameraX) * scale - actorFrame.feet.x / actorFrame.source.w * actorWidth;
+    const actorTop = (actor.y - cameraY) * scale - actorFrame.feet.y / actorFrame.source.h * actorHeight;
+    const nozzle = actorSprite.nozzleOriginByFrame?.[actor.sprite?.frame ?? 0] ?? { x: 0.78, y: 0.42 };
+    const nozzleX = actor.facing === "left" && actorSprite.mirrorForLeft ? 1 - nozzle.x : nozzle.x;
+    const start = { x: actorLeft + nozzleX * actorWidth, y: actorTop + nozzle.y * actorHeight };
+    const targetFrame = target.sprite ? march30Assets[target.sprite.assetId as keyof typeof march30Assets] : undefined;
+    const targetRect = target.sprite && targetFrame && "frames" in targetFrame ? targetFrame.frames[target.sprite.frame] : undefined;
+    const targetMaterialScale = target.sprite ? this.march30ScaleForAsset(target.sprite.assetId) : MARCH30_MATERIAL_SCALE;
+    const targetHeight = 154 * targetMaterialScale * scale;
+    const targetWidth = targetRect ? targetHeight * targetRect.source.w / targetRect.source.h : 46 * scale;
+    const targetX = (target.x - cameraX) * scale + (target.facing === "right" ? -0.12 : 0.12) * targetWidth;
+    const targetY = (target.y - cameraY) * scale - targetHeight * 0.62;
+    const end = { x: targetX, y: targetY };
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const distance = Math.hypot(dx, dy) * Math.max(0.35, effect.progress);
+    this.ctx.save();
+    this.ctx.globalAlpha = 0.8;
+    this.ctx.translate(start.x, start.y);
+    this.ctx.rotate(Math.atan2(dy, dx));
+    this.ctx.imageSmoothingEnabled = false;
+    this.ctx.drawImage(image, frame.source.x + bounds.x, frame.source.y + bounds.y, bounds.w, bounds.h, 0, -4 * MARCH30_MATERIAL_SCALE * scale, Math.max(12 * MARCH30_MATERIAL_SCALE * scale, distance), 8 * MARCH30_MATERIAL_SCALE * scale);
+    this.ctx.restore();
+  }
+
+  private march30ScaleForAsset(assetId: string): number {
+    if (assetId === "waterSpraying" || assetId === "keychains") return MARCH30_MATERIAL_SCALE;
+    return MARCH30_MATERIAL_SCALE;
+  }
+
+  private march30ScaleForProp(propId: string): number {
+    return propId === "gift" || propId === "waterGun" || propId === "ordinaryKeychain" || propId === "phoneCharm" ? MARCH30_LARGE_MATERIAL_SCALE : MARCH30_MATERIAL_SCALE;
   }
 
   private drawScene(layout: SceneLayout, time: number, kind: "forest" | "bakery" | "authored"): void {
@@ -2010,7 +2411,8 @@ export class WalkBackHomeApp {
     this.root.classList.toggle("overlay-open", Boolean(this.overlay.innerHTML.trim()));
     this.syncGameplayChromeVisibility();
     const labisPrompt = this.scene === "labis" && this.labisCutscene ? "Memory is playing" : this.scene === "labis" && this.activeObject === "exit" ? "Press E · 回到 Memory Forest" : this.scene === "labis" && this.activeObject ? `Press E · ${this.activeObject}` : "";
-    const rawText = this.scene === "forest" && this.activeDoor ? `Press E · ${this.activeDoor.date} ${this.activeDoor.title}` : this.scene === "bakery" && this.activeObject ? `Press E · ${this.activeObject}` : labisPrompt || (this.scene === "muji-room" && this.activeRoomInteraction ? `Press E · ${this.activeRoomInteraction.label}` : "WASD / arrows · E / Enter");
+    const march30Prompt = this.scene === "330-corridor" && this.march30Cutscene ? "Memory is rebuilding" : this.scene === "330-corridor" && this.activeObject ? `Press E · ${this.activeObject}` : "";
+    const rawText = this.scene === "forest" && this.activeDoor ? `Press E · ${this.activeDoor.date} ${this.activeDoor.title}` : this.scene === "bakery" && this.activeObject ? `Press E · ${this.activeObject}` : labisPrompt || march30Prompt || (this.scene === "muji-room" && this.activeRoomInteraction ? `Press E · ${this.activeRoomInteraction.label}` : "WASD / arrows · E / Enter");
     const text = this.mobileHudPrompt(rawText);
     this.input.setTouchInteractionLabel(this.touchActionText(rawText));
     const forestMonth = this.scene === "forest" ? `<div class="forest-month-hud" aria-label="Forest month"><button data-action="forest-month-prev" aria-label="Previous forest month">‹</button><strong>${this.escapeHtml(this.currentForestMonth().label)}</strong><button data-action="forest-month-next" aria-label="Next forest month">›</button></div>` : "";
@@ -3007,8 +3409,10 @@ export class WalkBackHomeApp {
     const memoryKind = (kindInput?.value as MemoryKind | undefined) ?? "diary";
     const moodValue = moodInput?.value.trim() ?? "";
     const mood = moodValue || existing?.mood || "calm";
+    const draft = makeDiaryEntry(date, title, body, id || existing?.id, memoryKind);
     return {
-      ...makeDiaryEntry(date, title, body, id || existing?.id, memoryKind),
+      ...draft,
+      chapterId: memoryKind === "chapter" ? existing?.chapterId ?? draft.chapterId : undefined,
       location: locationInput?.value.trim(),
       weather: weatherInput?.value.trim(),
       mood,

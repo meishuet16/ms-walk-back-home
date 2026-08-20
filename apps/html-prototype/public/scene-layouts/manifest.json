@@ -1,6 +1,10 @@
 {
   "scenes": [
     {
+      "id": "330-corridor",
+      "label": "330-corridor"
+    },
+    {
       "id": "forest",
       "label": "Forest"
     },

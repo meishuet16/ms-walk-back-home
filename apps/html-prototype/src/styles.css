@@ -595,8 +595,8 @@ canvas {
 .overlay.dialogue-open {
   position: fixed;
   z-index: 32;
-  place-items: end center;
-  padding: 12px 12px clamp(194px, 25vh, 238px);
+  place-items: center;
+  padding: 14px;
   background: linear-gradient(180deg, rgba(2, 7, 14, 0) 24%, rgba(2, 7, 14, .48));
 }
 .overlay:empty { display: none; }
@@ -624,8 +624,9 @@ canvas {
 .vn-portrait {
   min-height: 96px;
   display: grid;
-  place-items: end center;
+  place-items: center;
   overflow: hidden;
+  padding: 4px;
 }
 .vn-portrait img {
   max-width: 82px;
@@ -636,6 +637,43 @@ canvas {
 .vn-portrait img.friend-portrait {
   max-width: 246px;
   max-height: 336px;
+}
+.march30-portrait {
+  width: min(156px, 22vw);
+  height: 176px;
+  background-repeat: no-repeat;
+  background-size: 400% 400%;
+  image-rendering: pixelated;
+  filter: saturate(.84) contrast(.96);
+  overflow: hidden;
+}
+.vn-portrait:has(.march30-portrait) { overflow: hidden; }
+.march30-portrait.ms {
+  width: min(118px, 22vw);
+  height: 176px;
+  background-image: url("assets/330/ms-base.png");
+  background-position: 0 66.6667%;
+}
+.march30-portrait.et {
+  width: min(156px, 22vw);
+  height: 156px;
+  background-image: url("assets/330/yet-base.png");
+  background-position: 0 33.3333%;
+}
+.march30-prop-portrait {
+  min-height: 96px;
+  width: min(180px, 28vw);
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  gap: 2px;
+  overflow: visible;
+}
+.march30-prop-crop {
+  display: block;
+  flex: 0 0 auto;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
 }
 .rpg-dialogue {
   pointer-events: auto;
@@ -3282,12 +3320,17 @@ canvas {
     padding: 12px;
   }
   .overlay.dialogue-open {
-    padding: 10px 8px clamp(176px, 22vh, 204px);
+    padding: 10px 8px;
+  }
+  .overlay.dialogue-open .vn {
+    width: min(100%, 520px);
+    max-height: min(300px, 44vh);
   }
   .vn {
     grid-template-columns: minmax(56px, min(35vw, 180px)) 1fr;
     gap: 10px;
-    max-height: min(430px, 58vh);
+    max-height: min(300px, 44vh);
+    padding: 10px;
   }
   .vn-portrait img {
     max-width: 52px;
@@ -3296,6 +3339,52 @@ canvas {
   .vn-portrait img.friend-portrait {
     max-width: min(35vw, 180px);
     max-height: min(34vh, 260px);
+  }
+  .march30-portrait {
+    width: min(132px, 25vw);
+    height: 132px;
+  }
+  .march30-portrait.ms {
+    width: min(88px, 25vw);
+    height: 132px;
+  }
+  .march30-portrait.et {
+    width: min(132px, 25vw);
+    height: 132px;
+  }
+  .march30-prop-portrait {
+    width: min(180px, 35vw);
+    min-height: 76px;
+  }
+  .overlay .modal.reflection-choice,
+  .overlay .modal.ending-quote {
+    width: min(88%, 520px);
+    max-width: calc(100% - 24px);
+    max-height: min(64vh, 480px);
+    height: auto;
+    min-height: 0;
+    padding: 14px;
+    overflow: auto;
+  }
+  #app[data-orientation="portrait"] .diary-memory {
+    width: min(92%, 520px);
+    height: auto;
+    max-height: min(72dvh, 620px);
+    grid-template-rows: auto auto;
+  }
+  #app[data-orientation="portrait"] .diary-memory-scroll {
+    max-height: min(56dvh, 430px);
+  }
+  .overlay .reflection-choice h2 {
+    font-size: 21px;
+  }
+  .overlay .ending-quote h2 {
+    font-size: 24px;
+  }
+  .overlay .ending-quote blockquote {
+    margin: 10px 0;
+    padding: 10px;
+    font-size: 16px;
   }
   .choices button {
     width: 100%;
@@ -3872,6 +3961,25 @@ canvas {
     position: fixed;
     padding: 0;
     place-items: stretch;
+  }
+  #app[data-orientation="portrait"] .overlay {
+    position: absolute;
+    inset: 0;
+    padding: 12px;
+    place-items: center;
+  }
+  #app[data-orientation="portrait"] .overlay.dialogue-open {
+    position: absolute;
+    inset: 0;
+    padding: 12px;
+    place-items: center;
+  }
+  #app[data-orientation="portrait"] .overlay > .modal,
+  #app[data-orientation="portrait"] .overlay > .vn {
+    justify-self: center;
+    align-self: center;
+    margin: 0 auto;
+    max-width: calc(100% - 24px);
   }
   .overlay:empty {
     display: none;

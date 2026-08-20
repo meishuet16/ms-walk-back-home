@@ -107,9 +107,10 @@ test("330 corridor runtime path loads its authored portrait and landscape layout
     const portrait = getSceneLayout("330-corridor", "portrait");
     const landscape = getSceneLayout("330-corridor", "landscape");
     assert.deepEqual(portrait.spawn, JSON.parse(readFileSync("public/scene-layouts/330-corridor/portrait.json", "utf8")).spawn);
-    assert.equal(portrait.interactions.length, 3);
+    assert.equal(portrait.interactions.length, 5);
+    assert.equal(portrait.interactions.some((item) => item.id === "diary"), true);
     assert.equal(portrait.triggers[0].chapterId, "march30-too-fated");
-    assert.equal(landscape.obstacles.length, 11);
+    assert.equal(landscape.obstacles.length, 16);
   } finally {
     globalThis.fetch = originalFetch;
     if (originalEntry) sceneLayoutManifest["330-corridor"] = originalEntry;
@@ -144,7 +145,7 @@ test("authored chapters use a generic SceneLayout runtime path and remain replay
   assert.match(appSource, /private updateAuthoredScene/);
   assert.match(appSource, /private drawAuthoredScene/);
   assert.match(appSource, /chapter\.runtimeScene/);
-  assert.match(appSource, /This authored memory scene is ready/);
+  assert.match(appSource, /This authored scene is not playable yet/);
   assert.match(appSource, /if \(action === "forest"\)/);
   assert.doesNotMatch(appSource, /const action = state === "walkedThrough" \? "Remember"/);
 });

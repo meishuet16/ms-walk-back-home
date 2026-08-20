@@ -30,6 +30,8 @@ export type SceneActor = {
   visible: boolean;
   kind: SceneActorKind;
   color?: string;
+  sprite?: { assetId: string; frame: number };
+  opacity?: number;
 };
 
 export function moveSceneActor(actor: SceneActor, x: number, y: number): SceneActor {
@@ -37,14 +39,18 @@ export function moveSceneActor(actor: SceneActor, x: number, y: number): SceneAc
 }
 
 export function drawSceneActor(ctx: CanvasRenderingContext2D, actor: SceneActor, cameraX: number, cameraY: number, scale: number): void {
-  if (!actor.visible) return;
+  if (!actor.visible || actor.opacity === 0) return;
+  ctx.save();
+  ctx.globalAlpha = actor.opacity ?? 1;
   const x = (actor.x - cameraX) * scale;
   const y = (actor.y - cameraY) * scale;
   if (actor.kind === "motor" || actor.kind === "compound-motor") {
     drawMotor(ctx, x, y, scale, actor.kind === "compound-motor" ? actor.expression : undefined);
+    ctx.restore();
     return;
   }
   drawHuman(ctx, x, y, scale, actor);
+  ctx.restore();
 }
 
 function drawHuman(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, actor: SceneActor): void {

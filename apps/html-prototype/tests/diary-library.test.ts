@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createDiaryLibrary, deleteDiaryEntriesByIds, deleteDiaryEntryById, getDiaryForestMemories, getDiaryTimeline, seedAuthoredChapterDiaryEntries, setDiaryEntryKind, upsertDiaryEntry } from "../src/systems/DiaryLibrary.js";
+import { createDiaryLibrary, deleteDiaryEntriesByIds, deleteDiaryEntryById, forestNodesForMonth, getDiaryForestMemories, getDiaryTimeline, seedAuthoredChapterDiaryEntries, setDiaryEntryKind, upsertDiaryEntry } from "../src/systems/DiaryLibrary.js";
+import { forestDoors } from "../src/fixtures/chapterPlan.js";
 import { makeDiaryEntry } from "../src/systems/DiaryImport.js";
 
 test("diary library timeline includes diary-only entries while forest does not", () => {
@@ -37,6 +38,23 @@ test("authored memory chapters seed editable diary entries into the timeline", (
   assert.equal(labis.date, "2026-07-19");
   assert.ok(labis.body.includes("单凭这一点"));
   assert.equal(getDiaryForestMemories(library).some((entry) => entry.kind === "chapter" && entry.chapterId === "labis-motor-day"), true);
+});
+
+test("March 30 seeds its 330 corridor diary as an editable chapter entry", () => {
+  const library = seedAuthoredChapterDiaryEntries(createDiaryLibrary());
+  const march30 = library.entries.find((entry) => entry.chapterId === "march30-too-fated");
+
+  assert.ok(march30);
+  assert.equal(march30.date, "2026-03-30");
+  assert.equal(march30.memoryKind, "chapter");
+  assert.match(march30.body, /three sprays of water/);
+});
+
+test("authored March 30 has one Forest node while its Journal entry remains editable", () => {
+  const library = seedAuthoredChapterDiaryEntries(createDiaryLibrary());
+  const nodes = forestNodesForMonth(forestDoors, library, "2026-03");
+  assert.equal(nodes.filter((node) => "chapterId" in node && node.chapterId === "march30-too-fated").length, 1);
+  assert.equal(nodes.some((node) => "userEntryId" in node && node.userEntryId === "authored-diary-march30-too-fated"), false);
 });
 
 test("timeline defaults to date descending and can sort ascending", () => {
