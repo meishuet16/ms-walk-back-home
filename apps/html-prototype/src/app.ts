@@ -5404,7 +5404,7 @@ export class WalkBackHomeApp {
     this.overlay.innerHTML = `
       <div class="modal game-panel backup-panel">
         <h2>Backup / Sync</h2>
-        <p class="quiet-line">Portable backup includes diary pages, timeline classifications, journey state, personal records, custom covers, backgrounds, and imported music blobs.</p>
+        <p class="quiet-line">Portable backup includes diary pages, timeline classifications, journey state, personal records, custom covers, backgrounds, and imported music blobs. Cloud sync excludes imported Records audio and covers; they stay on this device.</p>
         <div class="module-grid">
           <button data-action="download-backup">Download Backup<span>Save a full local JSON file for Google Drive or another device</span></button>
           <label class="backup-restore-button">Restore Backup<input id="restore-backup-input" type="file" accept="application/json,.json"></label>
@@ -5470,18 +5470,9 @@ export class WalkBackHomeApp {
         this.applyDiaryLibrary(bundle.diaryLibrary);
         this.save.saveDiaryLibrary(this.makeDiaryLibrary());
       }
-      if (bundle.musicLibrary) {
-        this.musicLibrary = bundle.musicLibrary;
-        this.save.saveMusicLibrary(this.musicLibrary);
-      }
       if (bundle.reflectionWall) {
         this.reflectionWall = bundle.reflectionWall;
         this.save.saveReflectionWall(this.reflectionWall);
-      }
-      if (bundle.personalPlayer) {
-        this.personalPlayer = { ...createDefaultPersonalPlayerState(), ...bundle.personalPlayer };
-        this.normalizePersonalPlayerToggles();
-        this.save.savePersonalPlayer(this.personalPlayer);
       }
       if (bundle.journey) {
         this.applyJourney(bundle.journey);
@@ -5498,9 +5489,7 @@ export class WalkBackHomeApp {
     return {
       diaryLibrary: this.makeDiaryLibrary(),
       journey: this.makeJourney(),
-      reflectionWall: this.reflectionWall,
-      musicLibrary: this.musicLibrary,
-      personalPlayer: this.personalPlayer
+      reflectionWall: this.reflectionWall
     };
   }
 
