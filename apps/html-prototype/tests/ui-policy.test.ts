@@ -271,7 +271,8 @@ test("journal mobile uses reading mode and quiet editor controls", () => {
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-media-dock[\s\S]*overflow-y:\s*auto/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-meta-card[\s\S]*grid-template-columns:\s*1fr 1fr/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-body-field[\s\S]*min-height:\s*360px/);
-  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-inline-photo-frame[\s\S]*max-height:\s*132px/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-inline-photo-frame[\s\S]*aspect-ratio:\s*var\(--crop-aspect/);
+  assert.doesNotMatch(stylesSource, /\.journal-inline-photo-frame[\s\S]*max-height:\s*132px/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-more-panel\.open[\s\S]*position:\s*fixed/);
   assert.match(appSource, /this\.journalMoreMenuOpen = false;[\s\S]*this\.showDiaryEditor\(target\.dataset\.id\)/);
 });
