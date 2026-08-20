@@ -152,6 +152,10 @@ export class WalkBackHomeApp {
   private timelineVisibleCount = journalBatchSize;
   private scrapbookDrag: { elementId: string; entryId: string; offsetX: number; offsetY: number } | null = null;
   private diaryAutosaveTimer = 0;
+  private journalEditorEntryId = "";
+  private journalEditorSnapshot: DiaryLibraryState | null = null;
+  private journalEditorIsNew = false;
+  private journalEditorDirty = false;
   private availableVinylRecords: VinylRecord[] = vinylRecords;
   private musicLibrary: PersonalMusicLibraryState = { version: 1, savedAt: new Date().toISOString(), tracks: [] };
   private personalPlayer: PersonalPlayerState = createDefaultPersonalPlayerState();
@@ -278,6 +282,10 @@ export class WalkBackHomeApp {
     const action = target.dataset.action;
     if (!action) return;
     if (this.resumeAfterRecordsClose(action)) void this.audio.ensurePlaying();
+    if (action === "close" && this.isJournalEditorActive()) {
+      this.handleJournalEditorBack();
+      return;
+    }
     if (action === "home") this.showHome();
     if (action === "new") this.newMemory();
     if (action === "continue") this.loadAutosave();
@@ -287,7 +295,10 @@ export class WalkBackHomeApp {
       this.returnToForest();
     }
     if (action === "menu") this.showSettings();
-    if (action === "open-timeline") this.showTimeline();
+    if (action === "open-timeline") {
+      this.handleJournalEditorBack();
+      return;
+    }
     if (action === "journal-timeline") this.showTimeline();
     if (action === "journal-books") this.showMonthlyBooks();
     if (action === "journal-month-prev") this.moveJournalMonth(-1);
@@ -319,16 +330,54 @@ export class WalkBackHomeApp {
       if (this.overlay.querySelector(".journal-reading-page")) this.showDiaryReader(entryId);
       else this.showDiaryEditor(entryId);
     }
-    if (action === "journal-add-inline-media") this.overlay.querySelector<HTMLInputElement>("#diary-mobile-media-input")?.click();
-    if (action === "journal-media-select") this.selectJournalMedia(target.dataset.media ?? "");
-    if (action === "journal-media-remove") this.removeSelectedJournalMedia(target.dataset.media ?? "");
-    if (action === "journal-media-crop") this.cropSelectedJournalMedia(target.dataset.media ?? "");
-    if (action === "journal-crop-apply") this.applyJournalCrop(target.dataset.media ?? "");
-    if (action === "journal-crop-cancel") this.closeJournalCropModal();
-    if (action === "journal-crop-reset") this.resetJournalCrop(target.dataset.media ?? "");
-    if (action === "journal-crop-ratio-original") this.setJournalCropOriginalRatio();
-    if (action === "journal-crop-ratio-free") this.showToast("Free crop mode enabled");
-    if (action === "change-month-cover") this.overlay.querySelector<HTMLInputElement>("#month-cover-input")?.click();
+    if (action === "journal-add-inline-media") {
+      this.overlay.querySelector<HTMLInputElement>("#diary-mobile-media-input")?.click();
+      return;
+    }
+    if (action === "journal-media-select") {
+      this.selectJournalMedia(target.dataset.media ?? "");
+      return;
+    }
+    if (action === "journal-media-remove") {
+      this.removeSelectedJournalMedia(target.dataset.media ?? "");
+      return;
+    }
+    if (action === "journal-media-crop") {
+      this.cropSelectedJournalMedia(target.dataset.media ?? "");
+      return;
+    }
+    if (action === "journal-crop-apply") {
+      this.applyJournalCrop(target.dataset.media ?? "");
+      return;
+    }
+    if (action === "journal-crop-cancel") {
+      this.closeJournalCropModal();
+      return;
+    }
+    if (action === "journal-crop-reset") {
+      this.resetJournalCrop(target.dataset.media ?? "");
+      return;
+    }
+    if (action === "journal-crop-ratio-original") {
+      this.setJournalCropOriginalRatio();
+      return;
+    }
+    if (action === "journal-crop-ratio-free") {
+      this.showToast("Free crop mode enabled");
+      return;
+    }
+    if (action === "journal-discard-confirm") {
+      this.discardJournalEditor();
+      return;
+    }
+    if (action === "journal-discard-cancel") {
+      this.cancelJournalEditorDiscard();
+      return;
+    }
+    if (action === "change-month-cover") {
+      this.overlay.querySelector<HTMLInputElement>("#month-cover-input")?.click();
+      return;
+    }
     if (action === "delete-diary-entry") this.deleteDiaryEntry(target.dataset.id ?? "");
     if (action === "timeline-request-delete-entry") this.requestDeleteTimelineEntry(target.dataset.id ?? "");
     if (action === "timeline-apply-filters") this.applyTimelineFilters();
@@ -633,6 +682,7 @@ export class WalkBackHomeApp {
     if (this.scene === "muji-room") this.updateMujiRoom(input.x, input.y, dt);
     this.draw(time);
     this.syncPersonalPlaybackState();
+    if (this.recordsPanelOpen) this.refreshRecordsPlaybackUI();
     this.updatePersonalMusicOverlay();
     requestAnimationFrame((next) => this.loop(next));
   }
@@ -2055,10 +2105,89 @@ export class WalkBackHomeApp {
     this.showLabisChoice("filter");
   }
 
+  private beginJournalEditor(entryId: string, isNew = false, snapshot = this.makeDiaryLibrary()): void {
+    this.journalEditorEntryId = entryId;
+    this.journalEditorSnapshot = snapshot;
+    this.journalEditorIsNew = isNew;
+    this.journalEditorDirty = isNew;
+  }
+
+  private endJournalEditor(): void {
+    window.clearTimeout(this.diaryAutosaveTimer);
+    this.journalEditorEntryId = "";
+    this.journalEditorSnapshot = null;
+    this.journalEditorIsNew = false;
+    this.journalEditorDirty = false;
+  }
+
+  private isJournalEditorActive(): boolean {
+    return Boolean(this.journalEditorEntryId && this.overlay.querySelector(".diary-page-editor"));
+  }
+
+  private flushJournalEditorDraft(): void {
+    if (!this.isJournalEditorActive()) return;
+    this.clearDiaryAutosaveTimer();
+    const draft = this.readDiaryDraftFromOverlay(this.journalEditorEntryId);
+    if (!draft) return;
+    const existing = this.diaryEntries.find((entry) => entry.id === draft.id);
+    const comparable = (entry: DiaryEntry) => JSON.stringify({
+      ...entry,
+      location: entry.location || undefined,
+      weather: entry.weather || undefined
+    });
+    if (!this.journalEditorIsNew && existing && comparable(existing) === comparable(draft)) return;
+    this.applyDiaryLibrary(upsertDiaryPageDraft(this.makeDiaryLibrary(), draft));
+    this.journalEditorDirty = true;
+  }
+
+  private handleJournalEditorBack(): void {
+    if (!this.isJournalEditorActive()) {
+      this.showTimeline();
+      return;
+    }
+    this.flushJournalEditorDraft();
+    if (!this.journalEditorDirty && !this.journalEditorIsNew) {
+      this.endJournalEditor();
+      this.showTimeline();
+      return;
+    }
+    const entryId = this.journalEditorEntryId;
+    this.overlay.innerHTML = `<div class="modal game-panel journal-discard-confirmation" role="dialog" aria-modal="true" aria-label="Discard journal changes"><h2>Discard changes?</h2><p>Your journal changes will not be kept.</p><div class="settings-row"><button data-action="journal-discard-cancel">Keep Editing</button><button class="danger" data-action="journal-discard-confirm" data-id="${this.escapeHtml(entryId)}">Discard Changes</button></div></div>`;
+    this.focusStage();
+  }
+
+  private cancelJournalEditorDiscard(): void {
+    if (!this.journalEditorEntryId) return this.showTimeline();
+    this.showDiaryEditor(this.journalEditorEntryId);
+  }
+
+  private discardJournalEditor(): void {
+    const snapshot = this.journalEditorSnapshot;
+    if (!snapshot) return this.showTimeline();
+    this.endJournalEditor();
+    this.applyDiaryLibrary(snapshot);
+    this.showTimeline();
+    this.autosave();
+    this.showToast("Changes discarded");
+  }
+
+  private clearDiaryAutosaveTimer(): void {
+    window.clearTimeout(this.diaryAutosaveTimer);
+    this.diaryAutosaveTimer = 0;
+  }
+
+  private updateDiaryEditorImmediately(entry: DiaryEntry): void {
+    this.clearDiaryAutosaveTimer();
+    this.updateDiaryEntry(entry);
+    this.showDiaryEditorPreservingScroll(entry.id);
+  }
+
   private openNewDiaryPage(): void {
     const today = new Date().toISOString().slice(0, 10);
-    const opened = createNewDiaryPage(this.makeDiaryLibrary(), today);
+    const originalLibrary = this.makeDiaryLibrary();
+    const opened = createNewDiaryPage(originalLibrary, today);
     this.applyDiaryLibrary(opened.library);
+    this.beginJournalEditor(opened.entry.id, true, originalLibrary);
     this.selectedTimelineMonthKey = today.slice(0, 7);
     this.timelineVisibleCount = journalBatchSize;
     this.showDiaryEditor(opened.entry.id);
@@ -2749,6 +2878,7 @@ export class WalkBackHomeApp {
 
   private showDiaryEditor(editId = ""): void {
     if (!editId) return this.showTimeline();
+    if (this.journalEditorEntryId !== editId || !this.journalEditorSnapshot) this.beginJournalEditor(editId);
     const moreOpen = this.journalMoreMenuOpen;
     const editing = this.diaryEntries.find((entry) => entry.id === editId) ?? this.diaryEntries[0];
     const today = new Date().toISOString().slice(0, 10);
@@ -2814,12 +2944,14 @@ export class WalkBackHomeApp {
   }
 
   private saveDiaryEntry(id = ""): void {
+    window.clearTimeout(this.diaryAutosaveTimer);
     const entry = this.readDiaryDraftFromOverlay(id);
     if (!entry) return;
     const index = this.diaryEntries.findIndex((item) => item.id === entry.id);
     this.applyDiaryLibrary(upsertDiaryPageDraft(this.makeDiaryLibrary(), entry));
     this.selectedChapter = entry.title;
     this.journalMoreMenuOpen = false;
+    this.endJournalEditor();
     this.showDiaryReader(entry.id);
     this.showToast(index >= 0 ? "Diary updated" : "Diary entry added");
     this.autosave();
@@ -2948,6 +3080,7 @@ export class WalkBackHomeApp {
     if (!target.closest(".diary-page-editor")) return;
     if (target instanceof HTMLInputElement && target.type === "file") return;
     if (target instanceof HTMLInputElement && target.id === "diary-date") this.updateVisibleDiaryWeekday(target.value);
+    this.journalEditorDirty = true;
     const editor = target.closest<HTMLElement>(".diary-page-editor");
     const entryId = editor?.dataset.entry ?? "";
     window.clearTimeout(this.diaryAutosaveTimer);
@@ -3027,6 +3160,7 @@ export class WalkBackHomeApp {
     const index = this.diaryEntries.findIndex((entry) => entry.id === id);
     if (index < 0) return;
     this.diaryEntries[index] = updateDiaryMemoryKind(this.diaryEntries[index], memoryKind);
+    if (this.journalEditorEntryId === id) this.journalEditorDirty = true;
     this.showDiaryEditor(id);
     this.autosave();
   }
@@ -3158,8 +3292,7 @@ export class WalkBackHomeApp {
     const photoMatch = draft.photos?.some((photo) => photo.id === mediaId);
     const next = photoMatch ? removePhotoAttachment(draft, mediaId) : removeJournalMedia(draft, mediaId);
     this.selectedJournalMediaId = "";
-    this.updateDiaryEntry(next);
-    this.showDiaryEditorPreservingScroll(entry.id);
+    this.updateDiaryEditorImmediately(next);
     this.showToast("Media removed");
   }
 
@@ -3178,8 +3311,7 @@ export class WalkBackHomeApp {
     }
     this.selectedJournalMediaId = mediaId;
     this.journalCropMediaId = mediaId;
-    this.updateDiaryEntry(draft);
-    this.showDiaryEditorPreservingScroll(entry.id);
+    this.updateDiaryEditorImmediately(draft);
   }
 
   private applyJournalCrop(mediaId: string): void {
@@ -3192,8 +3324,7 @@ export class WalkBackHomeApp {
     const next = this.updateJournalMediaCrop(draft, mediaId, crop);
     this.selectedJournalMediaId = mediaId;
     this.journalCropMediaId = "";
-    this.updateDiaryEntry(next);
-    this.showDiaryEditorPreservingScroll(entry.id);
+    this.updateDiaryEditorImmediately(next);
     this.showToast("Image crop updated");
   }
 
@@ -3214,8 +3345,7 @@ export class WalkBackHomeApp {
     const next = this.updateJournalMediaCrop(draft, mediaId, { x: 0, y: 0, width: 100, height: 100 });
     this.journalCropMediaId = mediaId;
     this.selectedJournalMediaId = mediaId;
-    this.updateDiaryEntry(next);
-    this.showDiaryEditorPreservingScroll(entry.id);
+    this.updateDiaryEditorImmediately(next);
   }
 
   private refreshJournalCropPreviewFromInputs(): void {
@@ -3354,6 +3484,7 @@ export class WalkBackHomeApp {
 
   private updateDiaryEntry(entry: DiaryEntry): void {
     this.applyDiaryLibrary(upsertDiaryEntry(this.makeDiaryLibrary(), entry));
+    if (this.journalEditorEntryId === entry.id) this.journalEditorDirty = true;
     this.autosave();
   }
 
@@ -3486,12 +3617,14 @@ export class WalkBackHomeApp {
       });
     }
     this.selectedJournalMediaId = mediaId;
+    this.clearDiaryAutosaveTimer();
     this.updateDiaryEntry(withMedia);
     this.showDiaryEditor(withMedia.id);
     this.showToast(validFiles.length === 1 ? "Media inserted" : `${validFiles.length} media inserted`);
   }
 
   private async handleMonthCoverInput(input: HTMLInputElement): Promise<void> {
+    this.clearDiaryAutosaveTimer();
     const file = input.files?.[0];
     if (!file || !file.type.startsWith("image/")) return;
     const src = await this.readFileAsDataUrl(file);
@@ -3505,10 +3638,12 @@ export class WalkBackHomeApp {
     }));
     this.save.saveDiaryLibrary(this.makeDiaryLibrary());
     this.openMonthlyBook(monthKey);
+    input.value = "";
     this.showToast("Monthly cover changed");
   }
 
   private setMonthlyCoverCrop(crop: JournalBookCoverCrop): void {
+    this.clearDiaryAutosaveTimer();
     const monthKey = this.currentBooksMonth().key;
     const current = this.monthlyCovers?.[monthKey] ?? defaultMonthlyCover(monthKey);
     const nextCrop: JournalBookCoverCrop = crop === "top" || crop === "bottom" || crop === "contain" ? crop : "center";

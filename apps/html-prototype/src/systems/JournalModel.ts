@@ -109,9 +109,14 @@ export function hasMoreTimelineEntries(month: JournalMonth, visibleCount: number
   return month.entries.length > Math.max(journalBatchSize, visibleCount);
 }
 
+export function matchesLiteralJournalQuery(text: string, query: string): boolean {
+  const needle = query.trim().normalize("NFKC").toLocaleLowerCase();
+  if (!needle) return true;
+  return text.normalize("NFKC").toLocaleLowerCase().includes(needle);
+}
+
 export function searchJournalEntries(entries: DiaryEntry[], query: string): DiaryEntry[] {
-  const normalized = query.trim().toLocaleLowerCase();
-  if (!normalized) return entries;
+  if (!query.trim()) return entries;
   return entries.filter((entry) => {
     const searchable = [
       entry.date,
@@ -121,8 +126,8 @@ export function searchJournalEntries(entries: DiaryEntry[], query: string): Diar
       entry.weather ?? "",
       entry.memoryKind,
       entry.chapterId ?? ""
-    ].join("\n").toLocaleLowerCase();
-    return searchable.includes(normalized);
+    ].join("\n");
+    return matchesLiteralJournalQuery(searchable, query);
   });
 }
 

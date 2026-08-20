@@ -100,3 +100,13 @@ test("Select All selects every entry in the filtered result, not only the first 
   assert.deepEqual(selectAllTimelineEntryIds(filtered), filtered.entries.map((entry) => entry.id));
   assert.equal(selectAllTimelineEntryIds(filtered).length, 4);
 });
+
+test("journal exit and async journal surfaces have explicit immediate-state handling", () => {
+  assert.match(appSource, /journal-discard-confirm/);
+  assert.match(appSource, /journalEditorSnapshot/);
+  assert.match(appSource, /if \(this\.recordsPanelOpen\) this\.refreshRecordsPlaybackUI\(\)/);
+  assert.match(appSource, /this\.openMonthlyBook\(monthKey\)/);
+  assert.match(appSource, /updateDiaryEditorImmediately/);
+  assert.match(appSource, /clearDiaryAutosaveTimer/);
+  assert.match(appSource, /this\.showDiaryEditorPreservingScroll\(entry\.id\)/);
+});

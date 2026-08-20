@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createDiaryLibrary } from "../src/systems/DiaryLibrary.js";
 import { makeDiaryEntry } from "../src/systems/DiaryImport.js";
-import { defaultMonthlyCover, deriveJournalMonths, filterJournalEntries, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, monthlyPdfPagePlan, searchJournalEntries, selectedOrLatestMonth, selectAllTimelineEntryIds, timelineCursorKeyForStep, upsertMonthlyCover, visibleTimelineEntries } from "../src/systems/JournalModel.js";
+import { defaultMonthlyCover, deriveJournalMonths, filterJournalEntries, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, matchesLiteralJournalQuery, monthlyBookSummaries, monthlyPdfFilename, monthlyPdfPagePlan, searchJournalEntries, selectedOrLatestMonth, selectAllTimelineEntryIds, timelineCursorKeyForStep, upsertMonthlyCover, visibleTimelineEntries } from "../src/systems/JournalModel.js";
 
 function entry(date: string, title: string) {
   return makeDiaryEntry(date, title, `${title} body`, `entry-${date}-${title}`);
@@ -54,6 +54,12 @@ test("timeline month view filters by keyword before batching", () => {
   assert.deepEqual(makeTimelineMonthView(month, "date-desc", "点", "chapter").entries.map((item) => item.id), ["entry-labis"]);
   assert.deepEqual(filterJournalEntries(entries, { memoryKind: "fragment" }).map((item) => item.id), ["entry-rain"]);
   assert.deepEqual(makeTimelineMonthView(month, "date-desc", "", "all", "2026-07-01").entries.map((item) => item.id), ["entry-market"]);
+});
+
+test("timeline keyword matching is literal for Chinese phrases", () => {
+  assert.equal(matchesLiteralJournalQuery("欢喜", "喜欢"), false);
+  assert.equal(matchesLiteralJournalQuery("欢喜", "欢"), true);
+  assert.equal(matchesLiteralJournalQuery("我很喜欢这里", "喜欢"), true);
 });
 
 test("monthly books and pdf export are derived on demand", async () => {
