@@ -3249,6 +3249,7 @@ canvas {
   }
   .module-grid { grid-template-columns: 1fr; }
   .touch-controls { display: none; }
+  #app[data-gameplay-scene="true"] .touch-controls,
   #app[data-scene="forest"] .touch-controls,
   #app[data-scene="bakery"] .touch-controls,
   #app[data-scene="labis"] .touch-controls,

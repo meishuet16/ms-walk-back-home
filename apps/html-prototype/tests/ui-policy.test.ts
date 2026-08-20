@@ -203,6 +203,12 @@ test("mobile touch controls are large and hidden behind non-game portrait sheets
 }
 );
 
+test("portrait chapter scenes inherit touch controls without a scene whitelist", () => {
+  assert.match(stylesSource, /#app\[data-gameplay-scene="true"\] \.touch-controls[\s\S]*display:\s*flex/);
+  assert.match(appSource, /this\.root\.dataset\.gameplayScene = gameplay \? "true" : "false"/);
+  assert.match(appSource, /this\.isAuthoredRuntimeScene\(\)/);
+});
+
 test("journal mobile uses reading mode and quiet editor controls", () => {
   const editorMorePanel = appSource.match(/<div class="journal-more-panel \$\{moreOpen \? "open" : ""\}">[\s\S]*?<\/div>/)?.[0] ?? "";
 
