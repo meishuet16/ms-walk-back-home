@@ -17,7 +17,7 @@ import { resolveChapterReflection, type Ending } from "./systems/EndingResolver.
 import { InputManager } from "./systems/InputManager.js";
 import { journalMediaCropRenderModel, journalMediaCropRenderStyle as renderJournalMediaCropStyle, normalizeJournalMediaCrop } from "./systems/JournalCrop.js";
 import { moveBooksMonth as moveBooksMonthState, moveTimelineMonth as moveTimelineMonthState, selectBooksYear as selectBooksYearState, selectTimelineYear as selectTimelineYearState, type JournalNavigationState } from "./systems/JournalNavigation.js";
-import { adjacentMonthKey, defaultMonthlyCover, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, monthLabel, selectedOrLatestMonth, sortMonthEntries, upsertMonthlyCover, visibleTimelineEntries, type JournalMonth, type MonthlyJournalPdfPage, type TimelineDateScope, type TimelineMemoryKindFilter } from "./systems/JournalModel.js";
+import { adjacentMonthKey, defaultMonthlyCover, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, monthLabel, selectedOrLatestMonth, selectAllTimelineEntryIds, sortMonthEntries, upsertMonthlyCover, visibleTimelineEntries, type JournalMonth, type MonthlyJournalPdfPage, type TimelineDateScope, type TimelineMemoryKindFilter } from "./systems/JournalModel.js";
 import { createBackupBundle, parseBackupBundle, walkBackupFilename, type BackupBlobEntry } from "./systems/BackupManager.js";
 import { MusicBlobStore } from "./systems/MusicBlobStore.js";
 import { ParticleSystem } from "./systems/ParticleSystem.js";
@@ -221,7 +221,7 @@ export class WalkBackHomeApp {
     this.musicPlayer = root.querySelector(".music-player")!;
     this.overlay = root.querySelector(".overlay")!;
     this.input = new InputManager(root);
-    this.input.mountTouchControls(() => this.interact());
+    this.input.mountTouchControls(() => this.interact(), root.querySelector<HTMLElement>(".game-shell")!);
     this.renderTopNav();
     this.canvas.addEventListener("click", (event) => this.handleCanvasClick(event));
     this.musicPlayer.addEventListener("click", (event) => {
@@ -297,7 +297,7 @@ export class WalkBackHomeApp {
     if (action === "journal-show-more") this.showMoreTimelineEntries();
     if (action === "open-month-book") this.openMonthlyBook(target.dataset.month ?? "");
     if (action === "export-month-pdf") void this.exportMonthlyPdf(target.dataset.month ?? "");
-    if (action === "open-map") this.returnToForest();
+    if (action === "open-map") this.showMap();
     if (action === "forest-month-prev") this.moveForestMonth(-1);
     if (action === "forest-month-next") this.moveForestMonth(1);
     if (action === "open-room") this.enterMujiRoom();
@@ -428,6 +428,19 @@ export class WalkBackHomeApp {
     if (action === "rain") this.toggleRain();
     if (action === "music") this.toggleSceneMusic();
     if (action === "toggle-touch-controls") this.toggleTouchControls();
+    if (action === "edit-touch-controls") this.beginTouchControlEdit();
+    if (action === "save-touch-controls") {
+      this.input.saveTouchControlEdit();
+      this.showSettings();
+    }
+    if (action === "cancel-touch-control-edit") {
+      this.input.cancelTouchControlEdit();
+      this.showSettings();
+    }
+    if (action === "reset-touch-controls") {
+      this.input.resetTouchControlEdit();
+      this.showTouchControlEditor();
+    }
     if (action === "close") {
       this.overlay.classList.remove("dialogue-open");
       this.overlay.innerHTML = "";
@@ -439,6 +452,7 @@ export class WalkBackHomeApp {
       this.labisLessonChoiceIndex = -1;
       this.labisLessonLeadLines = [];
       this.updatePersonalMusicOverlay();
+      this.syncGameplayChromeVisibility();
       this.showToast("Closed");
     }
     if (action === "enter-door") {
@@ -1912,6 +1926,7 @@ export class WalkBackHomeApp {
     this.root.dataset.scene = this.scene;
     this.root.dataset.forceTouch = this.forceTouchControls ? "true" : "false";
     this.root.classList.toggle("overlay-open", Boolean(this.overlay.innerHTML.trim()));
+    this.syncGameplayChromeVisibility();
     const labisPrompt = this.scene === "labis" && this.labisCutscene ? "Memory is playing" : this.scene === "labis" && this.activeObject === "exit" ? "Press E · 回到 Memory Forest" : this.scene === "labis" && this.activeObject ? `Press E · ${this.activeObject}` : "";
     const rawText = this.scene === "forest" && this.activeDoor ? `Press E · ${this.activeDoor.date} ${this.activeDoor.title}` : this.scene === "bakery" && this.activeObject ? `Press E · ${this.activeObject}` : labisPrompt || (this.scene === "muji-room" && this.activeRoomInteraction ? `Press E · ${this.activeRoomInteraction.label}` : "WASD / arrows · E / Enter");
     const text = this.mobileHudPrompt(rawText);
@@ -1940,6 +1955,23 @@ export class WalkBackHomeApp {
         </div>
       </details>`;
     if (this.topNav.innerHTML !== html) this.topNav.innerHTML = html;
+    this.syncGameplayChromeVisibility();
+  }
+
+  private isGameplayScene(): boolean {
+    return this.scene === "forest" || this.scene === "bakery" || this.scene === "labis" || this.scene === "muji-room";
+  }
+
+  private syncGameplayChromeVisibility(): void {
+    const overlayOpen = Boolean(this.overlay?.innerHTML.trim());
+    const editing = this.input?.isTouchControlEditing() ?? false;
+    const gameplay = this.isGameplayScene();
+    const hamburgerVisible = gameplay && !overlayOpen && !editing;
+    this.root.dataset.gameplayHamburger = hamburgerVisible ? "visible" : "hidden";
+    this.root.dataset.gameplayScene = gameplay ? "true" : "false";
+    this.topNav?.classList.toggle("gameplay-hamburger-hidden", !hamburgerVisible);
+    this.root.classList.toggle("touch-controls-editing", editing);
+    this.input?.clampTouchControlsToViewport();
   }
 
   private touchActionText(prompt: string): string {
@@ -1974,7 +2006,21 @@ export class WalkBackHomeApp {
         <button data-action="credits">Credits<span>Project notes and credits</span></button>
         <button data-action="backup-sync">Backup / Sync<span>Portable backup and cloud account</span></button>
       </div>
-      <div class="settings-row"><button data-action="rain">Rain: ${this.settings.rain ? "On" : "Off"}</button><button data-action="compact">${this.settings.compact ? "960x540" : "480x270"}</button><button data-action="fullscreen">Fullscreen</button><button data-action="reset-journey">Begin Again</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
+      <div class="settings-row"><button data-action="rain">Rain: ${this.settings.rain ? "On" : "Off"}</button><button data-action="compact">${this.settings.compact ? "960x540" : "480x270"}</button><button data-action="fullscreen">Fullscreen</button><button data-action="edit-touch-controls">Edit Touch Controls</button><button data-action="reset-journey">Begin Again</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
+  }
+
+  private beginTouchControlEdit(): void {
+    if (!this.isGameplayScene()) {
+      this.showToast("Touch controls can only be edited from gameplay");
+      return;
+    }
+    this.input.beginTouchControlEdit();
+    this.showTouchControlEditor();
+  }
+
+  private showTouchControlEditor(): void {
+    this.overlay.innerHTML = "<div class=\"modal game-panel touch-control-editor\"><h2>Edit Touch Controls</h2><p>Drag the joystick and A button to place them safely in the viewport.</p><div class=\"settings-row\"><button data-action=\"save-touch-controls\">Save Touch Controls</button><button data-action=\"cancel-touch-control-edit\">Cancel Touch Control Editing</button><button data-action=\"reset-touch-controls\">Reset to Default</button></div></div>";
+    this.focusStage();
   }
 
   private showHome(): void {
@@ -3051,7 +3097,7 @@ export class WalkBackHomeApp {
   }
 
   private selectAllTimelineEntries(): void {
-    this.selectedTimelineEntryIds = new Set(visibleTimelineEntries(this.currentTimelineMonthView(), this.timelineVisibleCount).map((entry) => entry.id));
+    this.selectedTimelineEntryIds = new Set(selectAllTimelineEntryIds(this.currentTimelineMonthView()));
     this.showTimeline();
   }
 
@@ -4973,6 +5019,7 @@ export class WalkBackHomeApp {
   }
 
   private showSettings(): void {
+    if (this.input.isTouchControlEditing()) this.input.cancelTouchControlEdit();
     this.overlay.innerHTML = `<div class="modal game-panel"><h2>Menu / Settings</h2>${this.settingsContent()}</div>`;
     this.focusStage();
   }

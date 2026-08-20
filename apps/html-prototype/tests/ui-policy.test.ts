@@ -38,7 +38,7 @@ test("primary navigation is consolidated at the top and HUD has no button row", 
 });
 
 test("mobile portrait entry and fullscreen use the playable scene shell", () => {
-  assert.match(appSource, /if \(action === "open-map"\) this\.returnToForest\(\)/);
+  assert.match(appSource, /if \(action === "open-map"\) this\.showMap\(\)/);
   assert.match(appSource, /this\.scene = "forest"/);
   assert.match(stylesSource, /\.game-shell:fullscreen[\s\S]*padding:\s*0/);
   assert.match(stylesSource, /\.game-shell:fullscreen \.top-menu-title[\s\S]*display:\s*none/);
@@ -108,7 +108,7 @@ test("mobile controls use contextual interaction copy instead of keyboard-only E
   assert.match(inputSource, /touch-action-label/);
   assert.match(inputSource, /data-touch-control="stick"/);
   assert.match(inputSource, /data-touch-control="action"/);
-  assert.match(inputSource, /localStorage\.setItem\("walk-back-home-touch-controls"/);
+  assert.match(inputSource, /touchControlStorageKey = "walk-back-home-touch-controls"/);
   assert.match(appSource, /setTouchInteractionLabel/);
   assert.match(appSource, /mobileHudPrompt/);
   assert.match(appSource, /Virtual joystick · A/);
