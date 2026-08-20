@@ -99,3 +99,11 @@ test("legacy room reflection migrates once without deleting old journey fields",
   assert.deepEqual(migrated.notes.map((note) => note.text), ["old wall note", "second old note"]);
   assert.equal(again.notes.length, 2);
 });
+
+test("kept chapter reflection notes remain after replaying the same ending", () => {
+  const kept = createChapterReflectionNote(createReflectionWallState(), "03.30 ending", "march30-too-fated", { now });
+  const replayed = createChapterReflectionNote(kept, "03.30 ending", "march30-too-fated", { now: new Date("2026-08-12T00:00:00.000Z") });
+
+  assert.equal(replayed.notes.some((note) => note.source === "chapter" && note.chapterId === "march30-too-fated" && note.text === "03.30 ending"), true);
+  assert.equal(replayed.notes.length, 2);
+});

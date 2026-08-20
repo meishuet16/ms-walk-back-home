@@ -1,12 +1,10 @@
 import type { AppConfig } from "./AppConfig.js";
-import type { DiaryLibraryState, JourneyState, PersonalMusicLibraryState, PersonalPlayerState, ReflectionWallState, RoomJourneyState } from "../types.js";
+import type { DiaryLibraryState, JourneyState, ReflectionWallState, RoomJourneyState } from "../types.js";
 
 export type CloudSyncBundle = {
   diaryLibrary: DiaryLibraryState;
   journey: JourneyState;
   reflectionWall: ReflectionWallState;
-  musicLibrary: PersonalMusicLibraryState;
-  personalPlayer: PersonalPlayerState;
 };
 
 export type CloudUserSession = {
@@ -18,7 +16,6 @@ type DiaryRow = { id: string; entry: unknown; updated_at?: string };
 type JourneyRow = { state: unknown; updated_at?: string };
 type ReflectionRow = { id: string; note: unknown; updated_at?: string };
 type RoomRow = { state: unknown; updated_at?: string };
-type MusicRow = { id: string; metadata: unknown; updated_at?: string };
 type SupabaseUser = { id: string; email?: string };
 type SupabaseQuery<T> = PromiseLike<{ error: unknown; data: T | null }>;
 type SupabaseClient = {
@@ -30,6 +27,7 @@ type SupabaseClient = {
   from(table: string): {
     select(columns: string): { is(column: string, value: unknown): SupabaseQuery<unknown[]>; maybeSingle(): SupabaseQuery<unknown> };
     upsert(value: unknown, options?: { onConflict?: string }): SupabaseQuery<unknown>;
+    delete(): { eq(column: string, value: unknown): SupabaseQuery<unknown> };
   };
 };
 
@@ -53,7 +51,7 @@ export class SupabaseSync {
 
   statusLabel(): string {
     if (!this.isConfigured()) return "Cloud sync is not connected in this local build. Portable backup remains available.";
-    return "Supabase is configured. Google sign-in and private sync are available.";
+    return "Supabase is configured. Diary and journey sync are available; imported Records stay on this device.";
   }
 
   async currentSession(): Promise<CloudUserSession | null> {
@@ -88,36 +86,34 @@ export class SupabaseSync {
       bundle.diaryLibrary.entries.map((entry) => ({ user_id: userId, id: entry.id, entry, updated_at: now, deleted_at: null })),
       { onConflict: "user_id,id" }
     ));
-    await this.throwOnError(client.from("journey_states").upsert({ user_id: userId, state: bundle.journey, updated_at: now }));
+    const { personalPlayer: _localPersonalPlayer, ...cloudJourney } = bundle.journey;
+    await this.throwOnError(client.from("journey_states").upsert({ user_id: userId, state: cloudJourney, updated_at: now }));
     await this.throwOnError(client.from("reflection_notes").upsert(
       bundle.reflectionWall.notes.map((note) => ({ user_id: userId, id: note.id, note, updated_at: now, deleted_at: null })),
       { onConflict: "user_id,id" }
     ));
     await this.throwOnError(client.from("muji_room_states").upsert({ user_id: userId, state: bundle.journey.room, updated_at: now }));
-    await this.throwOnError(client.from("music_tracks").upsert(
-      bundle.musicLibrary.tracks.map((track) => ({ user_id: userId, id: track.id, metadata: track, updated_at: now, deleted_at: null })),
-      { onConflict: "user_id,id" }
-    ));
+    await this.throwOnError(client.from("music_tracks").delete().eq("user_id", userId));
   }
 
   async pull(): Promise<Partial<CloudSyncBundle>> {
     const client = await this.requireClient();
-    const [diaryRows, journeyRow, reflectionRows, roomRow, musicRows] = await Promise.all([
+    const [diaryRows, journeyRow, reflectionRows, roomRow] = await Promise.all([
       this.select(client.from("diary_entries").select("id,entry,updated_at").is("deleted_at", null) as SupabaseQuery<DiaryRow[]>),
       this.select(client.from("journey_states").select("state,updated_at").maybeSingle() as SupabaseQuery<JourneyRow | null>),
       this.select(client.from("reflection_notes").select("id,note,updated_at").is("deleted_at", null) as SupabaseQuery<ReflectionRow[]>),
-      this.select(client.from("muji_room_states").select("state,updated_at").maybeSingle() as SupabaseQuery<RoomRow | null>),
-      this.select(client.from("music_tracks").select("id,metadata,updated_at").is("deleted_at", null) as SupabaseQuery<MusicRow[]>)
+      this.select(client.from("muji_room_states").select("state,updated_at").maybeSingle() as SupabaseQuery<RoomRow | null>)
     ]);
     const savedAt = new Date().toISOString();
-    const journey = journeyRow?.state as JourneyState | undefined;
+    const rawJourney = journeyRow?.state as JourneyState | undefined;
+    const journey = rawJourney
+      ? (({ personalPlayer: _localPersonalPlayer, ...cloudJourney }) => cloudJourney as JourneyState)(rawJourney)
+      : undefined;
     if (journey && roomRow?.state) journey.room = roomRow.state as RoomJourneyState;
     return {
       diaryLibrary: (diaryRows ?? []).length ? { version: 1, savedAt, entries: (diaryRows ?? []).map((row) => row.entry) as DiaryLibraryState["entries"], legacyArtifacts: [] } : undefined,
       journey,
-      reflectionWall: (reflectionRows ?? []).length ? { version: 1, savedAt, defaultStyleId: "paper-mix", migratedLegacyKeys: [], notes: (reflectionRows ?? []).map((row) => row.note) as ReflectionWallState["notes"] } : undefined,
-      musicLibrary: (musicRows ?? []).length ? { version: 1, savedAt, tracks: (musicRows ?? []).map((row) => row.metadata) as PersonalMusicLibraryState["tracks"] } : undefined,
-      personalPlayer: journey?.personalPlayer
+      reflectionWall: (reflectionRows ?? []).length ? { version: 1, savedAt, defaultStyleId: "paper-mix", migratedLegacyKeys: [], notes: (reflectionRows ?? []).map((row) => row.note) as ReflectionWallState["notes"] } : undefined
     };
   }
 

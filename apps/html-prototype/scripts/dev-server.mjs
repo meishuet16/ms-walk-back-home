@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { extname, join, resolve } from "node:path";
+import { networkInterfaces } from "node:os";
 
 const root = resolve(import.meta.dirname, "..");
 const port = Number(process.env.PORT ?? 4173);
@@ -17,6 +18,7 @@ const mime = {
 };
 
 const sceneRoot = resolve(root, "public/scene-layouts");
+const servedSceneRoot = resolve(root, "dist/scene-layouts");
 const distSceneRoot = resolve(root, "dist/public/scene-layouts");
 
 createServer(async (req, res) => {
@@ -41,7 +43,13 @@ createServer(async (req, res) => {
   res.end(body);
 }).listen(port, "0.0.0.0", () => {
   console.log(`Walk Back Home HTML prototype running at http://localhost:${port}`);
-  console.log(`LAN: http://192.168.1.187:${port}`);
+   for (const addresses of Object.values(networkInterfaces())) {
+    for (const address of addresses ?? []) {
+      if (address.family === "IPv4" && !address.internal) {
+        console.log(`LAN: http://${address.address}:${port}`);
+      }
+    }
+  }
 });
 
 async function handleDebugRequest(req, res, url) {
@@ -186,7 +194,7 @@ function resolveSceneFile(sceneId, orientation, base = sceneRoot) {
 }
 
 async function writeLayout(layout) {
-  for (const base of [sceneRoot, distSceneRoot]) {
+  for (const base of [sceneRoot, servedSceneRoot, distSceneRoot]) {
     const file = resolveSceneFile(layout.sceneId, layout.orientation, base);
     await mkdir(resolve(base, layout.sceneId), { recursive: true });
     await writeFile(file, `${JSON.stringify(layout, null, 2)}\n`);
@@ -201,7 +209,7 @@ async function upsertManifestScene(sceneId, label) {
   scenes.push({ id: sceneId, label });
   scenes.sort((a, b) => a.label.localeCompare(b.label));
   const next = { scenes };
-  for (const base of [sceneRoot, distSceneRoot]) {
+  for (const base of [sceneRoot, servedSceneRoot, distSceneRoot]) {
     await mkdir(base, { recursive: true });
     await writeFile(resolve(base, "manifest.json"), `${JSON.stringify(next, null, 2)}\n`);
   }

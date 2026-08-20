@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { test } from "node:test";
 import { cloneSceneLayout, getSceneLayout, loadSceneLayoutOverrides, setSceneLayout } from "../src/systems/SceneLayouts.js";
 
@@ -14,7 +15,7 @@ test("debug scene mode mounts Scene Debug Editor v2 instead of normal gameplay",
 });
 
 test("Scene Debug Editor exposes required authoring tools and actions", () => {
-  for (const label of ["Scene Debug Editor", "+ Add Scene", "Landscape", "Portrait", "Select", "Spawn", "Collision", "Interaction", "Trigger", "Placement Slot", "Preview", "Inspector", "Delete Selected", "Save Layout", "Copy JSON", "Download Backup JSON"]) {
+  for (const label of ["Scene Debug Editor", "+ Add Scene", "Landscape", "Portrait", "Select", "Spawn", "Collision", "Interaction", "Trigger", "Placement Slot", "Anchor", "Echo Anchor", "Preview", "Inspector", "Delete Selected", "Save Layout", "Copy JSON", "Download Backup JSON"]) {
     assert.match(editorSource, new RegExp(label.replace(/[+]/g, "\\+"), "i"));
   }
   assert.match(editorSource, /data-debug-field="scene"/);
@@ -23,7 +24,9 @@ test("Scene Debug Editor exposes required authoring tools and actions", () => {
   assert.match(editorSource, /Chapter Slot/);
   assert.match(editorSource, /Fragment Slot/);
   assert.match(editorSource, /Echo Anchor/);
-  assert.match(editorSource, /data-debug-field="echo-id"/);
+  assert.match(editorSource, /data-debug-field="echo-key"/);
+  assert.doesNotMatch(editorSource, /labisEchoes/);
+  assert.doesNotMatch(editorSource, /sceneId === "labis"/);
 });
 
 test("debug save flow writes through localhost-only endpoints and never arbitrary paths", () => {
@@ -37,6 +40,21 @@ test("debug save flow writes through localhost-only endpoints and never arbitrar
   assert.match(devServerSource, /public\/scene-layouts/);
   assert.match(devServerSource, /placementSlots/);
   assert.match(devServerSource, /placementSlot\(value\)/);
+});
+
+test("debug saves update the scene-layout directory served first after refresh", () => {
+  assert.match(devServerSource, /const servedSceneRoot = resolve\(root, "dist\/scene-layouts"\)/);
+  assert.match(devServerSource, /for \(const base of \[sceneRoot, servedSceneRoot, distSceneRoot\]\)/);
+  assert.match(devServerSource, /upsertManifestScene[\s\S]*servedSceneRoot/);
+});
+
+test("330 authored layouts retain every supplied backup anchor and echo anchor", () => {
+  for (const orientation of ["landscape", "portrait"] as const) {
+    const layout = JSON.parse(readFileSync(join("public/assets/330", `330-corridor-${orientation}.json`), "utf8"));
+    const authored = JSON.parse(readFileSync(join("public/scene-layouts/330-corridor", `${orientation}.json`), "utf8"));
+    assert.deepEqual(authored.anchors, layout.anchors, `${orientation} normal anchors`);
+    assert.deepEqual(authored.echoAnchors, layout.echoAnchors, `${orientation} echo anchors`);
+  }
 });
 
 test("saving portrait layout through runtime model does not mutate landscape", () => {

@@ -86,7 +86,7 @@ export function getDiaryForestMemories(library: DiaryLibraryState): DiaryForestM
 
 export function forestNodesForMonth(publicEntries: AuthoredForestEntry[], library: DiaryLibraryState, monthKey: string): Array<AuthoredForestEntry | DiaryForestMemory> {
   const visiblePublicEntries = publicEntries.filter((entry) => forestEntryMatchesMonth(entry.date, monthKey));
-  const publicChapterIds = new Set(visiblePublicEntries.map((entry) => entry.chapterId));
+  const publicChapterIds = new Set(publicEntries.map((entry) => entry.chapterId));
   const privateMemories = getDiaryForestMemories(library)
     .filter((entry) => entry.date.startsWith(monthKey))
     .filter((entry) => entry.kind !== "chapter" || !publicChapterIds.has(entry.chapterId));

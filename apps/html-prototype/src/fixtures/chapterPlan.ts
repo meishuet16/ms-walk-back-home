@@ -1,5 +1,14 @@
 import type { HtmlChapterScene } from "../types.js";
 
+export type ForestDoor = {
+  id: string;
+  date: string;
+  title: string;
+  chapterId: string;
+  x: number;
+  y: number;
+};
+
 export const bakeryChapter: HtmlChapterScene = {
   id: "bakery-day",
   date: "07.28",
@@ -37,10 +46,11 @@ export const bakeryChapter: HtmlChapterScene = {
   ]
 };
 
-export const forestDoors = [
+export const forestDoors: ForestDoor[] = [
   { id: "labis-motor", date: "07.19", title: "单凭这一点，没有白来", x: 930, y: 520, chapterId: "labis-motor-day" },
   { id: "segamat", date: "07.31", title: "Went to Segamat", x: 700, y: 260, chapterId: "segamat-bakery" },
   { id: "yumido", date: "07.28", title: "Yumido Bread", x: 1120, y: 210, chapterId: "bakery-day" },
   { id: "night", date: "07.27", title: "Night Walk", x: 430, y: 300, chapterId: "night-bakery" },
-  { id: "palapes", date: "07.26", title: "Palapes Meeting", x: 1240, y: 660, chapterId: "palapes-bakery" }
+  { id: "palapes", date: "07.26", title: "Palapes Meeting", x: 1240, y: 660, chapterId: "palapes-bakery" },
+  { id: "march30-too-fated", date: "03.30", title: "Too Fated", x: 0, y: 0, chapterId: "march30-too-fated" }
 ];

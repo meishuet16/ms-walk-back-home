@@ -73,7 +73,13 @@ export function sortMonthEntries(entries: DiaryEntry[]): DiaryEntry[] {
 
 export function selectedOrLatestMonth(entries: DiaryEntry[], selectedKey = ""): JournalMonth {
   const months = deriveJournalMonths(entries);
-  const selected = months.find((month) => month.key === selectedKey) ?? months[0];
+  const selectedMatch = /^(\d{4})-(\d{2})$/.exec(selectedKey);
+  if (selectedMatch) {
+    const year = Number(selectedMatch[1]);
+    const month = Number(selectedMatch[2]);
+    if (month >= 1 && month <= 12) return { key: selectedKey, year, month, label: monthLabel(year, month), entries: months.find((item) => item.key === selectedKey)?.entries ?? [] };
+  }
+  const selected = months[0];
   if (selected) return selected;
   const now = new Date();
   const year = now.getFullYear();
@@ -109,9 +115,14 @@ export function hasMoreTimelineEntries(month: JournalMonth, visibleCount: number
   return month.entries.length > Math.max(journalBatchSize, visibleCount);
 }
 
+export function matchesLiteralJournalQuery(text: string, query: string): boolean {
+  const needle = query.trim().normalize("NFKC").toLocaleLowerCase();
+  if (!needle) return true;
+  return text.normalize("NFKC").toLocaleLowerCase().includes(needle);
+}
+
 export function searchJournalEntries(entries: DiaryEntry[], query: string): DiaryEntry[] {
-  const normalized = query.trim().toLocaleLowerCase();
-  if (!normalized) return entries;
+  if (!query.trim()) return entries;
   return entries.filter((entry) => {
     const searchable = [
       entry.date,
@@ -121,8 +132,8 @@ export function searchJournalEntries(entries: DiaryEntry[], query: string): Diar
       entry.weather ?? "",
       entry.memoryKind,
       entry.chapterId ?? ""
-    ].join("\n").toLocaleLowerCase();
-    return searchable.includes(normalized);
+    ].join("\n");
+    return matchesLiteralJournalQuery(searchable, query);
   });
 }
 
