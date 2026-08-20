@@ -38,7 +38,7 @@ test("primary navigation is consolidated at the top and HUD has no button row", 
 });
 
 test("mobile portrait entry and fullscreen use the playable scene shell", () => {
-  assert.match(appSource, /if \(action === "open-map"\) this\.returnToForest\(\)/);
+  assert.match(appSource, /if \(action === "open-map"\) this\.showMap\(\)/);
   assert.match(appSource, /this\.scene = "forest"/);
   assert.match(stylesSource, /\.game-shell:fullscreen[\s\S]*padding:\s*0/);
   assert.match(stylesSource, /\.game-shell:fullscreen \.top-menu-title[\s\S]*display:\s*none/);
@@ -108,7 +108,7 @@ test("mobile controls use contextual interaction copy instead of keyboard-only E
   assert.match(inputSource, /touch-action-label/);
   assert.match(inputSource, /data-touch-control="stick"/);
   assert.match(inputSource, /data-touch-control="action"/);
-  assert.match(inputSource, /localStorage\.setItem\("walk-back-home-touch-controls"/);
+  assert.match(inputSource, /touchControlStorageKey = "walk-back-home-touch-controls"/);
   assert.match(appSource, /setTouchInteractionLabel/);
   assert.match(appSource, /mobileHudPrompt/);
   assert.match(appSource, /Virtual joystick · A/);
@@ -271,7 +271,8 @@ test("journal mobile uses reading mode and quiet editor controls", () => {
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-media-dock[\s\S]*overflow-y:\s*auto/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-meta-card[\s\S]*grid-template-columns:\s*1fr 1fr/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-body-field[\s\S]*min-height:\s*360px/);
-  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-inline-photo-frame[\s\S]*max-height:\s*132px/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-inline-photo-frame[\s\S]*aspect-ratio:\s*var\(--crop-aspect/);
+  assert.doesNotMatch(stylesSource, /\.journal-inline-photo-frame[\s\S]*max-height:\s*132px/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.journal-more-panel\.open[\s\S]*position:\s*fixed/);
   assert.match(appSource, /this\.journalMoreMenuOpen = false;[\s\S]*this\.showDiaryEditor\(target\.dataset\.id\)/);
 });

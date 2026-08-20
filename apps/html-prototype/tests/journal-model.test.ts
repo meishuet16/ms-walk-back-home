@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createDiaryLibrary } from "../src/systems/DiaryLibrary.js";
 import { makeDiaryEntry } from "../src/systems/DiaryImport.js";
-import { defaultMonthlyCover, deriveJournalMonths, filterJournalEntries, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, monthlyPdfPagePlan, searchJournalEntries, selectedOrLatestMonth, timelineCursorKeyForStep, upsertMonthlyCover, visibleTimelineEntries } from "../src/systems/JournalModel.js";
+import { defaultMonthlyCover, deriveJournalMonths, filterJournalEntries, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, monthlyPdfPagePlan, searchJournalEntries, selectedOrLatestMonth, selectAllTimelineEntryIds, timelineCursorKeyForStep, upsertMonthlyCover, visibleTimelineEntries } from "../src/systems/JournalModel.js";
 
 function entry(date: string, title: string) {
   return makeDiaryEntry(date, title, `${title} body`, `entry-${date}-${title}`);
@@ -25,6 +25,14 @@ test("timeline initially shows five entries and show more reveals batches", () =
   assert.equal(hasMoreTimelineEntries(month, journalBatchSize), true);
   assert.equal(visibleTimelineEntries(month, journalBatchSize + 5).length, 8);
   assert.equal(hasMoreTimelineEntries(month, journalBatchSize + 5), false);
+});
+
+test("Select All uses the complete filtered timeline result", () => {
+  const entries = Array.from({ length: 7 }, (_, index) => entry("2026-07-" + String(index + 1).padStart(2, "0"), "Day " + (index + 1)));
+  const month = makeTimelineMonthView(selectedOrLatestMonth(entries, "2026-07"), "date-desc");
+
+  assert.equal(visibleTimelineEntries(month, journalBatchSize).length, journalBatchSize);
+  assert.equal(selectAllTimelineEntryIds(month).length, entries.length);
 });
 
 test("timeline date cursor steps years without falling back to month mode", () => {

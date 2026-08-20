@@ -38,3 +38,27 @@ test("timeline date filtering uses a calendar-style input instead of month dropd
   assert.doesNotMatch(appSource, /id="timeline-month-select"/);
   assert.doesNotMatch(appSource, /id="timeline-day-select"/);
 });
+
+test("Books year navigation has a dedicated action and never routes to Timeline", () => {
+  assert.match(appSource, /data-action="journal-books-year"/);
+  assert.match(appSource, /action === "journal-books-year"\) this\.selectBooksYear/);
+  assert.match(appSource, /private selectBooksYear\(year: string\)[\s\S]*?this\.showMonthlyBooks\(\);/);
+  assert.match(appSource, /private filterTimelineYear\(year: string\)[\s\S]*?this\.showTimeline\(\);/);
+  assert.match(appSource, /private selectedTimelineMonthKey/);
+  assert.match(appSource, /private selectedBooksYear/);
+  assert.match(appSource, /private selectedBooksMonthKey/);
+});
+
+test("Books month navigation remains in Books/Reader and crop renderer is shared", () => {
+  const monthNavigation = appSource.match(/private moveJournalMonth\([\s\S]*?\n  private journalNavigationState/)?.[0] ?? "";
+  assert.match(monthNavigation, /if \(this\.journalMode === "books"\) this\.showMonthlyBooks\(\);/);
+  assert.match(monthNavigation, /else this\.openMonthlyBook\(this\.selectedBooksMonthKey\);/);
+  assert.doesNotMatch(monthNavigation, /else this\.showTimeline\(\)/);
+  assert.ok((appSource.match(/this\.renderJournalImageCrop\(item,/g) ?? []).length >= 2);
+  const readerCropRule = cssSource.match(/\.journal-reading-photo-frame \.journal-inline-photo \{[\s\S]*?\}/)?.[0] ?? "";
+  const inlineCropRule = cssSource.match(/  \.journal-inline-photo \{[\s\S]*?\n  \}/)?.[0] ?? "";
+  assert.doesNotMatch(readerCropRule, /object-fit:\s*cover/);
+  assert.doesNotMatch(inlineCropRule, /object-fit:\s*cover/);
+  assert.match(readerCropRule, /height:\s*auto/);
+  assert.match(inlineCropRule, /height:\s*auto/);
+});

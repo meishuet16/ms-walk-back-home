@@ -15,7 +15,9 @@ import { makeDiaryEntry, parseDiaryImport, updateDiaryMemoryKind, type DiaryFore
 import { DialogueSystem } from "./systems/DialogueSystem.js";
 import { resolveChapterReflection, type Ending } from "./systems/EndingResolver.js";
 import { InputManager } from "./systems/InputManager.js";
-import { adjacentMonthKey, defaultMonthlyCover, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, monthLabel, selectedOrLatestMonth, sortMonthEntries, timelineCursorKeyForStep, upsertMonthlyCover, visibleTimelineEntries, type JournalMonth, type MonthlyJournalPdfPage, type TimelineDateScope, type TimelineMemoryKindFilter } from "./systems/JournalModel.js";
+import { journalMediaCropRenderModel, journalMediaCropRenderStyle as renderJournalMediaCropStyle, normalizeJournalMediaCrop } from "./systems/JournalCrop.js";
+import { moveBooksMonth as moveBooksMonthState, moveTimelineMonth as moveTimelineMonthState, selectBooksYear as selectBooksYearState, selectTimelineYear as selectTimelineYearState, type JournalNavigationState } from "./systems/JournalNavigation.js";
+import { adjacentMonthKey, defaultMonthlyCover, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, monthLabel, selectedOrLatestMonth, selectAllTimelineEntryIds, sortMonthEntries, upsertMonthlyCover, visibleTimelineEntries, type JournalMonth, type MonthlyJournalPdfPage, type TimelineDateScope, type TimelineMemoryKindFilter } from "./systems/JournalModel.js";
 import { createBackupBundle, parseBackupBundle, walkBackupFilename, type BackupBlobEntry } from "./systems/BackupManager.js";
 import { MusicBlobStore } from "./systems/MusicBlobStore.js";
 import { ParticleSystem } from "./systems/ParticleSystem.js";
@@ -142,7 +144,9 @@ export class WalkBackHomeApp {
   private timelineDateScope: TimelineDateScope = "all";
   private timelineFilterAppliedMessage = "";
   private journalMode: "timeline" | "books" | "reader" = "timeline";
-  private selectedJournalMonthKey = "";
+  private selectedTimelineMonthKey = "";
+  private selectedBooksYear = "";
+  private selectedBooksMonthKey = "";
   private monthlyCovers: DiaryLibraryState["monthlyCovers"] = {};
   private selectedForestMonthKey = "";
   private timelineVisibleCount = journalBatchSize;
@@ -217,7 +221,7 @@ export class WalkBackHomeApp {
     this.musicPlayer = root.querySelector(".music-player")!;
     this.overlay = root.querySelector(".overlay")!;
     this.input = new InputManager(root);
-    this.input.mountTouchControls(() => this.interact());
+    this.input.mountTouchControls(() => this.interact(), root.querySelector<HTMLElement>(".game-shell")!);
     this.renderTopNav();
     this.canvas.addEventListener("click", (event) => this.handleCanvasClick(event));
     this.musicPlayer.addEventListener("click", (event) => {
@@ -289,10 +293,11 @@ export class WalkBackHomeApp {
     if (action === "journal-month-prev") this.moveJournalMonth(-1);
     if (action === "journal-month-next") this.moveJournalMonth(1);
     if (action === "journal-filter-year") this.filterTimelineYear(target.dataset.year ?? "");
+    if (action === "journal-books-year") this.selectBooksYear(target.dataset.year ?? "");
     if (action === "journal-show-more") this.showMoreTimelineEntries();
     if (action === "open-month-book") this.openMonthlyBook(target.dataset.month ?? "");
     if (action === "export-month-pdf") void this.exportMonthlyPdf(target.dataset.month ?? "");
-    if (action === "open-map") this.returnToForest();
+    if (action === "open-map") this.showMap();
     if (action === "forest-month-prev") this.moveForestMonth(-1);
     if (action === "forest-month-next") this.moveForestMonth(1);
     if (action === "open-room") this.enterMujiRoom();
@@ -423,6 +428,19 @@ export class WalkBackHomeApp {
     if (action === "rain") this.toggleRain();
     if (action === "music") this.toggleSceneMusic();
     if (action === "toggle-touch-controls") this.toggleTouchControls();
+    if (action === "edit-touch-controls") this.beginTouchControlEdit();
+    if (action === "save-touch-controls") {
+      this.input.saveTouchControlEdit();
+      this.showSettings();
+    }
+    if (action === "cancel-touch-control-edit") {
+      this.input.cancelTouchControlEdit();
+      this.showSettings();
+    }
+    if (action === "reset-touch-controls") {
+      this.input.resetTouchControlEdit();
+      this.showTouchControlEditor();
+    }
     if (action === "close") {
       this.overlay.classList.remove("dialogue-open");
       this.overlay.innerHTML = "";
@@ -434,6 +452,7 @@ export class WalkBackHomeApp {
       this.labisLessonChoiceIndex = -1;
       this.labisLessonLeadLines = [];
       this.updatePersonalMusicOverlay();
+      this.syncGameplayChromeVisibility();
       this.showToast("Closed");
     }
     if (action === "enter-door") {
@@ -1907,6 +1926,7 @@ export class WalkBackHomeApp {
     this.root.dataset.scene = this.scene;
     this.root.dataset.forceTouch = this.forceTouchControls ? "true" : "false";
     this.root.classList.toggle("overlay-open", Boolean(this.overlay.innerHTML.trim()));
+    this.syncGameplayChromeVisibility();
     const labisPrompt = this.scene === "labis" && this.labisCutscene ? "Memory is playing" : this.scene === "labis" && this.activeObject === "exit" ? "Press E · 回到 Memory Forest" : this.scene === "labis" && this.activeObject ? `Press E · ${this.activeObject}` : "";
     const rawText = this.scene === "forest" && this.activeDoor ? `Press E · ${this.activeDoor.date} ${this.activeDoor.title}` : this.scene === "bakery" && this.activeObject ? `Press E · ${this.activeObject}` : labisPrompt || (this.scene === "muji-room" && this.activeRoomInteraction ? `Press E · ${this.activeRoomInteraction.label}` : "WASD / arrows · E / Enter");
     const text = this.mobileHudPrompt(rawText);
@@ -1935,6 +1955,23 @@ export class WalkBackHomeApp {
         </div>
       </details>`;
     if (this.topNav.innerHTML !== html) this.topNav.innerHTML = html;
+    this.syncGameplayChromeVisibility();
+  }
+
+  private isGameplayScene(): boolean {
+    return this.scene === "forest" || this.scene === "bakery" || this.scene === "labis" || this.scene === "muji-room";
+  }
+
+  private syncGameplayChromeVisibility(): void {
+    const overlayOpen = Boolean(this.overlay?.innerHTML.trim());
+    const editing = this.input?.isTouchControlEditing() ?? false;
+    const gameplay = this.isGameplayScene();
+    const hamburgerVisible = gameplay && !overlayOpen && !editing;
+    this.root.dataset.gameplayHamburger = hamburgerVisible ? "visible" : "hidden";
+    this.root.dataset.gameplayScene = gameplay ? "true" : "false";
+    this.topNav?.classList.toggle("gameplay-hamburger-hidden", !hamburgerVisible);
+    this.root.classList.toggle("touch-controls-editing", editing);
+    this.input?.clampTouchControlsToViewport();
   }
 
   private touchActionText(prompt: string): string {
@@ -1969,7 +2006,21 @@ export class WalkBackHomeApp {
         <button data-action="credits">Credits<span>Project notes and credits</span></button>
         <button data-action="backup-sync">Backup / Sync<span>Portable backup and cloud account</span></button>
       </div>
-      <div class="settings-row"><button data-action="rain">Rain: ${this.settings.rain ? "On" : "Off"}</button><button data-action="compact">${this.settings.compact ? "960x540" : "480x270"}</button><button data-action="fullscreen">Fullscreen</button><button data-action="reset-journey">Begin Again</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
+      <div class="settings-row"><button data-action="rain">Rain: ${this.settings.rain ? "On" : "Off"}</button><button data-action="compact">${this.settings.compact ? "960x540" : "480x270"}</button><button data-action="fullscreen">Fullscreen</button><button data-action="edit-touch-controls">Edit Touch Controls</button><button data-action="reset-journey">Begin Again</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
+  }
+
+  private beginTouchControlEdit(): void {
+    if (!this.isGameplayScene()) {
+      this.showToast("Touch controls can only be edited from gameplay");
+      return;
+    }
+    this.input.beginTouchControlEdit();
+    this.showTouchControlEditor();
+  }
+
+  private showTouchControlEditor(): void {
+    this.overlay.innerHTML = "<div class=\"modal game-panel touch-control-editor\"><h2>Edit Touch Controls</h2><p>Drag the joystick and A button to place them safely in the viewport.</p><div class=\"settings-row\"><button data-action=\"save-touch-controls\">Save Touch Controls</button><button data-action=\"cancel-touch-control-edit\">Cancel Touch Control Editing</button><button data-action=\"reset-touch-controls\">Reset to Default</button></div></div>";
+    this.focusStage();
   }
 
   private showHome(): void {
@@ -2008,7 +2059,7 @@ export class WalkBackHomeApp {
     const today = new Date().toISOString().slice(0, 10);
     const opened = createNewDiaryPage(this.makeDiaryLibrary(), today);
     this.applyDiaryLibrary(opened.library);
-    this.selectedJournalMonthKey = today.slice(0, 7);
+    this.selectedTimelineMonthKey = today.slice(0, 7);
     this.timelineVisibleCount = journalBatchSize;
     this.showDiaryEditor(opened.entry.id);
     this.showToast("New journal created");
@@ -2049,9 +2100,10 @@ export class WalkBackHomeApp {
     this.focusStage();
   }
 
-  private currentJournalMonth(key = this.selectedJournalMonthKey): JournalMonth {
+  private currentBooksMonth(key = this.selectedBooksMonthKey): JournalMonth {
     const month = selectedOrLatestMonth(this.diaryEntries, key);
-    this.selectedJournalMonthKey = month.key;
+    this.selectedBooksMonthKey = month.key;
+    this.selectedBooksYear = String(month.year);
     return month;
   }
 
@@ -2078,7 +2130,7 @@ export class WalkBackHomeApp {
   }
 
   private timelineCursorMonth(): JournalMonth {
-    const fallback = this.selectedJournalMonthKey || this.currentJournalMonth().key;
+    const fallback = this.selectedTimelineMonthKey || selectedOrLatestMonth(this.diaryEntries).key;
     const cursorKey = /^\d{4}-\d{2}$/.test(fallback) ? fallback : new Date().toISOString().slice(0, 7);
     const [yearText, monthText] = cursorKey.split("-");
     const year = Number(yearText);
@@ -2210,25 +2262,41 @@ export class WalkBackHomeApp {
   private moveJournalMonth(direction: -1 | 1): void {
     this.timelineVisibleCount = journalBatchSize;
     if (this.journalMode === "timeline") {
-      this.selectedJournalMonthKey = timelineCursorKeyForStep(this.timelineCursorMonth().key, this.timelineDateScope, direction);
-      this.timelineDateFilter = "";
-      this.timelineFilterAppliedMessage = "";
+      const next = moveTimelineMonthState(this.journalNavigationState(), direction, this.timelineDateScope);
+      this.selectedTimelineMonthKey = next.timelineMonthKey;
+      this.timelineDateFilter = next.timelineDateFilter;
+      this.timelineFilterAppliedMessage = next.timelineFilterAppliedMessage;
       this.showTimeline();
       return;
     }
-    this.selectedJournalMonthKey = adjacentMonthKey(this.currentJournalMonth().key, direction);
+    const availableMonthKeys = monthlyBookSummaries(this.diaryEntries, this.monthlyCovers).map((book) => book.key);
+    const next = moveBooksMonthState(this.journalNavigationState(), direction, availableMonthKeys);
+    this.selectedBooksYear = next.booksYear;
+    this.selectedBooksMonthKey = next.booksMonthKey;
     if (this.journalMode === "books") this.showMonthlyBooks();
-    else if (this.journalMode === "reader") this.openMonthlyBook(this.selectedJournalMonthKey);
-    else this.showTimeline();
+    else this.openMonthlyBook(this.selectedBooksMonthKey);
+  }
+
+  private journalNavigationState(): JournalNavigationState {
+    const booksMonthKey = this.selectedBooksMonthKey || selectedOrLatestMonth(this.diaryEntries).key;
+    return {
+      mode: this.journalMode,
+      timelineMonthKey: this.timelineCursorMonth().key,
+      booksYear: this.selectedBooksYear || booksMonthKey.slice(0, 4),
+      booksMonthKey,
+      timelineDateScope: this.timelineDateScope,
+      timelineDateFilter: this.timelineDateFilter,
+      timelineFilterAppliedMessage: this.timelineFilterAppliedMessage
+    };
   }
 
   private showMonthlyBooks(): void {
     this.journalMode = "books";
-    const month = this.currentJournalMonth();
     const summaries = monthlyBookSummaries(this.diaryEntries, this.monthlyCovers);
-    const selectedYear = month.key.slice(0, 4);
+    const month = this.currentBooksMonth();
+    const selectedYear = this.selectedBooksYear || month.key.slice(0, 4);
     const yearOptions = [...new Set(summaries.map((book) => book.year))];
-    const yearFilter = `<div class="journal-year-filter" aria-label="Filter books by year">${yearOptions.map((year) => `<button class="${String(year) === selectedYear ? "selected" : ""}" data-action="journal-filter-year" data-year="${year}">${year}</button>`).join("")}</div>`;
+    const yearFilter = `<div class="journal-year-filter" aria-label="Filter books by year">${yearOptions.map((year) => `<button class="${String(year) === selectedYear ? "selected" : ""}" data-action="journal-books-year" data-year="${year}">${year}</button>`).join("")}</div>`;
     const books = summaries
       .filter((book) => String(book.year) === selectedYear)
       .map((book) => `<button class="monthly-book theme-${book.theme}" data-action="open-month-book" data-month="${book.key}"><span class="book-cover-thumb" style="--book-cover:${book.cover?.src.startsWith("data:") ? `url('${this.escapeHtml(book.cover.src)}')` : this.escapeHtml(book.cover?.src ?? defaultMonthlyCover(book.key).src)}">${this.escapeHtml(book.label.split(" ")[0].toUpperCase())}</span><strong>${book.year}</strong><small>${book.entryCount} entries · ${book.photoCount} photos · ${book.videoCount} videos</small></button>`).join("");
@@ -2236,18 +2304,31 @@ export class WalkBackHomeApp {
     this.focusStage();
   }
 
+  private selectBooksYear(year: string): void {
+    if (!/^\d{4}$/.test(year)) return;
+    const monthKeys = monthlyBookSummaries(this.diaryEntries, this.monthlyCovers).map((book) => book.key);
+    const next = selectBooksYearState(this.journalNavigationState(), year, monthKeys);
+    this.selectedBooksYear = next.booksYear;
+    this.selectedBooksMonthKey = next.booksMonthKey;
+    this.journalMode = "books";
+    this.showMonthlyBooks();
+  }
+
   private filterTimelineYear(year: string): void {
     if (!/^\d{4}$/.test(year)) return;
-    this.selectedJournalMonthKey = `${year}-01`;
-    this.timelineDateScope = "year";
-    this.timelineDateFilter = "";
-    this.timelineFilterAppliedMessage = `Year ${year}`;
+    const next = selectTimelineYearState(this.journalNavigationState(), year);
+    this.selectedTimelineMonthKey = next.timelineMonthKey;
+    this.timelineDateScope = next.timelineDateScope;
+    this.timelineDateFilter = next.timelineDateFilter;
+    this.timelineFilterAppliedMessage = next.timelineFilterAppliedMessage;
     this.showTimeline();
   }
 
   private openMonthlyBook(monthKey: string): void {
     this.journalMode = "reader";
-    const month = this.currentJournalMonth(monthKey);
+    this.selectedBooksMonthKey = monthKey;
+    this.selectedBooksYear = monthKey.slice(0, 4);
+    const month = this.currentBooksMonth(monthKey);
     const pages = month.entries.map((entry) => `<article class="book-page"><button class="diary-page-preview" data-action="open-diary-page" data-id="${this.escapeHtml(entry.id)}">${this.renderDiaryPreview(entry)}</button><button data-action="open-diary-page" data-id="${this.escapeHtml(entry.id)}">Open Page</button></article>`).join("");
     const stats = `${month.entries.length} entries · ${month.entries.reduce((sum, entry) => sum + diaryMediaItems(entry).filter((media) => media.type === "image").length, 0)} photos · ${month.entries.reduce((sum, entry) => sum + (entry.media ?? []).filter((media) => media.type === "video").length, 0)} videos`;
     const cover = this.monthlyCovers?.[month.key] ?? defaultMonthlyCover(month.key);
@@ -2599,7 +2680,7 @@ export class WalkBackHomeApp {
   }
 
   private async exportMonthlyPdf(monthKey: string): Promise<void> {
-    const month = this.currentJournalMonth(monthKey);
+    const month = this.currentBooksMonth(monthKey);
     this.showToast("Exporting monthly PDF...");
     const pages = await this.renderMonthlyPdfPages(month);
     const blob = makeMonthlyJournalImagePdf(month, pages);
@@ -2623,7 +2704,7 @@ export class WalkBackHomeApp {
   }
 
   private currentForestMonth(): JournalMonth {
-    const selected = this.selectedForestMonthKey || this.selectedJournalMonthKey;
+    const selected = this.selectedForestMonthKey || this.selectedTimelineMonthKey;
     const month = selectedOrLatestMonth(this.diaryEntries, selected);
     this.selectedForestMonthKey = month.key;
     return month;
@@ -2648,7 +2729,7 @@ export class WalkBackHomeApp {
     const media = diaryMediaItems(entry);
     const mediaHtml = media.length ? `<div class="journal-reading-media count-${Math.min(media.length, 4)}">${media.map((item) => item.type === "video"
       ? `<video class="journal-video-block" controls preload="metadata" src="${this.escapeHtml(item.src)}" aria-label="${this.escapeHtml(item.caption ?? "Journal video")}"></video>`
-      : `<figure><span class="journal-reading-photo-frame" style="${this.journalMediaCropRenderStyle(item)}"><img class="journal-inline-photo" src="${this.escapeHtml(item.src)}" alt="" onload="this.parentElement.style.setProperty('--crop-source-aspect', this.naturalWidth / Math.max(1, this.naturalHeight));this.parentElement.style.setProperty('--crop-aspect', (this.naturalWidth / Math.max(1, this.naturalHeight)) * (Number(this.parentElement.style.getPropertyValue('--crop-img-width')) / Math.max(1, Number(this.parentElement.style.getPropertyValue('--crop-img-height')))))"></span></figure>`).join("")}</div>` : "";
+      : `<figure>${this.renderJournalImageCrop(item, "journal-reading-photo-frame")}</figure>`).join("")}</div>` : "";
     const moodMeta = entry.mood ? `心情：${entry.mood}` : "";
     this.overlay.innerHTML = `
       <div class="modal game-panel journal-reading-page mood-${entry.mood ?? "calm"}">
@@ -2780,10 +2861,9 @@ export class WalkBackHomeApp {
     if (!media.length) return "";
     return `<div class="journal-inline-media">${media.map((item) => {
       const selected = this.selectedJournalMediaId === item.id;
-      const crop = this.normalizeJournalMediaCrop(item.crop);
       const mediaNode = item.type === "video"
         ? `<span class="journal-video-select-frame"><video class="journal-inline-photo journal-inline-video" preload="metadata" muted playsinline src="${this.escapeHtml(item.src)}" aria-label="${this.escapeHtml(item.caption ?? "Journal video")}"></video><span class="journal-video-select-shield" data-action="journal-media-select" data-media="${this.escapeHtml(item.id)}" aria-hidden="true">Tap for tools</span></span>`
-        : `<span class="journal-inline-photo-frame" style="${this.journalMediaCropRenderStyle(item)}"><img class="journal-inline-photo" src="${this.escapeHtml(item.src)}" alt="" onload="this.parentElement.style.setProperty('--crop-source-aspect', this.naturalWidth / Math.max(1, this.naturalHeight));this.parentElement.style.setProperty('--crop-aspect', (this.naturalWidth / Math.max(1, this.naturalHeight)) * (Number(this.parentElement.style.getPropertyValue('--crop-img-width')) / Math.max(1, Number(this.parentElement.style.getPropertyValue('--crop-img-height')))))"></span>`;
+        : this.renderJournalImageCrop(item, "journal-inline-photo-frame");
       const tools = item.type === "image"
         ? `<button data-action="journal-media-crop" data-media="${this.escapeHtml(item.id)}" data-crop-mode="custom">Edit Crop</button><button data-action="journal-media-remove" data-media="${this.escapeHtml(item.id)}">Remove</button>`
         : `<span class="journal-media-type">Video</span><button data-action="journal-media-remove" data-media="${this.escapeHtml(item.id)}">Remove</button>`;
@@ -2794,47 +2874,16 @@ export class WalkBackHomeApp {
     }).join("")}</div>`;
   }
 
-  private normalizeJournalMediaCrop(crop: unknown): DiaryMediaCrop {
-    if (crop && typeof crop === "object") {
-      const candidate = crop as Partial<DiaryMediaCrop>;
-      const width = this.clampNumber(candidate.width, 8, 100, 100);
-      const height = this.clampNumber(candidate.height, 8, 100, 100);
-      return {
-        x: this.clampNumber(candidate.x, 0, 100 - width, 0),
-        y: this.clampNumber(candidate.y, 0, 100 - height, 0),
-        width,
-        height
-      };
-    }
-    return { x: 0, y: 0, width: 100, height: 100 };
-  }
-
   private journalMediaCropStyle(crop: unknown): string {
-    const next = this.normalizeJournalMediaCrop(crop);
+    const next = normalizeJournalMediaCrop(crop);
     return `--crop-x:${next.x.toFixed(2)}%;--crop-y:${next.y.toFixed(2)}%;--crop-width:${next.width.toFixed(2)}%;--crop-height:${next.height.toFixed(2)}%;`;
   }
 
-  private journalMediaCropAspectStyle(crop: unknown): string {
-    const next = this.normalizeJournalMediaCrop(crop);
-    return `--crop-aspect:${Math.max(0.1, next.width / Math.max(1, next.height)).toFixed(3)};`;
-  }
-
-  private journalMediaCropRenderStyle(media: DiaryMedia): string {
-    const crop = this.normalizeJournalMediaCrop(media.crop);
-    const sourceAspect = media.width && media.height ? Math.max(0.1, media.width / media.height) : 1;
-    const cropAspect = Math.max(0.1, sourceAspect * crop.width / Math.max(1, crop.height));
-    return [
-      `--crop-x:${crop.x.toFixed(2)}`,
-      `--crop-y:${crop.y.toFixed(2)}`,
-      `--crop-img-width:${crop.width.toFixed(2)}`,
-      `--crop-img-height:${crop.height.toFixed(2)}`,
-      `--crop-left:${(-crop.x / Math.max(1, crop.width) * 100).toFixed(2)}%`,
-      `--crop-top:${(-crop.y / Math.max(1, crop.height) * 100).toFixed(2)}%`,
-      `--crop-render-width:${(10000 / Math.max(1, crop.width)).toFixed(2)}%`,
-      `--crop-render-height:${(10000 / Math.max(1, crop.height)).toFixed(2)}%`,
-      `--crop-source-aspect:${sourceAspect.toFixed(4)}`,
-      `--crop-aspect:${cropAspect.toFixed(4)}`
-    ].join(";") + ";";
+  private renderJournalImageCrop(media: DiaryMedia, frameClass: "journal-inline-photo-frame" | "journal-reading-photo-frame"): string {
+    const model = journalMediaCropRenderModel(media.crop, media.width, media.height);
+    const hasStoredDimensions = Number.isFinite(media.width) && Number.isFinite(media.height) && (media.width ?? 0) > 0 && (media.height ?? 0) > 0;
+    const loadHandler = hasStoredDimensions ? "" : ` onload="this.parentElement.style.setProperty('--crop-source-aspect', this.naturalWidth / Math.max(1, this.naturalHeight));this.parentElement.style.setProperty('--crop-aspect', (this.naturalWidth / Math.max(1, this.naturalHeight)) * (Number(this.parentElement.style.getPropertyValue('--crop-img-width')) / Math.max(1, Number(this.parentElement.style.getPropertyValue('--crop-img-height')))))"`;
+    return `<span class="${frameClass}" style="${renderJournalMediaCropStyle(model)}"><img class="journal-inline-photo" src="${this.escapeHtml(media.src)}" alt=""${loadHandler}></span>`;
   }
 
   private journalCropImageAspectStyle(media: DiaryMedia): string {
@@ -2846,7 +2895,7 @@ export class WalkBackHomeApp {
     if (!entry || !this.journalCropMediaId) return "";
     const media = diaryMediaItems(entry).find((item) => item.id === this.journalCropMediaId && item.type === "image");
     if (!media) return "";
-    const crop = this.normalizeJournalMediaCrop(media.crop);
+    const crop = normalizeJournalMediaCrop(media.crop);
     return `<div class="journal-crop-modal" role="dialog" aria-label="Crop journal image">
       <div class="journal-crop-stage">
         <div class="journal-crop-image-frame" style="${this.journalCropImageAspectStyle(media)}">
@@ -3006,7 +3055,7 @@ export class WalkBackHomeApp {
     this.timelineSort = sort === "date-asc" || sort === "title-asc" ? sort : "date-desc";
     this.timelineKindFilter = kind === "diary" || kind === "fragment" || kind === "chapter" ? kind : "all";
     this.timelineDateScope = scope;
-    if (scope !== "all") this.selectedJournalMonthKey = selectedDate.slice(0, 7);
+    if (scope !== "all") this.selectedTimelineMonthKey = selectedDate.slice(0, 7);
     this.timelineDateFilter = scope === "date" ? selectedDate : "";
     this.timelineSearch = searchInput?.value.trim() ?? "";
     this.timelineVisibleCount = journalBatchSize;
@@ -3021,7 +3070,7 @@ export class WalkBackHomeApp {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !this.timelineDateHasEntries(date)) return;
     this.timelineDateScope = "date";
     this.timelineDateFilter = date;
-    this.selectedJournalMonthKey = date.slice(0, 7);
+    this.selectedTimelineMonthKey = date.slice(0, 7);
     this.timelineVisibleCount = journalBatchSize;
     this.selectedTimelineEntryIds.clear();
     const nextMonth = this.currentTimelineMonthView();
@@ -3048,7 +3097,7 @@ export class WalkBackHomeApp {
   }
 
   private selectAllTimelineEntries(): void {
-    this.selectedTimelineEntryIds = new Set(visibleTimelineEntries(this.currentTimelineMonthView(), this.timelineVisibleCount).map((entry) => entry.id));
+    this.selectedTimelineEntryIds = new Set(selectAllTimelineEntryIds(this.currentTimelineMonthView()));
     this.showTimeline();
   }
 
@@ -3182,7 +3231,7 @@ export class WalkBackHomeApp {
 
   private cropFromBoxStyle(box: HTMLElement): DiaryMediaCrop {
     const value = (name: string, fallback: number) => Number.parseFloat(box.style.getPropertyValue(name)) || fallback;
-    return this.normalizeJournalMediaCrop({
+    return normalizeJournalMediaCrop({
       x: value("--crop-x", 0),
       y: value("--crop-y", 0),
       width: value("--crop-width", 100),
@@ -3195,7 +3244,7 @@ export class WalkBackHomeApp {
     if (mode === "move") {
       x += dx;
       y += dy;
-      return this.normalizeJournalMediaCrop({ x, y, width, height });
+      return normalizeJournalMediaCrop({ x, y, width, height });
     }
     if (mode.includes("w")) {
       x += dx;
@@ -3211,7 +3260,7 @@ export class WalkBackHomeApp {
     height = Math.max(8, height);
     x = Math.max(0, Math.min(100 - width, x));
     y = Math.max(0, Math.min(100 - height, y));
-    return this.normalizeJournalMediaCrop({ x, y, width, height });
+    return normalizeJournalMediaCrop({ x, y, width, height });
   }
 
   private setJournalCropOriginalRatio(): void {
@@ -3226,18 +3275,13 @@ export class WalkBackHomeApp {
       height = 86;
       width = height * ratio;
     }
-    const crop = this.normalizeJournalMediaCrop({
+    const crop = normalizeJournalMediaCrop({
       x: (100 - width) / 2,
       y: (100 - height) / 2,
       width,
       height
     });
     box.setAttribute("style", this.journalMediaCropStyle(crop));
-  }
-
-  private clampNumber(value: unknown, min: number, max: number, fallback: number): number {
-    const numeric = typeof value === "number" && Number.isFinite(value) ? value : fallback;
-    return Math.max(min, Math.min(max, numeric));
   }
 
   private showDiaryEditorPreservingScroll(entryId: string): void {
@@ -3451,7 +3495,7 @@ export class WalkBackHomeApp {
     const file = input.files?.[0];
     if (!file || !file.type.startsWith("image/")) return;
     const src = await this.readFileAsDataUrl(file);
-    const monthKey = this.currentJournalMonth().key;
+    const monthKey = this.currentBooksMonth().key;
     const current = this.monthlyCovers?.[monthKey] ?? defaultMonthlyCover(monthKey);
     this.applyDiaryLibrary(upsertMonthlyCover(this.makeDiaryLibrary(), monthKey, {
       src,
@@ -3465,7 +3509,7 @@ export class WalkBackHomeApp {
   }
 
   private setMonthlyCoverCrop(crop: JournalBookCoverCrop): void {
-    const monthKey = this.currentJournalMonth().key;
+    const monthKey = this.currentBooksMonth().key;
     const current = this.monthlyCovers?.[monthKey] ?? defaultMonthlyCover(monthKey);
     const nextCrop: JournalBookCoverCrop = crop === "top" || crop === "bottom" || crop === "contain" ? crop : "center";
     this.applyDiaryLibrary(upsertMonthlyCover(this.makeDiaryLibrary(), monthKey, {
@@ -4975,6 +5019,7 @@ export class WalkBackHomeApp {
   }
 
   private showSettings(): void {
+    if (this.input.isTouchControlEditing()) this.input.cancelTouchControlEdit();
     this.overlay.innerHTML = `<div class="modal game-panel"><h2>Menu / Settings</h2>${this.settingsContent()}</div>`;
     this.focusStage();
   }

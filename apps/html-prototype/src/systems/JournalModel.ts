@@ -101,6 +101,10 @@ export function visibleTimelineEntries(month: JournalMonth, visibleCount: number
   return month.entries.slice(0, Math.max(journalBatchSize, visibleCount));
 }
 
+export function selectAllTimelineEntryIds(month: JournalMonth): string[] {
+  return month.entries.map((entry) => entry.id);
+}
+
 export function hasMoreTimelineEntries(month: JournalMonth, visibleCount: number): boolean {
   return month.entries.length > Math.max(journalBatchSize, visibleCount);
 }
