@@ -28,6 +28,27 @@ type VisibleOptions = {
   now?: Date;
 };
 
+export type ReflectionNoteDimensions = {
+  widthPercent: number;
+  heightPercent: number;
+  edgePercent?: number;
+};
+
+export function clampReflectionNotePosition(
+  position: { x: number; y: number },
+  dimensions: ReflectionNoteDimensions = { widthPercent: 28, heightPercent: 24, edgePercent: 4 }
+): { x: number; y: number } {
+  const edge = Math.max(0, dimensions.edgePercent ?? 4);
+  const minX = edge + Math.max(0, dimensions.widthPercent) / 2;
+  const maxX = 100 - edge - Math.max(0, dimensions.widthPercent) / 2;
+  const minY = edge + Math.max(0, dimensions.heightPercent) / 2;
+  const maxY = 100 - edge - Math.max(0, dimensions.heightPercent) / 2;
+  return {
+    x: Math.round(Math.max(minX, Math.min(maxX, position.x)) * 100) / 100,
+    y: Math.round(Math.max(minY, Math.min(maxY, position.y)) * 100) / 100
+  };
+}
+
 export function createReflectionWallState(now = new Date()): ReflectionWallState {
   return {
     version: 1,

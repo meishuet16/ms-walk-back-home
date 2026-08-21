@@ -35,6 +35,45 @@ export function filterAndSortMusic(tracks: UserMusicTrack[], search: string, sor
   });
 }
 
+export type BatchMusicMetadata = {
+  artist?: string;
+  album?: string;
+};
+
+export type BuiltInMusicMetadata = Record<string, BatchMusicMetadata>;
+
+export function selectAllMusicTrackIds(ids: string[]): string[] {
+  return [...ids];
+}
+
+export function applyBatchMusicMetadata(
+  library: PersonalMusicLibraryState,
+  selectedIds: string[],
+  metadata: BatchMusicMetadata,
+  builtInMeta: BuiltInMusicMetadata,
+  now = new Date()
+): { library: PersonalMusicLibraryState; builtInMeta: BuiltInMusicMetadata } {
+  const selected = new Set(selectedIds);
+  const nextMetadata = Object.fromEntries(
+    Object.entries(metadata)
+      .map(([key, value]) => [key, value?.trim() ?? ""] as const)
+      .filter(([, value]) => Boolean(value))
+  ) as BatchMusicMetadata;
+  const nextLibrary = {
+    ...library,
+    savedAt: now.toISOString(),
+    tracks: library.tracks.map((track) => selected.has(track.id)
+      ? { ...track, ...nextMetadata }
+      : track)
+  };
+  const nextBuiltInMeta = { ...builtInMeta };
+  for (const id of selectedIds) {
+    if (!nextBuiltInMeta[id]) nextBuiltInMeta[id] = {};
+    nextBuiltInMeta[id] = { ...nextBuiltInMeta[id], ...nextMetadata };
+  }
+  return { library: nextLibrary, builtInMeta: nextBuiltInMeta };
+}
+
 export function parseLrc(source: string): SyncedLyricLine[] {
   const lines: SyncedLyricLine[] = [];
   const pattern = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]([^\n\r]*)/g;
@@ -139,5 +178,30 @@ export function removeUserMusicTrack(library: PersonalMusicLibraryState, trackId
     removed,
     blobKeysToDelete: [removed.audioBlobKey, removed.coverBlobKey].filter((key): key is string => Boolean(key)),
     nextTrackId: tracks[0]?.id ?? fallbackTrackIds[0]
+  };
+}
+
+export function removeSelectedMusicTracks(
+  library: PersonalMusicLibraryState,
+  selectedIds: string[],
+  builtInIds: string[],
+  now = new Date()
+): {
+  library: PersonalMusicLibraryState;
+  removed: UserMusicTrack[];
+  skippedBuiltInCount: number;
+  blobKeysToDelete: string[];
+  nextTrackId?: string;
+} {
+  const selected = new Set(selectedIds);
+  const builtIns = new Set(builtInIds);
+  const removed = library.tracks.filter((track) => selected.has(track.id));
+  const tracks = library.tracks.filter((track) => !selected.has(track.id));
+  return {
+    library: { ...library, tracks, savedAt: now.toISOString() },
+    removed,
+    skippedBuiltInCount: selectedIds.filter((id) => builtIns.has(id)).length,
+    blobKeysToDelete: removed.flatMap((track) => [track.audioBlobKey, track.coverBlobKey].filter((key): key is string => Boolean(key))),
+    nextTrackId: tracks[0]?.id
   };
 }

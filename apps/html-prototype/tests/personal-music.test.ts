@@ -15,6 +15,9 @@ import {
   parseLrc,
   personalMusicShouldPlayInScene,
   personalMusicShouldResumeAfterScene,
+  selectAllMusicTrackIds,
+  applyBatchMusicMetadata,
+  removeSelectedMusicTracks,
   removeUserMusicTrack
 } from "../src/systems/PersonalMusic.js";
 
@@ -160,4 +163,45 @@ test("removing a user track plans app-owned cleanup and next selection only", ()
   assert.deepEqual(result.blobKeysToDelete, ["music/audio/user-1", "music/cover/user-1"]);
   assert.deepEqual(result.library.tracks.map((track) => track.id), ["user-2"]);
   assert.equal(result.nextTrackId, "user-2");
+});
+
+test("mixed Records deletion removes users and reports skipped built-ins", () => {
+  const result = removeSelectedMusicTracks(
+    {
+      version: 1,
+      savedAt: "2026-08-21T00:00:00.000Z",
+      tracks: [
+        { id: "user-a", title: "A", audioBlobKey: "audio-a", addedAt: 1 },
+        { id: "user-b", title: "B", audioBlobKey: "audio-b", addedAt: 2 }
+      ]
+    },
+    ["user-a", "built-in-a"],
+    ["built-in-a"],
+    new Date("2026-08-21T00:00:00.000Z")
+  );
+
+  assert.deepEqual(result.removed.map((track) => track.id), ["user-a"]);
+  assert.equal(result.skippedBuiltInCount, 1);
+  assert.deepEqual(result.library.tracks.map((track) => track.id), ["user-b"]);
+});
+
+test("batch metadata updates imported tracks and built-in local overrides", () => {
+  const library = {
+    version: 1 as const,
+    savedAt: "now",
+    tracks: [{ id: "user-a", title: "A", artist: "old", album: "old album", audioBlobKey: "a", addedAt: 1 }]
+  };
+  const result = applyBatchMusicMetadata(library, ["user-a", "built-in-a"], { artist: "new", album: "new album" }, {});
+
+  assert.equal(result.library.tracks[0].artist, "new");
+  assert.equal(result.library.tracks[0].album, "new album");
+  assert.deepEqual(result.builtInMeta["built-in-a"], { artist: "new", album: "new album" });
+});
+
+test("Select All copies every filtered Records id", () => {
+  const ids = ["a", "b", "c", "d"];
+  const selected = selectAllMusicTrackIds(ids);
+
+  assert.deepEqual(selected, ids);
+  assert.notEqual(selected, ids);
 });
