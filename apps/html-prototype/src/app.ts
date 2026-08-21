@@ -96,7 +96,7 @@ const assets = {
   bakery: "assets/bakery.png",
   labis: "assets/labis-july19.png",
   muji: "assets/muji-sheet.png",
-  friend: "assets/friend-a.png",
+  friend: "assets/330/111.png",
   room: "assets/muji-room.png",
   roomFallback: "assets/room-panel.jpg",
   map: "assets/map-panel.jpg",
