@@ -3871,6 +3871,31 @@ canvas {
   width: 100%;
   min-width: 0;
 }
+.journal-audio-media-card {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.journal-audio-node {
+  display: block;
+  min-width: 0;
+}
+.journal-audio-edit-button {
+  justify-self: start;
+  min-height: 32px;
+  padding: 5px 12px;
+  border: 1px solid rgba(126, 79, 27, .35);
+  border-radius: 7px;
+  color: #5a351d;
+  background: rgba(255, 248, 226, .94);
+  font: inherit;
+  cursor: pointer;
+}
+.journal-audio-edit-button:hover,
+.journal-audio-edit-button:focus-visible {
+  border-color: #b97822;
+  background: #fff4ce;
+}
 .journal-audio-reading,
 .journal-audio-unavailable,
 .journal-audio-loading,

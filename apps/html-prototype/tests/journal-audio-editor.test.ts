@@ -35,6 +35,12 @@ test("journal audio removal requires a centered confirmation", () => {
   assert.match(appSource, /event\.target as HTMLElement\)\.closest\("audio"\)/);
 });
 
+test("journal audio cards expose an explicit edit control outside the native player", () => {
+  assert.match(appSource, /journal-audio-edit-button/);
+  assert.match(appSource, /data-action="journal-audio-edit"/);
+  assert.match(appSource, /action === "journal-audio-edit"/);
+});
+
 test("journal editor places Record voice between photo and video controls", () => {
   const toolbarStart = appSource.indexOf('<div class="mobile-editor-toolbar">');
   const toolbarEnd = appSource.indexOf('<input id="diary-mobile-media-input"', toolbarStart);

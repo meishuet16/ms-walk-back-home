@@ -432,6 +432,10 @@ export class WalkBackHomeApp {
       this.selectJournalMedia(target.dataset.media ?? "");
       return;
     }
+    if (action === "journal-audio-edit") {
+      this.selectJournalMedia(target.dataset.media ?? "");
+      return;
+    }
     if (action === "journal-audio-delete-confirm") {
       void this.confirmJournalMediaDelete();
       return;
@@ -2822,7 +2826,7 @@ export class WalkBackHomeApp {
     }
     const editor = this.overlay.querySelector<HTMLElement>(`.diary-page-editor[data-entry="${this.escapeHtml(entryId)}"]`);
     if (editor) {
-      const item = editor.querySelector<HTMLElement>(`[data-media="${this.escapeHtml(media.id)}"] .journal-media-select`);
+      const item = editor.querySelector<HTMLElement>(`[data-media="${this.escapeHtml(media.id)}"] .journal-audio-node`);
       if (item) item.innerHTML = this.renderJournalAudioNode(media);
       return;
     }
@@ -3797,7 +3801,7 @@ export class WalkBackHomeApp {
           ? `<span class="journal-media-type">Voice note</span><button data-action="journal-media-remove" data-media="${this.escapeHtml(item.id)}">Remove</button>`
           : `<span class="journal-media-type">Video</span><button data-action="journal-media-remove" data-media="${this.escapeHtml(item.id)}">Remove</button>`;
       const selector = item.type === "audio"
-        ? `<div class="journal-media-select" data-action="journal-media-select" data-media="${this.escapeHtml(item.id)}" aria-label="Select media">${mediaNode}</div>`
+        ? `<div class="journal-audio-media-card"><span class="journal-audio-node">${mediaNode}</span><button class="journal-audio-edit-button" data-action="journal-audio-edit" data-media="${this.escapeHtml(item.id)}" aria-label="Edit voice note">Edit</button></div>`
         : `<button class="journal-media-select" data-action="journal-media-select" data-media="${this.escapeHtml(item.id)}" aria-label="Select media">${mediaNode}</button>`;
       return `<figure class="journal-inline-media-item ${selected ? "selected" : ""}" data-media="${this.escapeHtml(item.id)}">
         ${selector}
