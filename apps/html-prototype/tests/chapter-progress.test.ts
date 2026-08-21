@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { beginChapterVisit, finishChapterWalkthrough, initialChapterProgress, recordChapterChoice } from "../src/systems/ChapterProgressManager.js";
+import { beginChapterVisit, consumeAutomaticChapterTrigger, createChapterTriggerSession, finishChapterWalkthrough, initialChapterProgress, recordChapterChoice, resetChapterTriggerSession } from "../src/systems/ChapterProgressManager.js";
 import { emptyTendencies } from "../src/systems/TendencySystem.js";
 
 test("entering a chapter marks it visited but not walked through", () => {
@@ -28,4 +28,15 @@ test("canonical closure marks a chapter walked through and preserves first refle
   assert.equal(walked.walkedThrough, true);
   assert.equal(replayed.closingQuoteId, "yumido-accepting");
   assert.equal(replayed.reflectionTone, "accepting");
+});
+
+test("automatic Chapter trigger stays consumed after cutscene completion", () => {
+  let session = createChapterTriggerSession("labis-motor-day");
+  const first = consumeAutomaticChapterTrigger(session);
+  assert.equal(first.allowed, true);
+  session = first.session;
+
+  assert.equal(consumeAutomaticChapterTrigger(session).allowed, false);
+  session = resetChapterTriggerSession(session);
+  assert.equal(consumeAutomaticChapterTrigger(session).allowed, true);
 });

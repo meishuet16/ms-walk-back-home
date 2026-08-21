@@ -1,3 +1,5 @@
+import type { DialoguePortrait } from "./systems/PresentationRenderer.js";
+
 export type CoreSceneId = "title" | "forest" | "bakery" | "labis" | "muji-room" | "ending";
 export type SceneId = CoreSceneId | (string & {});
 export type TendencyKey =
@@ -22,7 +24,7 @@ export type Choice = {
 export type DialogueNode = {
   id: string;
   speaker: string;
-  portrait: string | "none";
+  portrait: DialoguePortrait | "none";
   text: string;
   choices?: Choice[];
 };
@@ -74,7 +76,7 @@ export type DiaryMediaCrop = {
   height: number;
 };
 
-export type DiaryMedia = {
+export type DiaryVisualMedia = {
   id: string;
   type: "image" | "video";
   storageKey?: string;
@@ -86,6 +88,25 @@ export type DiaryMedia = {
   height?: number;
   crop?: DiaryMediaCrop;
 };
+
+export type DiaryAudioMedia = {
+  id: string;
+  type: "audio";
+  storageKey: string;
+  src?: never;
+  caption?: string;
+  displayName?: string;
+  mimeType?: string;
+  duration?: number;
+  createdAt?: string;
+  width?: never;
+  height?: never;
+  crop?: never;
+};
+
+export type DiaryImageMedia = Omit<DiaryVisualMedia, "type"> & { type: "image" };
+export type DiaryVideoMedia = Omit<DiaryVisualMedia, "type"> & { type: "video" };
+export type DiaryMedia = DiaryImageMedia | DiaryVideoMedia | DiaryAudioMedia;
 
 export type JournalBookCoverCrop = "center" | "top" | "bottom" | "contain";
 
@@ -224,7 +245,7 @@ export type PersonalPlayerState = {
   playbackMode?: MusicPlaybackMode;
   shuffleEnabled: boolean;
   repeatOne: boolean;
-  customTrackMeta?: Record<string, { title?: string; artist?: string }>;
+  customTrackMeta?: Record<string, { title?: string; artist?: string; album?: string }>;
   customTrackLyrics?: Record<string, { syncedLyrics: SyncedLyricLine[]; plainLyrics?: string }>;
   playerBackgroundBlobKey?: string;
 };

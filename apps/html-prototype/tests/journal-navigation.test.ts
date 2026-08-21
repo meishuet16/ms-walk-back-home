@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createJournalNavigationState, moveBooksMonth, moveTimelineMonth, selectBooksYear, selectJournalTab, selectTimelineYear } from "../src/systems/JournalNavigation.js";
+import { createJournalNavigationState, createJournalReturnSnapshot, journalReturnTarget, moveBooksMonth, moveTimelineMonth, selectBooksYear, selectJournalTab, selectTimelineYear } from "../src/systems/JournalNavigation.js";
 
 const months = ["2026-02", "2026-10", "2025-01", "2025-09"];
 
@@ -90,4 +90,10 @@ test("Timeline month navigation changes only Timeline context", () => {
   assert.equal(next.timelineFilterAppliedMessage, "");
   assert.equal(next.booksYear, "2025");
   assert.equal(next.booksMonthKey, "2025-09");
+});
+
+test("reader return snapshot keeps Books surface and scroll", () => {
+  const snapshot = createJournalReturnSnapshot("books", "2026-08", "2026", 428);
+
+  assert.deepEqual(journalReturnTarget(snapshot), { mode: "books", monthKey: "2026-08", year: "2026", scrollTop: 428 });
 });

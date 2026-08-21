@@ -1,4 +1,5 @@
 import type { ActorFacing, SceneActor, SceneActorKind } from "./SceneActorRenderer.js";
+import type { DialoguePortrait } from "./PresentationRenderer.js";
 
 export type CutsceneAction =
   | { type: "wait"; duration: number }
@@ -10,13 +11,13 @@ export type CutsceneAction =
   | { type: "prop"; id: string; assetId: string; owner?: string; visible: boolean }
   | { type: "effect"; id: string; kind: "water-vfx" | "dissolve"; actor?: string; target?: string; frame?: number; duration: number }
   | { type: "fade"; actors: string[]; duration: number }
-  | { type: "dialogue"; speaker: string; text: string; portrait?: string }
+  | { type: "dialogue"; speaker: string; text: string; portrait?: DialoguePortrait }
   | { type: "despawn"; actor: string };
 
 export type CutsceneDialogue = {
   speaker: string;
   text: string;
-  portrait?: string;
+  portrait?: DialoguePortrait;
 };
 
 export type CutsceneProp = {

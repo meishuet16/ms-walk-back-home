@@ -47,12 +47,17 @@ Updated 2026-08-11.
 - Touch controls include a left virtual joystick and a right-side A interaction button.
 - Mobile portrait game scenes (Forest, Muji Room, and chapter scenes) show a rotate-to-landscape prompt; portrait content screens remain responsive and scrollable.
 - Portrait Journal uses a single-column, scrollable editor layout with static paper fields.
+- Journal voice notes use the generic local Journal media blob store. New recordings keep only `storageKey`, MIME type, duration, and display metadata in diary entries; the audio binary stays in locally persisted Blob storage.
+- Voice-note playback resolves local Blobs lazily to temporary object URLs and shows “Voice note unavailable on this device” when Supabase metadata exists without a local binary. Supabase does not synchronize audio binary across devices.
+- The normal JSON backup includes referenced Journal audio Blobs as `kind: "journal-media"` entries and restores them to the same namespaced `storageKey`; existing MusicBlobStore entries remain `kind: "music"` (legacy entries without a kind continue to route to music).
 - Portrait Reflection Wall preserves tap targets, note drag gestures, and empty-wall pan behavior through explicit touch-action rules.
 - Landscape Muji Room and Forest use compact top navigation, HUD, joystick, and interaction controls for short mobile viewports.
 - Floating lyrics separates draggable lyrics from the Records / previous / play / next control bar so transport buttons remain clickable; the floating Records button opens the Records page.
 - Records lyrics now keep the active synced line centered as playback time changes.
 - Verification run: `npm run typecheck`, `npm run build`, and `npm test -- ui-policy personal-music` from `apps/html-prototype`, which builds and runs 119 tests including a Those Bygone Years / 那些年 LRC timing excerpt.
 - Browser visual check update: the Codex in-app browser blocked access to `http://localhost:4173/` during this pass by policy, so current viewport verification is covered by source-level responsive tests plus build/typecheck/test output rather than a fresh browser screenshot.
+
+Known Journal behavior: the existing mixed photo/video ordering behavior is unchanged. This audio work does not migrate existing photo/video data URLs or reorder their media.
 
 ## Backup / Restore
 
@@ -63,7 +68,7 @@ Updated 2026-08-11.
 - reflection wall
 - personal music metadata
 - personal player state
-- IndexedDB music/media blobs as data URLs
+- IndexedDB MusicBlobStore entries and referenced Journal media Blobs as data URLs in the backup envelope; Journal entries are explicitly discriminated with `kind: "journal-media"`.
 
 The parser rejects unrelated or unsupported backup envelopes. Public ChapterDefinitions are intentionally excluded.
 

@@ -92,7 +92,10 @@ test("monthly books account for video media and local cover metadata", () => {
   const library = createDiaryLibrary([{
     ...entry("2026-07-19", "Labis"),
     photos: [{ id: "photo-1", src: "data:image/png;base64,photo" }],
-    media: [{ id: "video-1", type: "video", src: "data:video/mp4;base64,video", caption: "ride.mp4" }]
+    media: [
+      { id: "video-1", type: "video", src: "data:video/mp4;base64,video", caption: "ride.mp4" },
+      { id: "audio-1", type: "audio", storageKey: "journal-media/e/audio-1", mimeType: "audio/webm", duration: 2 }
+    ]
   }]);
   const withCover = upsertMonthlyCover(library, "2026-07", {
     src: "data:image/jpeg;base64,cover",
@@ -103,6 +106,7 @@ test("monthly books account for video media and local cover metadata", () => {
 
   assert.equal(books[0].photoCount, 1);
   assert.equal(books[0].videoCount, 1);
+  assert.equal(books[0].audioCount, 1);
   assert.equal(books[0].cover?.crop, "top");
   assert.equal(books[0].cover?.caption, undefined);
   assert.equal(defaultMonthlyCover("2026-07").src.startsWith("linear-gradient"), true);

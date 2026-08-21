@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   changeReflectionPaper,
+  clampReflectionNotePosition,
   createChapterReflectionNote,
   createReflectionNote,
   createReflectionWallState,
@@ -106,4 +107,11 @@ test("kept chapter reflection notes remain after replaying the same ending", () 
 
   assert.equal(replayed.notes.some((note) => note.source === "chapter" && note.chapterId === "march30-too-fated" && note.text === "03.30 ending"), true);
   assert.equal(replayed.notes.length, 2);
+});
+
+test("reflection note center is clamped by its rendered dimensions", () => {
+  assert.deepEqual(
+    clampReflectionNotePosition({ x: 99, y: 99 }, { widthPercent: 32, heightPercent: 28, edgePercent: 4 }),
+    { x: 80, y: 82 }
+  );
 });

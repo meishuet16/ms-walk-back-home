@@ -1,5 +1,5 @@
 import type { AppConfig } from "./AppConfig.js";
-import type { DiaryLibraryState, JourneyState, ReflectionWallState, RoomJourneyState } from "../types.js";
+import type { DiaryEntry, DiaryLibraryState, DiaryMedia, JourneyState, ReflectionWallState, RoomJourneyState } from "../types.js";
 
 export type CloudSyncBundle = {
   diaryLibrary: DiaryLibraryState;
@@ -30,6 +30,18 @@ type SupabaseClient = {
     delete(): { eq(column: string, value: unknown): SupabaseQuery<unknown> };
   };
 };
+
+function sanitizeDiaryEntryForCloud(entry: DiaryEntry): DiaryEntry {
+  if (!entry.media?.some((media) => media.type === "audio")) return entry;
+  return {
+    ...entry,
+    media: entry.media.map((media) => {
+      if (media.type !== "audio") return media;
+      const { src: _localAudioSource, ...audioMetadata } = media as DiaryMedia & { src?: string };
+      return audioMetadata as DiaryMedia;
+    })
+  };
+}
 
 declare global {
   interface Window {
@@ -83,7 +95,7 @@ export class SupabaseSync {
     const client = await this.requireClient();
     const now = new Date().toISOString();
     await this.throwOnError(client.from("diary_entries").upsert(
-      bundle.diaryLibrary.entries.map((entry) => ({ user_id: userId, id: entry.id, entry, updated_at: now, deleted_at: null })),
+      bundle.diaryLibrary.entries.map((entry) => ({ user_id: userId, id: entry.id, entry: sanitizeDiaryEntryForCloud(entry), updated_at: now, deleted_at: null })),
       { onConflict: "user_id,id" }
     ));
     const { personalPlayer: _localPersonalPlayer, ...cloudJourney } = bundle.journey;

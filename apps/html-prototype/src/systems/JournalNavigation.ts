@@ -2,6 +2,21 @@ import { adjacentMonthKey, timelineCursorKeyForStep, type TimelineDateScope } fr
 
 export type JournalNavigationMode = "timeline" | "books" | "reader";
 
+export type JournalReturnSnapshot = {
+  mode: "timeline" | "books";
+  monthKey: string;
+  year: string;
+  scrollTop: number;
+};
+
+export function createJournalReturnSnapshot(mode: "timeline" | "books", monthKey: string, year: string, scrollTop: number): JournalReturnSnapshot {
+  return { mode, monthKey, year, scrollTop: Math.max(0, scrollTop) };
+}
+
+export function journalReturnTarget(snapshot: JournalReturnSnapshot): JournalReturnSnapshot {
+  return { ...snapshot };
+}
+
 export type JournalNavigationState = {
   mode: JournalNavigationMode;
   timelineMonthKey: string;

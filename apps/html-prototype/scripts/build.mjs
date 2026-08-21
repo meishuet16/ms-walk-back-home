@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 const root = resolve(import.meta.dirname, "..");
 await mkdir(resolve(root, "dist/public"), { recursive: true });
 await cp(resolve(root, "public"), resolve(root, "dist/public"), { recursive: true });
+await cp(resolve(root, "public/lrc"), resolve(root, "dist/lrc"), { recursive: true });
 await cp(resolve(root, "public/scene-layouts"), resolve(root, "dist/scene-layouts"), { recursive: true });
 await cp(resolve(root, "public/assets"), resolve(root, "dist/assets"), { recursive: true });
 const audioFiles = (await readdir(resolve(root, "public/assets/audio"))).filter((file) => file.toLowerCase().endsWith(".mp3"));
