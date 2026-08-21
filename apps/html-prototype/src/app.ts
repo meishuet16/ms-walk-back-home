@@ -158,6 +158,7 @@ export class WalkBackHomeApp {
   private selectedScrapbookElementId = "";
   private journalMoreMenuOpen = false;
   private selectedJournalMediaId = "";
+  private pendingJournalMediaDeleteId = "";
   private journalCropMediaId = "";
   private journalCropDrag: { mode: string; startX: number; startY: number; startCrop: DiaryMediaCrop } | null = null;
   private selectedReflectionNoteId = "";
@@ -429,6 +430,14 @@ export class WalkBackHomeApp {
     }
     if (action === "journal-media-select") {
       this.selectJournalMedia(target.dataset.media ?? "");
+      return;
+    }
+    if (action === "journal-audio-delete-confirm") {
+      void this.confirmJournalMediaDelete();
+      return;
+    }
+    if (action === "journal-audio-delete-cancel") {
+      this.cancelJournalMediaDelete();
       return;
     }
     if (action === "journal-media-remove") {
@@ -3692,6 +3701,7 @@ export class WalkBackHomeApp {
           ${elements}
         </section>
         ${this.renderJournalCropModal(editing)}
+        ${this.renderJournalAudioDeleteConfirmation(editing)}
         <div class="integrated-tools journal-photo-dock"></div>
         <div class="journal-audio-recording-panel"><div class="journal-audio-recording-controls"></div><span class="journal-audio-recording-state">Add a voice note</span></div>
         <div class="mobile-editor-toolbar"><button data-action="journal-add-inline-media" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="Add photo">▧<span>图片</span></button><button data-action="journal-add-inline-media" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="Add video">▭<span>视频</span></button></div>
@@ -3790,6 +3800,16 @@ export class WalkBackHomeApp {
         ${selected ? `<figcaption class="journal-media-tools">${tools}</figcaption>` : ""}
       </figure>`;
     }).join("")}</div>`;
+  }
+
+  private renderJournalAudioDeleteConfirmation(entry?: DiaryEntry): string {
+    if (!entry || !this.pendingJournalMediaDeleteId) return "";
+    const media = diaryMediaItems(entry).find((item) => item.id === this.pendingJournalMediaDeleteId && item.type === "audio");
+    if (!media) return "";
+    return `<div class="modal game-panel journal-audio-delete-confirmation delete-confirmation" role="dialog" aria-modal="true" aria-label="Confirm voice note deletion">
+      <div><strong>Delete this voice note?</strong><p>This removes the recording from this journal.</p></div>
+      <div class="delete-confirmation-actions"><button data-action="journal-audio-delete-cancel">Cancel</button><button class="danger" data-action="journal-audio-delete-confirm">Delete</button></div>
+    </div>`;
   }
 
   private journalMediaCropStyle(crop: unknown): string {
@@ -4074,17 +4094,12 @@ export class WalkBackHomeApp {
     const entryId = editor?.dataset.entry ?? "";
     const entry = this.diaryEntries.find((item) => item.id === entryId);
     if (!entry || !mediaId) return;
-    const pending = this.pendingJournalAudio.get(entry.id) ?? [];
-    const pendingItem = pending.find((item) => item.mediaId === mediaId);
-    if (pendingItem) {
-      this.pendingJournalAudio.set(entry.id, pending.filter((item) => item.mediaId !== mediaId));
-      void this.journalMediaBlobStore.deleteBlob(pendingItem.tempKey);
-      this.journalMediaObjectUrls.delete(pendingItem.tempKey);
-      this.journalMediaResolution.delete(pendingItem.tempKey);
-      this.selectedJournalMediaId = "";
-      this.journalEditorDirty = true;
+    const editing = this.pendingAudioEntry(entry);
+    const selected = diaryMediaItems(editing).find((media) => media.id === mediaId);
+    if (selected?.type === "audio") {
+      this.pendingJournalMediaDeleteId = mediaId;
+      this.selectedJournalMediaId = mediaId;
       this.showDiaryEditorPreservingScroll(entry.id);
-      this.showToast("Media removed");
       return;
     }
     const draft = this.readDiaryDraftFromOverlay(entry.id) ?? entry;
@@ -4095,6 +4110,42 @@ export class WalkBackHomeApp {
     this.updateDiaryEditorImmediately(next);
     if (removed?.type === "audio" && !collectReferencedJournalMediaKeys(this.makeDiaryLibrary()).includes(removed.storageKey)) void this.journalMediaBlobStore.deleteBlob(removed.storageKey);
     this.showToast("Media removed");
+  }
+
+  private async confirmJournalMediaDelete(): Promise<void> {
+    const editor = this.overlay.querySelector<HTMLElement>(".diary-page-editor");
+    const entryId = editor?.dataset.entry ?? "";
+    const mediaId = this.pendingJournalMediaDeleteId;
+    const entry = this.diaryEntries.find((item) => item.id === entryId);
+    if (!entry || !mediaId) return;
+    const pending = this.pendingJournalAudio.get(entry.id) ?? [];
+    const pendingItem = pending.find((item) => item.mediaId === mediaId);
+    this.pendingJournalMediaDeleteId = "";
+    this.selectedJournalMediaId = "";
+    if (pendingItem) {
+      this.pendingJournalAudio.set(entry.id, pending.filter((item) => item.mediaId !== mediaId));
+      await this.journalMediaBlobStore.deleteBlob(pendingItem.tempKey);
+      this.journalMediaObjectUrls.delete(pendingItem.tempKey);
+      this.journalMediaResolution.delete(pendingItem.tempKey);
+      this.journalEditorDirty = true;
+      this.showDiaryEditorPreservingScroll(entry.id);
+      this.showToast("Media removed");
+      return;
+    }
+    const draft = this.readDiaryDraftFromOverlay(entry.id) ?? entry;
+    const removed = diaryMediaItems(draft).find((media) => media.id === mediaId && media.type === "audio");
+    if (!removed || removed.type !== "audio") return;
+    const next = removeJournalMedia(draft, mediaId);
+    this.updateDiaryEditorImmediately(next);
+    if (!collectReferencedJournalMediaKeys(this.makeDiaryLibrary()).includes(removed.storageKey)) await this.journalMediaBlobStore.deleteBlob(removed.storageKey);
+    this.showToast("Media removed");
+  }
+
+  private cancelJournalMediaDelete(): void {
+    const editor = this.overlay.querySelector<HTMLElement>(".diary-page-editor");
+    const entryId = editor?.dataset.entry ?? "";
+    this.pendingJournalMediaDeleteId = "";
+    this.showDiaryEditorPreservingScroll(entryId);
   }
 
   private cropSelectedJournalMedia(mediaId: string): void {

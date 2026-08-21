@@ -3031,6 +3031,15 @@ canvas {
   max-width: calc(100% - 28px);
   transform: translate(-50%, -50%);
 }
+.journal-audio-delete-confirmation {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 60;
+  width: min(520px, calc(100% - 28px));
+  max-width: calc(100% - 28px);
+  transform: translate(-50%, -50%);
+}
 .delete-confirmation strong,
 .records-delete-confirmation strong {
   display: block;
