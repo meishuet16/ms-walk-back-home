@@ -189,6 +189,32 @@ test("Today / Home no longer renders the retired Continue action", () => {
   assert.doesNotMatch(showHome, /data-action="continue"/);
 });
 
+test("mobile journal deletion confirmation is centered in the viewport", () => {
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-delete-confirmation[\s\S]*top:\s*50%/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-delete-confirmation[\s\S]*bottom:\s*auto/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-delete-confirmation[\s\S]*translate\(-50%,\s*-50%\)/);
+});
+
+test("journal discard confirmation stays over the active editor", () => {
+  assert.match(appSource, /journal-discard-confirmation/);
+  assert.match(appSource, /overlay\.insertAdjacentHTML\("beforeend"[\s\S]*journal-discard-confirmation/);
+  assert.match(stylesSource, /\.journal-discard-confirmation[\s\S]*position:\s*absolute/);
+});
+
+test("Records is a top menu route rather than a Settings module", () => {
+  const topNavSource = appSource.match(/private renderTopNav\(\): void \{[\s\S]*?\n  \}/)?.[0] ?? "";
+  const settingsSource = appSource.match(/private settingsContent\(\): string \{[\s\S]*?\n  \}/)?.[0] ?? "";
+  assert.match(topNavSource, /data-action="open-room"[\s\S]*data-action="room-records"/);
+  assert.doesNotMatch(settingsSource, /data-action="room-records"/);
+});
+
+test("mobile Records batch confirmation is centered within the open song sheet", () => {
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.records-song-sheet \.records-batch-mobile-confirmation[\s\S]*position:\s*fixed/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.records-song-sheet \.records-batch-mobile-confirmation[\s\S]*top:\s*50%/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.records-song-sheet \.records-batch-mobile-confirmation[\s\S]*translate\(-50%,\s*-50%\)/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.records-song-sheet \.records-batch-toolbar[\s\S]*position:\s*sticky/);
+});
+
 test("Records playback refreshes desktop and mobile lyrics without rebuilding the modal", () => {
   assert.match(appSource, /data-lyric-index/);
   assert.match(appSource, /querySelectorAll<HTMLElement>\("\.records-mobile-lyrics p"\)/);

@@ -2465,6 +2465,7 @@ export class WalkBackHomeApp {
           <button data-action="open-timeline">Timeline</button>
           <button data-action="forest">Forest</button>
           <button data-action="open-room">Muji Room</button>
+          <button data-action="room-records">Records</button>
           <button data-action="reflection-wall">Reflection Wall</button>
           <button data-action="toggle-touch-controls">Joystick: ${this.forceTouchControls ? "On" : "Auto"}</button>
           <button data-action="settings">Settings</button>
@@ -2516,7 +2517,6 @@ export class WalkBackHomeApp {
         <button data-action="home">Today / Home<span>Write today or continue gently</span></button>
         <button data-action="open-timeline">Timeline<span>${this.diaryEntries.length} diary entries</span></button>
         <button data-action="open-map">Walk Back Home<span>${this.allDoors().length} forest memories</span></button>
-        <button data-action="room-records">Records<span>Play personal music and floating lyrics</span></button>
         <button data-action="backup-sync">Backup / Sync<span>Portable backup and cloud account</span></button>
       </div>
       <div class="settings-row"><button data-action="rain">Rain: ${this.settings.rain ? "On" : "Off"}</button><button data-action="fullscreen">Fullscreen</button><button data-action="edit-touch-controls">Edit Touch Controls</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
@@ -2615,7 +2615,7 @@ export class WalkBackHomeApp {
       return;
     }
     const entryId = this.journalEditorEntryId;
-    this.overlay.innerHTML = `<div class="modal game-panel journal-discard-confirmation" role="dialog" aria-modal="true" aria-label="Discard journal changes"><h2>Discard changes?</h2><p>Your journal changes will not be kept.</p><div class="settings-row"><button data-action="journal-discard-cancel">Keep Editing</button><button class="danger" data-action="journal-discard-confirm" data-id="${this.escapeHtml(entryId)}">Discard Changes</button></div></div>`;
+    this.overlay.insertAdjacentHTML("beforeend", `<div class="modal game-panel journal-discard-confirmation" role="dialog" aria-modal="true" aria-label="Discard journal changes"><h2>Discard changes?</h2><p>Your journal changes will not be kept.</p><div class="settings-row"><button data-action="journal-discard-cancel">Keep Editing</button><button class="danger" data-action="journal-discard-confirm" data-id="${this.escapeHtml(entryId)}">Discard Changes</button></div></div>`);
     this.focusStage();
   }
 

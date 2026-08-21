@@ -2970,6 +2970,15 @@ canvas {
 .records-batch-mobile-confirmation {
   display: none;
 }
+.journal-discard-confirmation {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 60;
+  width: min(520px, calc(100% - 28px));
+  max-width: calc(100% - 28px);
+  transform: translate(-50%, -50%);
+}
 .delete-confirmation strong,
 .records-delete-confirmation strong {
   display: block;
@@ -3189,6 +3198,27 @@ canvas {
   .records-song-sheet.open {
     display: grid;
     gap: 12px;
+  }
+  .records-song-sheet .records-batch-mobile-confirmation {
+    position: fixed;
+    left: 50%;
+    right: auto;
+    top: 50%;
+    bottom: auto;
+    z-index: 90;
+    width: min(460px, calc(100vw - 28px));
+    max-width: calc(100vw - 28px);
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    transform: translate(-50%, -50%);
+  }
+  .records-song-sheet .records-batch-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    margin-top: -10px;
+    padding-top: 22px;
+    background: rgba(31, 20, 10, .98);
   }
   .sheet-handle {
     justify-self: center;
@@ -4371,11 +4401,12 @@ canvas {
     position: fixed;
     left: 50%;
     right: auto;
-    bottom: calc(18px + env(safe-area-inset-bottom));
+    top: 50%;
+    bottom: auto;
     width: min(332px, calc(100vw - 32px));
     max-width: none;
     z-index: 46;
-    transform: translateX(-50%);
+    transform: translate(-50%, -50%);
   }
   .timeline-date-heading {
     background: rgba(245, 236, 219, .96);
