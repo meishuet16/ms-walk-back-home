@@ -11,7 +11,7 @@ Repair the mobile portrait experience in `apps/html-prototype` while preserving 
 - Play, delete-menu actions, and changing songs must preserve the current Records scroll position.
 - Records supports selecting and deselecting songs, Select All, batch delete, and batch Artist/Album editing. Single-track editing continues to support Title, Artist, Cover, and Lyrics.
 - Built-in tracks keep their fixture data immutable; edits are stored as local overrides.
-- Every fresh entry into a Chapter that has an automatic cutscene starts that cutscene again, even when the Chapter was previously visited or completed. A trigger may start only once during a single active Chapter session. `completedMemoryEvents` remains completion/unlock state, not an automatic-trigger suppression flag.
+- Every fresh entry into a Chapter that has an automatic cutscene starts that cutscene again, even when the Chapter was previously visited or completed. A session-local automatic-trigger eligibility flag is consumed on the first trigger and remains blocked for the entire active Chapter session, including after the cutscene finishes. Only leaving the Chapter and freshly re-entering resets that eligibility. `completedMemoryEvents` remains completion/unlock state, not an automatic-trigger suppression flag.
 - Journal viewer Back returns to the exact originating Books or Timeline surface and restores its scroll position. It must not default to Timeline or to the top.
 - The Timeline Show more action remains visible in portrait layouts.
 - Changing a Books cover updates the visible preview immediately.
@@ -41,7 +41,7 @@ Add a small Records selection state owned by `WalkHomeApp`:
 - `recordsReturnScrollTop`/existing scroll state retained as the single source of truth for the Records panel scroll offset.
 - A helper returns the currently visible track IDs after search and sort, so Select All applies to the complete filtered list, not only the visible DOM slice.
 
-Render each row with a checkbox or equivalent selection control that does not activate playback. Render a Records batch toolbar when at least one track is selected. The toolbar exposes Select All/Clear, batch Artist, batch Album, and batch Delete. Batch metadata edits apply to imported tracks directly and to built-in tracks through local override metadata. Batch delete removes only user tracks; built-in selections are ignored with a clear local toast. Single-track fields retain their current behavior.
+Render each row with a checkbox or equivalent selection control that does not activate playback. Render a Records batch toolbar when at least one track is selected. The toolbar exposes Select All/Clear, batch Artist, batch Album, and batch Delete. Batch metadata edits apply to imported tracks directly and to built-in tracks through local override metadata. Mixed batch deletion removes selected user tracks, preserves selected built-in tracks, and shows a deterministic toast reporting how many built-ins were skipped. Single-track fields retain their current behavior.
 
 Keep the delete confirmation in a sibling layer of the scrollable Records content, using a viewport-centered or bottom-sheet layout with `position: fixed` relative to the Records modal/overlay. On confirmation or cancellation, restore the saved Records scroll offset after the modal DOM is settled.
 
@@ -88,7 +88,7 @@ Keep the stored percentage model, but compute mobile-safe note positions against
 
 ### Menu and Music toggle
 
-Render a top-right button outside the settings menu with `aria-label="Toggle music"`, a `🎵` icon, and an enabled/disabled state. It calls the existing scene music toggle and updates its state immediately. Remove the legacy Music, Credits, compact-resolution, Begin Again, and Continue controls from the menu surface. Keep internal load/reset methods untouched unless they are unreachable legacy UI and remove only dead event branches after tests confirm no active flow uses them.
+Render a top-right button in the existing app-level responsive control area with `aria-label="Toggle music"`, a `🎵` icon, and an enabled/disabled state. It calls the existing scene music toggle and updates its state immediately. Reuse the existing responsive positioning and safe-area behavior; do not render a second toggle inside modals, fullscreen surfaces, or a second shell control during fullscreen gameplay. Remove the legacy Music, Credits, compact-resolution, Begin Again, and Continue controls from the menu surface. Keep internal load/reset methods untouched unless they are unreachable legacy UI and remove only dead event branches after tests confirm no active flow uses them.
 
 ## Error handling and privacy
 
@@ -104,12 +104,12 @@ Add or extend focused Node tests before implementation for:
 - mobile and desktop lyric containers receiving the same active index on time updates;
 - Records scroll restoration through play, delete-menu, track-change, and confirmation flows;
 - fixed delete-dialog markup/CSS being outside the scrolling content;
-- Select All selecting every filtered track, batch metadata changes, and user-only deletion;
-- repeated automatic Chapter entry after a completed event, plus no repeated start within one active session;
+- Select All selecting every filtered track, batch metadata changes, mixed deletion that preserves built-ins, and the skipped-built-in toast;
+- repeated automatic Chapter entry after a completed event, plus no repeated start within one active session even after the cutscene finishes;
 - Journal reader return snapshots for Books and Timeline with scroll restoration;
 - immediate monthly cover state/markup update after file input handling;
 - Reflection Wall edge clamping for right/bottom mobile positions;
-- presence of the top-right 🎵 toggle and absence of removed menu actions.
+- presence of exactly one app-level top-right 🎵 toggle across normal and fullscreen shell states, and absence of removed menu actions.
 
 Run the existing typecheck, full html-prototype test suite, build, and a mobile portrait browser smoke test at 390x844. Do not change authored fixture files or commit private runtime data.
 
