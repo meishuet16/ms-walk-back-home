@@ -21,7 +21,8 @@ import { createJournalReturnSnapshot, journalReturnTarget, moveBooksMonth as mov
 import { adjacentMonthKey, defaultMonthlyCover, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, monthLabel, selectedOrLatestMonth, selectAllTimelineEntryIds, sortMonthEntries, upsertMonthlyCover, visibleTimelineEntries, type JournalMonth, type MonthlyJournalPdfPage, type TimelineDateScope, type TimelineMemoryKindFilter } from "./systems/JournalModel.js";
 import { createBackupBundle, parseBackupBundle, restoreBackupBlobEntries, walkBackupFilename, type BackupBlobEntry } from "./systems/BackupManager.js";
 import { JournalMediaBlobStore } from "./systems/JournalMediaBlobStore.js";
-import { collectReferencedJournalMediaKeys } from "./systems/JournalMedia.js";
+import { collectReferencedJournalMediaKeys, commitPendingJournalAudio, journalMediaTempKey, makeJournalAudioMedia, type PendingJournalAudio } from "./systems/JournalMedia.js";
+import { JournalAudioRecorder } from "./systems/JournalAudioRecorder.js";
 import { MusicBlobStore } from "./systems/MusicBlobStore.js";
 import { ParticleSystem } from "./systems/ParticleSystem.js";
 import { BundledLyricsLoader, trackIdentity } from "./systems/BundledLyrics.js";
@@ -182,6 +183,11 @@ export class WalkBackHomeApp {
   private journalEditorSnapshot: DiaryLibraryState | null = null;
   private journalEditorIsNew = false;
   private journalEditorDirty = false;
+  private journalAudioRecorder: JournalAudioRecorder | null = null;
+  private journalAudioTimer = 0;
+  private pendingJournalAudio = new Map<string, PendingJournalAudio[]>();
+  private journalMediaObjectUrls = new Map<string, string>();
+  private journalMediaResolution = new Map<string, "loading" | "missing">();
   private availableVinylRecords: VinylRecord[] = vinylRecords;
   private musicLibrary: PersonalMusicLibraryState = { version: 1, savedAt: new Date().toISOString(), tracks: [] };
   private personalPlayer: PersonalPlayerState = createDefaultPersonalPlayerState();
@@ -320,6 +326,12 @@ export class WalkBackHomeApp {
       if (document.hidden) this.last = performance.now();
       else void this.audio.ensurePlaying();
     });
+    window.addEventListener("pagehide", () => {
+      this.journalAudioRecorder?.cancel();
+      this.clearJournalAudioTimer();
+      this.journalMediaBlobStore.revokeAllObjectUrls();
+      this.journalMediaObjectUrls.clear();
+    });
     requestAnimationFrame((time) => this.loop(time));
   }
 
@@ -370,7 +382,28 @@ export class WalkBackHomeApp {
       this.restoreJournalOrigin();
       return;
     }
-    if (action === "save-diary-entry") this.saveDiaryEntry(target.dataset.id);
+    if (action === "save-diary-entry") {
+      void this.saveDiaryEntry(target.dataset.id);
+      return;
+    }
+    if (action === "journal-record-audio") {
+      void this.startJournalAudioRecording();
+      return;
+    }
+    if (action === "journal-audio-stop") {
+      void this.stopJournalAudioRecording();
+      return;
+    }
+    if (action === "journal-audio-pause") {
+      this.journalAudioRecorder?.pause();
+      this.refreshJournalAudioRecordingUi();
+      return;
+    }
+    if (action === "journal-audio-resume") {
+      this.journalAudioRecorder?.resume();
+      this.refreshJournalAudioRecordingUi();
+      return;
+    }
     if (action === "edit-diary-entry") {
       this.journalMoreMenuOpen = false;
       this.captureJournalReturnSnapshot();
@@ -424,7 +457,7 @@ export class WalkBackHomeApp {
       return;
     }
     if (action === "journal-discard-confirm") {
-      this.discardJournalEditor();
+      void this.discardJournalEditor();
       return;
     }
     if (action === "journal-discard-cancel") {
@@ -2662,10 +2695,139 @@ export class WalkBackHomeApp {
 
   private endJournalEditor(): void {
     window.clearTimeout(this.diaryAutosaveTimer);
+    this.journalAudioRecorder?.cancel();
+    this.clearJournalAudioTimer();
     this.journalEditorEntryId = "";
     this.journalEditorSnapshot = null;
     this.journalEditorIsNew = false;
     this.journalEditorDirty = false;
+  }
+
+  private pendingAudioEntry(entry: DiaryEntry): DiaryEntry {
+    const pending = this.pendingJournalAudio.get(entry.id) ?? [];
+    if (!pending.length) return entry;
+    return {
+      ...entry,
+      media: [
+        ...(entry.media ?? []),
+        ...pending.map((item) => makeJournalAudioMedia({
+          id: item.mediaId,
+          storageKey: item.tempKey,
+          mimeType: item.mimeType,
+          duration: item.duration,
+          displayName: item.displayName,
+          createdAt: item.createdAt
+        }))
+      ]
+    };
+  }
+
+  private async startJournalAudioRecording(): Promise<void> {
+    if (!this.isJournalEditorActive()) return;
+    if (this.journalAudioRecorder?.isActive()) return;
+    try {
+      this.journalAudioRecorder = new JournalAudioRecorder();
+      await this.journalAudioRecorder.start();
+      this.journalEditorDirty = true;
+      this.clearJournalAudioTimer();
+      this.journalAudioTimer = window.setInterval(() => this.refreshJournalAudioRecordingUi(), 250);
+      this.refreshJournalAudioRecordingUi();
+    } catch (error) {
+      this.journalAudioRecorder = null;
+      this.clearJournalAudioTimer();
+      this.showToast(error instanceof Error ? error.message : "Audio recording is unavailable on this device.");
+      this.refreshJournalAudioRecordingUi();
+    }
+  }
+
+  private async stopJournalAudioRecording(): Promise<void> {
+    const recorder = this.journalAudioRecorder;
+    const entryId = this.journalEditorEntryId;
+    if (!recorder?.isActive() || !entryId) return;
+    try {
+      const result = await recorder.stop();
+      const mediaId = `audio-${Date.now()}`;
+      const tempKey = journalMediaTempKey(entryId, mediaId);
+      await this.journalMediaBlobStore.putBlob(tempKey, result.blob);
+      const pending: PendingJournalAudio = {
+        mediaId,
+        tempKey,
+        blob: result.blob,
+        duration: result.duration,
+        mimeType: result.mimeType,
+        displayName: `Voice note ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
+        createdAt: new Date().toISOString()
+      };
+      this.pendingJournalAudio.set(entryId, [...(this.pendingJournalAudio.get(entryId) ?? []), pending]);
+      this.journalMediaResolution.delete(tempKey);
+      const objectUrl = await this.journalMediaBlobStore.objectUrlFor(tempKey);
+      if (objectUrl) this.journalMediaObjectUrls.set(tempKey, objectUrl);
+      this.journalAudioRecorder = null;
+      this.clearJournalAudioTimer();
+      this.showDiaryEditorPreservingScroll(entryId);
+      this.showToast("Voice note ready — save the journal to keep it");
+    } catch (error) {
+      this.journalAudioRecorder = null;
+      this.clearJournalAudioTimer();
+      this.showToast(error instanceof Error ? error.message : "Could not finish the voice note.");
+      this.refreshJournalAudioRecordingUi();
+    }
+  }
+
+  private clearJournalAudioTimer(): void {
+    if (this.journalAudioTimer) window.clearInterval(this.journalAudioTimer);
+    this.journalAudioTimer = 0;
+  }
+
+  private refreshJournalAudioRecordingUi(): void {
+    const status = this.overlay.querySelector<HTMLElement>(".journal-audio-recording-state");
+    const controls = this.overlay.querySelector<HTMLElement>(".journal-audio-recording-controls");
+    if (!status || !controls) return;
+    const recorder = this.journalAudioRecorder;
+    const active = Boolean(recorder?.isActive());
+    const paused = active && recorder?.state() === "paused";
+    status.textContent = active ? `${paused ? "Paused" : "Recording"} ${Math.floor((recorder?.elapsedMs() ?? 0) / 1000)}s` : "Add a voice note";
+    controls.classList.toggle("recording", active);
+    controls.innerHTML = active
+      ? `<button data-action="journal-audio-stop" aria-label="Stop recording">■ Stop</button><button data-action="${paused ? "journal-audio-resume" : "journal-audio-pause"}" aria-label="${paused ? "Resume" : "Pause"} recording">${paused ? "Resume" : "Pause"}</button>`
+      : `<button data-action="journal-record-audio" aria-label="Record audio">🎙 Record voice</button>`;
+  }
+
+  private async resolveJournalAudioMedia(entryId: string, media: Extract<DiaryMedia, { type: "audio" }>): Promise<void> {
+    const key = media.storageKey;
+    if (!key || this.journalMediaObjectUrls.has(key) || this.journalMediaResolution.get(key) === "loading" || this.journalMediaResolution.get(key) === "missing") return;
+    this.journalMediaResolution.set(key, "loading");
+    const objectUrl = await this.journalMediaBlobStore.objectUrlFor(key);
+    if (objectUrl) {
+      this.journalMediaObjectUrls.set(key, objectUrl);
+      this.journalMediaResolution.delete(key);
+    } else {
+      this.journalMediaResolution.set(key, "missing");
+    }
+    const editor = this.overlay.querySelector<HTMLElement>(`.diary-page-editor[data-entry="${this.escapeHtml(entryId)}"]`);
+    if (editor) {
+      const item = editor.querySelector<HTMLElement>(`[data-media="${this.escapeHtml(media.id)}"] .journal-media-select`);
+      if (item) item.innerHTML = this.renderJournalAudioNode(media);
+      return;
+    }
+    if (this.overlay.querySelector(`.journal-reading-page`) && this.diaryEntries.some((entry) => entry.id === entryId)) this.showDiaryReader(entryId);
+  }
+
+  private renderJournalAudioNode(media: Extract<DiaryMedia, { type: "audio" }>): string {
+    const url = this.journalMediaObjectUrls.get(media.storageKey);
+    if (url) return `<audio class="journal-audio-player" controls preload="metadata" src="${this.escapeHtml(url)}" aria-label="${this.escapeHtml(media.displayName ?? "Journal voice note")}"></audio>`;
+    if (this.journalMediaResolution.get(media.storageKey) === "missing") return `<span class="journal-audio-unavailable">🎙 Voice note unavailable on this device</span>`;
+    return `<span class="journal-audio-loading">🎙 Loading voice note…</span>`;
+  }
+
+  private async clearPendingJournalAudio(entryId: string): Promise<void> {
+    const pending = this.pendingJournalAudio.get(entryId) ?? [];
+    for (const item of pending) {
+      await this.journalMediaBlobStore.deleteBlob(item.tempKey);
+      this.journalMediaObjectUrls.delete(item.tempKey);
+      this.journalMediaResolution.delete(item.tempKey);
+    }
+    this.pendingJournalAudio.delete(entryId);
   }
 
   private isJournalEditorActive(): boolean {
@@ -2709,9 +2871,12 @@ export class WalkBackHomeApp {
     this.showDiaryEditor(this.journalEditorEntryId);
   }
 
-  private discardJournalEditor(): void {
+  private async discardJournalEditor(): Promise<void> {
     const snapshot = this.journalEditorSnapshot;
     if (!snapshot) return this.restoreJournalOrigin();
+    const entryId = this.journalEditorEntryId;
+    this.journalAudioRecorder?.cancel();
+    await this.clearPendingJournalAudio(entryId);
     this.endJournalEditor();
     this.applyDiaryLibrary(snapshot);
     this.restoreJournalOrigin();
@@ -3443,7 +3608,7 @@ export class WalkBackHomeApp {
     const mediaHtml = media.length ? `<div class="journal-reading-media count-${Math.min(media.length, 4)}">${media.map((item) => item.type === "video"
       ? `<video class="journal-video-block" controls preload="metadata" src="${this.escapeHtml(item.src)}" aria-label="${this.escapeHtml(item.caption ?? "Journal video")}"></video>`
       : item.type === "audio"
-        ? `<div class="journal-audio-unavailable">🎙 ${this.escapeHtml(item.displayName ?? "Voice note")}</div>`
+        ? `<div class="journal-audio-reading" data-media="${this.escapeHtml(item.id)}">${this.renderJournalAudioNode(item)}</div>`
         : `<figure>${this.renderJournalImageCrop(item, "journal-reading-photo-frame")}</figure>`).join("")}</div>` : "";
     const moodMeta = entry.mood ? `心情：${entry.mood}` : "";
     this.overlay.innerHTML = `
@@ -3460,13 +3625,15 @@ export class WalkBackHomeApp {
         </article>
       </div>`;
     this.focusStage();
+    for (const item of media) if (item.type === "audio") void this.resolveJournalAudioMedia(entry.id, item);
   }
 
   private showDiaryEditor(editId = ""): void {
     if (!editId) return this.showTimeline();
     if (this.journalEditorEntryId !== editId || !this.journalEditorSnapshot) this.beginJournalEditor(editId);
     const moreOpen = this.journalMoreMenuOpen;
-    const editing = this.diaryEntries.find((entry) => entry.id === editId) ?? this.diaryEntries[0];
+    const editingBase = this.diaryEntries.find((entry) => entry.id === editId) ?? this.diaryEntries[0];
+    const editing = editingBase ? this.pendingAudioEntry(editingBase) : editingBase;
     const today = new Date().toISOString().slice(0, 10);
     const dateValue = editing?.date ?? today;
     const weekday = formatDiaryWeekday(dateValue);
@@ -3523,22 +3690,43 @@ export class WalkBackHomeApp {
         </section>
         ${this.renderJournalCropModal(editing)}
         <div class="integrated-tools journal-photo-dock"></div>
+        <div class="journal-audio-recording-panel"><div class="journal-audio-recording-controls"></div><span class="journal-audio-recording-state">Add a voice note</span></div>
         <div class="mobile-editor-toolbar"><button data-action="journal-add-inline-media" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="Add photo">▧<span>图片</span></button><button data-action="journal-add-inline-media" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="Add video">▭<span>视频</span></button></div>
         <input id="diary-mobile-media-input" class="sr-only" type="file" accept="image/*,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov" multiple>
       </div>`;
+    this.refreshJournalAudioRecordingUi();
+    for (const item of diaryMediaItems(editing)) if (item.type === "audio") void this.resolveJournalAudioMedia(editing.id, item);
     this.focusStage();
   }
 
-  private saveDiaryEntry(id = ""): void {
+  private async saveDiaryEntry(id = ""): Promise<void> {
     window.clearTimeout(this.diaryAutosaveTimer);
+    if (this.journalAudioRecorder?.isActive()) {
+      this.showToast("Stop the voice note before saving");
+      return;
+    }
     const entry = this.readDiaryDraftFromOverlay(id);
     if (!entry) return;
+    const pending = this.pendingJournalAudio.get(entry.id) ?? [];
+    let committedAudio: DiaryMedia[] = [];
+    try {
+      committedAudio = await commitPendingJournalAudio(this.journalMediaBlobStore, entry.id, pending);
+    } catch (error) {
+      this.showToast(error instanceof Error ? error.message : "Could not save the voice note.");
+      return;
+    }
+    const savedEntry = committedAudio.length ? { ...entry, media: [...(entry.media ?? []), ...committedAudio] } : entry;
     const index = this.diaryEntries.findIndex((item) => item.id === entry.id);
-    this.applyDiaryLibrary(upsertDiaryPageDraft(this.makeDiaryLibrary(), entry));
-    this.selectedChapter = entry.title;
+    this.applyDiaryLibrary(upsertDiaryPageDraft(this.makeDiaryLibrary(), savedEntry));
+    this.pendingJournalAudio.delete(entry.id);
+    for (const item of pending) {
+      this.journalMediaObjectUrls.delete(item.tempKey);
+      this.journalMediaResolution.delete(item.tempKey);
+    }
+    this.selectedChapter = savedEntry.title;
     this.journalMoreMenuOpen = false;
     this.endJournalEditor();
-    this.showDiaryReader(entry.id);
+    this.showDiaryReader(savedEntry.id);
     this.showToast(index >= 0 ? "Diary updated" : "Diary entry added");
     this.autosave();
   }
@@ -3584,13 +3772,18 @@ export class WalkBackHomeApp {
       const mediaNode = item.type === "video"
         ? `<span class="journal-video-select-frame"><video class="journal-inline-photo journal-inline-video" preload="metadata" muted playsinline src="${this.escapeHtml(item.src)}" aria-label="${this.escapeHtml(item.caption ?? "Journal video")}"></video><span class="journal-video-select-shield" data-action="journal-media-select" data-media="${this.escapeHtml(item.id)}" aria-hidden="true">Tap for tools</span></span>`
         : item.type === "audio"
-          ? `<span class="journal-audio-preview">🎙<strong>Voice note</strong></span>`
+          ? this.renderJournalAudioNode(item)
           : this.renderJournalImageCrop(item, "journal-inline-photo-frame");
       const tools = item.type === "image"
         ? `<button data-action="journal-media-crop" data-media="${this.escapeHtml(item.id)}" data-crop-mode="custom">Edit Crop</button><button data-action="journal-media-remove" data-media="${this.escapeHtml(item.id)}">Remove</button>`
-        : `<span class="journal-media-type">${item.type === "audio" ? "Voice note" : "Video"}</span><button data-action="journal-media-remove" data-media="${this.escapeHtml(item.id)}">Remove</button>`;
+        : item.type === "audio"
+          ? `<span class="journal-media-type">Voice note</span><button data-action="journal-media-remove" data-media="${this.escapeHtml(item.id)}">Remove</button>`
+          : `<span class="journal-media-type">Video</span><button data-action="journal-media-remove" data-media="${this.escapeHtml(item.id)}">Remove</button>`;
+      const selector = item.type === "audio"
+        ? `<div class="journal-media-select" data-action="journal-media-select" data-media="${this.escapeHtml(item.id)}" aria-label="Select media">${mediaNode}</div>`
+        : `<button class="journal-media-select" data-action="journal-media-select" data-media="${this.escapeHtml(item.id)}" aria-label="Select media">${mediaNode}</button>`;
       return `<figure class="journal-inline-media-item ${selected ? "selected" : ""}" data-media="${this.escapeHtml(item.id)}">
-        <button class="journal-media-select" data-action="journal-media-select" data-media="${this.escapeHtml(item.id)}" aria-label="Select media">${mediaNode}</button>
+        ${selector}
         ${selected ? `<figcaption class="journal-media-tools">${tools}</figcaption>` : ""}
       </figure>`;
     }).join("")}</div>`;
@@ -3878,11 +4071,26 @@ export class WalkBackHomeApp {
     const entryId = editor?.dataset.entry ?? "";
     const entry = this.diaryEntries.find((item) => item.id === entryId);
     if (!entry || !mediaId) return;
+    const pending = this.pendingJournalAudio.get(entry.id) ?? [];
+    const pendingItem = pending.find((item) => item.mediaId === mediaId);
+    if (pendingItem) {
+      this.pendingJournalAudio.set(entry.id, pending.filter((item) => item.mediaId !== mediaId));
+      void this.journalMediaBlobStore.deleteBlob(pendingItem.tempKey);
+      this.journalMediaObjectUrls.delete(pendingItem.tempKey);
+      this.journalMediaResolution.delete(pendingItem.tempKey);
+      this.selectedJournalMediaId = "";
+      this.journalEditorDirty = true;
+      this.showDiaryEditorPreservingScroll(entry.id);
+      this.showToast("Media removed");
+      return;
+    }
     const draft = this.readDiaryDraftFromOverlay(entry.id) ?? entry;
     const photoMatch = draft.photos?.some((photo) => photo.id === mediaId);
+    const removed = diaryMediaItems(draft).find((media) => media.id === mediaId);
     const next = photoMatch ? removePhotoAttachment(draft, mediaId) : removeJournalMedia(draft, mediaId);
     this.selectedJournalMediaId = "";
     this.updateDiaryEditorImmediately(next);
+    if (removed?.type === "audio" && !collectReferencedJournalMediaKeys(this.makeDiaryLibrary()).includes(removed.storageKey)) void this.journalMediaBlobStore.deleteBlob(removed.storageKey);
     this.showToast("Media removed");
   }
 
@@ -5943,6 +6151,9 @@ export class WalkBackHomeApp {
       this.showToast("That backup file was not recognized.");
       return;
     }
+    this.journalMediaBlobStore.revokeAllObjectUrls();
+    this.journalMediaObjectUrls.clear();
+    this.journalMediaResolution.clear();
     await restoreBackupBlobEntries(bundle.blobs, {
       journalStore: this.journalMediaBlobStore,
       musicStore: this.musicBlobStore

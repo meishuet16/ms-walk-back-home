@@ -125,6 +125,10 @@ export class JournalAudioRecorder {
     return Boolean(this.recorder && this.recorder.state !== "inactive");
   }
 
+  state(): "inactive" | "recording" | "paused" {
+    return this.recorder?.state ?? "inactive";
+  }
+
   elapsedMs(): number {
     if (!this.startedAt) return 0;
     const end = this.pausedAt ?? this.clock();
