@@ -477,3 +477,13 @@ test("mobile journal reflection and pdf surfaces fill the portrait viewport", ()
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.overlay[\s\S]*padding:\s*0/);
 }
 );
+
+test("Backup / Sync exposes readable copy and persistent cloud operation feedback", () => {
+  assert.match(stylesSource, /\.backup-panel \.quiet-line[\s\S]*color:\s*#3c2b1c/);
+  assert.match(appSource, /backupSyncOperation/);
+  assert.match(appSource, /role="status"/);
+  assert.match(appSource, /Syncing this device/);
+  assert.match(appSource, /Pulling cloud memories/);
+  assert.match(appSource, /const cloudActionDisabled = this\.backupSyncOperation \? "disabled" : ""/);
+  assert.match(appSource, /Imported Records audio and covers stayed on this device/);
+});

@@ -203,6 +203,8 @@ export class WalkBackHomeApp {
   private pendingBatchDelete = false;
   private activeRecordMenuTrackId = "";
   private pendingDeleteTrackId = "";
+  private backupSyncOperation: "push" | "pull" | null = null;
+  private backupSyncFeedback: { tone: "info" | "success" | "error"; message: string } | null = null;
   private lyricsDrag: { offsetX: number; offsetY: number } | null = null;
   private lyricsResize: { startX: number; startY: number; startWidth: number; startHeight: number } | null = null;
   private pendingPersonalSeek: number | null = null;
@@ -5991,8 +5993,14 @@ export class WalkBackHomeApp {
     const claimButton = session.mode === "authenticated" && !session.claimedGuestDataAt ? `<button data-action="account-claim-local">Keep local memories with this account</button>` : "";
     const signOut = session.mode === "authenticated" ? `<button data-action="account-sign-out">Sign out</button>` : "";
     const signIn = session.mode === "guest" && this.cloudSync.isConfigured() ? `<button data-action="account-google-sign-in">Sign in with Google</button>` : "";
+    const cloudActionDisabled = this.backupSyncOperation ? "disabled" : "";
+    const pushLabel = this.backupSyncOperation === "push" ? "Syncing this device…" : "Sync this device to cloud";
+    const pullLabel = this.backupSyncOperation === "pull" ? "Pulling cloud memories…" : "Pull cloud memories";
     const cloudActions = session.mode === "authenticated" && this.cloudSync.isConfigured()
-      ? `<button data-action="cloud-sync-push">Sync this device to cloud</button><button data-action="cloud-sync-pull">Pull cloud memories</button>`
+      ? `<button data-action="cloud-sync-push" ${cloudActionDisabled}>${pushLabel}</button><button data-action="cloud-sync-pull" ${cloudActionDisabled}>${pullLabel}</button>`
+      : "";
+    const syncFeedback = this.backupSyncFeedback
+      ? `<p class="sync-feedback sync-feedback-${this.backupSyncFeedback.tone}" role="status">${this.escapeHtml(this.backupSyncFeedback.message)}</p>`
       : "";
     this.overlay.innerHTML = `
       <div class="modal game-panel backup-panel">
@@ -6008,6 +6016,7 @@ export class WalkBackHomeApp {
           <div class="settings-row">${signIn}${claimButton}${signOut}</div>
           <h3>Cloud / Cross-device Sync</h3>
           <p>${this.escapeHtml(this.cloudSync.statusLabel())}</p>
+          ${syncFeedback}
           <div class="settings-row">${cloudActions}</div>
         </div>
         <div class="settings-row"><button data-action="settings">Back</button><button data-action="close">Close</button></div>
@@ -6042,39 +6051,67 @@ export class WalkBackHomeApp {
   }
 
   private async pushCloudSync(): Promise<void> {
+    if (this.backupSyncOperation) return;
     const session = this.account.current();
     if (session.mode !== "authenticated") {
       this.showToast("Sign in with Google first");
       return;
     }
+    this.backupSyncOperation = "push";
+    this.backupSyncFeedback = { tone: "info", message: "Syncing this device to cloud…" };
+    this.showBackupSync();
     try {
       await this.cloudSync.push(this.cloudUserId(session.ownerId), this.makeCloudBundle());
+      this.backupSyncFeedback = {
+        tone: "success",
+        message: "Sync complete · diary, journey, and reflection wall synced. Imported Records audio and covers stayed on this device."
+      };
       this.showToast("Cloud sync complete");
-      this.showBackupSync();
     } catch (error) {
+      this.backupSyncFeedback = { tone: "error", message: `Cloud sync failed · ${this.errorMessage(error)}` };
       this.showToast(`Cloud sync failed · ${this.errorMessage(error)}`);
+    } finally {
+      this.backupSyncOperation = null;
+      this.showBackupSync();
     }
   }
 
   private async pullCloudSync(): Promise<void> {
+    if (this.backupSyncOperation) return;
+    this.backupSyncOperation = "pull";
+    this.backupSyncFeedback = { tone: "info", message: "Pulling cloud memories…" };
+    this.showBackupSync();
     try {
       const bundle = await this.cloudSync.pull();
+      const appliedSections: string[] = [];
       if (bundle.diaryLibrary) {
         this.applyDiaryLibrary(bundle.diaryLibrary);
         this.save.saveDiaryLibrary(this.makeDiaryLibrary());
+        appliedSections.push("Diary");
       }
       if (bundle.reflectionWall) {
         this.reflectionWall = bundle.reflectionWall;
         this.save.saveReflectionWall(this.reflectionWall);
+        appliedSections.push("reflection wall");
       }
       if (bundle.journey) {
         this.applyJourney(bundle.journey);
         this.save.saveJourney(this.makeJourney());
+        appliedSections.push("journey");
       }
+      this.backupSyncFeedback = {
+        tone: "success",
+        message: appliedSections.length
+          ? `Pull complete · ${appliedSections.join(", ")} updated. Imported Records audio and covers stayed on this device.`
+          : "Pull complete · no cloud diary, journey, or reflection wall data was found. Local Records audio and covers stayed on this device."
+      };
       this.showToast("Cloud memories pulled");
-      this.showBackupSync();
     } catch (error) {
+      this.backupSyncFeedback = { tone: "error", message: `Cloud pull failed · ${this.errorMessage(error)}` };
       this.showToast(`Cloud pull failed · ${this.errorMessage(error)}`);
+    } finally {
+      this.backupSyncOperation = null;
+      this.showBackupSync();
     }
   }
 

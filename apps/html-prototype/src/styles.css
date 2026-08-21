@@ -1940,7 +1940,7 @@ canvas {
 }
 .backup-panel .quiet-line,
 .sync-status p {
-  color: #ead3a0;
+  color: #3c2b1c;
 }
 .backup-restore-button {
   display: grid;
@@ -1970,6 +1970,21 @@ canvas {
 .game-panel label {
   color: #3c2b1c;
   text-shadow: none;
+}
+.sync-feedback {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(60, 43, 28, .3);
+  border-radius: 5px;
+  background: rgba(255, 248, 232, .82);
+  color: #3c2b1c !important;
+  font-weight: 700;
+}
+.sync-feedback-success {
+  border-color: rgba(46, 103, 61, .5);
+}
+.sync-feedback-error {
+  border-color: rgba(139, 48, 38, .58);
 }
 .reflection-wall-modal {
   width: min(1120px, calc(100vw - 18px));
