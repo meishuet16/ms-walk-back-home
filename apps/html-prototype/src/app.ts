@@ -19,7 +19,9 @@ import { InputManager } from "./systems/InputManager.js";
 import { journalMediaCropRenderModel, journalMediaCropRenderStyle as renderJournalMediaCropStyle, normalizeJournalMediaCrop } from "./systems/JournalCrop.js";
 import { createJournalReturnSnapshot, journalReturnTarget, moveBooksMonth as moveBooksMonthState, moveTimelineMonth as moveTimelineMonthState, selectBooksYear as selectBooksYearState, selectTimelineYear as selectTimelineYearState, type JournalNavigationState, type JournalReturnSnapshot } from "./systems/JournalNavigation.js";
 import { adjacentMonthKey, defaultMonthlyCover, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, monthLabel, selectedOrLatestMonth, selectAllTimelineEntryIds, sortMonthEntries, upsertMonthlyCover, visibleTimelineEntries, type JournalMonth, type MonthlyJournalPdfPage, type TimelineDateScope, type TimelineMemoryKindFilter } from "./systems/JournalModel.js";
-import { createBackupBundle, parseBackupBundle, walkBackupFilename, type BackupBlobEntry } from "./systems/BackupManager.js";
+import { createBackupBundle, parseBackupBundle, restoreBackupBlobEntries, walkBackupFilename, type BackupBlobEntry } from "./systems/BackupManager.js";
+import { JournalMediaBlobStore } from "./systems/JournalMediaBlobStore.js";
+import { collectReferencedJournalMediaKeys } from "./systems/JournalMedia.js";
 import { MusicBlobStore } from "./systems/MusicBlobStore.js";
 import { ParticleSystem } from "./systems/ParticleSystem.js";
 import { BundledLyricsLoader, trackIdentity } from "./systems/BundledLyrics.js";
@@ -184,6 +186,7 @@ export class WalkBackHomeApp {
   private musicLibrary: PersonalMusicLibraryState = { version: 1, savedAt: new Date().toISOString(), tracks: [] };
   private personalPlayer: PersonalPlayerState = createDefaultPersonalPlayerState();
   private musicBlobStore = new MusicBlobStore();
+  private journalMediaBlobStore = new JournalMediaBlobStore();
   private recordsPanelOpen = false;
   private recordsSongSheetOpen = false;
   private recordsMoreMenuOpen = false;
@@ -5903,12 +5906,24 @@ export class WalkBackHomeApp {
   }
 
   private async backupBlobEntries(): Promise<BackupBlobEntry[]> {
-    const entries = await this.musicBlobStore.entries();
-    return Promise.all(entries.map(async ({ key, blob }) => ({
+    const musicEntries = await this.musicBlobStore.entries();
+    const music = await Promise.all(musicEntries.map(async ({ key, blob }) => ({
       key,
+      kind: "music" as const,
       type: blob.type || "application/octet-stream",
       dataUrl: await this.blobToDataUrl(blob)
     })));
+    const journal = await Promise.all(collectReferencedJournalMediaKeys(this.makeDiaryLibrary()).map(async (key) => {
+      const blob = await this.journalMediaBlobStore.getBlob(key);
+      if (!blob) return null;
+      return {
+        key,
+        kind: "journal-media" as const,
+        type: blob.type || "application/octet-stream",
+        dataUrl: await this.blobToDataUrl(blob)
+      };
+    }));
+    return [...music, ...journal.filter((entry) => entry !== null)];
   }
 
   private blobToDataUrl(blob: Blob): Promise<string> {
@@ -5928,7 +5943,10 @@ export class WalkBackHomeApp {
       this.showToast("That backup file was not recognized.");
       return;
     }
-    for (const entry of bundle.blobs) await this.musicBlobStore.putDataUrl(entry.key, entry.dataUrl);
+    await restoreBackupBlobEntries(bundle.blobs, {
+      journalStore: this.journalMediaBlobStore,
+      musicStore: this.musicBlobStore
+    });
     if (bundle.diaryLibrary) {
       this.applyDiaryLibrary(bundle.diaryLibrary);
       this.save.saveDiaryLibrary(this.makeDiaryLibrary());

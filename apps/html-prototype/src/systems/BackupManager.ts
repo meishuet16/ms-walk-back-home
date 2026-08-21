@@ -3,8 +3,13 @@ import { normalizeReflectionWallState } from "./ReflectionWall.js";
 
 export type BackupBlobEntry = {
   key: string;
+  kind?: "music" | "journal-media";
   type: string;
   dataUrl: string;
+};
+
+export type BackupBlobWriter = {
+  putBlob(key: string, blob: Blob): Promise<void>;
 };
 
 export type WalkBackupBundle = {
@@ -66,8 +71,24 @@ export function walkBackupFilename(now = new Date()): string {
   return `walk-back-home-backup-${now.toISOString().slice(0, 10)}.json`;
 }
 
+export async function restoreBackupBlobEntries(
+  blobs: BackupBlobEntry[],
+  stores: { journalStore: BackupBlobWriter; musicStore: BackupBlobWriter }
+): Promise<void> {
+  for (const entry of blobs) {
+    const response = await fetch(entry.dataUrl);
+    const source = await response.blob();
+    const blob = source.type === entry.type ? source : new Blob([await source.arrayBuffer()], { type: entry.type });
+    await (entry.kind === "journal-media" ? stores.journalStore : stores.musicStore).putBlob(entry.key, blob);
+  }
+}
+
 function isBackupBlobEntry(value: unknown): value is BackupBlobEntry {
   if (!value || typeof value !== "object") return false;
   const candidate = value as BackupBlobEntry;
-  return typeof candidate.key === "string" && typeof candidate.type === "string" && typeof candidate.dataUrl === "string" && candidate.dataUrl.startsWith("data:");
+  return typeof candidate.key === "string"
+    && (candidate.kind === undefined || candidate.kind === "music" || candidate.kind === "journal-media")
+    && typeof candidate.type === "string"
+    && typeof candidate.dataUrl === "string"
+    && candidate.dataUrl.startsWith("data:");
 }
