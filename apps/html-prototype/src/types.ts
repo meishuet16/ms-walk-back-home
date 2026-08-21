@@ -76,7 +76,7 @@ export type DiaryMediaCrop = {
   height: number;
 };
 
-export type DiaryMedia = {
+export type DiaryVisualMedia = {
   id: string;
   type: "image" | "video";
   storageKey?: string;
@@ -88,6 +88,25 @@ export type DiaryMedia = {
   height?: number;
   crop?: DiaryMediaCrop;
 };
+
+export type DiaryAudioMedia = {
+  id: string;
+  type: "audio";
+  storageKey: string;
+  src?: never;
+  caption?: string;
+  displayName?: string;
+  mimeType?: string;
+  duration?: number;
+  createdAt?: string;
+  width?: never;
+  height?: never;
+  crop?: never;
+};
+
+export type DiaryImageMedia = Omit<DiaryVisualMedia, "type"> & { type: "image" };
+export type DiaryVideoMedia = Omit<DiaryVisualMedia, "type"> & { type: "video" };
+export type DiaryMedia = DiaryImageMedia | DiaryVideoMedia | DiaryAudioMedia;
 
 export type JournalBookCoverCrop = "center" | "top" | "bottom" | "contain";
 

@@ -2923,7 +2923,9 @@ export class WalkBackHomeApp {
     const media = allMedia.slice(0, 4);
     const mediaGrid = media.length ? `<div class="timeline-media-grid count-${Math.min(media.length, 4)}">${media.map((item, index) => item.type === "video"
       ? `<span class="journal-video-block preview-video">${index === 3 && allMedia.length > 4 ? `+${allMedia.length - 3}` : "▶"}<small>${this.escapeHtml(item.caption ?? "video")}</small></span>`
-      : `<img class="preview-photo-square" src="${this.escapeHtml(item.src)}" alt="">`).join("")}</div>` : "";
+      : item.type === "audio"
+        ? `<span class="journal-audio-preview preview-audio">🎙<small>Voice note</small></span>`
+        : `<img class="preview-photo-square" src="${this.escapeHtml(item.src)}" alt="">`).join("")}</div>` : "";
     return `<div class="preview-text"><span class="preview-date">${this.escapeHtml(entry.date)}</span><strong>${this.escapeHtml(entry.title)}</strong><span class="preview-body">${this.escapeHtml(entry.body.slice(0, 160)) || "Empty draft"}</span></div>${mediaGrid}<small>${entry.memoryKind}</small>`;
   }
 
@@ -3244,8 +3246,8 @@ export class WalkBackHomeApp {
     return pages;
   }
 
-  private entryPdfImages(entry: DiaryEntry): DiaryMedia[] {
-    return diaryMediaItems(entry).filter((media) => media.type === "image");
+  private entryPdfImages(entry: DiaryEntry): Extract<DiaryMedia, { type: "image" }>[] {
+    return diaryMediaItems(entry).filter((media): media is Extract<DiaryMedia, { type: "image" }> => media.type === "image");
   }
 
   private async renderMonthlyPdfFlowPages(month: JournalMonth): Promise<MonthlyJournalPdfPage[]> {
@@ -3369,7 +3371,7 @@ export class WalkBackHomeApp {
     ctx.restore();
   }
 
-  private async drawDiaryPhotosOnPdfPage(ctx: CanvasRenderingContext2D, photos: DiaryMedia[], x: number, y: number, columns: number, size: number, gap: number): Promise<void> {
+  private async drawDiaryPhotosOnPdfPage(ctx: CanvasRenderingContext2D, photos: Extract<DiaryMedia, { type: "image" }>[], x: number, y: number, columns: number, size: number, gap: number): Promise<void> {
     if (!photos?.length) return;
     for (const [index, photo] of photos.entries()) {
       const image = await this.loadCanvasImage(photo.src);
@@ -3437,7 +3439,9 @@ export class WalkBackHomeApp {
     const media = diaryMediaItems(entry);
     const mediaHtml = media.length ? `<div class="journal-reading-media count-${Math.min(media.length, 4)}">${media.map((item) => item.type === "video"
       ? `<video class="journal-video-block" controls preload="metadata" src="${this.escapeHtml(item.src)}" aria-label="${this.escapeHtml(item.caption ?? "Journal video")}"></video>`
-      : `<figure>${this.renderJournalImageCrop(item, "journal-reading-photo-frame")}</figure>`).join("")}</div>` : "";
+      : item.type === "audio"
+        ? `<div class="journal-audio-unavailable">🎙 ${this.escapeHtml(item.displayName ?? "Voice note")}</div>`
+        : `<figure>${this.renderJournalImageCrop(item, "journal-reading-photo-frame")}</figure>`).join("")}</div>` : "";
     const moodMeta = entry.mood ? `心情：${entry.mood}` : "";
     this.overlay.innerHTML = `
       <div class="modal game-panel journal-reading-page mood-${entry.mood ?? "calm"}">
@@ -3576,10 +3580,12 @@ export class WalkBackHomeApp {
       const selected = this.selectedJournalMediaId === item.id;
       const mediaNode = item.type === "video"
         ? `<span class="journal-video-select-frame"><video class="journal-inline-photo journal-inline-video" preload="metadata" muted playsinline src="${this.escapeHtml(item.src)}" aria-label="${this.escapeHtml(item.caption ?? "Journal video")}"></video><span class="journal-video-select-shield" data-action="journal-media-select" data-media="${this.escapeHtml(item.id)}" aria-hidden="true">Tap for tools</span></span>`
-        : this.renderJournalImageCrop(item, "journal-inline-photo-frame");
+        : item.type === "audio"
+          ? `<span class="journal-audio-preview">🎙<strong>Voice note</strong></span>`
+          : this.renderJournalImageCrop(item, "journal-inline-photo-frame");
       const tools = item.type === "image"
         ? `<button data-action="journal-media-crop" data-media="${this.escapeHtml(item.id)}" data-crop-mode="custom">Edit Crop</button><button data-action="journal-media-remove" data-media="${this.escapeHtml(item.id)}">Remove</button>`
-        : `<span class="journal-media-type">Video</span><button data-action="journal-media-remove" data-media="${this.escapeHtml(item.id)}">Remove</button>`;
+        : `<span class="journal-media-type">${item.type === "audio" ? "Voice note" : "Video"}</span><button data-action="journal-media-remove" data-media="${this.escapeHtml(item.id)}">Remove</button>`;
       return `<figure class="journal-inline-media-item ${selected ? "selected" : ""}" data-media="${this.escapeHtml(item.id)}">
         <button class="journal-media-select" data-action="journal-media-select" data-media="${this.escapeHtml(item.id)}" aria-label="Select media">${mediaNode}</button>
         ${selected ? `<figcaption class="journal-media-tools">${tools}</figcaption>` : ""}
@@ -3592,7 +3598,7 @@ export class WalkBackHomeApp {
     return `--crop-x:${next.x.toFixed(2)}%;--crop-y:${next.y.toFixed(2)}%;--crop-width:${next.width.toFixed(2)}%;--crop-height:${next.height.toFixed(2)}%;`;
   }
 
-  private renderJournalImageCrop(media: DiaryMedia, frameClass: "journal-inline-photo-frame" | "journal-reading-photo-frame"): string {
+  private renderJournalImageCrop(media: Extract<DiaryMedia, { type: "image" }>, frameClass: "journal-inline-photo-frame" | "journal-reading-photo-frame"): string {
     const model = journalMediaCropRenderModel(media.crop, media.width, media.height);
     const hasStoredDimensions = Number.isFinite(media.width) && Number.isFinite(media.height) && (media.width ?? 0) > 0 && (media.height ?? 0) > 0;
     const loadHandler = hasStoredDimensions ? "" : ` onload="this.parentElement.style.setProperty('--crop-source-aspect', this.naturalWidth / Math.max(1, this.naturalHeight));this.parentElement.style.setProperty('--crop-aspect', (this.naturalWidth / Math.max(1, this.naturalHeight)) * (Number(this.parentElement.style.getPropertyValue('--crop-img-width')) / Math.max(1, Number(this.parentElement.style.getPropertyValue('--crop-img-height')))))"`;
@@ -3606,7 +3612,7 @@ export class WalkBackHomeApp {
 
   private renderJournalCropModal(entry?: DiaryEntry): string {
     if (!entry || !this.journalCropMediaId) return "";
-    const media = diaryMediaItems(entry).find((item) => item.id === this.journalCropMediaId && item.type === "image");
+    const media = diaryMediaItems(entry).find((item): item is Extract<DiaryMedia, { type: "image" }> => item.id === this.journalCropMediaId && item.type === "image");
     if (!media) return "";
     const crop = normalizeJournalMediaCrop(media.crop);
     return `<div class="journal-crop-modal" role="dialog" aria-label="Crop journal image">
@@ -4010,7 +4016,7 @@ export class WalkBackHomeApp {
     return {
       ...entry,
       photos: entry.photos?.map((photo) => photo.id === mediaId ? { ...photo, crop } : photo),
-      media: entry.media?.map((media) => media.id === mediaId ? { ...media, crop } : media)
+      media: entry.media?.map((media) => media.id === mediaId && media.type !== "audio" ? { ...media, crop } : media)
     };
   }
 
