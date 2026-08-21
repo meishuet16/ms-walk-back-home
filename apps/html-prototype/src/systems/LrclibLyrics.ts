@@ -165,6 +165,7 @@ type SearchCandidate = {
   title: number;
   artist: number;
   duration: number;
+  durationDifference: number;
   total: number;
 };
 
@@ -174,8 +175,13 @@ function scoreSearchCandidate(record: LrclibRecord, track: LrclibTrackInput, res
   const title = titleScore(track.title, candidateTitle);
   if (!title) return null;
   const artist = artistScore(track.artist, stringValue(record.artistName));
-  const duration = durationScore(numericDuration(track.duration), numericDuration(record.duration));
-  return { result, title, artist, duration, total: title * 10 + artist * 4 + duration };
+  const requestedDuration = numericDuration(track.duration);
+  const candidateDuration = numericDuration(record.duration);
+  const duration = durationScore(requestedDuration, candidateDuration);
+  const durationDifference = requestedDuration !== undefined && candidateDuration !== undefined
+    ? Math.abs(requestedDuration - candidateDuration)
+    : Number.POSITIVE_INFINITY;
+  return { result, title, artist, duration, durationDifference, total: title * 10 + artist * 4 + duration };
 }
 
 function retryAfterMs(value: string | null, now: number): number {
@@ -244,9 +250,9 @@ export class LrclibLyricsProvider {
     }
     const exactTitleCount = scored.filter((candidate) => candidate.title === 100).length;
     const eligible = scored.filter((candidate) => candidate.artist > 0 || (candidate.title === 100 && exactTitleCount === 1));
-    eligible.sort((left, right) => right.total - left.total);
+    eligible.sort((left, right) => right.total - left.total || left.durationDifference - right.durationDifference);
     const best = eligible[0];
-    if (!best || (eligible[1] && eligible[1].total === best.total)) return null;
+    if (!best || eligible.slice(1).some((candidate) => candidate.total === best.total && candidate.durationDifference === best.durationDifference)) return null;
     this.resultCache.set(key, best.result);
     return best.result;
   }

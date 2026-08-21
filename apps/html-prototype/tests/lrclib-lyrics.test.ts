@@ -123,6 +123,14 @@ test("search fallback chooses the strongest title, artist, and duration candidat
   assert.deepEqual(result?.syncedLyrics, [{ time: 3, text: "strongest" }]);
 });
 
+test("search fallback breaks an equal score by choosing the closest duration", async () => {
+  const result = await searchProvider([
+    { id: 1, trackName: "左轉燈 (1000 Times+1)", artistName: "派偉俊 & mac ova seas", duration: 197, syncedLyrics: "[00:01]closest" },
+    { id: 2, trackName: "左轉燈 (1000 Times+1) (合作演出：mac ova seas)", artistName: "派偉俊 ,  mac ova seas", duration: 198, syncedLyrics: "[00:02]farther" }
+  ]).resolve({ title: "左轉燈", artist: "派偉俊, mac ova seas", duration: 197 });
+  assert.deepEqual(result?.syncedLyrics, [{ time: 1, text: "closest" }]);
+});
+
 test("precise lookup also rejects contradictory returned metadata", async () => {
   const requests: string[] = [];
   const provider = new LrclibLyricsProvider({
