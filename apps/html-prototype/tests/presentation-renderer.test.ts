@@ -10,6 +10,7 @@ import {
   renderVnDialogue
 } from "../src/systems/PresentationRenderer.js";
 import { CutsceneSystem } from "../src/systems/CutsceneSystem.js";
+import type { DialogueNode } from "../src/types.js";
 
 const appSource = readFileSync("src/app.ts", "utf8");
 const stylesSource = readFileSync("src/styles.css", "utf8");
@@ -71,6 +72,17 @@ test("cutscene dialogue accepts a future generic local portrait config", () => {
 
   cutscene.update(0);
   assert.deepEqual(cutscene.currentDialogue?.portrait, { src: "assets/labis/example.png", height: 180, offsetY: 10 });
+});
+
+test("shared DialogueNode accepts Bakery and future generic portrait configs", () => {
+  const node: DialogueNode = {
+    id: "generic-portrait",
+    speaker: "Memory",
+    text: "A future object",
+    portrait: { src: "assets/bakery/example.png", height: 180, offsetX: 2 }
+  };
+
+  assert.deepEqual(node.portrait, { src: "assets/bakery/example.png", height: 180, offsetX: 2 });
 });
 
 test("renders shared VN, RPG, reflection-choice, and reflection roles", () => {

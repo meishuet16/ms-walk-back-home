@@ -9,6 +9,7 @@ import {
   march30MainMemoryActions,
   march30ReflectionChoices,
   resolveMarch30Anchor,
+  type March30Action,
   type March30AnchorKey
 } from "../src/fixtures/march30Memory.js";
 
@@ -95,4 +96,23 @@ test("March 30 uses the gift portrait for ET's question and the water-gun portra
   assert.equal(giftQuestion?.portrait, "gift");
   assert.equal(waterGunAnswer?.type, "dialogue");
   assert.equal(waterGunAnswer?.portrait, "waterGun");
+});
+
+test("March 30 dialogue actions accept the shared generic portrait config", () => {
+  const action: Extract<March30Action, { type: "dialogue" }> = {
+    type: "dialogue",
+    speaker: "MS",
+    text: "test",
+    portrait: {
+      src: "assets/330/test.png",
+      height: 200,
+      offsetY: 8
+    }
+  };
+
+  assert.deepEqual(action.portrait, {
+    src: "assets/330/test.png",
+    height: 200,
+    offsetY: 8
+  });
 });

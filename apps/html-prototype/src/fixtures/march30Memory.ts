@@ -2,6 +2,7 @@ import type { Choice, Tendencies } from "../types.js";
 import type { Point } from "../systems/CollisionSystem.js";
 import type { CutsceneAction } from "../systems/CutsceneSystem.js";
 import type { SceneLayout } from "../systems/SceneLayouts.js";
+import type { DialoguePortraitConfig } from "../systems/PresentationRenderer.js";
 
 export type March30AnchorKey =
   | "et-bench-seat"
@@ -27,7 +28,7 @@ export type March30AssetId =
   | "dissolve";
 
 export type March30PropId = "gift" | "waterGun" | "ordinaryKeychain" | "phoneCharm";
-export type March30DialoguePortrait = "ms" | "et" | "gift" | "waterGun" | "keychains";
+export type March30DialoguePortrait = "ms" | "et" | "gift" | "waterGun" | "keychains" | DialoguePortraitConfig;
 
 export type FrameRect = {
   source: { x: number; y: number; w: number; h: number };
