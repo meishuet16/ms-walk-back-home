@@ -175,6 +175,7 @@ export class WalkBackHomeApp {
   private recordsSongSheetOpen = false;
   private recordsMoreMenuOpen = false;
   private recordsScrollTop = 0;
+  private recordsRenderToken = 0;
   private activeRecordMenuTrackId = "";
   private pendingDeleteTrackId = "";
   private lyricsDrag: { offsetX: number; offsetY: number } | null = null;
@@ -4801,15 +4802,17 @@ export class WalkBackHomeApp {
     this.recordsScrollTop = panel?.scrollTop ?? this.recordsScrollTop;
   }
 
-  private restoreRecordsScroll(): void {
+  private restoreRecordsScroll(renderToken = this.recordsRenderToken): void {
     const scrollTop = this.recordsScrollTop;
     requestAnimationFrame(() => {
+      if (renderToken !== this.recordsRenderToken) return;
       const panel = this.overlay.querySelector<HTMLElement>(".records-panel");
       if (panel) panel.scrollTop = scrollTop;
     });
   }
 
   private closeRecords(): void {
+    this.recordsRenderToken += 1;
     this.overlay.innerHTML = "";
     this.recordsPanelOpen = false;
     this.recordsSongSheetOpen = false;
@@ -4822,6 +4825,8 @@ export class WalkBackHomeApp {
 
   private async showRecords(): Promise<void> {
     this.recordsPanelOpen = true;
+    this.preserveRecordsScroll();
+    const renderToken = ++this.recordsRenderToken;
     const current = this.currentPersonalTrack();
     const cover = current ? await this.coverUrlForTrack(current.id) : "";
     const background = this.personalPlayer.playerBackgroundBlobKey ? await this.safeObjectUrl(this.personalPlayer.playerBackgroundBlobKey) : "";
@@ -4830,10 +4835,10 @@ export class WalkBackHomeApp {
     const lyrics = current?.syncedLyrics ?? [];
     const activeLyric = activeLyricIndexAt(lyrics, currentTime);
     const lyricRows = lyrics.length
-      ? lyrics.map((line, index) => `<p class="${index === activeLyric ? "active" : Math.abs(index - activeLyric) <= 2 ? "near" : ""}">${this.escapeHtml(line.text)}</p>`).join("")
+      ? lyrics.map((line, index) => `<p data-lyric-index="${index}" class="${index === activeLyric ? "active" : Math.abs(index - activeLyric) <= 2 ? "near" : ""}">${this.escapeHtml(line.text)}</p>`).join("")
       : `<p class="empty-lyrics">Add .lrc lyrics to let words drift with the room.</p>`;
     const mobileLyricRows = lyrics.length
-      ? lyricWindowForTime(lyrics, currentTime).map((item) => `<p class="${item.state}">${this.escapeHtml(item.line?.text ?? "")}</p>`).join("")
+      ? lyricWindowForTime(lyrics, currentTime).map((item) => `<p data-lyric-index="${item.sourceIndex}" class="${item.state}">${this.escapeHtml(item.line?.text ?? "")}</p>`).join("")
       : `<p class="empty-lyrics">Add lyrics from the More menu.</p>`;
     const libraryRows = this.renderRecordsLibraryRows(current?.id);
     const visualStyle = cover ? `--cover:url('${this.escapeHtml(cover)}')` : "";
@@ -4851,6 +4856,7 @@ export class WalkBackHomeApp {
     const deleteTrack = this.pendingDeleteTrackId ? this.musicLibrary.tracks.find((track) => track.id === this.pendingDeleteTrackId) : undefined;
     this.overlay.innerHTML = `
       <div class="modal game-panel records-panel personal-records ${background ? "has-bg" : ""}" ${bgStyle}>
+        <div class="records-scroll-content">
         <header class="records-header"><div><h2>My Records</h2><p>Personal songs for the room and forest.</p></div><div class="records-header-actions"><button class="records-mobile-more-button" data-action="toggle-records-more-menu" aria-label="More Records actions">⋮</button><button class="records-mobile-close-button" data-action="close-records" aria-label="Close Records">×</button><button data-action="close" aria-label="Close Records">Close</button></div></header>
         <section class="records-mobile-player" aria-label="Mobile Records player">
           <div class="records-mobile-title">
@@ -4918,7 +4924,8 @@ export class WalkBackHomeApp {
           <label class="file-control add-record">+ Add My Record<input id="music-audio-input" type="file" accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/mp4,audio/aac,.mp3,.wav,.ogg,.m4a,.aac" aria-label="Add my record"></label>
           <div class="record-list personal-list">${libraryRows || `<p>Add your own song.</p>`}</div>
         </section>
-        ${deleteTrack ? `<div class="delete-confirmation" role="dialog" aria-modal="true" aria-label="Delete from My Records">
+        </div>
+        ${deleteTrack ? `<div class="records-delete-confirmation" role="dialog" aria-modal="true" aria-label="Delete from My Records">
           <div>
             <strong>Delete from My Records?</strong>
             <p>Remove “${this.escapeHtml(deleteTrack.title)}” from Walk Back Home?</p>
@@ -4928,7 +4935,7 @@ export class WalkBackHomeApp {
         </div>` : ""}
       </div>`;
     this.focusStage();
-    this.restoreRecordsScroll();
+    this.restoreRecordsScroll(renderToken);
   }
 
   private renderRecordsLibraryRows(currentId?: string): string {
@@ -5234,15 +5241,13 @@ export class WalkBackHomeApp {
     if (!this.recordsPanelOpen) return;
     const currentTime = this.currentPersonalPlaybackTime();
     const duration = this.audio.getDuration() || this.currentPersonalTrack()?.duration || 0;
-    const currentLabel = this.overlay.querySelector<HTMLElement>("[data-music-current]");
-    const durationLabel = this.overlay.querySelector<HTMLElement>("[data-music-duration]");
-    const seek = this.overlay.querySelector<HTMLInputElement>("#music-seek");
-    if (currentLabel) currentLabel.textContent = this.formatTime(currentTime);
-    if (durationLabel) durationLabel.textContent = this.formatTime(duration);
-    if (seek && document.activeElement !== seek) {
+    this.overlay.querySelectorAll<HTMLElement>("[data-music-current]").forEach((label) => { label.textContent = this.formatTime(currentTime); });
+    this.overlay.querySelectorAll<HTMLElement>("[data-music-duration]").forEach((label) => { label.textContent = this.formatTime(duration); });
+    this.overlay.querySelectorAll<HTMLInputElement>("[data-music-seek]").forEach((seek) => {
+      if (document.activeElement === seek) return;
       seek.max = String(Math.max(1, duration || 1));
       seek.value = String(Math.min(currentTime, Math.max(1, duration || 1)));
-    }
+    });
     this.refreshRecordsLyricsUI(currentTime);
   }
 
@@ -5250,15 +5255,31 @@ export class WalkBackHomeApp {
     const lyrics = this.currentPersonalTrack()?.syncedLyrics ?? [];
     const active = activeLyricIndexAt(lyrics, currentTime);
     const rows = Array.from(this.overlay.querySelectorAll<HTMLElement>(".lyrics-pane p"));
-    if (!rows.length || !lyrics.length) return;
+    if (!lyrics.length) return;
     const activeRow = active >= 0 ? rows[active] : null;
     const shouldScroll = activeRow ? !activeRow.classList.contains("active") : false;
     rows.forEach((row, index) => {
+      row.dataset.lyricIndex = String(index);
       row.classList.toggle("active", index === active);
       row.classList.toggle("near", index !== active && Math.abs(index - active) <= 2);
     });
     if (activeRow && shouldScroll) {
       activeRow.scrollIntoView({ block: "center", behavior: this.settings.reducedMotion ? "auto" : "smooth" });
+    }
+    const mobile = this.overlay.querySelector<HTMLElement>(".records-mobile-lyrics");
+    if (!mobile) return;
+    const mobileWindow = lyricWindowForTime(lyrics, currentTime);
+    const mobileRows = Array.from(this.overlay.querySelectorAll<HTMLElement>(".records-mobile-lyrics p"));
+    const currentWindowKey = mobileRows.map((row) => row.dataset.lyricIndex ?? "").join(",");
+    const nextWindowKey = mobileWindow.map((item) => String(item.sourceIndex)).join(",");
+    if (currentWindowKey !== nextWindowKey) {
+      mobile.innerHTML = mobileWindow.map((item) => `<p data-lyric-index="${item.sourceIndex}" class="${item.state}">${this.escapeHtml(item.line?.text ?? "")}</p>`).join("");
+    } else {
+      mobileRows.forEach((row, index) => {
+        row.classList.toggle("previous", mobileWindow[index]?.state === "previous");
+        row.classList.toggle("active", mobileWindow[index]?.state === "active");
+        row.classList.toggle("next", mobileWindow[index]?.state === "next");
+      });
     }
   }
 

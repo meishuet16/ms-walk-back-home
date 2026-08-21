@@ -175,6 +175,20 @@ test("records mobile menus stay in viewport and preserve scroll while selecting"
 }
 );
 
+test("Records playback refreshes desktop and mobile lyrics without rebuilding the modal", () => {
+  assert.match(appSource, /data-lyric-index/);
+  assert.match(appSource, /querySelectorAll<HTMLElement>\("\.records-mobile-lyrics p"\)/);
+  assert.match(appSource, /lyricWindowForTime\(lyrics, currentTime\)/);
+  assert.match(appSource, /refreshRecordsLyricsUI\(currentTime\)/);
+});
+
+test("Records delete confirmation is outside the scrolling content and viewport anchored", () => {
+  assert.match(appSource, /records-scroll-content/);
+  assert.match(appSource, /records-delete-confirmation/);
+  assert.match(stylesSource, /\.records-delete-confirmation[\s\S]*position:\s*fixed/);
+  assert.match(stylesSource, /\.records-panel[\s\S]*overflow-y:\s*auto/);
+});
+
 test("mobile portrait and landscape layouts have explicit touch behavior", () => {
   assert.match(inputSource, /Virtual joystick/);
   assert.match(stylesSource, /#app\[data-scene="forest"\] \.touch-controls/);

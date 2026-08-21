@@ -2549,7 +2549,8 @@ canvas {
   transform: translateX(-50%);
   width: min(1080px, calc(100vw - 34px));
   max-height: calc(100vh - 20px);
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 0;
   border-color: rgba(211, 164, 91, .7);
   background:
@@ -2576,6 +2577,10 @@ canvas {
     linear-gradient(90deg, rgba(5, 12, 19, .58), rgba(24, 20, 18, .66));
 }
 .records-panel.personal-records > * {
+  position: relative;
+  z-index: 1;
+}
+.records-scroll-content {
   position: relative;
   z-index: 1;
 }
@@ -2859,11 +2864,11 @@ canvas {
   color: #2d2117;
   background: #d5aa69;
 }
-.delete-confirmation {
+.records-delete-confirmation {
   position: fixed;
   left: 50%;
   bottom: max(18px, env(safe-area-inset-bottom));
-  z-index: 8;
+  z-index: 80;
   display: grid;
   gap: 14px;
   width: min(460px, calc(100vw - 28px));
@@ -2875,23 +2880,27 @@ canvas {
   box-shadow: 0 22px 70px rgba(0,0,0,.42);
   transform: translateX(-50%);
 }
-.delete-confirmation strong {
+.delete-confirmation strong,
+.records-delete-confirmation strong {
   display: block;
   color: #bd2d2d;
   text-align: center;
 }
-.delete-confirmation p {
+.delete-confirmation p,
+.records-delete-confirmation p {
   margin: 8px 0 0;
   text-align: center;
 }
-.delete-confirmation-actions {
+.delete-confirmation-actions,
+.records-delete-confirmation-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   padding-top: 12px;
   border-top: 1px solid rgba(76, 52, 32, .18);
 }
-.delete-confirmation-actions button {
+.delete-confirmation-actions button,
+.records-delete-confirmation-actions button {
   min-height: 46px;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -2911,6 +2920,11 @@ canvas {
     background:
       radial-gradient(circle at 50% 28%, rgba(187, 119, 39, .26), transparent 40%),
       linear-gradient(180deg, rgba(35, 20, 10, .98), rgba(13, 9, 5, .98));
+  }
+  .records-delete-confirmation {
+    bottom: max(12px, env(safe-area-inset-bottom));
+    max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow-y: auto;
   }
   .records-panel.personal-records.has-bg::after {
     background:
