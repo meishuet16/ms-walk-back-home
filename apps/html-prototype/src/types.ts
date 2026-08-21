@@ -224,7 +224,7 @@ export type PersonalPlayerState = {
   playbackMode?: MusicPlaybackMode;
   shuffleEnabled: boolean;
   repeatOne: boolean;
-  customTrackMeta?: Record<string, { title?: string; artist?: string }>;
+  customTrackMeta?: Record<string, { title?: string; artist?: string; album?: string }>;
   customTrackLyrics?: Record<string, { syncedLyrics: SyncedLyricLine[]; plainLyrics?: string }>;
   playerBackgroundBlobKey?: string;
 };

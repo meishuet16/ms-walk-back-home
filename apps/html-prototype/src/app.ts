@@ -8,7 +8,7 @@ import { AudioManager } from "./systems/AudioManager.js";
 import { AccountManager } from "./systems/AccountManager.js";
 import { loadAppConfig } from "./systems/AppConfig.js";
 import { chapterRegistry, forestEntries, routeForestEntry, type AuthoredForestEntry } from "./systems/ChapterRegistry.js";
-import { beginChapterVisit, finishChapterWalkthrough, initialChapterProgress, markChapterDialogueComplete, markChapterMemoryRead, recordChapterChoice } from "./systems/ChapterProgressManager.js";
+import { beginChapterVisit, consumeAutomaticChapterTrigger, createChapterTriggerSession, finishChapterWalkthrough, initialChapterProgress, markChapterDialogueComplete, markChapterMemoryRead, recordChapterChoice, type ChapterTriggerSession } from "./systems/ChapterProgressManager.js";
 import { inAnyRect, type Point } from "./systems/CollisionSystem.js";
 import { CutsceneSystem } from "./systems/CutsceneSystem.js";
 import { createNewDiaryPage, deleteDiaryEntriesByIds, deleteDiaryEntryById, forestNodesForMonth, formatDiaryWeekday, getDiaryTimeline, openDiaryPageForDate, seedAuthoredChapterDiaryEntries, upsertDiaryEntry, upsertDiaryPageDraft } from "./systems/DiaryLibrary.js";
@@ -17,13 +17,13 @@ import { DialogueSystem } from "./systems/DialogueSystem.js";
 import { resolveChapterReflection, type Ending } from "./systems/EndingResolver.js";
 import { InputManager } from "./systems/InputManager.js";
 import { journalMediaCropRenderModel, journalMediaCropRenderStyle as renderJournalMediaCropStyle, normalizeJournalMediaCrop } from "./systems/JournalCrop.js";
-import { moveBooksMonth as moveBooksMonthState, moveTimelineMonth as moveTimelineMonthState, selectBooksYear as selectBooksYearState, selectTimelineYear as selectTimelineYearState, type JournalNavigationState } from "./systems/JournalNavigation.js";
+import { createJournalReturnSnapshot, journalReturnTarget, moveBooksMonth as moveBooksMonthState, moveTimelineMonth as moveTimelineMonthState, selectBooksYear as selectBooksYearState, selectTimelineYear as selectTimelineYearState, type JournalNavigationState, type JournalReturnSnapshot } from "./systems/JournalNavigation.js";
 import { adjacentMonthKey, defaultMonthlyCover, hasMoreTimelineEntries, journalBatchSize, makeMonthlyJournalImagePdf, makeTimelineMonthView, monthlyBookSummaries, monthlyPdfFilename, monthLabel, selectedOrLatestMonth, selectAllTimelineEntryIds, sortMonthEntries, upsertMonthlyCover, visibleTimelineEntries, type JournalMonth, type MonthlyJournalPdfPage, type TimelineDateScope, type TimelineMemoryKindFilter } from "./systems/JournalModel.js";
 import { createBackupBundle, parseBackupBundle, walkBackupFilename, type BackupBlobEntry } from "./systems/BackupManager.js";
 import { MusicBlobStore } from "./systems/MusicBlobStore.js";
 import { ParticleSystem } from "./systems/ParticleSystem.js";
-import { activeLyricIndexAt, adjacentTrackIdForControl, clampLyricsOverlay, createDefaultPersonalPlayerState, filterAndSortMusic, isBuiltInTrackId, lyricWindowForTime, nextTrackIdForPlayback, normalizePlaybackMode, parseLrc, personalMusicShouldPlayInScene, removeUserMusicTrack } from "./systems/PersonalMusic.js";
-import { changeReflectionPaper, createChapterReflectionNote, createReflectionNote, createReflectionWallState, deleteReflectionNote, migrateLegacyReflectionWall, moveReflectionNote, reflectionPaperStyles, toggleReflectionNoteFlag, updateReflectionNote, visibleReflectionNotes } from "./systems/ReflectionWall.js";
+import { activeLyricIndexAt, adjacentTrackIdForControl, applyBatchMusicMetadata, clampLyricsOverlay, createDefaultPersonalPlayerState, filterAndSortMusic, isBuiltInTrackId, lyricWindowForTime, nextTrackIdForPlayback, normalizePlaybackMode, parseLrc, personalMusicShouldPlayInScene, removeSelectedMusicTracks, removeUserMusicTrack, selectAllMusicTrackIds, type BatchMusicMetadata } from "./systems/PersonalMusic.js";
+import { changeReflectionPaper, clampReflectionNotePosition, createChapterReflectionNote, createReflectionNote, createReflectionWallState, deleteReflectionNote, migrateLegacyReflectionWall, moveReflectionNote, reflectionPaperStyles, toggleReflectionNoteFlag, updateReflectionNote, visibleReflectionNotes } from "./systems/ReflectionWall.js";
 import { drawSceneActor } from "./systems/SceneActorRenderer.js";
 import { getSceneLayout, loadSceneLayoutOverrides, resolveForestDynamicPlacements, sceneLayoutManifest, selectSceneOrientation, type SceneInteraction, type SceneLayout, type SceneLayoutId, type SceneOrientation } from "./systems/SceneLayouts.js";
 import { applyChoice } from "./systems/TendencySystem.js";
@@ -155,6 +155,7 @@ export class WalkBackHomeApp {
   private timelineDateScope: TimelineDateScope = "all";
   private timelineFilterAppliedMessage = "";
   private journalMode: "timeline" | "books" | "reader" = "timeline";
+  private journalReturnSnapshot: JournalReturnSnapshot | null = null;
   private selectedTimelineMonthKey = "";
   private selectedBooksYear = "";
   private selectedBooksMonthKey = "";
@@ -176,6 +177,8 @@ export class WalkBackHomeApp {
   private recordsMoreMenuOpen = false;
   private recordsScrollTop = 0;
   private recordsRenderToken = 0;
+  private selectedRecordIds = new Set<string>();
+  private pendingBatchDelete = false;
   private activeRecordMenuTrackId = "";
   private pendingDeleteTrackId = "";
   private lyricsDrag: { offsetX: number; offsetY: number } | null = null;
@@ -218,6 +221,7 @@ export class WalkBackHomeApp {
   private sceneOrientation: SceneOrientation = "landscape";
   private sceneLayoutLoadPromise: Promise<void> = Promise.resolve();
   private completedMemoryEvents = new Set<string>();
+  private chapterTriggerSessions = new Map<string, ChapterTriggerSession>();
   private ending: Ending | null = null;
 
   constructor(private root: HTMLElement) {
@@ -335,7 +339,15 @@ export class WalkBackHomeApp {
     if (action === "open-room") this.enterMujiRoom();
     if (action === "new-diary-entry") this.openNewDiaryPage();
     if (action === "open-diary-editor") this.showTimeline();
-    if (action === "open-diary-page") this.showDiaryReader(target.dataset.id ?? "");
+    if (action === "open-diary-page") {
+      this.captureJournalReturnSnapshot();
+      this.showDiaryReader(target.dataset.id ?? "");
+      return;
+    }
+    if (action === "journal-reader-back") {
+      this.restoreJournalOrigin();
+      return;
+    }
     if (action === "save-diary-entry") this.saveDiaryEntry(target.dataset.id);
     if (action === "edit-diary-entry") {
       this.journalMoreMenuOpen = false;
@@ -476,8 +488,17 @@ export class WalkBackHomeApp {
       void this.showRecords();
     }
     if (action === "request-delete-user-track") this.requestDeleteUserTrack(target.dataset.track ?? "");
+    if (action === "toggle-record-selection") this.toggleRecordSelection(target.dataset.track ?? "");
+    if (action === "records-select-all") this.selectAllRecords();
+    if (action === "records-clear-selection") this.clearRecordSelection();
+    if (action === "records-request-batch-delete") this.requestBatchDelete();
+    if (action === "records-cancel-batch-delete") this.cancelBatchDelete();
+    if (action === "records-confirm-batch-delete") void this.confirmBatchDelete();
+    if (action === "records-apply-batch-edit") this.applyBatchRecordEdit();
     if (action === "cancel-delete-user-track") {
       this.pendingDeleteTrackId = "";
+      this.selectedRecordIds.clear();
+      this.pendingBatchDelete = false;
       void this.showRecords();
     }
     if (action === "confirm-delete-user-track") void this.confirmDeleteUserTrack();
@@ -745,6 +766,7 @@ export class WalkBackHomeApp {
     this.choices = [];
     this.readMemories.clear();
     this.completedMemoryEvents.clear();
+    this.chapterTriggerSessions.clear();
     this.chapterProgress.clear();
     this.room = createDefaultRoomState();
     this.personalPlayer = { ...createDefaultPersonalPlayerState(), selectedTrackId: this.personalPlayer.selectedTrackId };
@@ -866,10 +888,10 @@ export class WalkBackHomeApp {
       return;
     }
     const mainTrigger = layout.triggers.find((trigger) => {
-      if (trigger.id !== "main-memory" || (trigger.once && this.completedMemoryEvents.has(trigger.eventId))) return false;
+      if (trigger.id !== "main-memory") return false;
       return this.player.x >= trigger.rect.x && this.player.x <= trigger.rect.x + trigger.rect.w && this.player.y >= trigger.rect.y && this.player.y <= trigger.rect.y + trigger.rect.h;
     });
-    if (mainTrigger) {
+    if (mainTrigger && this.consumeChapterTrigger("march30-too-fated")) {
       this.startMarch30Memory(false);
       return;
     }
@@ -1016,14 +1038,11 @@ export class WalkBackHomeApp {
       this.activeObject = "";
       return;
     }
-    const activeTrigger = layout.triggers.find((trigger) => {
-      if (trigger.once && this.completedMemoryEvents.has(trigger.eventId)) return false;
-      return this.player.x >= trigger.rect.x && this.player.x <= trigger.rect.x + trigger.rect.w && this.player.y >= trigger.rect.y && this.player.y <= trigger.rect.y + trigger.rect.h;
-    });
+    const activeTrigger = layout.triggers.find((trigger) => this.player.x >= trigger.rect.x && this.player.x <= trigger.rect.x + trigger.rect.w && this.player.y >= trigger.rect.y && this.player.y <= trigger.rect.y + trigger.rect.h);
     const canStartMemory = layout.orientation === "landscape"
       ? canStartLabisMotorMemory(this.player, this.readMemories, this.completedMemoryEvents)
       : Boolean(activeTrigger);
-    if (canStartMemory) {
+    if (canStartMemory && this.consumeChapterTrigger("july19-motor-day")) {
       this.startLabisMemory(false);
       return;
     }
@@ -1298,6 +1317,7 @@ export class WalkBackHomeApp {
       return;
     }
     const chapterId = this.chapterIdFor(this.currentDoor);
+    this.chapterTriggerSessions.set(chapterId, createChapterTriggerSession(chapterId));
     this.chapterProgress.set(chapterId, beginChapterVisit(this.progressFor(chapterId)));
     this.visitedMemories.add(this.currentDoor.id);
     const chapter = chapterRegistry[chapterId];
@@ -1319,6 +1339,13 @@ export class WalkBackHomeApp {
     this.showToast("Entered memory");
     this.playSceneMusic(chapter.runtimeScene === "labis" ? "forest" : "bakery");
     this.autosave();
+  }
+
+  private consumeChapterTrigger(chapterId: string): boolean {
+    const session = this.chapterTriggerSessions.get(chapterId) ?? createChapterTriggerSession(chapterId);
+    const result = consumeAutomaticChapterTrigger(session);
+    this.chapterTriggerSessions.set(chapterId, result.session);
+    return result.allowed;
   }
 
   private resetBakeryDialogue(): void {
@@ -1716,6 +1743,7 @@ export class WalkBackHomeApp {
 
   private finishReturnToForest(): void {
     const leavingDoor = this.scene === "bakery" || this.scene === "labis" || this.isAuthoredRuntimeScene() ? this.currentDoor : null;
+    if (leavingDoor && this.isChapterNode(leavingDoor)) this.chapterTriggerSessions.delete(this.chapterIdFor(leavingDoor));
     const leavingRoom = this.scene === "muji-room";
     const keepPersonalMusic = personalMusicShouldPlayInScene(this.scene) && this.personalPlayer.playing && Boolean(this.personalPlayer.selectedTrackId);
     this.syncPersonalPlaybackState();
@@ -2426,6 +2454,7 @@ export class WalkBackHomeApp {
 
   private renderTopNav(): void {
     const html = `
+      <button class="shell-music-toggle" data-action="music" aria-label="Toggle music" aria-pressed="${this.settings.musicEnabled}">🎵</button>
       <details class="top-actions-menu">
         <summary class="menu-toggle" aria-label="Open menu">☰</summary>
         <div class="menu-panel">
@@ -2434,7 +2463,6 @@ export class WalkBackHomeApp {
           <button data-action="forest">Forest</button>
           <button data-action="open-room">Muji Room</button>
           <button data-action="reflection-wall">Reflection Wall</button>
-          <button data-action="music">Music: ${this.settings.musicEnabled ? "On" : "Off"}</button>
           <button data-action="toggle-touch-controls">Joystick: ${this.forceTouchControls ? "On" : "Auto"}</button>
           <button data-action="settings">Settings</button>
         </div>
@@ -2487,11 +2515,9 @@ export class WalkBackHomeApp {
         <button data-action="new">Begin Journey<span>Start the walk from the beginning</span></button>
         <button data-action="open-map">Walk Back Home<span>${this.allDoors().length} forest memories</span></button>
         <button data-action="room-records">Records<span>Play personal music and floating lyrics</span></button>
-        <button data-action="continue">Continue<span>Load the latest local journey</span></button>
-        <button data-action="credits">Credits<span>Project notes and credits</span></button>
         <button data-action="backup-sync">Backup / Sync<span>Portable backup and cloud account</span></button>
       </div>
-      <div class="settings-row"><button data-action="rain">Rain: ${this.settings.rain ? "On" : "Off"}</button><button data-action="compact">${this.settings.compact ? "960x540" : "480x270"}</button><button data-action="fullscreen">Fullscreen</button><button data-action="edit-touch-controls">Edit Touch Controls</button><button data-action="reset-journey">Begin Again</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
+      <div class="settings-row"><button data-action="rain">Rain: ${this.settings.rain ? "On" : "Off"}</button><button data-action="fullscreen">Fullscreen</button><button data-action="edit-touch-controls">Edit Touch Controls</button><button data-action="forest">Return to Forest</button><button data-action="close">Close</button></div>`;
   }
 
   private beginTouchControlEdit(): void {
@@ -2649,7 +2675,7 @@ export class WalkBackHomeApp {
         </div>
       </article>`;
     }).join("");
-    const showMore = hasMoreTimelineEntries(month, this.timelineVisibleCount) ? `<button class="show-more" data-action="journal-show-more">Show More</button>` : "";
+    const showMore = hasMoreTimelineEntries(month, this.timelineVisibleCount) ? `<button class="show-more timeline-show-more" data-action="journal-show-more">Show More</button>` : "";
     const noResult = this.timelineSearch.trim() || this.timelineKindFilter !== "all" || this.timelineDateFilter;
     const empty = `<div class="journal-empty"><p>${noResult ? "No diary matched these filters." : "Nothing was written here."}</p><button data-action="new-diary-entry">Create New Journal</button></div>`;
     const confirm = this.timelineDeleteConfirmOpen ? this.renderTimelineDeleteConfirmation() : "";
@@ -2821,6 +2847,39 @@ export class WalkBackHomeApp {
     const restoreScrollTop = panel?.scrollTop ?? 0;
     this.timelineVisibleCount += journalBatchSize;
     this.showTimeline({ restoreScrollTop });
+  }
+
+  private captureJournalReturnSnapshot(): void {
+    if (this.journalReturnSnapshot) return;
+    const panel = this.overlay.querySelector<HTMLElement>(".journal-panel");
+    if (!panel) return;
+    const booksSurface = this.journalMode === "books" || this.journalMode === "reader";
+    const monthKey = booksSurface
+      ? this.selectedBooksMonthKey || selectedOrLatestMonth(this.diaryEntries).key
+      : this.timelineCursorMonth().key;
+    const year = booksSurface ? this.selectedBooksYear || monthKey.slice(0, 4) : monthKey.slice(0, 4);
+    this.journalReturnSnapshot = createJournalReturnSnapshot(booksSurface ? "books" : "timeline", monthKey, year, panel.scrollTop);
+  }
+
+  private restoreJournalOrigin(): void {
+    const snapshot = this.journalReturnSnapshot ? journalReturnTarget(this.journalReturnSnapshot) : null;
+    this.journalReturnSnapshot = null;
+    if (!snapshot) {
+      this.showTimeline();
+      return;
+    }
+    if (snapshot.mode === "books") {
+      this.selectedBooksYear = snapshot.year;
+      this.selectedBooksMonthKey = snapshot.monthKey;
+      this.openMonthlyBook(snapshot.monthKey);
+      requestAnimationFrame(() => {
+        const panel = this.overlay.querySelector<HTMLElement>(".journal-panel");
+        if (panel) panel.scrollTop = snapshot.scrollTop;
+      });
+      return;
+    }
+    this.selectedTimelineMonthKey = snapshot.monthKey;
+    this.showTimeline({ restoreScrollTop: snapshot.scrollTop });
   }
 
   private moveJournalMonth(direction: -1 | 1): void {
@@ -3296,7 +3355,7 @@ export class WalkBackHomeApp {
     const moodMeta = entry.mood ? `心情：${entry.mood}` : "";
     this.overlay.innerHTML = `
       <div class="modal game-panel journal-reading-page mood-${entry.mood ?? "calm"}">
-        <header class="journal-reading-header"><button data-action="open-timeline" aria-label="Back to timeline">‹</button><button data-action="journal-more-menu" data-id="${this.escapeHtml(entry.id)}" aria-label="Journal more menu">⋮</button></header>
+        <header class="journal-reading-header"><button data-action="journal-reader-back" aria-label="Back to journal">‹</button><button data-action="journal-more-menu" data-id="${this.escapeHtml(entry.id)}" aria-label="Journal more menu">⋮</button></header>
         <div class="journal-reader-more ${this.journalMoreMenuOpen ? "open" : ""}"><button data-action="journal-edit-current" data-id="${this.escapeHtml(entry.id)}">Edit Journal</button><button data-action="timeline-request-delete-entry" data-id="${this.escapeHtml(entry.id)}">Delete Journal</button><button data-action="journal-books">Books</button></div>
         <article class="journal-reading-sheet">
           <aside class="journal-reading-date"><strong>${this.escapeHtml(day)}</strong><span>${this.escapeHtml(month)}</span><small>${this.escapeHtml(weekday)}</small></aside>
@@ -3948,6 +4007,14 @@ export class WalkBackHomeApp {
       this.showTimeline();
       return;
     }
+    const recordSelectId = input.dataset.recordSelect;
+    if (recordSelectId) {
+      if (input.checked) this.selectedRecordIds.add(recordSelectId);
+      else this.selectedRecordIds.delete(recordSelectId);
+      this.preserveRecordsScroll();
+      void this.showRecords();
+      return;
+    }
     if (input.id === "diary-date" || input.id === "diary-memory-kind") {
       this.handleInput(event);
       return;
@@ -4483,13 +4550,15 @@ export class WalkBackHomeApp {
       const rect = wall.getBoundingClientRect();
       const x = ((event.clientX - rect.left) / rect.width) * 100 - this.reflectionWallDrag.offsetX;
       const y = ((event.clientY - rect.top) / rect.height) * 100 - this.reflectionWallDrag.offsetY;
-      this.reflectionWall = moveReflectionNote(this.reflectionWall, this.reflectionWallDrag.noteId, { x, y });
+      const position = clampReflectionNotePosition({ x, y }, this.reflectionWallNoteDimensions());
+      this.reflectionWall = moveReflectionNote(this.reflectionWall, this.reflectionWallDrag.noteId, position);
       this.save.saveReflectionWall(this.reflectionWall);
       const note = this.overlay.querySelector<HTMLElement>(`.wall-note[data-note="${CSS.escape(this.reflectionWallDrag.noteId)}"]`);
       const next = this.reflectionWall.notes.find((item) => item.id === this.reflectionWallDrag?.noteId);
       if (note && next) {
-        note.style.left = `${next.x}%`;
-        note.style.top = `${next.y}%`;
+        const nextPosition = clampReflectionNotePosition(next, this.reflectionWallNoteDimensions());
+        note.style.left = `${nextPosition.x}%`;
+        note.style.top = `${nextPosition.y}%`;
         note.dataset.dragging = "true";
       }
       event.preventDefault();
@@ -4648,7 +4717,8 @@ export class WalkBackHomeApp {
   private renderWallNote(note: ReflectionNote, visible: boolean): string {
     const faded = this.reflectionWallSearch.trim() || this.reflectionWallFilter !== "all" ? (visible ? "" : " faded") : "";
     const selected = this.selectedReflectionNoteId === note.id;
-    return `<article class="wall-note paper-${this.escapeHtml(note.styleId)}${faded} ${selected ? "selected" : ""}" data-note="${this.escapeHtml(note.id)}" style="left:${note.x}%;top:${note.y}%;transform:translate(-50%,-50%) rotate(${note.rotation}deg);">
+    const position = clampReflectionNotePosition(note, this.reflectionWallNoteDimensions());
+    return `<article class="wall-note paper-${this.escapeHtml(note.styleId)}${faded} ${selected ? "selected" : ""}" data-note="${this.escapeHtml(note.id)}" style="left:${position.x}%;top:${position.y}%;transform:translate(-50%,-50%) rotate(${note.rotation}deg);">
       <button class="wall-note-body" data-action="reflection-note-select" data-note="${this.escapeHtml(note.id)}">
         <span>${this.escapeHtml(note.text)}</span>
         <small>${this.escapeHtml(this.formatReflectionTimestamp(note.createdAt))}${note.updatedAt ? `<br>edited ${this.escapeHtml(this.formatReflectionTimestamp(note.updatedAt))}` : ""}</small>
@@ -4659,6 +4729,12 @@ export class WalkBackHomeApp {
         <button data-action="reflection-note-delete" data-note="${this.escapeHtml(note.id)}" aria-label="Remove note">×</button>
       </div>
     </article>`;
+  }
+
+  private reflectionWallNoteDimensions(): { widthPercent: number; heightPercent: number; edgePercent: number } {
+    return window.matchMedia("(max-width: 700px)").matches
+      ? { widthPercent: 52, heightPercent: 34, edgePercent: 6 }
+      : { widthPercent: 28, heightPercent: 24, edgePercent: 4 };
   }
 
   private renderReflectionStack(notes: ReflectionNote[]): string {
@@ -4819,6 +4895,8 @@ export class WalkBackHomeApp {
     this.recordsMoreMenuOpen = false;
     this.activeRecordMenuTrackId = "";
     this.pendingDeleteTrackId = "";
+    this.selectedRecordIds.clear();
+    this.pendingBatchDelete = false;
     this.recordsScrollTop = 0;
     this.updatePersonalMusicOverlay();
   }
@@ -4841,6 +4919,7 @@ export class WalkBackHomeApp {
       ? lyricWindowForTime(lyrics, currentTime).map((item) => `<p data-lyric-index="${item.sourceIndex}" class="${item.state}">${this.escapeHtml(item.line?.text ?? "")}</p>`).join("")
       : `<p class="empty-lyrics">Add lyrics from the More menu.</p>`;
     const libraryRows = this.renderRecordsLibraryRows(current?.id);
+    const batchToolbar = this.renderRecordsBatchToolbar();
     const visualStyle = cover ? `--cover:url('${this.escapeHtml(cover)}')` : "";
     const bgStyle = background ? `style="--player-bg:url('${this.escapeHtml(background)}')"` : "";
     const coverInitials = cover ? "" : `<span>${this.escapeHtml(this.trackInitials(current?.title ?? "Music"))}</span>`;
@@ -4858,6 +4937,7 @@ export class WalkBackHomeApp {
       <div class="modal game-panel records-panel personal-records ${background ? "has-bg" : ""}" ${bgStyle}>
         <div class="records-scroll-content">
         <header class="records-header"><div><h2>My Records</h2><p>Personal songs for the room and forest.</p></div><div class="records-header-actions"><button class="records-mobile-more-button" data-action="toggle-records-more-menu" aria-label="More Records actions">⋮</button><button class="records-mobile-close-button" data-action="close-records" aria-label="Close Records">×</button><button data-action="close" aria-label="Close Records">Close</button></div></header>
+        ${batchToolbar}
         <section class="records-mobile-player" aria-label="Mobile Records player">
           <div class="records-mobile-title">
             <small>${current?.source === "user" ? "My Music" : "Walk Back Home"}</small>
@@ -4933,9 +5013,90 @@ export class WalkBackHomeApp {
           </div>
           <div class="delete-confirmation-actions"><button data-action="cancel-delete-user-track">Cancel</button><button class="danger" data-action="confirm-delete-user-track">Delete</button></div>
         </div>` : ""}
+        ${this.pendingBatchDelete ? `<div class="records-delete-confirmation" role="dialog" aria-modal="true" aria-label="Delete selected Records">
+          <div>
+            <strong>Delete selected Records?</strong>
+            <p>${this.selectedRecordIds.size} record${this.selectedRecordIds.size === 1 ? "" : "s"} selected. User records will be removed; built-in records will be kept.</p>
+          </div>
+          <div class="delete-confirmation-actions"><button data-action="records-cancel-batch-delete">Cancel</button><button class="danger" data-action="records-confirm-batch-delete">Delete users</button></div>
+        </div>` : ""}
       </div>`;
     this.focusStage();
     this.restoreRecordsScroll(renderToken);
+  }
+
+  private toggleRecordSelection(trackId: string): void {
+    if (!trackId) return;
+    if (this.selectedRecordIds.has(trackId)) this.selectedRecordIds.delete(trackId);
+    else this.selectedRecordIds.add(trackId);
+    this.preserveRecordsScroll();
+    void this.showRecords();
+  }
+
+  private selectAllRecords(): void {
+    this.selectedRecordIds = new Set(selectAllMusicTrackIds(this.visibleMusicTracks().map((track) => track.id)));
+    this.preserveRecordsScroll();
+    void this.showRecords();
+  }
+
+  private clearRecordSelection(): void {
+    this.selectedRecordIds.clear();
+    this.pendingBatchDelete = false;
+    this.preserveRecordsScroll();
+    void this.showRecords();
+  }
+
+  private requestBatchDelete(): void {
+    if (!this.selectedRecordIds.size) {
+      this.showToast("Select at least one record first");
+      return;
+    }
+    this.pendingBatchDelete = true;
+    this.preserveRecordsScroll();
+    void this.showRecords();
+  }
+
+  private cancelBatchDelete(): void {
+    this.pendingBatchDelete = false;
+    this.preserveRecordsScroll();
+    void this.showRecords();
+  }
+
+  private applyBatchRecordEdit(): void {
+    const artist = this.overlay.querySelector<HTMLInputElement>("[data-record-batch-field='artist']")?.value.trim() ?? "";
+    const album = this.overlay.querySelector<HTMLInputElement>("[data-record-batch-field='album']")?.value.trim() ?? "";
+    const metadata: BatchMusicMetadata = { artist, album };
+    if (!artist && !album) {
+      this.showToast("Enter an Artist or Album first");
+      return;
+    }
+    const result = applyBatchMusicMetadata(this.musicLibrary, [...this.selectedRecordIds], metadata, this.personalPlayer.customTrackMeta ?? {});
+    this.musicLibrary = result.library;
+    this.personalPlayer = { ...this.personalPlayer, customTrackMeta: result.builtInMeta };
+    this.save.saveMusicLibrary(this.musicLibrary);
+    this.save.savePersonalPlayer(this.personalPlayer);
+    this.preserveRecordsScroll();
+    void this.showRecords();
+    this.showToast("Records updated");
+  }
+
+  private async confirmBatchDelete(): Promise<void> {
+    const selectedIds = [...this.selectedRecordIds];
+    const currentId = this.personalPlayer.selectedTrackId;
+    const result = removeSelectedMusicTracks(this.musicLibrary, selectedIds, this.availableVinylRecords.map((record) => record.id));
+    for (const key of result.blobKeysToDelete) await this.musicBlobStore.deleteBlob(key);
+    this.musicLibrary = result.library;
+    const currentWasRemoved = Boolean(currentId && result.removed.some((track) => track.id === currentId));
+    this.pendingBatchDelete = false;
+    this.selectedRecordIds.clear();
+    if (currentWasRemoved) {
+      const nextId = result.nextTrackId ?? this.availableVinylRecords[0]?.id;
+      if (nextId) await this.selectVinyl(nextId, false);
+    }
+    this.save.saveMusicLibrary(this.musicLibrary);
+    this.preserveRecordsScroll();
+    if (result.skippedBuiltInCount > 0) this.showToast(`Skipped ${result.skippedBuiltInCount} built-in records`);
+    if (this.recordsPanelOpen) await this.showRecords();
   }
 
   private renderRecordsLibraryRows(currentId?: string): string {
@@ -4945,6 +5106,7 @@ export class WalkBackHomeApp {
       const menuOpen = this.activeRecordMenuTrackId === track.id;
       return `
         <div class="record-list-row ${selected ? "selected" : ""}">
+          <label class="record-selection" aria-label="Select ${this.escapeHtml(track.title)}"><input type="checkbox" data-record-select="${this.escapeHtml(track.id)}" ${this.selectedRecordIds.has(track.id) ? "checked" : ""}></label>
           <button class="record-select" data-action="select-vinyl" data-record="${this.escapeHtml(track.id)}">
             <span>${selected && this.personalPlayer.playing ? "◉ " : ""}${this.escapeHtml(track.title)}</span>
             <small>${this.escapeHtml(track.artist || source)}</small>
@@ -4956,6 +5118,19 @@ export class WalkBackHomeApp {
           </div>
         </div>`;
     }).join("");
+  }
+
+  private renderRecordsBatchToolbar(): string {
+    if (!this.selectedRecordIds.size) return "";
+    const visibleIds = this.visibleMusicTracks().map((track) => track.id);
+    const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => this.selectedRecordIds.has(id));
+    return `<section class="records-batch-toolbar" aria-label="Batch Records actions">
+      <div><strong>${this.selectedRecordIds.size} selected</strong><span>${allVisibleSelected ? "All filtered records selected" : "Choose records to edit"}</span></div>
+      <div class="records-batch-actions"><button data-action="${allVisibleSelected ? "records-clear-selection" : "records-select-all"}">${allVisibleSelected ? "Clear All" : "Select All"}</button><button data-action="records-request-batch-delete" data-batch-action="records-batch-delete" class="danger">Delete Selected</button></div>
+      <label>Artist<input data-record-batch-field="artist" data-batch-field="records-batch-artist" placeholder="Leave blank to keep" aria-label="Batch Artist"></label>
+      <label>Album<input data-record-batch-field="album" data-batch-field="records-batch-album" placeholder="Leave blank to keep" aria-label="Batch Album"></label>
+      <button data-action="records-apply-batch-edit">Apply Artist / Album</button>
+    </section>`;
   }
 
   private async selectVinyl(recordId: string, announce = true): Promise<void> {
@@ -5004,6 +5179,7 @@ export class WalkBackHomeApp {
         id: record.id,
         title: custom?.title || record.title,
         artist: custom?.artist || record.subtitle,
+        album: custom?.album,
         source: "built-in" as const,
         src: record.sideA?.src,
         duration: record.sideA?.duration,
@@ -5027,6 +5203,7 @@ export class WalkBackHomeApp {
           id: record.id,
           title: custom?.title || record.title,
           artist: custom?.artist || record.subtitle,
+          album: custom?.album,
           source: "built-in" as const,
           src: record.sideA?.src,
           duration: record.sideA?.duration,
@@ -5400,6 +5577,7 @@ export class WalkBackHomeApp {
     this.choices = [];
     this.readMemories.clear();
     this.completedMemoryEvents.clear();
+    this.chapterTriggerSessions.clear();
     this.chapterProgress.clear();
     this.reflectionWall = migrateLegacyReflectionWall(this.reflectionWall, this.room);
     this.save.saveReflectionWall(this.reflectionWall);

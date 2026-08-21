@@ -68,6 +68,7 @@ export function applyBatchMusicMetadata(
   };
   const nextBuiltInMeta = { ...builtInMeta };
   for (const id of selectedIds) {
+    if (library.tracks.some((track) => track.id === id)) continue;
     if (!nextBuiltInMeta[id]) nextBuiltInMeta[id] = {};
     nextBuiltInMeta[id] = { ...nextBuiltInMeta[id], ...nextMetadata };
   }

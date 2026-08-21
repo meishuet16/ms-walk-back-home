@@ -31,7 +31,7 @@ test("primary navigation is consolidated at the top and HUD has no button row", 
   assert.match(appSource, /class="menu-panel"/);
   assert.match(appSource, /data-action="open-room">Muji Room/);
   assert.match(appSource, /data-action="reflection-wall">Reflection Wall/);
-  assert.match(appSource, /data-action="music">Music:/);
+  assert.match(appSource, /class="shell-music-toggle" data-action="music"/);
   assert.doesNotMatch(appSource, /<button data-action="new">Begin Journey<\/button>/);
   assert.doesNotMatch(appSource, /hud-actions/);
   assert.doesNotMatch(stylesSource, /\.hud-actions/);
@@ -48,11 +48,11 @@ test("mobile portrait entry and fullscreen use the playable scene shell", () => 
 
 test("secondary actions live inside settings instead of the forest HUD", () => {
   assert.match(appSource, /data-action="new">Begin Journey<span>/);
-  assert.match(appSource, /data-action="continue">Continue<span>/);
-  assert.match(appSource, /data-action="credits">Credits<span>/);
   assert.match(appSource, /data-action="rain">Rain:/);
   assert.match(appSource, /data-action="fullscreen">Fullscreen/);
-  assert.match(appSource, /data-action="compact">\$\{this\.settings\.compact/);
+  assert.doesNotMatch(appSource, /data-action="compact">/);
+  assert.doesNotMatch(appSource, /data-action="credits">/);
+  assert.doesNotMatch(appSource, /data-action="reset-journey">/);
   assert.doesNotMatch(appSource, /data-action="mute"/);
 });
 
@@ -187,6 +187,51 @@ test("Records delete confirmation is outside the scrolling content and viewport 
   assert.match(appSource, /records-delete-confirmation/);
   assert.match(stylesSource, /\.records-delete-confirmation[\s\S]*position:\s*fixed/);
   assert.match(stylesSource, /\.records-panel[\s\S]*overflow-y:\s*auto/);
+});
+
+test("Records exposes multi-select batch editing and mixed deletion", () => {
+  const typesSource = readFileSync("src/types.ts", "utf8");
+  assert.match(appSource, /selectedRecordIds/);
+  assert.match(appSource, /records-select-all/);
+  assert.match(appSource, /records-batch-delete/);
+  assert.match(appSource, /records-batch-artist/);
+  assert.match(appSource, /records-batch-album/);
+  assert.match(appSource, /Skipped .* built-in records/);
+  assert.match(typesSource, /customTrackMeta\?[\s\S]*album\?: string/);
+  assert.match(stylesSource, /\.records-batch-toolbar/);
+});
+
+test("Chapter automatic cutscenes use an entry session instead of completed event history", () => {
+  assert.match(appSource, /chapterTriggerSessions/);
+  assert.match(appSource, /consumeAutomaticChapterTrigger/);
+  assert.match(appSource, /createChapterTriggerSession/);
+  assert.match(appSource, /chapterTriggerSessions\.delete/);
+  assert.doesNotMatch(appSource, /trigger\.once && this\.completedMemoryEvents\.has\(trigger\.eventId\)/);
+});
+
+test("Journal reader returns to its originating surface and keeps the scroll position", () => {
+  assert.match(appSource, /journalReturnSnapshot/);
+  assert.match(appSource, /createJournalReturnSnapshot/);
+  assert.match(appSource, /data-action="journal-reader-back"/);
+  assert.match(appSource, /restoreJournalOrigin/);
+  assert.match(appSource, /openMonthlyBook\(snapshot\.monthKey\)/);
+  assert.match(appSource, /showTimeline\(\{ restoreScrollTop: snapshot\.scrollTop \}\)/);
+  assert.match(stylesSource, /\.timeline-show-more[\s\S]*position:\s*sticky/);
+  assert.match(appSource, /handleMonthCoverInput[\s\S]*this\.openMonthlyBook\(monthKey\)/);
+});
+
+test("Reflection Wall keeps portrait notes inside the usable surface", () => {
+  assert.match(appSource, /clampReflectionNotePosition/);
+  assert.match(appSource, /reflectionWallNoteDimensions/);
+  assert.match(appSource, /transform:translate\(-50%,\s*-50%\)/);
+  assert.doesNotMatch(stylesSource, /\.wall-note\s*\{[^}]*transform:\s*none\s*!important/);
+});
+
+test("Music is one shell-level top-right toggle and legacy menu actions are removed", () => {
+  const settingsSource = appSource.match(/private settingsContent\(\): string \{[\s\S]*?\n  \}/)?.[0] ?? "";
+  assert.equal((appSource.match(/data-action="music"/g) ?? []).length, 1);
+  assert.match(appSource, /shell-music-toggle/);
+  assert.doesNotMatch(settingsSource, /data-action="music"|data-action="compact"|data-action="credits"|data-action="continue"|data-action="reset-journey"/);
 });
 
 test("mobile portrait and landscape layouts have explicit touch behavior", () => {
@@ -352,7 +397,7 @@ test("mobile journal reflection and pdf surfaces fill the portrait viewport", ()
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.reflection-chip-row[\s\S]*display:\s*none/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.reflection-wall-filter-menu\[open\]\s+\.reflection-chip-row[\s\S]*display:\s*flex/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.wall-note[\s\S]*max-width:\s*calc\(100vw - 48px\)/);
-  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.wall-note[\s\S]*transform:\s*none\s*!important/);
+  assert.doesNotMatch(stylesSource, /\.wall-note\s*\{[^}]*transform:\s*none\s*!important/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.wall-note\[data-dragging="true"\][\s\S]*outline/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.game-panel[\s\S]*color:\s*#3c2b1c/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.overlay[\s\S]*padding:\s*0/);
