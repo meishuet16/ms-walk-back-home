@@ -615,6 +615,13 @@ canvas {
   padding: 14px;
   background: linear-gradient(180deg, rgba(2, 7, 14, 0) 24%, rgba(2, 7, 14, .48));
 }
+.overlay.dialogue-open.lightweight-presentation {
+  position: absolute;
+  inset: 0;
+  place-items: stretch;
+  padding: 0;
+  --lightweight-overlay-control-clearance: clamp(92px, 14vh, 148px);
+}
 .overlay:empty { display: none; }
 .modal, .vn {
   pointer-events: auto;
@@ -651,6 +658,14 @@ canvas {
   max-height: 112px;
   object-fit: contain;
   image-rendering: pixelated;
+}
+.vn-portrait img.dialogue-portrait-image {
+  width: auto;
+  height: auto;
+  max-width: min(100%, 246px);
+  max-height: min(100%, 336px);
+  object-fit: contain;
+  transform-origin: center;
 }
 .vn-portrait img.friend-portrait {
   max-width: 246px;
@@ -698,7 +713,9 @@ canvas {
   position: relative;
   width: min(66%, 650px);
   min-height: 76px;
-  margin: 0 auto;
+  justify-self: center;
+  align-self: end;
+  margin: 0 auto max(calc(92px + env(safe-area-inset-bottom)), var(--lightweight-overlay-control-clearance, 110px));
   padding: 18px 46px 16px 24px;
   border: 2px solid rgba(230, 187, 107, .82);
   border-radius: 5px;
@@ -743,14 +760,16 @@ canvas {
   box-shadow: none;
   color: #f8d79a;
 }
+.reflection-choice-ui,
 .labis-choice-ui {
   pointer-events: auto;
   width: min(32%, 310px);
   justify-self: end;
   align-self: end;
-  margin: 0 28px 44px 0;
+  margin: 0 28px max(calc(92px + env(safe-area-inset-bottom)), var(--lightweight-overlay-control-clearance, 110px)) 0;
   color: #f9e8c6;
 }
+.reflection-choice-ui p,
 .labis-choice-ui p {
   margin: 0 0 10px;
   padding: 2px 0 4px 16px;
@@ -760,16 +779,20 @@ canvas {
   color: #ffe4ad;
   text-shadow: 0 2px 8px rgba(0,0,0,.7);
 }
+.reflection-choice-ui p::before,
 .labis-choice-ui p::before {
   content: "“";
 }
+.reflection-choice-ui p::after,
 .labis-choice-ui p::after {
   content: "”";
 }
+.reflection-choice-list,
 .labis-choice-ui div {
   display: grid;
   gap: 8px;
 }
+.reflection-choice-card,
 .labis-choice-card {
   width: 100%;
   min-height: 48px;
@@ -778,21 +801,33 @@ canvas {
   border-color: rgba(230, 187, 107, .76);
   color: #f8e3b8;
 }
+.reflection,
 .labis-reflection {
   pointer-events: auto;
   width: min(600px, calc(100vw - 34px));
   align-self: end;
-  margin-bottom: 78px;
+  justify-self: center;
+  margin-bottom: max(calc(92px + env(safe-area-inset-bottom)), var(--lightweight-overlay-control-clearance, 110px));
   padding: 18px 22px;
   text-align: center;
   color: #ffe7b5;
   text-shadow: 0 2px 8px rgba(0,0,0,.75);
   background: rgba(10, 12, 14, .32);
 }
+.reflection p,
 .labis-reflection p {
   margin: 8px 0;
   font-size: 20px;
   line-height: 1.5;
+}
+.reflection blockquote {
+  margin: 8px 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  line-height: inherit;
 }
 .labis-keyframe {
   pointer-events: auto;
@@ -905,11 +940,13 @@ canvas {
   .rpg-dialogue p {
     font-size: 15px;
   }
+  .reflection-choice-ui,
   .labis-choice-ui {
     width: min(86%, 360px);
-    margin: 0 auto 34px;
+    margin: 0 auto max(calc(116px + env(safe-area-inset-bottom)), var(--lightweight-overlay-control-clearance, 132px));
     justify-self: center;
   }
+  .reflection p,
   .labis-reflection p {
     font-size: 17px;
   }
@@ -3456,6 +3493,9 @@ canvas {
   #app.overlay-open .touch-controls {
     display: none;
   }
+  #app.overlay-open:has(.overlay.lightweight-presentation) .touch-controls {
+    display: flex;
+  }
   #app.touch-controls-editing .touch-controls {
     display: flex !important;
   }
@@ -3479,6 +3519,10 @@ canvas {
   }
   .overlay.dialogue-open {
     padding: 10px 8px;
+  }
+  .overlay.dialogue-open.lightweight-presentation {
+    padding: 0 10px;
+    --lightweight-overlay-control-clearance: clamp(124px, 18dvh, 184px);
   }
   .overlay.dialogue-open .vn {
     width: min(100%, 520px);
@@ -3543,6 +3587,12 @@ canvas {
     margin: 10px 0;
     padding: 10px;
     font-size: 16px;
+  }
+  .reflection-choice-ui,
+  .reflection,
+  .labis-reflection {
+    width: min(92%, 620px);
+    max-width: calc(100% - 20px);
   }
   .choices button {
     width: 100%;
@@ -4139,6 +4189,10 @@ canvas {
     inset: 0;
     padding: 12px;
     place-items: center;
+  }
+  #app[data-orientation="portrait"] .overlay.dialogue-open.lightweight-presentation {
+    padding: 0 10px;
+    place-items: stretch;
   }
   #app[data-orientation="portrait"] .overlay > .modal,
   #app[data-orientation="portrait"] .overlay > .vn {

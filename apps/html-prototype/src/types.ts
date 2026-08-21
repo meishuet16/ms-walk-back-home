@@ -1,3 +1,5 @@
+import type { DialoguePortrait } from "./systems/PresentationRenderer.js";
+
 export type CoreSceneId = "title" | "forest" | "bakery" | "labis" | "muji-room" | "ending";
 export type SceneId = CoreSceneId | (string & {});
 export type TendencyKey =
@@ -22,7 +24,7 @@ export type Choice = {
 export type DialogueNode = {
   id: string;
   speaker: string;
-  portrait: string | "none";
+  portrait: DialoguePortrait | "none";
   text: string;
   choices?: Choice[];
 };

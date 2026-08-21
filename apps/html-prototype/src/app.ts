@@ -63,6 +63,16 @@ import { SaveManager } from "./systems/SaveManager.js";
 import type { MusicScene } from "./systems/SceneMusic.js";
 import { SupabaseSync } from "./systems/SupabaseSync.js";
 import { emptyTendencies } from "./systems/TendencySystem.js";
+import {
+  renderDialoguePortrait,
+  renderDialoguePortraits,
+  renderReflection,
+  renderReflectionChoice,
+  renderRpgDialogue,
+  renderVnDialogue,
+  type DialoguePortrait,
+  type DialoguePortraitRenderModel
+} from "./systems/PresentationRenderer.js";
 
 type ForestNode = (AuthoredForestEntry | DiaryForestMemory) & { radius?: number; placementSlotId?: string };
 type LabisDialogueLine = { speaker: string; text: string };
@@ -935,25 +945,40 @@ export class WalkBackHomeApp {
     if (!dialogue || this.march30OverlayMode === "dialogue") return;
     this.march30OverlayMode = "dialogue";
     this.overlay.classList.add("dialogue-open");
-    this.overlay.innerHTML = `<div class="vn"><div class="vn-portrait">${this.march30PortraitMarkup(dialogue)}</div><div><h3>${this.escapeHtml(dialogue.speaker)}</h3><p>${this.escapeHtml(dialogue.text)}</p><div class="choices"><button data-action="march30-dialogue-next">Continue</button></div></div></div>`;
+    this.overlay.classList.remove("lightweight-presentation");
+    this.overlay.innerHTML = renderVnDialogue({
+      speaker: dialogue.speaker,
+      text: dialogue.text,
+      portrait: this.march30PortraitModel(dialogue),
+      actions: '<button data-action="march30-dialogue-next">Continue</button>'
+    });
     this.focusStage();
   }
 
-  private march30PortraitMarkup(dialogue: { speaker: string; portrait?: string }): string {
+  private march30PortraitModel(dialogue: { speaker: string; portrait?: DialoguePortrait }): DialoguePortraitRenderModel {
+    if (dialogue.portrait && typeof dialogue.portrait === "object") {
+      return { kind: "image", config: dialogue.portrait, alt: dialogue.speaker };
+    }
     if (dialogue.portrait === "gift") {
-      return `<div class="march30-prop-portrait gift" role="img" aria-label="Xiaoba fish charm gift">${this.march30PropPortraitCrop("gift")}</div>`;
+      return { kind: "group", className: "march30-prop-portrait gift", ariaLabel: "Xiaoba fish charm gift", children: [this.march30PropPortraitCrop("gift")] } as DialoguePortraitRenderModel;
     }
     if (dialogue.portrait === "waterGun") {
-      return `<div class="march30-prop-portrait water-gun" role="img" aria-label="Xiaoba water gun">${this.march30PropPortraitCrop("waterGun")}</div>`;
+      return { kind: "group", className: "march30-prop-portrait water-gun", ariaLabel: "Xiaoba water gun", children: [this.march30PropPortraitCrop("waterGun")] } as DialoguePortraitRenderModel;
     }
     if (dialogue.portrait === "keychains") {
-      return `<div class="march30-prop-portrait keychains" role="img" aria-label="Two Xiaoba candied-haw keychains">${this.march30PropPortraitCrop("ordinaryKeychain")}${this.march30PropPortraitCrop("phoneCharm")}</div>`;
+      return { kind: "group", className: "march30-prop-portrait keychains", ariaLabel: "Two Xiaoba candied-haw keychains", children: [this.march30PropPortraitCrop("ordinaryKeychain"), this.march30PropPortraitCrop("phoneCharm")] } as DialoguePortraitRenderModel;
     }
     const character = dialogue.speaker === "MS" ? "ms" : "et";
-    return `<div class="march30-portrait ${character}" role="img" aria-label="${character === "ms" ? "MS" : "ET"}"></div>`;
+    return { kind: "sprite", className: `march30-portrait ${character}`, ariaLabel: character === "ms" ? "MS" : "ET" };
   }
 
-  private march30PropPortraitCrop(assetId: March30PortraitPropId): string {
+  private march30PortraitMarkup(dialogue: { speaker: string; portrait?: DialoguePortrait }): string {
+    const model = this.march30PortraitModel(dialogue);
+    if (model.kind === "group") return renderDialoguePortraits(model.children, model.className, model.ariaLabel);
+    return renderDialoguePortrait(model);
+  }
+
+  private march30PropPortraitCrop(assetId: March30PortraitPropId): Extract<DialoguePortraitRenderModel, { kind: "crop" }> {
     const asset = march30Assets[assetId];
     const source = asset.source;
     const sheet = propPortraitSheetDimensions[assetId];
@@ -964,7 +989,7 @@ export class WalkBackHomeApp {
     const sheetHeight = sheet.h * displayScale;
     const left = -source.x * displayScale;
     const top = -source.y * displayScale;
-    return `<span class="march30-prop-crop" aria-hidden="true" style="width:${displayWidth}px;height:${displayHeight}px;background-size:${sheetWidth}px ${sheetHeight}px;background-position:${left}px ${top}px;background-image:url('${asset.path}')"></span>`;
+    return { kind: "crop", className: "march30-prop-crop", width: displayWidth, height: displayHeight, backgroundImage: asset.path, backgroundSize: `${sheetWidth}px ${sheetHeight}px`, backgroundPosition: `${left}px ${top}px` };
   }
 
   private finishMarch30Cutscene(): void {
@@ -992,9 +1017,14 @@ export class WalkBackHomeApp {
     this.march30ReflectionIndex = index;
     this.march30OverlayMode = "reflection";
     const choices = index === 1 ? march30ReflectionChoices : march30EchoReflectionChoices;
-    const buttons = choices.map((choice) => `<button data-action="march30-reflection-choice" data-choice="${choice.id}"><span>${this.escapeHtml(choice.label)}</span><small>reflection</small></button>`).join("");
-    this.overlay.classList.remove("dialogue-open");
-    this.overlay.innerHTML = `<div class="modal reflection-choice"><span class="ending-kicker">A quiet afterimage</span><h2>你想怎样记住这一段？</h2><div class="choices">${buttons}</div></div>`;
+    this.overlay.classList.add("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = renderReflectionChoice({
+      kicker: "A quiet afterimage",
+      title: "你想怎样记住这一段？",
+      prompt: "",
+      choices: choices.map((choice) => ({ id: choice.id, label: choice.label })),
+      action: "march30-reflection-choice"
+    });
     this.focusStage();
   }
 
@@ -1007,7 +1037,11 @@ export class WalkBackHomeApp {
     this.chapterProgress.set("march30-too-fated", recordChapterChoice(this.progressFor("march30-too-fated"), choice.id, this.tendencies));
     this.march30ReflectionResponse = choice.response ?? "";
     this.march30OverlayMode = "response";
-    this.overlay.innerHTML = `<div class="modal reflection-choice"><p class="memory-line">${this.escapeHtml(this.march30ReflectionResponse)}</p><button data-action="march30-reflection-next">Continue walking</button></div>`;
+    this.overlay.classList.add("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = renderReflection({
+      lines: [this.march30ReflectionResponse],
+      actions: '<button data-action="march30-reflection-next">Continue walking</button>'
+    });
     this.autosave();
   }
 
@@ -1015,7 +1049,12 @@ export class WalkBackHomeApp {
     if (this.march30ReflectionIndex === 2) {
       this.march30OverlayMode = "closing";
       const quote = resolveMarch30Closing(this.tendencies);
-      this.overlay.innerHTML = `<div class="modal ending-quote"><span class="ending-kicker">March 30 · 330 corridor</span><p>${this.escapeHtml(quote).replace(/\n/g, "<br>")}</p><button data-action="reflection-keep-chapter" data-chapter="march30-too-fated" data-text="${this.escapeHtml(quote)}">Keep this</button><button data-action="march30-closing-close">Continue walking</button></div>`;
+      this.overlay.classList.add("dialogue-open", "lightweight-presentation");
+      this.overlay.innerHTML = renderReflection({
+        kicker: "March 30 · 330 corridor",
+        lines: [quote],
+        actions: `<button data-action="reflection-keep-chapter" data-chapter="march30-too-fated" data-text="${this.escapeHtml(quote)}">Keep this</button><button data-action="march30-closing-close">Continue walking</button>`
+      });
     } else {
       this.march30OverlayMode = null;
       this.overlay.innerHTML = "";
@@ -1108,7 +1147,13 @@ export class WalkBackHomeApp {
     if (!dialogue || this.labisDialogueOpen) return;
     this.labisDialogueOpen = true;
     this.overlay.classList.add("dialogue-open");
-    this.overlay.innerHTML = `<div class="vn"><div class="vn-portrait"></div><div><h3>${this.escapeHtml(dialogue.speaker)}</h3><p>${this.escapeHtml(dialogue.text)}</p><div class="choices"><button data-action="choice" data-choice="labis-next">Continue</button></div></div></div>`;
+    this.overlay.classList.remove("lightweight-presentation");
+    this.overlay.innerHTML = renderVnDialogue({
+      speaker: dialogue.speaker,
+      text: dialogue.text,
+      portrait: this.dialoguePortraitModel(dialogue.portrait),
+      actions: '<button data-action="choice" data-choice="labis-next">Continue</button>'
+    });
     this.focusStage();
   }
 
@@ -1388,11 +1433,25 @@ export class WalkBackHomeApp {
     const node = this.dialogue.current();
     if (!node) return;
     const choices = node.choices?.map((choice) => `<button data-action="choice" data-choice="${choice.id}"><span>${choice.label}</span><small>${this.choiceEffectLabel(choice)}</small></button>`).join("") ?? `<button data-action="choice" data-choice="next">Continue</button>`;
-    const portrait = node.portrait === "friend" ? assets.friend : node.portrait === "muji" ? assets.muji : "";
-    const portraitMarkup = portrait ? `<img ${node.portrait === "friend" ? `class="friend-portrait"` : ""} src="${portrait}" alt="">` : "";
     this.overlay.classList.add("dialogue-open");
-    this.overlay.innerHTML = `<div class="vn"><div class="vn-portrait">${portraitMarkup}</div><div><h3>${node.speaker}</h3><p>${node.text}</p>${this.dialogue.lastResponse ? `<p class="memory-line">${this.dialogue.lastResponse}</p>` : ""}<div class="choices">${choices}</div></div></div>`;
+    this.overlay.classList.remove("lightweight-presentation");
+    this.overlay.innerHTML = renderVnDialogue({
+      speaker: node.speaker,
+      text: node.text,
+      portrait: this.dialoguePortraitModel(node.portrait),
+      response: this.dialogue.lastResponse ?? undefined,
+      actions: choices
+    });
     this.focusStage();
+  }
+
+  private dialoguePortraitModel(portrait: DialoguePortrait | "none" | undefined): DialoguePortraitRenderModel {
+    if (!portrait || portrait === "none") return { kind: "empty" };
+    if (typeof portrait === "object") return { kind: "image", config: portrait };
+    // The shared renderer keeps Bakery's existing class="friend-portrait" hook and sizing behavior.
+    if (portrait === "friend") return { kind: "image", config: { src: assets.friend }, className: "friend-portrait" };
+    if (portrait === "muji") return { kind: "image", config: { src: assets.muji } };
+    return { kind: "empty" };
   }
 
   private focusStage(): void {
@@ -1453,9 +1512,12 @@ export class WalkBackHomeApp {
     this.labisOverlayMode = "choice";
     this.labisActiveChoice = id;
     this.labisActiveEcho = null;
-    const choices = point.choices.map((choice) => `<button class="labis-choice-card" data-action="labis-choice" data-choice="${this.escapeHtml(choice.id)}">${this.escapeHtml(choice.label)}</button>`).join("");
-    this.overlay.classList.remove("dialogue-open");
-    this.overlay.innerHTML = `<div class="labis-choice-ui"><p>${this.escapeHtml(point.prompt)}</p><div>${choices}</div></div>`;
+    this.overlay.classList.add("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = renderReflectionChoice({
+      prompt: point.prompt,
+      choices: point.choices.map((choice) => ({ id: choice.id, label: choice.label })),
+      action: "labis-choice"
+    });
     this.focusStage();
   }
 
@@ -1488,8 +1550,8 @@ export class WalkBackHomeApp {
   private renderLabisDialogue(): void {
     const line = this.labisDialogueQueue[this.labisDialogueIndex];
     if (!line) return this.finishLabisDialogueQueue();
-    this.overlay.classList.add("dialogue-open");
-    this.overlay.innerHTML = `<div class="rpg-dialogue"><span>${this.escapeHtml(line.speaker)}</span><p>${this.escapeHtml(line.text)}</p><button data-action="labis-dialogue-next" aria-label="Continue">▼</button></div>`;
+    this.overlay.classList.add("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = renderRpgDialogue({ speaker: line.speaker, text: line.text, action: "labis-dialogue-next" });
     this.focusStage();
   }
 
@@ -1657,8 +1719,11 @@ export class WalkBackHomeApp {
     this.room.residueIds = [...new Set([...(this.room.residueIds ?? []), "labis-motor-day"])];
     this.labisReflectionLines = reflection.lines;
     this.labisOverlayMode = "reflection";
-    this.overlay.classList.remove("dialogue-open");
-    this.overlay.innerHTML = `<div class="labis-reflection">${reflection.lines.map((line) => `<p>${this.escapeHtml(line)}</p>`).join("")}<button data-action="reflection-keep-chapter" data-chapter="labis-motor-day" data-text="${this.escapeHtml(reflection.lines.join("\n"))}">Keep this</button><button data-action="labis-reflection-close">Close</button></div>`;
+    this.overlay.classList.add("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = renderReflection({
+      lines: reflection.lines,
+      actions: `<button data-action="reflection-keep-chapter" data-chapter="labis-motor-day" data-text="${this.escapeHtml(reflection.lines.join("\n"))}">Keep this</button><button data-action="labis-reflection-close">Close</button>`
+    });
     this.audio.ping("ending");
     this.autosave();
   }
@@ -1718,8 +1783,17 @@ export class WalkBackHomeApp {
     const lead = leadLines.length ? `<p class="memory-line">${leadLines.map((line) => this.escapeHtml(line)).join("<br>")}</p>` : "";
     const quoteTitle = reflection.title ?? title;
     const afterline = reflection.afterline ?? "Some places do not ask us to make them dramatic. They simply keep the afternoon until we are ready to see it.";
-    this.overlay.classList.remove("dialogue-open");
-    this.overlay.innerHTML = `<div class="modal ending-quote"><span class="ending-kicker">${this.escapeHtml(kicker)}</span><h2>${this.escapeHtml(quoteTitle)}</h2>${lead}<p>${reflection.closureLines.map((line) => this.escapeHtml(line)).join("<br>")}</p><blockquote>${reflection.lines.map((line) => this.escapeHtml(line)).join("<br>")}</blockquote><p class="ending-afterline">${this.escapeHtml(afterline)}</p><button data-action="reflection-keep-chapter" data-chapter="${this.escapeHtml(this.currentMemoryKey())}" data-text="${this.escapeHtml(reflection.lines.join("\n"))}">Keep this</button><button data-action="close">Close</button><button data-action="forest">Return to Forest</button></div>`;
+    this.overlay.classList.add("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = renderReflection({
+      kicker,
+      title: quoteTitle,
+      leadLines,
+      closureLines: reflection.closureLines,
+      quoteLines: reflection.lines,
+      lines: reflection.lines,
+      afterline,
+      actions: `<button data-action="reflection-keep-chapter" data-chapter="${this.escapeHtml(this.currentMemoryKey())}" data-text="${this.escapeHtml(reflection.lines.join("\n"))}">Keep this</button><button data-action="close">Close</button><button data-action="forest">Return to Forest</button>`
+    });
   }
 
   private finishBakery(): void {
