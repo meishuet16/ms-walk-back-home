@@ -14,7 +14,7 @@
 - LRCLIB runs only for the selected unresolved track; never at startup, Records open, row rendering, or on `timeupdate`.
 - LRCLIB is synced-only for this task; plain-only results are safe no-lyrics results and must not receive fabricated timestamps.
 - Use effective current Artist, Title, Album, and duration metadata; do not mutate displayed metadata, fixtures, imported persistent tracks, localStorage, or IndexedDB.
-- Use exact normalized title/artist matching; no substring, fuzzy, semantic, token, or best-score matching.
+- Keep `/api/get` compatible with exact normalized title/artist and strict duration validation; use a bounded `/api/search` scorer with comparison-only title decoration removal, meaningful artist overlap, and duration proximity as confidence. Reject materially different titles and arbitrary fuzzy/semantic guessing.
 - Respect `Retry-After` after HTTP 429 and never retry repeatedly during playback updates.
 - Direct browser requests use `https://lrclib.net`; no backend, proxy, scraper, paid API, or cloud service.
 - Preserve the existing bundled resolver and all authored `public/lrc` files and manifest content.
@@ -145,7 +145,7 @@ Expected: FAIL because `src/systems/LrclibLyrics.ts` does not exist yet.
 
 - [ ] **Step 1: Implement normalization and query construction**
 
-Use `normalizeLookupText` from `BundledLyrics.ts` for exact comparison only. Include `duration` only when finite and between 1 and 3600 seconds. Set `Lrclib-Client` to a concise app identifier because browser JavaScript cannot set `User-Agent`.
+Use the existing lookup normalizers from `BundledLyrics.ts`, plus an isolated search-only title normalizer that removes common trailing version decorations and parenthesized alternate annotations without changing displayed metadata. Include `duration` only when finite and between 1 and 3600 seconds. Set `Lrclib-Client` to a concise app identifier because browser JavaScript cannot set `User-Agent`.
 
 - [ ] **Step 2: Implement `/api/get` response validation**
 
@@ -153,7 +153,7 @@ Require a JSON object, non-empty string `trackName`/`artistName` or fall back to
 
 - [ ] **Step 3: Implement conservative `/api/search` fallback**
 
-Call search only after `/api/get` returns 404/no usable synced result. Select the first candidate in response order that has exact normalized title and artist equality and, when requested duration exists and candidate duration is finite, absolute difference no greater than 2 seconds. If candidate duration is missing while requested duration is available, reject it. Parse only non-empty synced lyrics.
+Call search only after `/api/get` returns 404/no usable synced result. Parse candidates with usable synced lyrics, score normalized core title first, meaningful artist name/token overlap second, and duration proximity third. Allow version decorations, partial artist lists, and duration differences larger than two seconds when title/artist confidence is strong; reject materially different titles, artist-only matches, and ambiguous weak candidates.
 
 - [ ] **Step 4: Implement in-memory cache, in-flight deduplication, and retry-after cooldown**
 

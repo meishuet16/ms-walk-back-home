@@ -16,6 +16,15 @@ function providerFor(value: unknown, options: { status?: number; fetch?: typeof 
   });
 }
 
+function searchProvider(candidates: unknown): LrclibLyricsProvider {
+  return new LrclibLyricsProvider({
+    fetch: async (input) => String(input).includes("/api/get?")
+      ? new Response("missing", { status: 404 })
+      : jsonResponse(candidates),
+    parseLrc
+  });
+}
+
 test("precise lookup sends effective metadata and duration and parses synced lyrics", async () => {
   const requests: string[] = [];
   const provider = new LrclibLyricsProvider({
@@ -52,27 +61,66 @@ test("malformed, missing, and network-failed responses return null safely", asyn
   for (const provider of providers) assert.equal(await provider.resolve({ title: "Song", artist: "Artist" }), null);
 });
 
-test("search fallback rejects title and artist variants and accepts exact metadata within two seconds", async () => {
-  const requests: string[] = [];
-  const provider = new LrclibLyricsProvider({
-    fetch: async (input) => {
-      const url = String(input);
-      requests.push(url);
-      if (url.includes("/api/get?")) return new Response("missing", { status: 404 });
-      return jsonResponse([
-        { trackName: "Song (Live)", artistName: "Artist", duration: 201, syncedLyrics: "[00:01]wrong" },
-        { trackName: "Song", artistName: "Other Artist", duration: 201, syncedLyrics: "[00:01]wrong" },
-        { trackName: "Song", artistName: "Artist", duration: 203, syncedLyrics: "[00:02]right" }
-      ]);
-    },
-    parseLrc
-  });
+test("search fallback allows common title version decorations", async () => {
+  const provider = searchProvider([
+    { trackName: "那些年 (Live)", artistName: "胡夏", duration: 240, syncedLyrics: "[00:01]live" },
+    { trackName: "左转灯 (1000 Times+1)", artistName: "LBI", duration: 300, syncedLyrics: "[00:02]left" }
+  ]);
 
-  const result = await provider.resolve({ title: "Song", artist: "Artist", duration: 201 });
+  const bygone = await provider.resolve({ title: "那些年", artist: "胡夏", duration: 201 });
+  assert.deepEqual(bygone?.syncedLyrics, [{ time: 1, text: "live" }]);
 
-  assert.deepEqual(result?.syncedLyrics, [{ time: 2, text: "right" }]);
-  assert.equal(requests.length, 2);
-  assert.match(requests[1], /\/api\/search\?/);
+  const alternate = await searchProvider([
+    { trackName: "左转灯 (1000 Times+1)", artistName: "LBI", duration: 300, syncedLyrics: "[00:02]left" }
+  ]).resolve({ title: "左转灯", artist: "LBI", duration: 201 });
+  assert.deepEqual(alternate?.syncedLyrics, [{ time: 2, text: "left" }]);
+});
+
+test("search fallback accepts Traditional/Simplified titles and partial artist overlap", async () => {
+  const traditional = await searchProvider([
+    { trackName: "后来", artistName: "刘若英", duration: 245, syncedLyrics: "[00:01]later" }
+  ]).resolve({ title: "後來", artist: "劉若英", duration: 201 });
+  assert.deepEqual(traditional?.syncedLyrics, [{ time: 1, text: "later" }]);
+
+  const partialArtist = await searchProvider([
+    { trackName: "Song (Acoustic)", artistName: "派伟俊 & mac ova seas", duration: 260, syncedLyrics: "[00:02]partial" }
+  ]).resolve({ title: "Song", artist: "派伟俊", duration: 201 });
+  assert.deepEqual(partialArtist?.syncedLyrics, [{ time: 2, text: "partial" }]);
+});
+
+test("search duration is a confidence score rather than a hard two-second rejection", async () => {
+  const result = await searchProvider([
+    { trackName: "Song", artistName: "Artist", duration: 245, syncedLyrics: "[00:03]longer" }
+  ]).resolve({ title: "Song", artist: "Artist", duration: 201 });
+  assert.deepEqual(result?.syncedLyrics, [{ time: 3, text: "longer" }]);
+});
+
+test("search fallback rejects unrelated titles and same-artist different songs", async () => {
+  const unrelated = await searchProvider([
+    { trackName: "Another Song", artistName: "Artist", duration: 201, syncedLyrics: "[00:01]wrong" }
+  ]).resolve({ title: "Song", artist: "Artist", duration: 201 });
+  assert.equal(unrelated, null);
+
+  const sameArtistDifferentSong = await searchProvider([
+    { trackName: "Different Song", artistName: "Artist", duration: 201, syncedLyrics: "[00:01]wrong" }
+  ]).resolve({ title: "Song", artist: "Artist", duration: 201 });
+  assert.equal(sameArtistDifferentSong, null);
+});
+
+test("search fallback rejects plain-only candidates", async () => {
+  const result = await searchProvider([
+    { trackName: "Song (Live)", artistName: "Artist", duration: 201, plainLyrics: "no timestamps" }
+  ]).resolve({ title: "Song", artist: "Artist", duration: 201 });
+  assert.equal(result, null);
+});
+
+test("search fallback chooses the strongest title, artist, and duration candidate", async () => {
+  const result = await searchProvider([
+    { trackName: "Song (Live)", artistName: "Artist & Other", duration: 250, syncedLyrics: "[00:01]weaker" },
+    { trackName: "Song (Acoustic)", artistName: "Other Artist", duration: 202, syncedLyrics: "[00:02]wrong artist" },
+    { trackName: "Song", artistName: "Artist", duration: 203, syncedLyrics: "[00:03]strongest" }
+  ]).resolve({ title: "Song", artist: "Artist", duration: 201 });
+  assert.deepEqual(result?.syncedLyrics, [{ time: 3, text: "strongest" }]);
 });
 
 test("precise lookup also rejects contradictory returned metadata", async () => {
@@ -90,6 +138,16 @@ test("precise lookup also rejects contradictory returned metadata", async () => 
   const result = await provider.resolve({ title: "Song", artist: "Artist", duration: 201 });
   assert.deepEqual(result?.syncedLyrics, [{ time: 2, text: "right" }]);
   assert.equal(requests.length, 2);
+});
+
+test("precise lookup keeps strict duration validation while search remains relaxed", async () => {
+  const provider = new LrclibLyricsProvider({
+    fetch: async (input) => String(input).includes("/api/get?")
+      ? jsonResponse({ trackName: "Song", artistName: "Artist", duration: 240, syncedLyrics: "[00:01]wrong" })
+      : jsonResponse([]),
+    parseLrc
+  });
+  assert.equal(await provider.resolve({ title: "Song", artist: "Artist", duration: 201 }), null);
 });
 
 test("successful results are cached and concurrent requests share one fetch", async () => {

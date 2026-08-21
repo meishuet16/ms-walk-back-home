@@ -12,7 +12,7 @@ LRCLIB is called only for the selected track after local and bundled sources hav
 
 ## Provider API
 
-Use the documented direct-browser endpoint `GET https://lrclib.net/api/get` with `track_name`, `artist_name`, optional `album_name`, and optional duration in seconds. If the precise lookup returns no usable synced lyrics, use `GET https://lrclib.net/api/search` with track and artist parameters. Search candidates must have exact normalized title and artist matches; when duration is available, candidates must be within the documented two-second tolerance. No substring, fuzzy, semantic, or best-score matching is allowed.
+Use the documented direct-browser endpoint `GET https://lrclib.net/api/get` with `track_name`, `artist_name`, optional `album_name`, and optional duration in seconds. A precise response must remain compatible with the requested title, artist, and duration. If it returns no usable synced lyrics, use `GET https://lrclib.net/api/search` with track and artist parameters. Search candidates use a bounded scorer: normalized core title after comparison-only version-decoration removal is primary, meaningful artist overlap is secondary, and duration proximity is tertiary. Search duration is confidence rather than a hard filter; candidates still require usable synced lyrics, meaningful title compatibility, and a safety floor against unrelated songs. No arbitrary substring, semantic, or unconstrained best-score guessing is allowed.
 
 LRCLIB direct browser access is supported by the observed `Access-Control-Allow-Origin: *` response header, and `Retry-After` is exposed. A 429 records a cooldown until the indicated retry time; ordinary failures are safe no-lyrics results and are not retried on every playback update.
 
