@@ -1881,6 +1881,16 @@ canvas {
   background: rgba(52, 44, 34, .96);
   box-shadow: 0 4px 14px rgba(0, 0, 0, .28);
 }
+.timeline-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+.timeline-scroll-content {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
 .journal-empty {
   padding: 22px;
   text-align: center;
@@ -2034,6 +2044,7 @@ canvas {
 .reflection-stack,
 .reflection-list {
   overflow: auto;
+  min-height: 0;
   padding: 6px;
 }
 .reflection-stack-month {
@@ -2937,7 +2948,8 @@ canvas {
 .records-delete-confirmation {
   position: fixed;
   left: 50%;
-  bottom: max(18px, env(safe-area-inset-bottom));
+  top: 50%;
+  bottom: auto;
   z-index: 80;
   display: grid;
   gap: 14px;
@@ -2948,7 +2960,10 @@ canvas {
   background: linear-gradient(180deg, #fff8eb, #f7ecdc);
   color: #2d2117;
   box-shadow: 0 22px 70px rgba(0,0,0,.42);
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
+}
+.records-batch-mobile-confirmation {
+  display: none;
 }
 .delete-confirmation strong,
 .records-delete-confirmation strong {
@@ -2992,9 +3007,16 @@ canvas {
       linear-gradient(180deg, rgba(35, 20, 10, .98), rgba(13, 9, 5, .98));
   }
   .records-delete-confirmation {
-    bottom: max(12px, env(safe-area-inset-bottom));
+    top: 50%;
+    bottom: auto;
     max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
     overflow-y: auto;
+  }
+  .records-batch-desktop-confirmation {
+    display: none;
+  }
+  .records-batch-mobile-confirmation {
+    display: grid;
   }
   .records-panel.personal-records.has-bg::after {
     background:
@@ -3379,6 +3401,12 @@ canvas {
     position: fixed;
     top: 10px;
     left: 10px;
+  }
+  .shell-music-toggle {
+    position: fixed;
+    top: max(10px, env(safe-area-inset-top));
+    right: max(64px, calc(env(safe-area-inset-right) + 64px));
+    z-index: 43;
   }
   .module-grid { grid-template-columns: 1fr; }
   .touch-controls { display: none; }
@@ -4102,6 +4130,9 @@ canvas {
   .timeline-panel {
     min-height: 100dvh;
   }
+  .timeline-panel {
+    overflow: hidden;
+  }
   .records-panel.personal-records {
     padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
   }
@@ -4384,6 +4415,8 @@ canvas {
   .reflection-wall-modal {
     padding: env(safe-area-inset-top) 14px max(18px, env(safe-area-inset-bottom));
     background: linear-gradient(180deg, #fbf8ef, #ede0cc);
+    height: 100dvh;
+    overflow: hidden;
   }
   .reflection-wall-toolbar {
     grid-template-columns: minmax(0, 1fr) auto auto;
@@ -4428,6 +4461,14 @@ canvas {
     height: calc(100dvh - 224px);
     overflow: hidden;
     touch-action: none;
+  }
+  .reflection-stack,
+  .reflection-list {
+    min-height: 0;
+    height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
   }
   .wall-note {
     width: min(170px, calc(100vw - 48px));

@@ -234,6 +234,40 @@ test("Music is one shell-level top-right toggle and legacy menu actions are remo
   assert.doesNotMatch(settingsSource, /data-action="music"|data-action="compact"|data-action="credits"|data-action="continue"|data-action="reset-journey"/);
 });
 
+test("Reflection Wall stack and list have their own portrait scroll surface", () => {
+  assert.match(stylesSource, /\.reflection-stack,\s*\.reflection-list[\s\S]*min-height:\s*0/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.reflection-wall-modal[\s\S]*overflow:\s*hidden/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.reflection-stack,\s*\.reflection-list[\s\S]*overflow-y:\s*auto/);
+});
+
+test("Mobile shell music uses the same fixed safe-area control row as the menu", () => {
+  assert.match(stylesSource, /@media\s*\(max-width:\s*860px\)[\s\S]*\.shell-music-toggle[\s\S]*position:\s*fixed/);
+  assert.match(stylesSource, /\.shell-music-toggle[\s\S]*right:\s*max\(/);
+});
+
+test("Timeline keeps its load-more action visible while entries scroll", () => {
+  assert.match(appSource, /timeline-scroll-content/);
+  assert.match(stylesSource, /\.timeline-panel[\s\S]*display:\s*grid/);
+  assert.match(stylesSource, /\.timeline-scroll-content[\s\S]*overflow-y:\s*auto/);
+  assert.match(appSource, /querySelector<HTMLElement>\("\.timeline-scroll-content"\)/);
+});
+
+test("Journal editor back restores the originating timeline scroll position", () => {
+  assert.match(appSource, /edit-diary-entry[\s\S]*captureJournalReturnSnapshot\(\)[\s\S]*showDiaryEditor/);
+  assert.match(appSource, /journal-edit-current[\s\S]*captureJournalReturnSnapshot\(\)[\s\S]*showDiaryEditor/);
+  assert.match(appSource, /handleJournalEditorBack[\s\S]*restoreJournalOrigin/);
+  assert.match(appSource, /discardJournalEditor[\s\S]*restoreJournalOrigin/);
+});
+
+test("Records batch actions stay inside the song sheet and preserve sheet scroll when switching tracks", () => {
+  const sheetStart = appSource.indexOf('<section class="records-song-sheet');
+  const batchToolbar = appSource.indexOf('${batchToolbar}', sheetStart);
+  assert.ok(sheetStart >= 0 && batchToolbar > sheetStart);
+  assert.match(appSource, /recordsSheetScrollTop/);
+  assert.match(appSource, /querySelector<HTMLElement>\("\.records-song-sheet"\)/);
+  assert.match(stylesSource, /\.records-delete-confirmation[\s\S]*top:\s*50%/);
+});
+
 test("mobile portrait and landscape layouts have explicit touch behavior", () => {
   assert.match(inputSource, /Virtual joystick/);
   assert.match(stylesSource, /#app\[data-scene="forest"\] \.touch-controls/);
@@ -354,7 +388,7 @@ test("journal mobile timeline books and pdf expose editorial structures", () => 
   assert.doesNotMatch(appSource, /data-action="delete-diary-entry" data-id="\$\{this\.escapeHtml\(entry\.id\)\}">Delete/);
   assert.match(appSource, /timeline-filter-menu/);
   assert.match(appSource, /renderTimelineDatePicker/);
-  assert.match(appSource, /\$\{this\.journalHeader\("Timeline", month, this\.renderTimelineFilters\(month\)\)\}\$\{this\.renderTimelineDatePicker\(/);
+  assert.match(appSource, /\$\{this\.journalHeader\("Timeline", month, this\.renderTimelineFilters\(month\)\)\}\$\{this\.renderTimelineDatePicker\(|timeline-scroll-content/);
   assert.doesNotMatch(appSource, /<\/details>\$\{this\.renderTimelineDatePicker\(selectedDate\)\}/);
   assert.match(appSource, /timeline-date-picker/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.month-nav[\s\S]*grid-template-columns:\s*auto\s*minmax\(0,\s*1fr\)\s*auto\s*auto/);

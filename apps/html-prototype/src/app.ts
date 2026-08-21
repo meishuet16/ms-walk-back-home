@@ -176,6 +176,7 @@ export class WalkBackHomeApp {
   private recordsSongSheetOpen = false;
   private recordsMoreMenuOpen = false;
   private recordsScrollTop = 0;
+  private recordsSheetScrollTop = 0;
   private recordsRenderToken = 0;
   private selectedRecordIds = new Set<string>();
   private pendingBatchDelete = false;
@@ -351,10 +352,12 @@ export class WalkBackHomeApp {
     if (action === "save-diary-entry") this.saveDiaryEntry(target.dataset.id);
     if (action === "edit-diary-entry") {
       this.journalMoreMenuOpen = false;
+      this.captureJournalReturnSnapshot();
       this.showDiaryEditor(target.dataset.id);
     }
     if (action === "journal-edit-current") {
       this.journalMoreMenuOpen = false;
+      this.captureJournalReturnSnapshot();
       this.showDiaryEditor(target.dataset.id);
     }
     if (action === "journal-more-menu") {
@@ -2603,13 +2606,13 @@ export class WalkBackHomeApp {
 
   private handleJournalEditorBack(): void {
     if (!this.isJournalEditorActive()) {
-      this.showTimeline();
+      this.restoreJournalOrigin();
       return;
     }
     this.flushJournalEditorDraft();
     if (!this.journalEditorDirty && !this.journalEditorIsNew) {
       this.endJournalEditor();
-      this.showTimeline();
+      this.restoreJournalOrigin();
       return;
     }
     const entryId = this.journalEditorEntryId;
@@ -2624,10 +2627,10 @@ export class WalkBackHomeApp {
 
   private discardJournalEditor(): void {
     const snapshot = this.journalEditorSnapshot;
-    if (!snapshot) return this.showTimeline();
+    if (!snapshot) return this.restoreJournalOrigin();
     this.endJournalEditor();
     this.applyDiaryLibrary(snapshot);
-    this.showTimeline();
+    this.restoreJournalOrigin();
     this.autosave();
     this.showToast("Changes discarded");
   }
@@ -2644,6 +2647,7 @@ export class WalkBackHomeApp {
   }
 
   private openNewDiaryPage(): void {
+    this.captureJournalReturnSnapshot();
     const today = new Date().toISOString().slice(0, 10);
     const originalLibrary = this.makeDiaryLibrary();
     const opened = createNewDiaryPage(originalLibrary, today);
@@ -2680,10 +2684,10 @@ export class WalkBackHomeApp {
     const empty = `<div class="journal-empty"><p>${noResult ? "No diary matched these filters." : "Nothing was written here."}</p><button data-action="new-diary-entry">Create New Journal</button></div>`;
     const confirm = this.timelineDeleteConfirmOpen ? this.renderTimelineDeleteConfirmation() : "";
     const selectedDate = this.timelineDateFilter || `${this.timelineCursorMonth().key}-01`;
-    this.overlay.innerHTML = `<div class="modal game-panel timeline-panel journal-panel">${this.journalHeader("Timeline", month, this.renderTimelineFilters(month))}${this.renderTimelineDatePicker(selectedDate)}<div class="timeline-list">${this.renderTimelineDateGroups(visibleEntries, rows) || empty}</div>${showMore}${confirm}</div>`;
+    this.overlay.innerHTML = `<div class="modal game-panel timeline-panel journal-panel">${this.journalHeader("Timeline", month, this.renderTimelineFilters(month))}<div class="timeline-scroll-content">${this.renderTimelineDatePicker(selectedDate)}<div class="timeline-list">${this.renderTimelineDateGroups(visibleEntries, rows) || empty}</div></div>${showMore}${confirm}</div>`;
     if (options.restoreScrollTop !== undefined) {
       requestAnimationFrame(() => {
-        const panel = this.overlay.querySelector<HTMLElement>(".journal-panel");
+        const panel = this.overlay.querySelector<HTMLElement>(".timeline-scroll-content");
         if (panel) panel.scrollTop = options.restoreScrollTop ?? 0;
       });
     }
@@ -2843,7 +2847,7 @@ export class WalkBackHomeApp {
   }
 
   private showMoreTimelineEntries(): void {
-    const panel = this.overlay.querySelector<HTMLElement>(".journal-panel");
+    const panel = this.overlay.querySelector<HTMLElement>(".timeline-scroll-content");
     const restoreScrollTop = panel?.scrollTop ?? 0;
     this.timelineVisibleCount += journalBatchSize;
     this.showTimeline({ restoreScrollTop });
@@ -2854,11 +2858,12 @@ export class WalkBackHomeApp {
     const panel = this.overlay.querySelector<HTMLElement>(".journal-panel");
     if (!panel) return;
     const booksSurface = this.journalMode === "books" || this.journalMode === "reader";
+    const scrollSurface = booksSurface ? panel : this.overlay.querySelector<HTMLElement>(".timeline-scroll-content") ?? panel;
     const monthKey = booksSurface
       ? this.selectedBooksMonthKey || selectedOrLatestMonth(this.diaryEntries).key
       : this.timelineCursorMonth().key;
     const year = booksSurface ? this.selectedBooksYear || monthKey.slice(0, 4) : monthKey.slice(0, 4);
-    this.journalReturnSnapshot = createJournalReturnSnapshot(booksSurface ? "books" : "timeline", monthKey, year, panel.scrollTop);
+    this.journalReturnSnapshot = createJournalReturnSnapshot(booksSurface ? "books" : "timeline", monthKey, year, scrollSurface.scrollTop);
   }
 
   private restoreJournalOrigin(): void {
@@ -4875,7 +4880,9 @@ export class WalkBackHomeApp {
 
   private preserveRecordsScroll(): void {
     const panel = this.overlay.querySelector<HTMLElement>(".records-panel");
+    const sheet = this.overlay.querySelector<HTMLElement>(".records-song-sheet");
     this.recordsScrollTop = panel?.scrollTop ?? this.recordsScrollTop;
+    this.recordsSheetScrollTop = sheet?.scrollTop ?? this.recordsSheetScrollTop;
   }
 
   private restoreRecordsScroll(renderToken = this.recordsRenderToken): void {
@@ -4884,6 +4891,8 @@ export class WalkBackHomeApp {
       if (renderToken !== this.recordsRenderToken) return;
       const panel = this.overlay.querySelector<HTMLElement>(".records-panel");
       if (panel) panel.scrollTop = scrollTop;
+      const sheet = this.overlay.querySelector<HTMLElement>(".records-song-sheet");
+      if (sheet) sheet.scrollTop = this.recordsSheetScrollTop;
     });
   }
 
@@ -4898,6 +4907,7 @@ export class WalkBackHomeApp {
     this.selectedRecordIds.clear();
     this.pendingBatchDelete = false;
     this.recordsScrollTop = 0;
+    this.recordsSheetScrollTop = 0;
     this.updatePersonalMusicOverlay();
   }
 
@@ -4920,6 +4930,7 @@ export class WalkBackHomeApp {
       : `<p class="empty-lyrics">Add lyrics from the More menu.</p>`;
     const libraryRows = this.renderRecordsLibraryRows(current?.id);
     const batchToolbar = this.renderRecordsBatchToolbar();
+    const desktopBatchToolbar = this.renderRecordsBatchToolbar();
     const visualStyle = cover ? `--cover:url('${this.escapeHtml(cover)}')` : "";
     const bgStyle = background ? `style="--player-bg:url('${this.escapeHtml(background)}')"` : "";
     const coverInitials = cover ? "" : `<span>${this.escapeHtml(this.trackInitials(current?.title ?? "Music"))}</span>`;
@@ -4937,7 +4948,6 @@ export class WalkBackHomeApp {
       <div class="modal game-panel records-panel personal-records ${background ? "has-bg" : ""}" ${bgStyle}>
         <div class="records-scroll-content">
         <header class="records-header"><div><h2>My Records</h2><p>Personal songs for the room and forest.</p></div><div class="records-header-actions"><button class="records-mobile-more-button" data-action="toggle-records-more-menu" aria-label="More Records actions">⋮</button><button class="records-mobile-close-button" data-action="close-records" aria-label="Close Records">×</button><button data-action="close" aria-label="Close Records">Close</button></div></header>
-        ${batchToolbar}
         <section class="records-mobile-player" aria-label="Mobile Records player">
           <div class="records-mobile-title">
             <small>${current?.source === "user" ? "My Music" : "Walk Back Home"}</small>
@@ -4984,6 +4994,7 @@ export class WalkBackHomeApp {
           </section>
           <aside class="records-library">
             ${searchSortControls}
+            ${desktopBatchToolbar}
             <div class="record-list personal-list">${libraryRows || `<p>Add your own song.</p>`}</div>
             <label class="file-control add-record">+ Add My Record<input id="music-audio-input" type="file" accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/mp4,audio/aac,.mp3,.wav,.ogg,.m4a,.aac" aria-label="Add my record"></label>
             ${current?.source === "user" ? `<button data-action="delete-user-track" data-track="${this.escapeHtml(current.id)}">Delete Imported Song</button>` : ""}
@@ -5000,11 +5011,14 @@ export class WalkBackHomeApp {
         <section class="records-song-sheet ${this.recordsSongSheetOpen ? "open" : ""}" aria-label="Records song list">
           <div class="sheet-handle"></div>
           <div class="records-song-sheet-head"><h3>My Records</h3><button data-action="toggle-records-song-sheet" aria-label="Close Records song list">Close</button></div>
+          ${batchToolbar}
+          ${this.pendingBatchDelete ? this.renderBatchDeleteConfirmation("mobile") : ""}
           <div class="records-song-tools">${searchSortControls}</div>
           <label class="file-control add-record">+ Add My Record<input id="music-audio-input" type="file" accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/mp4,audio/aac,.mp3,.wav,.ogg,.m4a,.aac" aria-label="Add my record"></label>
           <div class="record-list personal-list">${libraryRows || `<p>Add your own song.</p>`}</div>
         </section>
         </div>
+        ${this.pendingBatchDelete ? this.renderBatchDeleteConfirmation("desktop") : ""}
         ${deleteTrack ? `<div class="records-delete-confirmation" role="dialog" aria-modal="true" aria-label="Delete from My Records">
           <div>
             <strong>Delete from My Records?</strong>
@@ -5012,13 +5026,6 @@ export class WalkBackHomeApp {
             <p>This removes the copy and information stored by this app. Your original audio file on your device will not be changed.</p>
           </div>
           <div class="delete-confirmation-actions"><button data-action="cancel-delete-user-track">Cancel</button><button class="danger" data-action="confirm-delete-user-track">Delete</button></div>
-        </div>` : ""}
-        ${this.pendingBatchDelete ? `<div class="records-delete-confirmation" role="dialog" aria-modal="true" aria-label="Delete selected Records">
-          <div>
-            <strong>Delete selected Records?</strong>
-            <p>${this.selectedRecordIds.size} record${this.selectedRecordIds.size === 1 ? "" : "s"} selected. User records will be removed; built-in records will be kept.</p>
-          </div>
-          <div class="delete-confirmation-actions"><button data-action="records-cancel-batch-delete">Cancel</button><button class="danger" data-action="records-confirm-batch-delete">Delete users</button></div>
         </div>` : ""}
       </div>`;
     this.focusStage();
@@ -5131,6 +5138,16 @@ export class WalkBackHomeApp {
       <label>Album<input data-record-batch-field="album" data-batch-field="records-batch-album" placeholder="Leave blank to keep" aria-label="Batch Album"></label>
       <button data-action="records-apply-batch-edit">Apply Artist / Album</button>
     </section>`;
+  }
+
+  private renderBatchDeleteConfirmation(surface: "mobile" | "desktop"): string {
+    return `<div class="records-delete-confirmation records-batch-${surface}-confirmation" role="dialog" aria-modal="true" aria-label="Delete selected Records">
+      <div>
+        <strong>Delete selected Records?</strong>
+        <p>${this.selectedRecordIds.size} record${this.selectedRecordIds.size === 1 ? "" : "s"} selected. User records will be removed; built-in records will be kept.</p>
+      </div>
+      <div class="delete-confirmation-actions"><button data-action="records-cancel-batch-delete">Cancel</button><button class="danger" data-action="records-confirm-batch-delete">Delete users</button></div>
+    </div>`;
   }
 
   private async selectVinyl(recordId: string, announce = true): Promise<void> {
