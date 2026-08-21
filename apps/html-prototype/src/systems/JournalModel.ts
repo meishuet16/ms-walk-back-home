@@ -17,6 +17,7 @@ export type MonthlyBookSummary = {
   entryCount: number;
   photoCount: number;
   videoCount: number;
+  audioCount: number;
   daysWritten: number;
   cover?: JournalBookCover;
   theme: "forest" | "cream" | "rain" | "brown" | "yellow" | "rose";
@@ -183,6 +184,7 @@ export function monthlyBookSummaries(entries: DiaryEntry[], covers: Record<strin
     entryCount: month.entries.length,
     photoCount: month.entries.reduce((sum, entry) => sum + (entry.photos?.length ?? 0), 0),
     videoCount: month.entries.reduce((sum, entry) => sum + (entry.media ?? []).filter((media) => media.type === "video").length, 0),
+    audioCount: month.entries.reduce((sum, entry) => sum + (entry.media ?? []).filter((media) => media.type === "audio").length, 0),
     daysWritten: new Set(month.entries.map((entry) => entry.date)).size,
     cover: covers[month.key] ?? defaultMonthlyCover(month.key),
     theme: themes[index % themes.length]

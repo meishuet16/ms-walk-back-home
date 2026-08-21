@@ -336,6 +336,7 @@ export class WalkBackHomeApp {
   }
 
   private handleClick(event: Event): void {
+    if ((event.target as HTMLElement).closest("audio")) return;
     const target = (event.target as HTMLElement).closest<HTMLElement>("[data-action]");
     if (!target) return;
     const action = target.dataset.action;
@@ -3178,7 +3179,7 @@ export class WalkBackHomeApp {
     const yearFilter = `<div class="journal-year-filter" aria-label="Filter books by year">${yearOptions.map((year) => `<button class="${String(year) === selectedYear ? "selected" : ""}" data-action="journal-books-year" data-year="${year}">${year}</button>`).join("")}</div>`;
     const books = summaries
       .filter((book) => String(book.year) === selectedYear)
-      .map((book) => `<button class="monthly-book theme-${book.theme}" data-action="open-month-book" data-month="${book.key}"><span class="book-cover-thumb" style="--book-cover:${book.cover?.src.startsWith("data:") ? `url('${this.escapeHtml(book.cover.src)}')` : this.escapeHtml(book.cover?.src ?? defaultMonthlyCover(book.key).src)}">${this.escapeHtml(book.label.split(" ")[0].toUpperCase())}</span><strong>${book.year}</strong><small>${book.entryCount} entries · ${book.photoCount} photos · ${book.videoCount} videos</small></button>`).join("");
+      .map((book) => `<button class="monthly-book theme-${book.theme}" data-action="open-month-book" data-month="${book.key}"><span class="book-cover-thumb" style="--book-cover:${book.cover?.src.startsWith("data:") ? `url('${this.escapeHtml(book.cover.src)}')` : this.escapeHtml(book.cover?.src ?? defaultMonthlyCover(book.key).src)}">${this.escapeHtml(book.label.split(" ")[0].toUpperCase())}</span><strong>${book.year}</strong><small>${book.entryCount} entries · ${book.photoCount} photos · ${book.videoCount} videos · ${book.audioCount} voice notes</small></button>`).join("");
     this.overlay.innerHTML = `<div class="modal game-panel journal-panel monthly-books">${this.journalHeader("Books", month)}${yearFilter}<section class="book-shelf-section"><h3>Time Albums</h3><div class="book-grid">${books || `<div class="journal-empty"><p>Your story starts here.</p><button data-action="new-diary-entry">Write the first page</button></div>`}</div></section></div>`;
     this.focusStage();
   }
@@ -3209,7 +3210,7 @@ export class WalkBackHomeApp {
     this.selectedBooksYear = monthKey.slice(0, 4);
     const month = this.currentBooksMonth(monthKey);
     const pages = month.entries.map((entry) => `<article class="book-page"><button class="diary-page-preview" data-action="open-diary-page" data-id="${this.escapeHtml(entry.id)}">${this.renderDiaryPreview(entry)}</button><button data-action="open-diary-page" data-id="${this.escapeHtml(entry.id)}">Open Page</button></article>`).join("");
-    const stats = `${month.entries.length} entries · ${month.entries.reduce((sum, entry) => sum + diaryMediaItems(entry).filter((media) => media.type === "image").length, 0)} photos · ${month.entries.reduce((sum, entry) => sum + (entry.media ?? []).filter((media) => media.type === "video").length, 0)} videos`;
+    const stats = `${month.entries.length} entries · ${month.entries.reduce((sum, entry) => sum + diaryMediaItems(entry).filter((media) => media.type === "image").length, 0)} photos · ${month.entries.reduce((sum, entry) => sum + (entry.media ?? []).filter((media) => media.type === "video").length, 0)} videos · ${month.entries.reduce((sum, entry) => sum + (entry.media ?? []).filter((media) => media.type === "audio").length, 0)} voice notes`;
     const cover = this.monthlyCovers?.[month.key] ?? defaultMonthlyCover(month.key);
     const coverPosition = cover.crop === "top" ? "center top" : cover.crop === "bottom" ? "center bottom" : "center center";
     const coverSize = cover.crop === "contain" ? "contain" : "cover";
