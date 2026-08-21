@@ -3,7 +3,7 @@ import { march30Assets, march30EchoActions, march30EchoReflectionChoices, march3
 import { canStartLabisMotorMemory, labisDiaryMemorySpot, labisInteractionForPoint, labisMotorMemoryActions } from "./fixtures/labisMotorMemory.js";
 import { labisAssetManifest, labisAssetPath, labisProductionAssetPaths } from "./fixtures/labisAssetRegistry.js";
 import { labisChoicePoints, labisEchoes, resolveLabisMemoryReflection, type LabisChoicePoint, type LabisEcho } from "./fixtures/labisMemoryEchoes.js";
-import type { ChapterProgress, Choice, DiaryEntry, DiaryLibraryState, DiaryMedia, DiaryMediaCrop, JournalBookCoverCrop, JourneyState, MemoryKind, MusicSort, PersonalMusicLibraryState, PersonalPlayerState, ReflectionNote, ReflectionWallFilter, ReflectionWallSort, ReflectionWallState, ReflectionWallView, RoomJourneyState, SceneId, Tendencies, UserMusicTrack } from "./types.js";
+import type { ChapterProgress, Choice, DiaryEntry, DiaryLibraryState, DiaryMedia, DiaryMediaCrop, JournalBookCoverCrop, JourneyState, MemoryKind, MusicSort, PersonalMusicLibraryState, PersonalPlayerState, ReflectionNote, ReflectionWallFilter, ReflectionWallSort, ReflectionWallState, ReflectionWallView, RoomJourneyState, SceneId, SyncedLyricLine, Tendencies, UserMusicTrack } from "./types.js";
 import { AudioManager } from "./systems/AudioManager.js";
 import { AccountManager } from "./systems/AccountManager.js";
 import { loadAppConfig } from "./systems/AppConfig.js";
@@ -22,6 +22,7 @@ import { adjacentMonthKey, defaultMonthlyCover, hasMoreTimelineEntries, journalB
 import { createBackupBundle, parseBackupBundle, walkBackupFilename, type BackupBlobEntry } from "./systems/BackupManager.js";
 import { MusicBlobStore } from "./systems/MusicBlobStore.js";
 import { ParticleSystem } from "./systems/ParticleSystem.js";
+import { BundledLyricsLoader, trackIdentity } from "./systems/BundledLyrics.js";
 import { activeLyricIndexAt, adjacentTrackIdForControl, applyBatchMusicMetadata, clampLyricsOverlay, createDefaultPersonalPlayerState, filterAndSortMusic, isBuiltInTrackId, lyricWindowForTime, nextTrackIdForPlayback, normalizePlaybackMode, parseLrc, personalMusicShouldPlayInScene, removeSelectedMusicTracks, removeUserMusicTrack, selectAllMusicTrackIds, type BatchMusicMetadata } from "./systems/PersonalMusic.js";
 import { changeReflectionPaper, clampReflectionNotePosition, createChapterReflectionNote, createReflectionNote, createReflectionWallState, deleteReflectionNote, migrateLegacyReflectionWall, moveReflectionNote, reflectionPaperStyles, toggleReflectionNoteFlag, updateReflectionNote, visibleReflectionNotes } from "./systems/ReflectionWall.js";
 import { drawSceneActor } from "./systems/SceneActorRenderer.js";
@@ -185,6 +186,9 @@ export class WalkBackHomeApp {
   private lyricsDrag: { offsetX: number; offsetY: number } | null = null;
   private lyricsResize: { startX: number; startY: number; startWidth: number; startHeight: number } | null = null;
   private pendingPersonalSeek: number | null = null;
+  private bundledLyricsLoader = new BundledLyricsLoader();
+  private bundledLyricsRuntime = new Map<string, { identity: string; lines: SyncedLyricLine[] }>();
+  private bundledLyricsRequestToken = 0;
   private forceTouchControls = false;
   private settings = { rain: true, muted: false, volume: 0.45, compact: false, reducedMotion: false, musicEnabled: true, musicScene: "bakery" as MusicScene };
   private room: RoomJourneyState = createDefaultRoomState();
@@ -4300,6 +4304,7 @@ export class WalkBackHomeApp {
       };
       this.save.saveMusicLibrary(this.musicLibrary);
     }
+    this.invalidateBundledLyricsForTrack(trackId);
     await this.showRecords();
     this.showToast("Lyrics added");
     this.autosave();
@@ -4341,6 +4346,8 @@ export class WalkBackHomeApp {
         [trackId]: { title, artist }
       };
     }
+    this.invalidateBundledLyricsForTrack(trackId);
+    void this.loadBundledLyricsForSelectedTrack();
     this.autosave();
   }
 
@@ -5081,6 +5088,10 @@ export class WalkBackHomeApp {
     this.personalPlayer = { ...this.personalPlayer, customTrackMeta: result.builtInMeta };
     this.save.saveMusicLibrary(this.musicLibrary);
     this.save.savePersonalPlayer(this.personalPlayer);
+    if (this.personalPlayer.selectedTrackId && this.selectedRecordIds.has(this.personalPlayer.selectedTrackId)) {
+      this.invalidateBundledLyricsForTrack(this.personalPlayer.selectedTrackId);
+      void this.loadBundledLyricsForSelectedTrack();
+    }
     this.preserveRecordsScroll();
     void this.showRecords();
     this.showToast("Records updated");
@@ -5155,6 +5166,7 @@ export class WalkBackHomeApp {
     this.personalPlayer.selectedTrackId = recordId;
     this.personalPlayer.playing = true;
     this.personalPlayer.playbackPosition = startPosition;
+    void this.loadBundledLyricsForSelectedTrack();
     this.preserveRecordsScroll();
     this.recordsMoreMenuOpen = false;
     this.activeRecordMenuTrackId = "";
@@ -5166,6 +5178,24 @@ export class WalkBackHomeApp {
     else this.updatePersonalMusicOverlay();
     if (announce) this.showToast("Record changed");
     this.autosave();
+  }
+
+  private async loadBundledLyricsForSelectedTrack(): Promise<void> {
+    const track = this.currentPersonalTrack();
+    const trackId = this.personalPlayer.selectedTrackId;
+    if (!track || !trackId || track.id !== trackId) return;
+    const identity = trackIdentity(track.artist, track.title);
+    const requestToken = ++this.bundledLyricsRequestToken;
+    this.bundledLyricsRuntime.delete(trackId);
+    if (this.localLyricsForTrack(track) !== undefined) return;
+
+    const result = await this.bundledLyricsLoader.load({ artist: track.artist, title: track.title });
+    const current = this.currentPersonalTrack();
+    if (!result || requestToken !== this.bundledLyricsRequestToken || this.personalPlayer.selectedTrackId !== trackId || current?.id !== trackId || identity !== (current ? trackIdentity(current.artist, current.title) : "")) return;
+
+    this.bundledLyricsRuntime.set(trackId, { identity, lines: result.lines });
+    if (this.recordsPanelOpen) this.refreshRecordsLyricsUI(this.currentPersonalPlaybackTime());
+    else this.updatePersonalMusicOverlay();
   }
 
   private async pauseVinyl(): Promise<void> {
@@ -5188,6 +5218,30 @@ export class WalkBackHomeApp {
     return selectVinylRecord({ ...this.room, selectedVinylId: record.id }, record.id, this.availableVinylRecords);
   }
 
+  private localLyricsForTrack(track: { id: string; source: "built-in" | "user"; syncedLyrics?: SyncedLyricLine[] }): SyncedLyricLine[] | undefined {
+    return track.source === "built-in"
+      ? this.personalPlayer.customTrackLyrics?.[track.id]?.syncedLyrics
+      : this.musicLibrary.tracks.find((item) => item.id === track.id)?.syncedLyrics;
+  }
+
+  private effectiveLyricsForTrack(track: { id: string; title: string; artist?: string; source: "built-in" | "user"; syncedLyrics?: SyncedLyricLine[] }): SyncedLyricLine[] | undefined {
+    const local = this.localLyricsForTrack(track);
+    if (local !== undefined) return local;
+    const bundled = this.bundledLyricsRuntime.get(track.id);
+    return bundled?.identity === trackIdentity(track.artist, track.title) ? bundled.lines : undefined;
+  }
+
+  private withEffectiveLyrics<T extends { id: string; title: string; artist?: string; source: "built-in" | "user"; syncedLyrics?: SyncedLyricLine[] }>(track: T): T {
+    const lyrics = this.effectiveLyricsForTrack(track);
+    return lyrics === undefined ? track : { ...track, syncedLyrics: lyrics };
+  }
+
+  private invalidateBundledLyricsForTrack(trackId: string): void {
+    this.bundledLyricsRuntime.delete(trackId);
+    this.bundledLyricsRequestToken += 1;
+    if (trackId === this.personalPlayer.selectedTrackId && this.recordsPanelOpen) this.refreshRecordsLyricsUI(this.currentPersonalPlaybackTime());
+  }
+
   private allPersonalTracks(): Array<{ id: string; title: string; artist?: string; album?: string; duration?: number; source: "built-in" | "user"; src?: string; audioBlobKey?: string; coverBlobKey?: string; syncedLyrics?: UserMusicTrack["syncedLyrics"]; addedAt: number; lastPlayedAt?: number }> {
     const builtIns = this.availableVinylRecords.map((record, index) => {
       const custom = this.personalPlayer.customTrackMeta?.[record.id];
@@ -5206,7 +5260,7 @@ export class WalkBackHomeApp {
       };
     });
     const imported = this.musicLibrary.tracks.map((track) => ({ ...track, source: "user" as const }));
-    return [...builtIns, ...imported];
+    return [...builtIns, ...imported].map((track) => this.withEffectiveLyrics(track));
   }
 
   private visibleMusicTracks(): ReturnType<typeof this.allPersonalTracks> {
@@ -5448,7 +5502,13 @@ export class WalkBackHomeApp {
     const lyrics = this.currentPersonalTrack()?.syncedLyrics ?? [];
     const active = activeLyricIndexAt(lyrics, currentTime);
     const rows = Array.from(this.overlay.querySelectorAll<HTMLElement>(".lyrics-pane p"));
-    if (!lyrics.length) return;
+    if (!lyrics.length) {
+      const pane = this.overlay.querySelector<HTMLElement>(".lyrics-pane");
+      if (pane) pane.innerHTML = `<p class="empty-lyrics">Add .lrc lyrics to let words drift with the room.</p>`;
+      const mobile = this.overlay.querySelector<HTMLElement>(".records-mobile-lyrics");
+      if (mobile) mobile.innerHTML = `<p class="empty-lyrics">Add lyrics from the More menu.</p>`;
+      return;
+    }
     const activeRow = active >= 0 ? rows[active] : null;
     const shouldScroll = activeRow ? !activeRow.classList.contains("active") : false;
     rows.forEach((row, index) => {
