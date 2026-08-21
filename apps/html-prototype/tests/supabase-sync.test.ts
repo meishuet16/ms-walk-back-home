@@ -4,6 +4,9 @@ import { loadAppConfig } from "../src/systems/AppConfig.js";
 import { createDefaultRoomState } from "../src/systems/MujiRoom.js";
 import { createDefaultPersonalPlayerState } from "../src/systems/PersonalMusic.js";
 import { SupabaseSync } from "../src/systems/SupabaseSync.js";
+import { makeDiaryEntry } from "../src/systems/DiaryImport.js";
+import { makeJournalAudioMedia } from "../src/systems/JournalMedia.js";
+import type { DiaryEntry } from "../src/types.js";
 
 type CloudCall = {
   operation: "upsert" | "select" | "delete";
@@ -16,7 +19,7 @@ function resolvedQuery<T>(data: T | null = null): Promise<{ error: null; data: T
   return Promise.resolve({ error: null, data });
 }
 
-function installRecordingSupabase(calls: CloudCall[], journeyState: unknown = null): void {
+function installRecordingSupabase(calls: CloudCall[], journeyState: unknown = null, diaryRows: unknown[] = []): void {
   const client = {
     auth: {
       getSession: async () => ({ error: null, data: { session: null } }),
@@ -29,7 +32,7 @@ function installRecordingSupabase(calls: CloudCall[], journeyState: unknown = nu
           return {
             is(column: string, value: unknown) {
               calls.push({ operation: "select", table, column, value });
-              return resolvedQuery<unknown[]>([]);
+              return resolvedQuery<unknown[]>(table === "diary_entries" ? diaryRows : []);
             },
             maybeSingle() {
               calls.push({ operation: "select", table });
@@ -65,7 +68,7 @@ function removeRecordingSupabase(): void {
 function emptyCloudBundle() {
   const personalPlayer = createDefaultPersonalPlayerState();
   return {
-    diaryLibrary: { version: 1 as const, savedAt: "now", entries: [], legacyArtifacts: [] },
+    diaryLibrary: { version: 1 as const, savedAt: "now", entries: [] as DiaryEntry[], legacyArtifacts: [] },
     journey: {
       version: 1 as const,
       savedAt: "now",
@@ -171,6 +174,54 @@ test("cloud pull strips legacy personal player state before applying a journey",
     });
     const bundle = await sync.pull();
     assert.equal(Object.prototype.hasOwnProperty.call(bundle.journey ?? {}, "personalPlayer"), false);
+  } finally {
+    removeRecordingSupabase();
+  }
+});
+
+test("cloud push strips audio binary while preserving audio metadata and legacy visual sources", async () => {
+  const calls: CloudCall[] = [];
+  installRecordingSupabase(calls);
+  try {
+    const sync = new SupabaseSync({
+      authProvider: "supabase",
+      supabaseUrl: "https://example.supabase.co",
+      supabaseAnonKey: "anon",
+      privateMediaBucket: "walk-private-media"
+    });
+    const audio = { ...makeJournalAudioMedia({ id: "audio-1", storageKey: "journal-media/e/audio-1", mimeType: "audio/webm", duration: 2 }), src: "data:audio/webm;base64,RAW" } as unknown as ReturnType<typeof makeJournalAudioMedia>;
+    const entry = { ...makeDiaryEntry("2026-08-21", "Voice", "Fixture."), media: [audio, { id: "video-1", type: "video" as const, src: "data:video/mp4;base64,legacy", mimeType: "video/mp4" }] };
+    const bundle = emptyCloudBundle();
+    bundle.diaryLibrary.entries = [entry];
+
+    await sync.push("user-1", bundle);
+
+    const diaryCall = calls.find((call) => call.operation === "upsert" && call.table === "diary_entries");
+    const cloudEntry = ((diaryCall?.value as Array<{ entry: typeof entry }> | undefined)?.[0]?.entry);
+    assert.equal("src" in ((cloudEntry?.media ?? [])[0] ?? {}), false);
+    assert.equal((cloudEntry?.media ?? [])[0]?.storageKey, "journal-media/e/audio-1");
+    assert.equal((cloudEntry?.media ?? [])[1]?.src, "data:video/mp4;base64,legacy");
+  } finally {
+    removeRecordingSupabase();
+  }
+});
+
+test("cloud pull preserves audio metadata when its local blob is unavailable", async () => {
+  const calls: CloudCall[] = [];
+  const entry = { ...makeDiaryEntry("2026-08-21", "Voice", "Fixture."), media: [makeJournalAudioMedia({ id: "audio-1", storageKey: "journal-media/e/audio-1", mimeType: "audio/mp4", duration: 4 })] };
+  installRecordingSupabase(calls, null, [{ id: entry.id, entry }]);
+  try {
+    const sync = new SupabaseSync({
+      authProvider: "supabase",
+      supabaseUrl: "https://example.supabase.co",
+      supabaseAnonKey: "anon",
+      privateMediaBucket: "walk-private-media"
+    });
+
+    const bundle = await sync.pull();
+
+    assert.equal(bundle.diaryLibrary?.entries[0]?.media?.[0]?.type, "audio");
+    assert.equal(bundle.diaryLibrary?.entries[0]?.media?.[0]?.storageKey, "journal-media/e/audio-1");
   } finally {
     removeRecordingSupabase();
   }
