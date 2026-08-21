@@ -2515,7 +2515,6 @@ export class WalkBackHomeApp {
       <div class="module-grid">
         <button data-action="home">Today / Home<span>Write today or continue gently</span></button>
         <button data-action="open-timeline">Timeline<span>${this.diaryEntries.length} diary entries</span></button>
-        <button data-action="new">Begin Journey<span>Start the walk from the beginning</span></button>
         <button data-action="open-map">Walk Back Home<span>${this.allDoors().length} forest memories</span></button>
         <button data-action="room-records">Records<span>Play personal music and floating lyrics</span></button>
         <button data-action="backup-sync">Backup / Sync<span>Portable backup and cloud account</span></button>
@@ -2540,7 +2539,7 @@ export class WalkBackHomeApp {
   private showHome(): void {
     const today = new Date().toISOString().slice(0, 10);
     const recent = getDiaryTimeline(this.makeDiaryLibrary()).slice(0, 3).map((entry) => `<li>${this.escapeHtml(entry.date)} · ${this.escapeHtml(entry.title)}</li>`).join("");
-    this.overlay.innerHTML = `<div class="modal game-panel"><h2>Today / Home</h2><p>${today}</p><div class="settings-row"><button data-action="new-diary-entry">Create New Journal</button><button data-action="continue">Continue</button><button data-action="open-map">Walk Back Home</button></div><h3>Recent diary</h3><ul>${recent || "<li>No diary entries yet.</li>"}</ul><button data-action="close">Close</button></div>`;
+    this.overlay.innerHTML = `<div class="modal game-panel"><h2>Today / Home</h2><p>${today}</p><div class="settings-row"><button data-action="new-diary-entry">Create New Journal</button><button data-action="open-map">Walk Back Home</button></div><h3>Recent diary</h3><ul>${recent || "<li>No diary entries yet.</li>"}</ul><button data-action="close">Close</button></div>`;
     this.focusStage();
   }
 

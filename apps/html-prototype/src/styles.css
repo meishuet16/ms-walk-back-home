@@ -618,6 +618,8 @@ canvas {
 .overlay:empty { display: none; }
 .modal, .vn {
   pointer-events: auto;
+  box-sizing: border-box;
+  min-width: 0;
   width: min(620px, calc(100vw - 28px));
   border-radius: 7px;
   border: 2px solid #9e6a34;
@@ -1883,12 +1885,15 @@ canvas {
 }
 .timeline-panel {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   overflow: hidden;
 }
 .timeline-scroll-content {
+  min-width: 0;
   min-height: 0;
+  max-width: 100%;
   overflow-y: auto;
+  overflow-x: hidden;
   overscroll-behavior: contain;
 }
 .journal-empty {
@@ -4080,6 +4085,14 @@ canvas {
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
 }
 @media (max-width: 700px) {
+  .modal,
+  .vn,
+  .game-panel {
+    width: min(100%, calc(100vw - 28px));
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
   .overlay {
     position: fixed;
     padding: 0;
@@ -4115,14 +4128,17 @@ canvas {
     inset: 0;
     top: 0;
     left: 0;
-    width: 100vw;
-    max-width: none;
-    min-height: 100dvh;
-    max-height: 100dvh;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
     margin: 0;
     border: 0;
     border-radius: 0;
     transform: none;
+    box-sizing: border-box;
     overflow: auto;
   }
   .monthly-reader,
@@ -4131,7 +4147,14 @@ canvas {
     min-height: 100dvh;
   }
   .timeline-panel {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
     overflow: hidden;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
   }
   .records-panel.personal-records {
     padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
@@ -4207,6 +4230,19 @@ canvas {
     padding: calc(14px + env(safe-area-inset-top)) 18px 12px;
     background: rgba(251, 248, 239, .94);
     backdrop-filter: blur(10px);
+    min-width: 0;
+  }
+  .journal-archive-header > div,
+  .journal-tabs,
+  .journal-tabs button,
+  .month-nav,
+  .timeline-scroll-content,
+  .timeline-list,
+  .timeline-entry,
+  .timeline-card,
+  .timeline-card-actions {
+    min-width: 0;
+    max-width: 100%;
   }
   .journal-archive-header h2,
   .journal-archive-header p,
@@ -4288,6 +4324,8 @@ canvas {
     display: block;
     width: auto;
     margin: 0;
+    min-width: 0;
+    max-width: 100%;
   }
   .timeline-filter-menu summary {
     min-height: 40px;
@@ -4356,6 +4394,10 @@ canvas {
     gap: 7px;
     align-content: start;
   }
+  .timeline-card-actions > * {
+    min-width: 0;
+    max-width: 100%;
+  }
   .timeline-kind {
     grid-column: 1 / -1;
     order: 3;
@@ -4415,12 +4457,42 @@ canvas {
   .reflection-wall-modal {
     padding: env(safe-area-inset-top) 14px max(18px, env(safe-area-inset-bottom));
     background: linear-gradient(180deg, #fbf8ef, #ede0cc);
-    height: 100dvh;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
+    box-sizing: border-box;
     overflow: hidden;
   }
   .reflection-wall-toolbar {
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    display: flex;
+    flex-wrap: wrap;
+    min-width: 0;
     align-items: start;
+  }
+  .reflection-wall-toolbar > div,
+  .reflection-wall-toolbar > label {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .reflection-wall-toolbar > label input {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .reflection-wall-toolbar > .reflection-wall-filter-menu {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .reflection-wall-toolbar > .reflection-wall-filter-menu summary {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .reflection-wall-toolbar > button[data-action="reflection-note-new"] {
+    flex: 0 1 auto;
+    min-width: 0;
   }
   .reflection-wall-toolbar label {
     grid-column: 1 / -1;
@@ -4456,16 +4528,19 @@ canvas {
     font-size: 28px;
   }
   .reflection-wall-surface {
-    min-width: 100%;
+    width: 100%;
+    min-width: 0;
     min-height: 0;
-    height: calc(100dvh - 224px);
-    overflow: hidden;
-    touch-action: none;
+    height: auto;
+    overflow: auto;
+    touch-action: pan-x pan-y;
   }
   .reflection-stack,
   .reflection-list {
     min-height: 0;
-    height: 100%;
+    min-width: 0;
+    height: auto;
+    max-width: 100%;
     overflow-y: auto;
     overscroll-behavior: contain;
     padding-bottom: calc(24px + env(safe-area-inset-bottom));

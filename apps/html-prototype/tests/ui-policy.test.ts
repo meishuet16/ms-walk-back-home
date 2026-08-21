@@ -47,7 +47,7 @@ test("mobile portrait entry and fullscreen use the playable scene shell", () => 
 });
 
 test("secondary actions live inside settings instead of the forest HUD", () => {
-  assert.match(appSource, /data-action="new">Begin Journey<span>/);
+  assert.doesNotMatch(appSource, /data-action="new">Begin Journey<span>/);
   assert.match(appSource, /data-action="rain">Rain:/);
   assert.match(appSource, /data-action="fullscreen">Fullscreen/);
   assert.doesNotMatch(appSource, /data-action="compact">/);
@@ -175,6 +175,20 @@ test("records mobile menus stay in viewport and preserve scroll while selecting"
 }
 );
 
+test("portrait shells clamp their box model and internal grids to the viewport", () => {
+  assert.match(stylesSource, /\.modal, \.vn\s*\{[\s\S]*box-sizing:\s*border-box/);
+  assert.match(stylesSource, /\.modal, \.vn\s*\{[\s\S]*min-width:\s*0/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-panel\s*\{[\s\S]*min-width:\s*0/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.timeline-scroll-content[\s\S]*min-width:\s*0/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.reflection-wall-toolbar\s*\{[\s\S]*display:\s*flex/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.reflection-wall-modal\s*\{[\s\S]*box-sizing:\s*border-box/);
+});
+
+test("Today / Home no longer renders the retired Continue action", () => {
+  const showHome = appSource.match(/private showHome\(\): void \{[\s\S]*?\n  \}/)?.[0] ?? "";
+  assert.doesNotMatch(showHome, /data-action="continue"/);
+});
+
 test("Records playback refreshes desktop and mobile lyrics without rebuilding the modal", () => {
   assert.match(appSource, /data-lyric-index/);
   assert.match(appSource, /querySelectorAll<HTMLElement>\("\.records-mobile-lyrics p"\)/);
@@ -231,7 +245,7 @@ test("Music is one shell-level top-right toggle and legacy menu actions are remo
   const settingsSource = appSource.match(/private settingsContent\(\): string \{[\s\S]*?\n  \}/)?.[0] ?? "";
   assert.equal((appSource.match(/data-action="music"/g) ?? []).length, 1);
   assert.match(appSource, /shell-music-toggle/);
-  assert.doesNotMatch(settingsSource, /data-action="music"|data-action="compact"|data-action="credits"|data-action="continue"|data-action="reset-journey"/);
+  assert.doesNotMatch(settingsSource, /data-action="music"|data-action="compact"|data-action="credits"|data-action="continue"|data-action="reset-journey"|data-action="new"|Begin Journey/);
 });
 
 test("Reflection Wall stack and list have their own portrait scroll surface", () => {
