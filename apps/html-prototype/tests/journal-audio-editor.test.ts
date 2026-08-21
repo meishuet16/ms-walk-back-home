@@ -36,7 +36,9 @@ test("journal audio removal requires a centered confirmation", () => {
 });
 
 test("journal editor places Record voice between photo and video controls", () => {
-  const toolbar = appSource.match(/<div class="mobile-editor-toolbar">[\s\S]*?<\/div>/)?.[0] ?? "";
+  const toolbarStart = appSource.indexOf('<div class="mobile-editor-toolbar">');
+  const toolbarEnd = appSource.indexOf('<input id="diary-mobile-media-input"', toolbarStart);
+  const toolbar = appSource.slice(toolbarStart, toolbarEnd);
   assert.ok(toolbar.indexOf('aria-label="Add photo"') < toolbar.indexOf('aria-label="Record audio"'));
   assert.ok(toolbar.indexOf('aria-label="Record audio"') < toolbar.indexOf('aria-label="Add video"'));
   assert.match(stylesSource, /mobile-editor-toolbar[\s\S]*grid-template-columns:\s*repeat\(3/);

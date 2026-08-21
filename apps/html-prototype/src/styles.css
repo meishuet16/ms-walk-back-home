@@ -4160,7 +4160,7 @@ canvas {
     bottom: 0;
     z-index: 43;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
     padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
     border-top: 1px solid rgba(117, 89, 56, .2);
@@ -4545,6 +4545,10 @@ canvas {
     z-index: 46;
     transform: translate(-50%, -50%);
   }
+  .journal-audio-delete-confirmation {
+    width: min(332px, calc(100vw - 32px));
+    max-width: none;
+  }
   .timeline-date-heading {
     background: rgba(245, 236, 219, .96);
   }
@@ -4766,7 +4770,15 @@ canvas {
     overflow-wrap: anywhere;
   }
   .mobile-editor-toolbar {
-    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .journal-audio-recording-panel {
+    display: none;
+  }
+  .journal-audio-toolbar-slot {
+    display: grid;
+    min-width: 0;
+    place-items: center;
   }
   .journal-audio-recording-panel {
     justify-content: space-between;
@@ -5133,7 +5145,7 @@ canvas {
     pointer-events: auto;
   }
   .mobile-editor-toolbar {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .touch-stick {
     width: 116px;

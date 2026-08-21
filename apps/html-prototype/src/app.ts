@@ -2792,17 +2792,21 @@ export class WalkBackHomeApp {
   }
 
   private refreshJournalAudioRecordingUi(): void {
-    const status = this.overlay.querySelector<HTMLElement>(".journal-audio-recording-state");
-    const controls = this.overlay.querySelector<HTMLElement>(".journal-audio-recording-controls");
-    if (!status || !controls) return;
+    const statuses = this.overlay.querySelectorAll<HTMLElement>(".journal-audio-recording-state");
+    const controls = this.overlay.querySelectorAll<HTMLElement>(".journal-audio-recording-controls");
+    if (!controls.length) return;
     const recorder = this.journalAudioRecorder;
     const active = Boolean(recorder?.isActive());
     const paused = active && recorder?.state() === "paused";
-    status.textContent = active ? `${paused ? "Paused" : "Recording"} ${Math.floor((recorder?.elapsedMs() ?? 0) / 1000)}s` : "Add a voice note";
-    controls.classList.toggle("recording", active);
-    controls.innerHTML = active
-      ? `<button data-action="journal-audio-stop" aria-label="Stop recording">■ Stop</button><button data-action="${paused ? "journal-audio-resume" : "journal-audio-pause"}" aria-label="${paused ? "Resume" : "Pause"} recording">${paused ? "Resume" : "Pause"}</button>`
-      : `<button data-action="journal-record-audio" aria-label="Record audio">🎙 Record voice</button>`;
+    statuses.forEach((status) => {
+      status.textContent = active ? `${paused ? "Paused" : "Recording"} ${Math.floor((recorder?.elapsedMs() ?? 0) / 1000)}s` : "Add a voice note";
+    });
+    controls.forEach((control) => {
+      control.classList.toggle("recording", active);
+      control.innerHTML = active
+        ? `<button data-action="journal-audio-stop" aria-label="Stop recording">■<span>Stop</span></button><button data-action="${paused ? "journal-audio-resume" : "journal-audio-pause"}" aria-label="${paused ? "Resume" : "Pause"} recording">${paused ? "▶" : "Ⅱ"}<span>${paused ? "Resume" : "Pause"}</span></button>`
+        : `<button data-action="journal-record-audio" aria-label="Record audio">🎙<span>Record voice</span></button>`;
+    });
   }
 
   private async resolveJournalAudioMedia(entryId: string, media: Extract<DiaryMedia, { type: "audio" }>): Promise<void> {
@@ -3704,7 +3708,7 @@ export class WalkBackHomeApp {
         ${this.renderJournalAudioDeleteConfirmation(editing)}
         <div class="integrated-tools journal-photo-dock"></div>
         <div class="journal-audio-recording-panel"><div class="journal-audio-recording-controls"></div><span class="journal-audio-recording-state">Add a voice note</span></div>
-        <div class="mobile-editor-toolbar"><button data-action="journal-add-inline-media" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="Add photo">▧<span>图片</span></button><button data-action="journal-add-inline-media" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="Add video">▭<span>视频</span></button></div>
+        <div class="mobile-editor-toolbar"><button data-action="journal-add-inline-media" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="Add photo">▧<span>图片</span></button><div class="journal-audio-toolbar-slot"><div class="journal-audio-recording-controls"><button data-action="journal-record-audio" aria-label="Record audio">🎙<span>Record voice</span></button></div><span class="journal-audio-recording-state">Add a voice note</span></div><button data-action="journal-add-inline-media" data-id="${this.escapeHtml(editing?.id ?? "")}" aria-label="Add video">▭<span>视频</span></button></div>
         <input id="diary-mobile-media-input" class="sr-only" type="file" accept="image/*,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov" multiple>
       </div>`;
     this.refreshJournalAudioRecordingUi();
