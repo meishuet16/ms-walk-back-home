@@ -398,6 +398,10 @@ export class WalkBackHomeApp {
       void this.stopJournalAudioRecording();
       return;
     }
+    if (action === "journal-audio-cancel") {
+      this.cancelJournalAudioRecording();
+      return;
+    }
     if (action === "journal-audio-pause") {
       this.journalAudioRecorder?.pause();
       this.refreshJournalAudioRecordingUi();
@@ -2808,9 +2812,19 @@ export class WalkBackHomeApp {
     controls.forEach((control) => {
       control.classList.toggle("recording", active);
       control.innerHTML = active
-        ? `<button data-action="journal-audio-stop" aria-label="Stop recording">■<span>Stop</span></button><button data-action="${paused ? "journal-audio-resume" : "journal-audio-pause"}" aria-label="${paused ? "Resume" : "Pause"} recording">${paused ? "▶" : "Ⅱ"}<span>${paused ? "Resume" : "Pause"}</span></button>`
+        ? `<button type="button" data-action="journal-audio-stop" aria-label="Stop recording">■<span>Stop</span></button><button type="button" data-action="${paused ? "journal-audio-resume" : "journal-audio-pause"}" aria-label="${paused ? "Resume" : "Pause"} recording">${paused ? "▶" : "Ⅱ"}<span>${paused ? "Resume" : "Pause"}</span></button><button type="button" data-action="journal-audio-cancel" aria-label="Discard recording">×<span>Discard</span></button>`
         : `<button data-action="journal-record-audio" aria-label="Record audio">🎙<span>Record voice</span></button>`;
     });
+  }
+
+  private cancelJournalAudioRecording(): void {
+    const recorder = this.journalAudioRecorder;
+    if (!recorder?.isActive()) return;
+    recorder.cancel();
+    this.journalAudioRecorder = null;
+    this.clearJournalAudioTimer();
+    this.refreshJournalAudioRecordingUi();
+    this.showToast("Voice note discarded");
   }
 
   private async resolveJournalAudioMedia(entryId: string, media: Extract<DiaryMedia, { type: "audio" }>): Promise<void> {
@@ -3801,7 +3815,7 @@ export class WalkBackHomeApp {
           ? `<span class="journal-media-type">Voice note</span><button data-action="journal-media-remove" data-media="${this.escapeHtml(item.id)}">Remove</button>`
           : `<span class="journal-media-type">Video</span><button data-action="journal-media-remove" data-media="${this.escapeHtml(item.id)}">Remove</button>`;
       const selector = item.type === "audio"
-        ? `<div class="journal-audio-media-card"><span class="journal-audio-node">${mediaNode}</span><button class="journal-audio-edit-button" data-action="journal-audio-edit" data-media="${this.escapeHtml(item.id)}" aria-label="Edit voice note">Edit</button></div>`
+        ? `<div class="journal-audio-media-card" data-action="journal-audio-edit" data-media="${this.escapeHtml(item.id)}" role="button" tabindex="0" aria-label="Edit voice note"><span class="journal-audio-node">${mediaNode}</span><button type="button" class="journal-audio-edit-button" data-action="journal-audio-edit" data-media="${this.escapeHtml(item.id)}" aria-label="Edit voice note">Edit</button></div>`
         : `<button class="journal-media-select" data-action="journal-media-select" data-media="${this.escapeHtml(item.id)}" aria-label="Select media">${mediaNode}</button>`;
       return `<figure class="journal-inline-media-item ${selected ? "selected" : ""}" data-media="${this.escapeHtml(item.id)}">
         ${selector}
@@ -4094,7 +4108,7 @@ export class WalkBackHomeApp {
   private selectJournalMedia(mediaId: string): void {
     this.selectedJournalMediaId = this.selectedJournalMediaId === mediaId ? "" : mediaId;
     const editor = this.overlay.querySelector<HTMLElement>(".diary-page-editor");
-    this.showDiaryEditorPreservingScroll(editor?.dataset.entry ?? "");
+    this.showDiaryEditorPreservingScroll(editor?.dataset.entry ?? "", mediaId);
   }
 
   private removeSelectedJournalMedia(mediaId: string): void {
@@ -4274,14 +4288,27 @@ export class WalkBackHomeApp {
     box.setAttribute("style", this.journalMediaCropStyle(crop));
   }
 
-  private showDiaryEditorPreservingScroll(entryId: string): void {
+  private showDiaryEditorPreservingScroll(entryId: string, mediaId = ""): void {
     const panel = this.overlay.querySelector<HTMLElement>(".journal-modal");
     const restoreScrollTop = panel?.scrollTop ?? window.scrollY;
+    const restoreWindowScrollTop = window.scrollY;
+    const journalMediaAnchor = mediaId ? panel?.querySelector<HTMLElement>(`[data-media="${this.escapeHtml(mediaId)}"]`) : null;
+    const journalMediaAnchorTop = journalMediaAnchor?.getBoundingClientRect().top ?? null;
+    const panelTop = panel?.getBoundingClientRect().top ?? 0;
+    const journalMediaAnchorOffset = journalMediaAnchorTop === null ? null : journalMediaAnchorTop - panelTop;
     this.showDiaryEditor(entryId);
     window.requestAnimationFrame(() => {
       const nextPanel = this.overlay.querySelector<HTMLElement>(".journal-modal");
-      if (nextPanel) nextPanel.scrollTop = restoreScrollTop;
-      else window.scrollTo({ top: restoreScrollTop });
+      if (nextPanel) {
+        const nextAnchor = mediaId ? nextPanel.querySelector<HTMLElement>(`[data-media="${this.escapeHtml(mediaId)}"]`) : null;
+        if (nextAnchor && journalMediaAnchorOffset !== null) {
+          const nextOffset = nextAnchor.getBoundingClientRect().top - nextPanel.getBoundingClientRect().top;
+          nextPanel.scrollTop = Math.max(0, restoreScrollTop + nextOffset - journalMediaAnchorOffset);
+        } else {
+          nextPanel.scrollTop = restoreScrollTop;
+        }
+      }
+      window.scrollTo({ top: restoreWindowScrollTop, behavior: "auto" });
     });
   }
 

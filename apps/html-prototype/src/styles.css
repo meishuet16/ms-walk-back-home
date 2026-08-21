@@ -3875,6 +3875,7 @@ canvas {
   display: grid;
   gap: 6px;
   min-width: 0;
+  cursor: pointer;
 }
 .journal-audio-node {
   display: block;

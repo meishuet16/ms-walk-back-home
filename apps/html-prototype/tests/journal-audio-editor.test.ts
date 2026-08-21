@@ -8,6 +8,8 @@ const stylesSource = readFileSync("src/styles.css", "utf8");
 test("journal editor exposes explicit recording controls and keeps recording state local", () => {
   assert.match(appSource, /data-action="journal-record-audio"/);
   assert.match(appSource, /data-action="journal-audio-stop"/);
+  assert.match(appSource, /data-action="journal-audio-cancel"/);
+  assert.match(appSource, /cancelJournalAudioRecording/);
   assert.match(appSource, /action === "journal-audio-pause"/);
   assert.match(appSource, /action === "journal-audio-resume"/);
   assert.match(appSource, /JournalAudioRecorder/);
@@ -39,6 +41,14 @@ test("journal audio cards expose an explicit edit control outside the native pla
   assert.match(appSource, /journal-audio-edit-button/);
   assert.match(appSource, /data-action="journal-audio-edit"/);
   assert.match(appSource, /action === "journal-audio-edit"/);
+  assert.match(appSource, /class="journal-audio-media-card" data-action="journal-audio-edit"/);
+});
+
+test("selecting journal audio preserves the selected media position after rerender", () => {
+  assert.match(appSource, /showDiaryEditorPreservingScroll\(editor\?\.dataset\.entry \?\? "", mediaId\)/);
+  assert.match(appSource, /getBoundingClientRect\(\)/);
+  assert.match(appSource, /journalMediaAnchorTop/);
+  assert.match(appSource, /window\.scrollTo\(\{ top: restoreWindowScrollTop/);
 });
 
 test("journal editor places Record voice between photo and video controls", () => {
