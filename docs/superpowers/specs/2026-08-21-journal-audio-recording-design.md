@@ -16,7 +16,7 @@ Add small pure helpers for audio metadata, supported MediaRecorder MIME selectio
 
 The Edit Journal toolbar gains a visually consistent Record Audio action. A user action requests `getUserMedia({ audio: true })`; recording begins only after permission succeeds. `MediaRecorder` uses the first supported MIME type from the runtime-tested fallback list, collects chunks, tracks elapsed time, and exposes Stop plus Pause/Resume when supported.
 
-After Stop, all stream tracks and timers are released. The resulting Blob is stored under a temporary editor-local storage key and rendered through a temporary object URL for preview. The editor keeps the audio attachment out of persisted `DiaryEntry` state until the existing Journal save path commits it. Cancel, close, navigation, or removal deletes the temporary blob and revokes its object URL. Existing saved audio is loaded lazily by `storageKey`; unavailable local blobs render a compact local-media-unavailable state.
+After Stop, all stream tracks and timers are released. The resulting Blob is stored under a temporary editor-local storage key and rendered through a temporary object URL for preview. On explicit save, the same Blob is written once under its durable `storageKey`, then the temporary key and object URL are cleaned up; no IndexedDB move abstraction is introduced. The editor keeps the audio attachment out of persisted `DiaryEntry` state until the existing Journal save path commits it. Cancel, close, navigation, or removal deletes the temporary blob and revokes its object URL. Existing saved audio is loaded lazily by `storageKey`; unavailable local blobs render a compact local-media-unavailable state.
 
 The implementation prevents more than one active recorder and keeps microphone denial or unsupported MediaRecorder as recoverable editor messages. Existing text and photo/video draft behavior is preserved.
 
@@ -24,13 +24,13 @@ The implementation prevents more than one active recorder and keeps microphone d
 
 On explicit Journal save, the audio Blob is moved/retained under its durable `storageKey`, and the saved `DiaryMedia.audio` contains metadata such as id, type, storageKey, mimeType, duration, createdAt, and optional display name. No Blob, base64 data, or object URL is written to `DiaryEntry`.
 
-Normal backup collection is extended to include only Journal blob keys referenced by persisted audio media, alongside the existing music blob entries. The existing JSON/data-URL backup envelope remains unchanged; Journal audio blob bytes use the same `BackupBlobEntry` representation. Restore writes those entries into `JournalMediaBlobStore` before applying the diary library. The full round-trip test verifies binary bytes and MIME type, not only metadata.
+Normal backup collection is extended to include only Journal blob keys referenced by persisted audio media, alongside the existing music blob entries. Each blob entry carries an explicit `kind` discriminator (`music` or `journal-media`) so restore cannot route a Journal blob through `MusicBlobStore`; older entries without the discriminator remain Music entries for backward compatibility. The existing JSON/data-URL backup envelope remains unchanged; Journal audio blob bytes use the same `BackupBlobEntry` representation. Restore writes those entries into `JournalMediaBlobStore` before applying the diary library. The full round-trip test verifies binary bytes and MIME type, not only metadata.
 
 Removing saved audio removes its reference and deletes the local blob when no persisted entry still references that key. Existing photo/video backup behavior remains unchanged.
 
 ## Supabase behavior
 
-Before diary rows are pushed, audio media is serialized as metadata/reference only with its binary-bearing `src` absent. Existing photo/video cloud serialization remains unchanged. Pulling audio metadata never claims cross-device binary synchronization. On the local device, matching local audio can be preserved when cloud metadata is applied; on another device without the blob, playback shows the unavailable state. No Supabase Storage or external upload is added.
+Before diary rows are pushed, audio media is serialized as metadata/reference only with its binary-bearing `src` absent. Existing photo/video cloud serialization remains unchanged. Pulling audio metadata never claims cross-device binary synchronization and never drops an audio attachment when its local blob is missing; the metadata/reference remains in the diary and playback shows the unavailable state until the same `storageKey` is restored locally. No Supabase Storage or external upload is added.
 
 ## Rendering and mobile behavior
 
