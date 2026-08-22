@@ -6,6 +6,7 @@ export type SceneSpriteAsset = {
   visibleBounds?: { x: number; y: number; w: number; h: number };
   feet: { x: number; y: number };
   materialScale?: number;
+  nozzleOrigin?: { x: number; y: number };
   mirrorForLeft?: boolean;
 };
 

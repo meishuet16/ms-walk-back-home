@@ -1,10 +1,11 @@
 import { bakeryChapter } from "./fixtures/chapterPlan.js";
+import { april05Assets, april05Chapter, april05EchoActions, april05EchoAnchors, april05MainMemoryActions, april05ReflectionChoices, resolveApril05Actions, type April05EchoId } from "./fixtures/april05Chapter.js";
 import { april06Assets, april06Chapter, april06EchoActions, april06MainMemoryActions, april06ReflectionChoices, resolveApril06Actions } from "./fixtures/april06Chapter.js";
 import { march30Assets, march30EchoActions, march30EchoReflectionChoices, march30MainMemoryActions, march30ReflectionChoices, resolveMarch30Closing, resolveMarch30CutsceneActions } from "./fixtures/march30Memory.js";
 import { canStartLabisMotorMemory, labisDiaryMemorySpot, labisInteractionForPoint, labisMotorMemoryActions } from "./fixtures/labisMotorMemory.js";
 import { labisAssetManifest, labisAssetPath, labisProductionAssetPaths } from "./fixtures/labisAssetRegistry.js";
 import { labisChoicePoints, labisEchoes, resolveLabisMemoryReflection, type LabisChoicePoint, type LabisEcho } from "./fixtures/labisMemoryEchoes.js";
-import type { ChapterProgress, Choice, DiaryEntry, DiaryLibraryState, DiaryMedia, DiaryMediaCrop, JournalBookCoverCrop, JourneyState, MemoryKind, MusicSort, PersonalMusicLibraryState, PersonalPlayerState, ReflectionNote, ReflectionWallFilter, ReflectionWallSort, ReflectionWallState, ReflectionWallView, RoomJourneyState, SceneId, SyncedLyricLine, Tendencies, UserMusicTrack } from "./types.js";
+import type { ChapterDefinition, ChapterProgress, Choice, DiaryEntry, DiaryLibraryState, DiaryMedia, DiaryMediaCrop, JournalBookCoverCrop, JourneyState, MemoryKind, MusicSort, PersonalMusicLibraryState, PersonalPlayerState, ReflectionNote, ReflectionWallFilter, ReflectionWallSort, ReflectionWallState, ReflectionWallView, RoomJourneyState, SceneId, SyncedLyricLine, Tendencies, UserMusicTrack } from "./types.js";
 import { AudioManager } from "./systems/AudioManager.js";
 import { AccountManager } from "./systems/AccountManager.js";
 import { loadAppConfig } from "./systems/AppConfig.js";
@@ -12,7 +13,7 @@ import { chapterRegistry, forestEntries, routeForestEntry, type AuthoredForestEn
 import { beginChapterVisit, consumeAutomaticChapterTrigger, createChapterTriggerSession, finishChapterWalkthrough, initialChapterProgress, markChapterMemoryRead, type ChapterTriggerSession } from "./systems/ChapterProgressManager.js";
 import { applyChapterExperienceChoice, currentRunProgress, startChapterMemoryExperience, type ChapterExperienceMode, type ChapterMemoryExperienceRun } from "./systems/ChapterMemoryExperience.js";
 import { inAnyRect, type Point } from "./systems/CollisionSystem.js";
-import { CutsceneSystem } from "./systems/CutsceneSystem.js";
+import { CutsceneSystem, type CutsceneAction } from "./systems/CutsceneSystem.js";
 import { createNewDiaryPage, deleteDiaryEntriesByIds, deleteDiaryEntryById, findChapterDiaryEntry, forestNodesForMonth, formatDiaryWeekday, getDiaryTimeline, openDiaryPageForDate, seedAuthoredChapterDiaryEntries, sharedChapterDiaryBookAssetPath, upsertDiaryEntry, upsertDiaryPageDraft } from "./systems/DiaryLibrary.js";
 import { makeDiaryEntry, parseDiaryImport, updateDiaryMemoryKind, type DiaryForestMemory, type DiaryTimelineSort } from "./systems/DiaryImport.js";
 import { DialogueSystem } from "./systems/DialogueSystem.js";
@@ -31,7 +32,7 @@ import { BundledLyricsLoader, trackIdentity } from "./systems/BundledLyrics.js";
 import { LrclibLyricsProvider } from "./systems/LrclibLyrics.js";
 import { activeLyricIndexAt, adjacentTrackIdForControl, applyBatchMusicMetadata, clampLyricsOverlay, createDefaultPersonalPlayerState, filterAndSortMusic, isBuiltInTrackId, lyricWindowForTime, nextTrackIdForPlayback, normalizePlaybackMode, parseLrc, personalMusicShouldPlayInScene, removeSelectedMusicTracks, removeUserMusicTrack, selectAllMusicTrackIds, type BatchMusicMetadata } from "./systems/PersonalMusic.js";
 import { changeReflectionPaper, clampReflectionNotePosition, createChapterReflectionNote, createReflectionNote, createReflectionWallState, deleteReflectionNote, migrateLegacyReflectionWall, moveReflectionNote, reflectionPaperStyles, toggleReflectionNoteFlag, updateReflectionNote, visibleReflectionNotes } from "./systems/ReflectionWall.js";
-import { drawSceneActor, drawSceneSpriteAsset } from "./systems/SceneActorRenderer.js";
+import { drawSceneActor, drawSceneSpriteAsset, type SceneSpriteAsset } from "./systems/SceneActorRenderer.js";
 import { getSceneLayout, loadSceneLayoutOverrides, resolveForestDynamicPlacements, resolveSceneAssetPath, resolveSceneEchoAnchor, sceneLayoutManifest, selectSceneOrientation, type SceneInteraction, type SceneLayout, type SceneLayoutId, type SceneOrientation } from "./systems/SceneLayouts.js";
 import {
   addJournalMedia,
@@ -115,6 +116,30 @@ function img(src: string): HTMLImageElement {
   return image;
 }
 
+type AuthoredRuntimeDefinition = {
+  chapter: ChapterDefinition;
+  assets: Record<string, SceneSpriteAsset>;
+  resolveActions: (layout: SceneLayout, mode: "main" | "echo", echoId?: string) => CutsceneAction[];
+  reflectionChoices: Array<{ id: string; prompt: string; choices: Choice[] }>;
+  echoAnchors: Record<string, string>;
+};
+
+const authoredRuntimeByScene: Record<string, AuthoredRuntimeDefinition> = {
+  "405": {
+    chapter: april05Chapter,
+    assets: april05Assets,
+    resolveActions: (layout, mode, echoId) => resolveApril05Actions(layout, mode === "main" ? april05MainMemoryActions : april05EchoActions[echoId as April05EchoId] ?? []),
+    reflectionChoices: april05ReflectionChoices,
+    echoAnchors: april05EchoAnchors
+  },
+  "406": {
+    chapter: april06Chapter,
+    assets: april06Assets,
+    resolveActions: (layout, mode) => resolveApril06Actions(layout, mode === "main" ? april06MainMemoryActions : april06EchoActions),
+    reflectionChoices: april06ReflectionChoices,
+    echoAnchors: { "watergun-crossing": "watergun-crossing" }
+  }
+};
 export class WalkBackHomeApp {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -330,6 +355,7 @@ export class WalkBackHomeApp {
     this.preloadLabisAssets();
     this.preloadMarch30Assets();
     this.preloadApril06Assets();
+    this.preloadApril05Assets();
     this.preloadSceneLayoutAssets();
     this.sceneLayoutLoadPromise = this.loadSavedSceneLayouts();
     this.audio.setVolume(this.settings.volume);
@@ -741,6 +767,14 @@ export class WalkBackHomeApp {
     }
   }
 
+  private preloadApril05Assets(): void {
+    for (const asset of Object.values(april05Assets)) {
+      const image = img(asset.path);
+      image.addEventListener("error", () => this.authoredImages.delete(asset.path), { once: true });
+      this.authoredImages.set(asset.path, image);
+    }
+  }
+
   private preloadSceneLayoutAssets(): void {
     for (const sceneId of Object.keys(sceneLayoutManifest)) {
       this.sceneImage(getSceneLayout(sceneId, "landscape"));
@@ -761,6 +795,19 @@ export class WalkBackHomeApp {
 
   private hasSceneLayout(sceneId: string): boolean {
     return Boolean(sceneLayoutManifest[sceneId]);
+  }
+
+  private authoredRuntimeForScene(scene: SceneId = this.scene): AuthoredRuntimeDefinition | null {
+    return authoredRuntimeByScene[String(scene)] ?? null;
+  }
+
+  private authoredAssetsForScene(): Record<string, SceneSpriteAsset> {
+    return this.authoredRuntimeForScene()?.assets ?? april06Assets;
+  }
+
+  private authoredEchoPoint(layout: SceneLayout, id: string): { x: number; y: number; radius: number } | null {
+    const semanticId = this.authoredRuntimeForScene()?.echoAnchors[id];
+    return semanticId ? resolveSceneEchoAnchor(layout, semanticId) : null;
   }
 
   private isAuthoredRuntimeScene(): boolean {
@@ -972,8 +1019,14 @@ export class WalkBackHomeApp {
   }
 
   private updateAuthoredScene(x: number, y: number, dt: number): void {
+    const runtime = this.authoredRuntimeForScene();
     const layout = this.currentSceneLayout();
-    if (this.scene === "406" && this.authoredCutscene) {
+    if (!runtime) {
+      this.moveInLayout(x, y, dt, layout);
+      this.activeObject = "";
+      return;
+    }
+    if (this.authoredCutscene) {
       if (this.authoredOverlayMode) {
         this.activeObject = "";
         return;
@@ -985,7 +1038,7 @@ export class WalkBackHomeApp {
       this.activeObject = "";
       return;
     }
-    if (this.scene === "406" && this.authoredOverlayMode) {
+    if (this.authoredOverlayMode) {
       this.activeObject = "";
       return;
     }
@@ -993,36 +1046,44 @@ export class WalkBackHomeApp {
       const rect = item.rect;
       return this.player.x >= rect.x && this.player.x <= rect.x + rect.w && this.player.y >= rect.y && this.player.y <= rect.y + rect.h;
     });
-    if (this.scene === "406" && trigger?.id === "main-memory" && trigger.chapterId === april06Chapter.id && this.consumeChapterTrigger(april06Chapter.id)) {
+    if (trigger?.id === "main-memory" && trigger.chapterId === runtime.chapter.id && this.consumeChapterTrigger(runtime.chapter.id)) {
       this.startAuthoredCutscene("main", false);
       return;
     }
     this.moveInLayout(x, y, dt, layout);
     const interaction = layout.interactions.find((item) => Math.hypot(this.player.x - item.x, this.player.y - item.y) < item.radius);
-    const mainComplete = this.scene === "406" && this.completedMemoryEvents.has(april06Chapter.canonicalClosure.historicalEventId);
-    const echo = mainComplete ? resolveSceneEchoAnchor(layout, "watergun-crossing") : null;
-    const echoActive = echo ? Math.hypot(this.player.x - echo.x, this.player.y - echo.y) < echo.radius : false;
-    const availableInteraction = interaction && (mainComplete || interaction.id === "exit" || interaction.id === "diary" || interaction.id === "diary memory") ? interaction : null;
-    this.activeObject = echoActive ? "watergun-crossing" : availableInteraction?.id ?? "";
+    const mainComplete = this.completedMemoryEvents.has(runtime.chapter.canonicalClosure.historicalEventId);
+    const echoActive = mainComplete
+      ? Object.keys(runtime.echoAnchors).find((id) => {
+          const point = this.authoredEchoPoint(layout, id);
+          return point ? Math.hypot(this.player.x - point.x, this.player.y - point.y) < point.radius : false;
+        })
+      : undefined;
+    const availableInteraction = interaction && (mainComplete || ["exit", "diary", "diary memory"].includes(interaction.id)) ? interaction : null;
+    this.activeObject = echoActive ?? availableInteraction?.id ?? "";
   }
 
-  private startAuthoredCutscene(mode: "main" | "echo", replay: boolean): void {
-    if (this.scene !== "406") return;
-    const actions = mode === "main" ? april06MainMemoryActions : april06EchoActions;
-    this.authoredCutscene = new CutsceneSystem(resolveApril06Actions(this.currentSceneLayout(), actions));
+  private startAuthoredCutscene(mode: "main" | "echo", replay: boolean, echoId = ""): void {
+    const runtime = this.authoredRuntimeForScene();
+    if (!runtime) return;
+    const actions = runtime.resolveActions(this.currentSceneLayout(), mode, echoId);
+    this.authoredCutscene = new CutsceneSystem(actions);
     this.authoredMode = mode;
     this.authoredReplayMode = replay;
     if (mode === "main") {
-      this.startChapterMemoryRun(april06Chapter.id, april06Chapter.canonicalClosure.historicalEventId, replay ? "manual-replay" : "automatic");
+      this.startChapterMemoryRun(runtime.chapter.id, runtime.chapter.canonicalClosure.historicalEventId, replay ? "manual-replay" : "automatic");
     }
     this.authoredOverlayMode = null;
     this.authoredCheckpointId = "";
     this.authoredReflectionResponse = "";
     this.overlay.classList.remove("dialogue-open", "lightweight-presentation");
     this.overlay.innerHTML = "";
-    this.showToast(mode === "main" ? (replay ? "Replaying the delivery" : "The lobby remembers a quick delivery") : "A morning echo crosses the path");
+    if (mode === "main") {
+      this.showToast(replay ? "Replaying " + runtime.chapter.title : "The " + runtime.chapter.date + " memory begins");
+    } else {
+      this.showToast("A secondary memory surfaces.");
+    }
   }
-
   private showAuthoredDialogue(): void {
     const dialogue = this.authoredCutscene?.currentDialogue;
     if (!dialogue || this.authoredOverlayMode === "dialogue") return;
@@ -1041,10 +1102,11 @@ export class WalkBackHomeApp {
   }
 
   private showAuthoredChoice(): void {
+    const runtime = this.authoredRuntimeForScene();
     const checkpoint = this.authoredCutscene?.currentCheckpoint;
-    if (!checkpoint || this.authoredOverlayMode === "choice") return;
+    if (!runtime || !checkpoint || this.authoredOverlayMode === "choice") return;
 
-    const point = april06ReflectionChoices.find((item) => item.id === checkpoint);
+    const point = runtime.reflectionChoices.find((item) => item.id === checkpoint);
     if (!point) {
       this.authoredCutscene?.resolveCheckpoint();
       return;
@@ -1053,7 +1115,7 @@ export class WalkBackHomeApp {
     this.authoredOverlayMode = "choice";
     this.overlay.classList.add("dialogue-open", "lightweight-presentation");
     this.overlay.innerHTML = renderReflectionChoice({
-      kicker: "04.06 · KTHO Lobby",
+      kicker: runtime.chapter.date + " · " + runtime.chapter.location,
       title: "你想怎样记住这一段？",
       prompt: point.prompt,
       choices: point.choices.map((choice) => ({ id: choice.id, label: choice.label })),
@@ -1063,12 +1125,13 @@ export class WalkBackHomeApp {
   }
 
   private chooseAuthoredChoice(choiceId: string): void {
-    const point = april06ReflectionChoices.find((item) => item.id === this.authoredCheckpointId);
+    const runtime = this.authoredRuntimeForScene();
+    const point = runtime?.reflectionChoices.find((item) => item.id === this.authoredCheckpointId);
     const choice = point?.choices.find((item) => item.id === choiceId);
-    if (!choice || !this.authoredCutscene?.currentCheckpoint) return;
+    if (!runtime || !choice || !this.authoredCutscene?.currentCheckpoint) return;
     this.recordChapterExperienceChoice(
-      april06Chapter.id,
-      april06Chapter.canonicalClosure.historicalEventId,
+      runtime.chapter.id,
+      runtime.chapter.canonicalClosure.historicalEventId,
       this.authoredReplayMode ? "manual-replay" : "automatic",
       choice
     );
@@ -1093,7 +1156,8 @@ export class WalkBackHomeApp {
   }
 
   private finishAuthoredCutscene(): void {
-    if (!this.authoredCutscene || !this.authoredMode) return;
+    const runtime = this.authoredRuntimeForScene();
+    if (!this.authoredCutscene || !this.authoredMode || !runtime) return;
     const mode = this.authoredMode;
     this.authoredCutscene = null;
     this.authoredMode = null;
@@ -1104,14 +1168,13 @@ export class WalkBackHomeApp {
     this.overlay.classList.remove("dialogue-open", "lightweight-presentation");
     this.overlay.innerHTML = "";
     if (mode === "main") {
-      this.showChapterEndingQuote("04.06 · KTHO Lobby", april06Chapter.title, april06Chapter.canonicalClosure.lines);
+      this.showChapterEndingQuote(runtime.chapter.date + " · " + runtime.chapter.location, runtime.chapter.title, runtime.chapter.canonicalClosure.lines);
       this.autosave();
       return;
     }
-    this.showToast("The morning echo fades without adding another event.");
+    this.showToast("The secondary echo fades without adding another event.");
     this.autosave();
   }
-
   private inspectAuthoredResidue(id: string): void {
     if (id === "mcd-drop-memory") return this.startAuthoredCutscene("main", true);
     if (id === "roadside-empty-car") {
@@ -1490,16 +1553,19 @@ export class WalkBackHomeApp {
     }
     if (this.scene === "330-corridor") return this.interactMarch30();
     if (this.isAuthoredRuntimeScene()) {
-      if (this.scene === "406" && this.overlay.innerHTML.trim() && !this.authoredOverlayMode) return;
-      if (this.scene === "406" && this.authoredOverlayMode === "dialogue") return this.advanceAuthoredDialogue();
-      if (this.scene === "406" && this.authoredOverlayMode === "response") return this.advanceAuthoredReflection();
-      if (this.scene === "406" && (this.authoredOverlayMode === "choice" || this.authoredCutscene?.currentCheckpoint)) return;
-      if (this.scene === "406" && this.authoredCutscene) return;
+      const runtime = this.authoredRuntimeForScene();
+      if (!runtime) return this.showToast("Walk through the authored scene");
+      if (this.overlay.innerHTML.trim() && !this.authoredOverlayMode) return;
+      if (this.authoredOverlayMode === "dialogue") return this.advanceAuthoredDialogue();
+      if (this.authoredOverlayMode === "response") return this.advanceAuthoredReflection();
+      if (this.authoredOverlayMode === "choice" || this.authoredCutscene?.currentCheckpoint) return;
+      if (this.authoredCutscene) return;
       if (this.activeObject === "exit") return this.returnToForest();
-      if (this.scene === "406" && (this.activeObject === "diary" || this.activeObject === "diary memory")) return this.showChapterDiary(this.currentMemoryKey());
-      if (this.scene === "406" && this.activeObject === "watergun-crossing") return this.startAuthoredCutscene("echo", false);
-      if (this.scene === "406" && this.activeObject === "mcd-drop-memory") return this.startAuthoredCutscene("main", true);
-      if (this.scene === "406" && this.activeObject === "roadside-empty-car") return this.inspectAuthoredResidue(this.activeObject);
+      if (this.activeObject === "diary" || this.activeObject === "diary memory") return this.showChapterDiary(this.currentMemoryKey());
+      if (this.activeObject === "main-memory-replay" || this.activeObject === "mcd-drop-memory") return this.startAuthoredCutscene("main", true);
+      if (runtime.echoAnchors[this.activeObject]) return this.startAuthoredCutscene("echo", false, this.activeObject);
+      if (this.activeObject === "roadside-empty-car") return this.inspectAuthoredResidue(this.activeObject);
+      if (this.activeObject === "bench") return this.showToast("The bench keeps the ordinary part of the night.");
       if (this.activeObject) return this.showToast("Walk closer to " + this.activeObject);
       return this.showToast("Walk through the authored scene");
     }
@@ -2193,11 +2259,15 @@ export class WalkBackHomeApp {
 
   private drawAuthoredScene(time: number): void {
     if (this.scene === "330-corridor") return this.drawMarch30Scene(time);
-    if (this.scene === "406") return this.drawApril06Scene(time);
+    if (this.authoredRuntimeForScene()) return this.drawAuthoredSceneRuntime(time);
     this.drawScene(this.currentSceneLayout(), time, "authored");
   }
 
   private drawApril06Scene(time: number): void {
+    this.drawAuthoredSceneRuntime(time);
+  }
+
+  private drawAuthoredSceneRuntime(time: number): void {
     const layout = this.currentSceneLayout();
     const image = this.sceneImage(layout);
     const viewport = this.sceneViewport(layout);
@@ -2214,7 +2284,7 @@ export class WalkBackHomeApp {
     const actors = this.authoredCutscene ? [...this.authoredCutscene.actors.values()] : [];
     const mujiScreen = { x: (this.player.x - camera.x) * scale, y: (this.player.y - camera.y) * scale };
     const drawables = [
-      ...actors.map((actor) => ({ y: actor.y, draw: () => drawSceneActor(this.ctx, actor, camera.x, camera.y, scale, april06Assets, this.authoredImages) })),
+      ...actors.map((actor) => ({ y: actor.y, draw: () => drawSceneActor(this.ctx, actor, camera.x, camera.y, scale, this.authoredAssetsForScene(), this.authoredImages) })),
       { y: this.player.y, draw: () => { this.ctx.save(); this.ctx.globalAlpha = this.authoredCutscene ? 0.34 : 1; this.drawMuji(mujiScreen, time, scale); this.ctx.restore(); } }
     ].sort((a, b) => a.y - b.y);
     drawables.forEach((item) => item.draw());
@@ -2232,26 +2302,69 @@ export class WalkBackHomeApp {
   }
 
   private drawAuthoredProp(prop: { id: string; assetId: string; owner?: string; position?: Point; visible: boolean }, cameraX: number, cameraY: number, scale: number): void {
-    const asset = april06Assets[prop.assetId as keyof typeof april06Assets];
+    const asset = this.authoredAssetsForScene()[prop.assetId];
     const image = asset ? this.authoredImages.get(asset.path) : undefined;
     if (!asset || !image || !image.complete || image.naturalWidth === 0) return;
     const owner = prop.owner ? this.authoredCutscene?.actors.get(prop.owner) : undefined;
     const position = owner ? { x: owner.x + (owner.id === "et" ? -18 : 18), y: owner.y - 62 } : prop.position;
     if (!position) return;
-    drawSceneSpriteAsset(this.ctx, image, asset, position, cameraX, cameraY, scale, owner?.facing ?? "right", 1, prop.id === "mcd" ? 72 : 120);
+    const baseHeight = prop.id === "mcd" ? 72 : prop.assetId === "water-gun" ? 70 : 120;
+    drawSceneSpriteAsset(this.ctx, image, asset, position, cameraX, cameraY, scale, owner?.facing ?? "right", 1, baseHeight);
   }
 
-  private drawAuthoredEffect(effect: { id: string; kind: "water-vfx" | "dissolve"; position?: Point; progress: number }, cameraX: number, cameraY: number, scale: number): void {
-    if (effect.id !== "alza-headlights" || !effect.position) return;
-    const asset = april06Assets.headlights;
-    const image = this.authoredImages.get(asset.path);
-    if (!image || !image.complete || image.naturalWidth === 0) return;
-    drawSceneSpriteAsset(this.ctx, image, asset, effect.position, cameraX, cameraY, scale, "left", Math.max(0, 0.54 * (1 - effect.progress)), 160);
+  private drawAuthoredEffect(effect: { id: string; kind: "water-vfx" | "dissolve"; actor?: string; target?: string; frame?: number; position?: Point; progress: number }, cameraX: number, cameraY: number, scale: number): void {
+    if (effect.kind === "dissolve") {
+      if (effect.id !== "alza-headlights" || !effect.position) return;
+      const asset = this.authoredAssetsForScene()["headlights"];
+      const image = asset ? this.authoredImages.get(asset.path) : undefined;
+      if (!asset || !image || !image.complete || image.naturalWidth === 0) return;
+      drawSceneSpriteAsset(this.ctx, image, asset, effect.position, cameraX, cameraY, scale, "left", Math.max(0, 0.54 * (1 - effect.progress)), 160);
+      return;
+    }
+    const sourceAsset = march30Assets.waterVfx;
+    const frameIndex = effect.frame ?? 0;
+    const frame = sourceAsset.frames[frameIndex];
+    const bounds = sourceAsset.visibleBounds?.[frameIndex];
+    const runtimeAssets = this.authoredAssetsForScene();
+    const actor = effect.actor ? this.authoredCutscene?.actors.get(effect.actor) : undefined;
+    const target = effect.target ? this.authoredCutscene?.actors.get(effect.target) : undefined;
+    const actorAsset = actor?.sprite ? runtimeAssets[actor.sprite.assetId] : undefined;
+    const image = this.march30Images.get(sourceAsset.path);
+    if (!frame || !bounds || !actor || !target || !actorAsset || !image?.complete || image.naturalWidth === 0) return;
+    const actorHeight = 154 * (actorAsset.materialScale ?? 1) * scale;
+    const actorWidth = actorHeight * actorAsset.source.w / actorAsset.source.h;
+    const actorLeft = (actor.x - cameraX) * scale - actorAsset.feet.x * actorWidth;
+    const actorTop = (actor.y - cameraY) * scale - actorAsset.feet.y * actorHeight;
+    const nozzle = actorAsset.nozzleOrigin ?? { x: 0.78, y: 0.42 };
+    const nozzleX = actor.facing === "left" && actorAsset.mirrorForLeft ? 1 - nozzle.x : nozzle.x;
+    const start = { x: actorLeft + nozzleX * actorWidth, y: actorTop + nozzle.y * actorHeight };
+    const targetAsset = target.sprite ? runtimeAssets[target.sprite.assetId] : undefined;
+    const targetHeight = 154 * (targetAsset?.materialScale ?? 1) * scale;
+    const targetWidth = targetAsset ? targetHeight * targetAsset.source.w / targetAsset.source.h : 46 * scale;
+    const targetX = (target.x - cameraX) * scale + (target.facing === "right" ? -0.12 : 0.12) * targetWidth;
+    const targetY = (target.y - cameraY) * scale - targetHeight * 0.62;
+    const dx = targetX - start.x;
+    const dy = targetY - start.y;
+    const distance = Math.hypot(dx, dy) * Math.max(0.35, effect.progress);
+    this.ctx.save();
+    this.ctx.globalAlpha = 0.8;
+    this.ctx.translate(start.x, start.y);
+    this.ctx.rotate(Math.atan2(dy, dx));
+    this.ctx.imageSmoothingEnabled = false;
+    this.ctx.drawImage(image, frame.source.x + bounds.x, frame.source.y + bounds.y, bounds.w, bounds.h, 0, -4 * MARCH30_MATERIAL_SCALE * scale, Math.max(12 * MARCH30_MATERIAL_SCALE * scale, distance), 8 * MARCH30_MATERIAL_SCALE * scale);
+    this.ctx.restore();
   }
-
   private drawAuthoredInteractionTells(layout: SceneLayout, cameraX: number, cameraY: number, scale: number, time: number): void {
-    const anchors = layout.echoAnchors ? [resolveSceneEchoAnchor(layout, "watergun-crossing")].filter((anchor): anchor is NonNullable<typeof anchor> => Boolean(anchor)) : [];
-    const points = [...layout.interactions.map((item) => ({ id: item.id, x: item.x, y: item.y, radius: item.radius })), ...anchors.map((anchor) => ({ id: "watergun-crossing", x: anchor.x, y: anchor.y, radius: anchor.radius }))];
+    const runtime = this.authoredRuntimeForScene();
+    if (!runtime) return;
+    const echoPoints = Object.keys(runtime.echoAnchors)
+      .map((id) => {
+        const point = this.authoredEchoPoint(layout, id);
+        return point ? { id, x: point.x, y: point.y, radius: point.radius } : null;
+      })
+      .filter((point): point is { id: string; x: number; y: number; radius: number } => Boolean(point));
+    const interactionPoints = layout.interactions.map((item) => ({ id: item.id, x: item.x, y: item.y, radius: item.radius }));
+    const points = [...interactionPoints, ...echoPoints.filter((echo) => !interactionPoints.some((interaction) => Math.hypot(interaction.x - echo.x, interaction.y - echo.y) < 1))];
     for (const point of points) {
       const x = (point.x - cameraX) * scale;
       const y = (point.y - cameraY) * scale;
@@ -2920,8 +3033,9 @@ export class WalkBackHomeApp {
     this.syncGameplayChromeVisibility();
     const labisPrompt = this.scene === "labis" && this.labisCutscene ? "Memory is playing" : this.scene === "labis" && this.activeObject === "exit" ? "Press E · 回到 Memory Forest" : this.scene === "labis" && this.activeObject ? `Press E · ${this.activeObject}` : "";
     const march30Prompt = this.scene === "330-corridor" && this.march30Cutscene ? "Memory is rebuilding" : this.scene === "330-corridor" && this.activeObject ? `Press E · ${this.activeObject}` : "";
-    const authoredLabel = this.scene === "406" && this.activeObject === "watergun-crossing" ? "morning echo" : this.scene === "406" && this.activeObject === "mcd-drop-memory" ? "MCD memory" : this.scene === "406" && this.activeObject === "roadside-empty-car" ? "empty car" : this.activeObject;
-    const authoredPrompt = this.scene === "406" && this.authoredCutscene ? "Memory is playing" : this.scene === "406" && authoredLabel ? "Press E · " + authoredLabel : "";
+    const authoredRuntime = this.authoredRuntimeForScene();
+    const authoredLabel = authoredRuntime && this.activeObject === "watergun-crossing" ? "morning echo" : authoredRuntime && this.activeObject === "mcd-drop-memory" ? "MCD memory" : authoredRuntime && this.activeObject === "roadside-empty-car" ? "empty car" : this.activeObject;
+    const authoredPrompt = authoredRuntime && this.authoredCutscene ? "Memory is playing" : authoredRuntime && authoredLabel ? "Press E · " + authoredLabel : "";
     const rawText = this.scene === "forest" && this.activeDoor ? `Press E · ${this.activeDoor.date} ${this.activeDoor.title}` : this.scene === "bakery" && this.activeObject ? `Press E · ${this.activeObject}` : labisPrompt || march30Prompt || authoredPrompt || (this.scene === "muji-room" && this.activeRoomInteraction ? `Press E · ${this.activeRoomInteraction.label}` : "WASD / arrows · E / Enter");
     const text = this.mobileHudPrompt(rawText);
     this.input.setTouchInteractionLabel(this.touchActionText(rawText));

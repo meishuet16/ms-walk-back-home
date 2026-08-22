@@ -71,5 +71,22 @@ export const authoredChapterDiaryEntries: DiaryEntry[] = [
     chapterId: "april06-not-gone-yet",
     photos: [],
     scrapbookLayout: { elements: [] }
-  }
+  },
+  {
+    id: "authored-diary-april05-come-down",
+    date: "2026-04-05",
+    title: "04.05 · 下来一下",
+    body: [
+      "04.05 · KTHO residential-college entrance",
+      "MS 叫 ET 下来一下。她真的下来了，门口还有 ST 和 Angela。水枪、摸头、锁喉一样的玩笑，以及宿舍门口聊到很晚的普通夜晚，都留在这里。",
+      "她最后回去冲凉，第二天早上还有 quiz。日记和回忆都只记住发生过的事，不替谁补上没有说出口的答案。"
+    ].join("\n\n"),
+    location: "KTHO residential-college entrance / front sitting area",
+    weather: "warm night after a humid day",
+    memoryKind: "chapter",
+    mood: "close",
+    chapterId: "april05-come-down",
+    photos: [],
+    scrapbookLayout: { elements: [] }
+  },
 ];
