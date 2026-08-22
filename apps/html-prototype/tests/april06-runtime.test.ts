@@ -1,10 +1,23 @@
 import assert from "node:assert/strict";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { test } from "node:test";
 import * as april06Fixture from "../src/fixtures/april06Chapter.js";
 import { april06Assets, april06EchoActions, april06MainMemoryActions, resolveApril06Actions } from "../src/fixtures/april06Chapter.js";
 import { CutsceneSystem, type CutsceneAction } from "../src/systems/CutsceneSystem.js";
 import type { SceneLayout } from "../src/systems/SceneLayouts.js";
-import { resolveSceneEchoAnchor } from "../src/systems/SceneLayouts.js";
+import { resolveSceneAssetPath, resolveSceneEchoAnchor } from "../src/systems/SceneLayouts.js";
+
+test("April 6 legacy and authored background paths resolve to the committed scene assets", () => {
+  for (const orientation of ["landscape", "portrait"] as const) {
+    const authored = JSON.parse(readFileSync(join("public", "scene-layouts", "406", `${orientation}.json`), "utf8")) as SceneLayout;
+    const expected = `assets/406/406-${orientation}.png`;
+    const legacy = { ...authored, asset: `assets/scenes/406-${orientation}.png` };
+    assert.equal(resolveSceneAssetPath(legacy), expected);
+    assert.equal(resolveSceneAssetPath(authored), expected);
+    assert.equal(existsSync(join("public", expected)), true);
+  }
+});
 
 test("April 6 resolves one semantic water-gun echo anchor per orientation without mutating authored keys", () => {
   const landscape: SceneLayout = {

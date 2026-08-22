@@ -32,7 +32,7 @@ import { LrclibLyricsProvider } from "./systems/LrclibLyrics.js";
 import { activeLyricIndexAt, adjacentTrackIdForControl, applyBatchMusicMetadata, clampLyricsOverlay, createDefaultPersonalPlayerState, filterAndSortMusic, isBuiltInTrackId, lyricWindowForTime, nextTrackIdForPlayback, normalizePlaybackMode, parseLrc, personalMusicShouldPlayInScene, removeSelectedMusicTracks, removeUserMusicTrack, selectAllMusicTrackIds, type BatchMusicMetadata } from "./systems/PersonalMusic.js";
 import { changeReflectionPaper, clampReflectionNotePosition, createChapterReflectionNote, createReflectionNote, createReflectionWallState, deleteReflectionNote, migrateLegacyReflectionWall, moveReflectionNote, reflectionPaperStyles, toggleReflectionNoteFlag, updateReflectionNote, visibleReflectionNotes } from "./systems/ReflectionWall.js";
 import { drawSceneActor, drawSceneSpriteAsset } from "./systems/SceneActorRenderer.js";
-import { getSceneLayout, loadSceneLayoutOverrides, resolveForestDynamicPlacements, resolveSceneEchoAnchor, sceneLayoutManifest, selectSceneOrientation, type SceneInteraction, type SceneLayout, type SceneLayoutId, type SceneOrientation } from "./systems/SceneLayouts.js";
+import { getSceneLayout, loadSceneLayoutOverrides, resolveForestDynamicPlacements, resolveSceneAssetPath, resolveSceneEchoAnchor, sceneLayoutManifest, selectSceneOrientation, type SceneInteraction, type SceneLayout, type SceneLayoutId, type SceneOrientation } from "./systems/SceneLayouts.js";
 import {
   addJournalMedia,
   addPhotoAttachment,
@@ -788,10 +788,11 @@ export class WalkBackHomeApp {
   }
 
   private sceneImage(layout: SceneLayout): HTMLImageElement {
-    const existing = this.sceneImages.get(layout.asset);
+    const assetPath = resolveSceneAssetPath(layout);
+    const existing = this.sceneImages.get(assetPath);
     if (existing) return existing;
-    const image = img(layout.asset);
-    this.sceneImages.set(layout.asset, image);
+    const image = img(assetPath);
+    this.sceneImages.set(assetPath, image);
     return image;
   }
 
