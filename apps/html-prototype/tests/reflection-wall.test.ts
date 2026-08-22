@@ -9,6 +9,7 @@ import {
   filterReflectionNotes,
   migrateLegacyReflectionWall,
   moveReflectionNote,
+  reflectionWallCanvasHeight,
   searchReflectionNotes,
   sortReflectionNotes,
   updateReflectionNote,
@@ -114,4 +115,12 @@ test("reflection note center is clamped by its rendered dimensions", () => {
     clampReflectionNotePosition({ x: 99, y: 99 }, { widthPercent: 32, heightPercent: 28, edgePercent: 4 }),
     { x: 80, y: 82 }
   );
+});
+test("portrait wall canvas grows when memo count needs more vertical rows", () => {
+  const base = reflectionWallCanvasHeight(5);
+  const crowded = reflectionWallCanvasHeight(16);
+
+  assert.equal(base, 620);
+  assert.ok(crowded > base);
+  assert.equal(reflectionWallCanvasHeight(16), crowded);
 });
