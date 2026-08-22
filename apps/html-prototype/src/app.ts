@@ -1,4 +1,5 @@
 import { bakeryChapter } from "./fixtures/chapterPlan.js";
+import { april06Assets, april06Chapter, april06EchoActions, april06MainMemoryActions, april06ReflectionChoices, resolveApril06Actions } from "./fixtures/april06Chapter.js";
 import { march30Assets, march30EchoActions, march30EchoReflectionChoices, march30MainMemoryActions, march30ReflectionChoices, resolveMarch30Closing, resolveMarch30CutsceneActions } from "./fixtures/march30Memory.js";
 import { canStartLabisMotorMemory, labisDiaryMemorySpot, labisInteractionForPoint, labisMotorMemoryActions } from "./fixtures/labisMotorMemory.js";
 import { labisAssetManifest, labisAssetPath, labisProductionAssetPaths } from "./fixtures/labisAssetRegistry.js";
@@ -8,10 +9,11 @@ import { AudioManager } from "./systems/AudioManager.js";
 import { AccountManager } from "./systems/AccountManager.js";
 import { loadAppConfig } from "./systems/AppConfig.js";
 import { chapterRegistry, forestEntries, routeForestEntry, type AuthoredForestEntry } from "./systems/ChapterRegistry.js";
-import { beginChapterVisit, consumeAutomaticChapterTrigger, createChapterTriggerSession, finishChapterWalkthrough, initialChapterProgress, markChapterDialogueComplete, markChapterMemoryRead, recordChapterChoice, type ChapterTriggerSession } from "./systems/ChapterProgressManager.js";
+import { beginChapterVisit, consumeAutomaticChapterTrigger, createChapterTriggerSession, finishChapterWalkthrough, initialChapterProgress, markChapterMemoryRead, type ChapterTriggerSession } from "./systems/ChapterProgressManager.js";
+import { applyChapterExperienceChoice, currentRunProgress, startChapterMemoryExperience, type ChapterExperienceMode, type ChapterMemoryExperienceRun } from "./systems/ChapterMemoryExperience.js";
 import { inAnyRect, type Point } from "./systems/CollisionSystem.js";
 import { CutsceneSystem } from "./systems/CutsceneSystem.js";
-import { createNewDiaryPage, deleteDiaryEntriesByIds, deleteDiaryEntryById, forestNodesForMonth, formatDiaryWeekday, getDiaryTimeline, openDiaryPageForDate, seedAuthoredChapterDiaryEntries, upsertDiaryEntry, upsertDiaryPageDraft } from "./systems/DiaryLibrary.js";
+import { createNewDiaryPage, deleteDiaryEntriesByIds, deleteDiaryEntryById, findChapterDiaryEntry, forestNodesForMonth, formatDiaryWeekday, getDiaryTimeline, openDiaryPageForDate, seedAuthoredChapterDiaryEntries, sharedChapterDiaryBookAssetPath, upsertDiaryEntry, upsertDiaryPageDraft } from "./systems/DiaryLibrary.js";
 import { makeDiaryEntry, parseDiaryImport, updateDiaryMemoryKind, type DiaryForestMemory, type DiaryTimelineSort } from "./systems/DiaryImport.js";
 import { DialogueSystem } from "./systems/DialogueSystem.js";
 import { resolveChapterReflection, type Ending } from "./systems/EndingResolver.js";
@@ -29,9 +31,8 @@ import { BundledLyricsLoader, trackIdentity } from "./systems/BundledLyrics.js";
 import { LrclibLyricsProvider } from "./systems/LrclibLyrics.js";
 import { activeLyricIndexAt, adjacentTrackIdForControl, applyBatchMusicMetadata, clampLyricsOverlay, createDefaultPersonalPlayerState, filterAndSortMusic, isBuiltInTrackId, lyricWindowForTime, nextTrackIdForPlayback, normalizePlaybackMode, parseLrc, personalMusicShouldPlayInScene, removeSelectedMusicTracks, removeUserMusicTrack, selectAllMusicTrackIds, type BatchMusicMetadata } from "./systems/PersonalMusic.js";
 import { changeReflectionPaper, clampReflectionNotePosition, createChapterReflectionNote, createReflectionNote, createReflectionWallState, deleteReflectionNote, migrateLegacyReflectionWall, moveReflectionNote, reflectionPaperStyles, toggleReflectionNoteFlag, updateReflectionNote, visibleReflectionNotes } from "./systems/ReflectionWall.js";
-import { drawSceneActor } from "./systems/SceneActorRenderer.js";
-import { getSceneLayout, loadSceneLayoutOverrides, resolveForestDynamicPlacements, sceneLayoutManifest, selectSceneOrientation, type SceneInteraction, type SceneLayout, type SceneLayoutId, type SceneOrientation } from "./systems/SceneLayouts.js";
-import { applyChoice } from "./systems/TendencySystem.js";
+import { drawSceneActor, drawSceneSpriteAsset } from "./systems/SceneActorRenderer.js";
+import { getSceneLayout, loadSceneLayoutOverrides, resolveForestDynamicPlacements, resolveSceneEchoAnchor, sceneLayoutManifest, selectSceneOrientation, type SceneInteraction, type SceneLayout, type SceneLayoutId, type SceneOrientation } from "./systems/SceneLayouts.js";
 import {
   addJournalMedia,
   addPhotoAttachment,
@@ -83,6 +84,7 @@ type LabisDialogueLine = { speaker: string; text: string };
 type LabisDialogueAfter = "motor-choice" | "photo-choice" | "filter-choice" | "finish-echo" | "show-reflection" | "finish-chicken-cake" | null;
 type LabisOverlayMode = "dialogue" | "choice" | "vignette" | "reflection" | null;
 type March30OverlayMode = "dialogue" | "reflection" | "response" | "closing" | null;
+type AuthoredOverlayMode = "dialogue" | "choice" | "response" | null;
 type March30PortraitPropId = "gift" | "waterGun" | "ordinaryKeychain" | "phoneCharm";
 
 const propPortraitSheetDimensions: Record<March30PortraitPropId, { w: number; h: number }> = {
@@ -172,6 +174,7 @@ export class WalkBackHomeApp {
   private timelineFilterAppliedMessage = "";
   private journalMode: "timeline" | "books" | "reader" = "timeline";
   private journalReturnSnapshot: JournalReturnSnapshot | null = null;
+  private chapterDiaryReturnId = "";
   private selectedTimelineMonthKey = "";
   private selectedBooksYear = "";
   private selectedBooksMonthKey = "";
@@ -225,6 +228,7 @@ export class WalkBackHomeApp {
   private reflectionWallSearch = "";
   private reflectionWallDrag: { noteId: string; offsetX: number; offsetY: number } | null = null;
   private chapterProgress = new Map<string, ChapterProgress>();
+  private chapterMemoryRun: ChapterMemoryExperienceRun | null = null;
   private dialogue = new DialogueSystem(bakeryChapter.dialogue);
   private labisCutscene: CutsceneSystem | null = null;
   private labisDialogueOpen = false;
@@ -248,6 +252,13 @@ export class WalkBackHomeApp {
   private march30OverlayMode: March30OverlayMode = null;
   private march30ReflectionIndex = 0;
   private march30ReflectionResponse = "";
+  private authoredCutscene: CutsceneSystem | null = null;
+  private authoredMode: "main" | "echo" | null = null;
+  private authoredReplayMode = false;
+  private authoredOverlayMode: AuthoredOverlayMode = null;
+  private authoredCheckpointId = "";
+  private authoredReflectionResponse = "";
+  private authoredImages = new Map<string, HTMLImageElement>();
   private sceneImages = new Map<string, HTMLImageElement>();
   private sceneOrientation: SceneOrientation = "landscape";
   private sceneLayoutLoadPromise: Promise<void> = Promise.resolve();
@@ -318,6 +329,7 @@ export class WalkBackHomeApp {
     this.images.room.src = assets.room;
     this.preloadLabisAssets();
     this.preloadMarch30Assets();
+    this.preloadApril06Assets();
     this.preloadSceneLayoutAssets();
     this.sceneLayoutLoadPromise = this.loadSavedSceneLayouts();
     this.audio.setVolume(this.settings.volume);
@@ -377,6 +389,11 @@ export class WalkBackHomeApp {
     if (action === "open-room") this.enterMujiRoom();
     if (action === "new-diary-entry") this.openNewDiaryPage();
     if (action === "open-diary-editor") this.showTimeline();
+    if (action === "edit-chapter-diary") {
+      this.chapterDiaryReturnId = target.dataset.chapter ?? "";
+      this.showDiaryEditor(target.dataset.id ?? "");
+      return;
+    }
     if (action === "open-diary-page") {
       this.captureJournalReturnSnapshot();
       this.showDiaryReader(target.dataset.id ?? "");
@@ -634,6 +651,9 @@ export class WalkBackHomeApp {
     if (action === "labis-vignette-close") this.closeLabisKeyframeVignette();
     if (action === "labis-reflection-close") this.closeLabisReflection();
     if (action === "march30-dialogue-next") this.advanceMarch30Dialogue();
+    if (action === "authored-dialogue-next") this.advanceAuthoredDialogue();
+    if (action === "authored-reflection-choice") this.chooseAuthoredChoice(target.dataset.choice ?? "");
+    if (action === "authored-reflection-next") this.advanceAuthoredReflection();
     if (action === "march30-reflection-choice") this.chooseMarch30Reflection(target.dataset.choice ?? "");
     if (action === "march30-reflection-next") this.advanceMarch30Reflection();
     if (action === "march30-closing-close") {
@@ -710,6 +730,14 @@ export class WalkBackHomeApp {
       const image = img(asset.path);
       image.addEventListener("error", () => this.march30Images.delete(asset.path), { once: true });
       this.march30Images.set(asset.path, image);
+    }
+  }
+
+  private preloadApril06Assets(): void {
+    for (const asset of Object.values(april06Assets)) {
+      const image = img(asset.path);
+      image.addEventListener("error", () => this.authoredImages.delete(asset.path), { once: true });
+      this.authoredImages.set(asset.path, image);
     }
   }
 
@@ -843,6 +871,8 @@ export class WalkBackHomeApp {
     this.choices = [];
     this.readMemories.clear();
     this.completedMemoryEvents.clear();
+    this.resetAuthoredRuntime();
+    this.chapterMemoryRun = null;
     this.chapterTriggerSessions.clear();
     this.chapterProgress.clear();
     this.room = createDefaultRoomState();
@@ -942,15 +972,163 @@ export class WalkBackHomeApp {
 
   private updateAuthoredScene(x: number, y: number, dt: number): void {
     const layout = this.currentSceneLayout();
-    this.moveInLayout(x, y, dt, layout);
-    const interaction = layout.interactions.find((item) => Math.hypot(this.player.x - item.x, this.player.y - item.y) < item.radius);
+    if (this.scene === "406" && this.authoredCutscene) {
+      if (this.authoredOverlayMode) {
+        this.activeObject = "";
+        return;
+      }
+      this.authoredCutscene.update(dt);
+      if (this.authoredCutscene.currentDialogue) this.showAuthoredDialogue();
+      else if (this.authoredCutscene.currentCheckpoint) this.showAuthoredChoice();
+      if (this.authoredCutscene.completed) this.finishAuthoredCutscene();
+      this.activeObject = "";
+      return;
+    }
+    if (this.scene === "406" && this.authoredOverlayMode) {
+      this.activeObject = "";
+      return;
+    }
     const trigger = layout.triggers.find((item) => {
       const rect = item.rect;
       return this.player.x >= rect.x && this.player.x <= rect.x + rect.w && this.player.y >= rect.y && this.player.y <= rect.y + rect.h;
     });
-    this.activeObject = interaction?.id ?? trigger?.id ?? "";
+    if (this.scene === "406" && trigger?.id === "main-memory" && trigger.chapterId === april06Chapter.id && this.consumeChapterTrigger(april06Chapter.id)) {
+      this.startAuthoredCutscene("main", false);
+      return;
+    }
+    this.moveInLayout(x, y, dt, layout);
+    const interaction = layout.interactions.find((item) => Math.hypot(this.player.x - item.x, this.player.y - item.y) < item.radius);
+    const mainComplete = this.scene === "406" && this.completedMemoryEvents.has(april06Chapter.canonicalClosure.historicalEventId);
+    const echo = mainComplete ? resolveSceneEchoAnchor(layout, "watergun-crossing") : null;
+    const echoActive = echo ? Math.hypot(this.player.x - echo.x, this.player.y - echo.y) < echo.radius : false;
+    const availableInteraction = interaction && (mainComplete || interaction.id === "exit" || interaction.id === "diary" || interaction.id === "diary memory") ? interaction : null;
+    this.activeObject = echoActive ? "watergun-crossing" : availableInteraction?.id ?? "";
   }
 
+  private startAuthoredCutscene(mode: "main" | "echo", replay: boolean): void {
+    if (this.scene !== "406") return;
+    const actions = mode === "main" ? april06MainMemoryActions : april06EchoActions;
+    this.authoredCutscene = new CutsceneSystem(resolveApril06Actions(this.currentSceneLayout(), actions));
+    this.authoredMode = mode;
+    this.authoredReplayMode = replay;
+    if (mode === "main") {
+      this.startChapterMemoryRun(april06Chapter.id, april06Chapter.canonicalClosure.historicalEventId, replay ? "manual-replay" : "automatic");
+    }
+    this.authoredOverlayMode = null;
+    this.authoredCheckpointId = "";
+    this.authoredReflectionResponse = "";
+    this.overlay.classList.remove("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = "";
+    this.showToast(mode === "main" ? (replay ? "Replaying the delivery" : "The lobby remembers a quick delivery") : "A morning echo crosses the path");
+  }
+
+  private showAuthoredDialogue(): void {
+    const dialogue = this.authoredCutscene?.currentDialogue;
+    if (!dialogue || this.authoredOverlayMode === "dialogue") return;
+    this.authoredOverlayMode = "dialogue";
+    this.overlay.classList.add("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = renderRpgDialogue({ speaker: dialogue.speaker, text: dialogue.text, action: "authored-dialogue-next" });
+    this.focusStage();
+  }
+
+  private advanceAuthoredDialogue(): void {
+    if (this.authoredOverlayMode !== "dialogue") return;
+    this.authoredCutscene?.advanceDialogue();
+    this.authoredOverlayMode = null;
+    this.overlay.classList.remove("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = "";
+  }
+
+  private showAuthoredChoice(): void {
+    const checkpoint = this.authoredCutscene?.currentCheckpoint;
+    if (!checkpoint || this.authoredOverlayMode === "choice") return;
+
+    const point = april06ReflectionChoices.find((item) => item.id === checkpoint);
+    if (!point) {
+      this.authoredCutscene?.resolveCheckpoint();
+      return;
+    }
+    this.authoredCheckpointId = checkpoint;
+    this.authoredOverlayMode = "choice";
+    this.overlay.classList.add("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = renderReflectionChoice({
+      kicker: "04.06 · KTHO Lobby",
+      title: "你想怎样记住这一段？",
+      prompt: point.prompt,
+      choices: point.choices.map((choice) => ({ id: choice.id, label: choice.label })),
+      action: "authored-reflection-choice"
+    });
+    this.focusStage();
+  }
+
+  private chooseAuthoredChoice(choiceId: string): void {
+    const point = april06ReflectionChoices.find((item) => item.id === this.authoredCheckpointId);
+    const choice = point?.choices.find((item) => item.id === choiceId);
+    if (!choice || !this.authoredCutscene?.currentCheckpoint) return;
+    this.recordChapterExperienceChoice(
+      april06Chapter.id,
+      april06Chapter.canonicalClosure.historicalEventId,
+      this.authoredReplayMode ? "manual-replay" : "automatic",
+      choice
+    );
+    this.authoredReflectionResponse = choice.response;
+    this.authoredOverlayMode = "response";
+    this.overlay.classList.add("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = renderReflection({
+      lines: [choice.response],
+      actions: '<button data-action="authored-reflection-next">Continue walking</button>'
+    });
+    this.autosave();
+  }
+
+  private advanceAuthoredReflection(): void {
+    if (this.authoredOverlayMode !== "response") return;
+    this.authoredCutscene?.resolveCheckpoint();
+    this.authoredOverlayMode = null;
+    this.authoredCheckpointId = "";
+    this.authoredReflectionResponse = "";
+    this.overlay.classList.remove("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = "";
+  }
+
+  private finishAuthoredCutscene(): void {
+    if (!this.authoredCutscene || !this.authoredMode) return;
+    const mode = this.authoredMode;
+    this.authoredCutscene = null;
+    this.authoredMode = null;
+    this.authoredReplayMode = false;
+    this.authoredOverlayMode = null;
+    this.authoredCheckpointId = "";
+    this.authoredReflectionResponse = "";
+    this.overlay.classList.remove("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = "";
+    if (mode === "main") {
+      this.showChapterEndingQuote("04.06 · KTHO Lobby", april06Chapter.title, april06Chapter.canonicalClosure.lines);
+      this.autosave();
+      return;
+    }
+    this.showToast("The morning echo fades without adding another event.");
+    this.autosave();
+  }
+
+  private inspectAuthoredResidue(id: string): void {
+    if (id === "mcd-drop-memory") return this.startAuthoredCutscene("main", true);
+    if (id === "roadside-empty-car") {
+      this.overlay.innerHTML = '<div class="modal"><h2>Roadside</h2><p>车已经不在了。这里只留下一个很短的空镜头。</p><button data-action="close">Close</button></div>';
+    } else {
+      return this.showToast("Walk through the lobby");
+    }
+    this.focusStage();
+  }
+
+  private resetAuthoredRuntime(): void {
+    this.authoredCutscene = null;
+    this.authoredMode = null;
+    this.authoredReplayMode = false;
+    this.authoredOverlayMode = null;
+    this.authoredCheckpointId = "";
+    this.authoredReflectionResponse = "";
+  }
   private updateMarch30Scene(x: number, y: number, dt: number): void {
     const layout = this.currentSceneLayout();
     if (this.march30Cutscene) {
@@ -974,8 +1152,7 @@ export class WalkBackHomeApp {
     }
     this.moveInLayout(x, y, dt, layout);
     const interaction = layout.interactions.find((item) => Math.hypot(this.player.x - item.x, this.player.y - item.y) < item.radius);
-    const mainSeen = this.completedMemoryEvents.has("march30-bench-memory");
-    this.activeObject = (interaction?.id === "bench-memory" || interaction?.id === "elevator") && !mainSeen ? "" : interaction?.id ?? "";
+    this.activeObject = interaction?.id ?? "";
   }
 
   private startMarch30Memory(replay: boolean): void {
@@ -983,6 +1160,7 @@ export class WalkBackHomeApp {
     this.march30Cutscene = new CutsceneSystem(resolveMarch30CutsceneActions(layout, march30MainMemoryActions));
     this.march30Mode = "main";
     this.march30ReplayMode = replay;
+    this.startChapterMemoryRun("march30-too-fated", "march30-bench-memory", replay ? "manual-replay" : "automatic");
     this.march30OverlayMode = null;
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
@@ -994,6 +1172,7 @@ export class WalkBackHomeApp {
     this.march30Cutscene = new CutsceneSystem(resolveMarch30CutsceneActions(layout, march30EchoActions));
     this.march30Mode = "echo";
     this.march30ReplayMode = replay;
+    this.startChapterMemoryRun("march30-too-fated", "march30-elevator-echo", "manual-replay");
     this.march30OverlayMode = null;
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
@@ -1061,15 +1240,8 @@ export class WalkBackHomeApp {
     this.march30OverlayMode = null;
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
-    if (mode === "main") {
-      this.completedMemoryEvents.add("march30-bench-memory");
-      this.readMemories.add("march30-bench-memory");
-      this.chapterProgress.set("march30-too-fated", markChapterMemoryRead(this.progressFor("march30-too-fated")));
-      this.showMarch30ReflectionChoice(1);
-    } else {
-      this.completedMemoryEvents.add("march30-elevator-echo");
-      this.showMarch30ReflectionChoice(2);
-    }
+    if (mode === "main") this.showMarch30ReflectionChoice(1);
+    else this.showMarch30ReflectionChoice(2);
     this.autosave();
   }
 
@@ -1092,9 +1264,8 @@ export class WalkBackHomeApp {
     const choices = this.march30ReflectionIndex === 1 ? march30ReflectionChoices : march30EchoReflectionChoices;
     const choice = choices.find((item) => item.id === choiceId);
     if (!choice) return;
-    this.tendencies = applyChoice(this.tendencies, choice);
-    this.choices.push(choice.id);
-    this.chapterProgress.set("march30-too-fated", recordChapterChoice(this.progressFor("march30-too-fated"), choice.id, this.tendencies));
+    const eventId = this.march30ReflectionIndex === 1 ? "march30-bench-memory" : "march30-elevator-echo";
+    this.recordChapterExperienceChoice("march30-too-fated", eventId, this.march30ReplayMode ? "manual-replay" : "automatic", choice);
     this.march30ReflectionResponse = choice.response ?? "";
     this.march30OverlayMode = "response";
     this.overlay.classList.add("dialogue-open", "lightweight-presentation");
@@ -1106,19 +1277,19 @@ export class WalkBackHomeApp {
   }
 
   private advanceMarch30Reflection(): void {
-    if (this.march30ReflectionIndex === 2) {
-      this.march30OverlayMode = "closing";
-      const quote = resolveMarch30Closing(this.tendencies);
-      this.overlay.classList.add("dialogue-open", "lightweight-presentation");
-      this.overlay.innerHTML = renderReflection({
-        kicker: "March 30 · 330 corridor",
-        lines: [quote],
-        actions: `<button data-action="reflection-keep-chapter" data-chapter="march30-too-fated" data-text="${this.escapeHtml(quote)}">Keep this</button><button data-action="march30-closing-close">Continue walking</button>`
-      });
-    } else {
-      this.march30OverlayMode = null;
-      this.overlay.innerHTML = "";
-    }
+    const chapterId = "march30-too-fated";
+    const eventId = this.march30ReflectionIndex === 1 ? "march30-bench-memory" : "march30-elevator-echo";
+    const progress = this.currentRunProgressFor(chapterId);
+    const quote = resolveMarch30Closing(progress.tendencies);
+    const reflection = resolveChapterReflection(chapterRegistry[chapterId], progress);
+    this.completeChapterMemoryRun(chapterId, eventId, reflection);
+    this.march30OverlayMode = "closing";
+    this.overlay.classList.add("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = renderReflection({
+      kicker: "March 30 · 330 corridor",
+      lines: [quote],
+      actions: `<button data-action="reflection-keep-chapter" data-chapter="march30-too-fated" data-text="${this.escapeHtml(quote)}">Keep this</button><button data-action="march30-closing-close">Continue walking</button>`
+    });
     this.autosave();
   }
 
@@ -1166,6 +1337,7 @@ export class WalkBackHomeApp {
     this.labisCutscene = new CutsceneSystem(this.labisMotorActionsForCurrentLayout());
     this.labisDialogueOpen = false;
     this.labisReplayMode = replay;
+    this.startChapterMemoryRun("labis-motor-day", "july19-motor-learning", replay ? "manual-replay" : "automatic");
     this.labisLessonChoiceIndex = -1;
     this.labisOverlayMode = null;
     this.labisActiveChoice = null;
@@ -1218,17 +1390,14 @@ export class WalkBackHomeApp {
   }
 
   private finishLabisMemoryEvent(): void {
-    const alreadyCompleted = this.labisReplayMode || this.completedMemoryEvents.has("july19-motor-learning");
-    this.completedMemoryEvents.add("july19-motor-learning");
-    this.readMemories.add("july19-motor-learning");
-    this.chapterProgress.set("labis-motor-day", markChapterMemoryRead(this.progressFor("labis-motor-day")));
+    const replay = this.labisReplayMode;
     this.labisCutscene = null;
     this.labisDialogueOpen = false;
     this.labisReplayMode = false;
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
-    this.showToast(alreadyCompleted ? "Memory replayed" : "✦ 第一次学会驾 motor · 07.19 · Labis");
-    if (!alreadyCompleted) this.showLabisChoice("motor");
+    this.showToast(replay ? "Memory replayed" : "✦ 第一次学会驾 motor · 07.19 · Labis");
+    this.showLabisChoice("motor");
     this.autosave();
   }
 
@@ -1320,8 +1489,17 @@ export class WalkBackHomeApp {
     }
     if (this.scene === "330-corridor") return this.interactMarch30();
     if (this.isAuthoredRuntimeScene()) {
+      if (this.scene === "406" && this.overlay.innerHTML.trim() && !this.authoredOverlayMode) return;
+      if (this.scene === "406" && this.authoredOverlayMode === "dialogue") return this.advanceAuthoredDialogue();
+      if (this.scene === "406" && this.authoredOverlayMode === "response") return this.advanceAuthoredReflection();
+      if (this.scene === "406" && (this.authoredOverlayMode === "choice" || this.authoredCutscene?.currentCheckpoint)) return;
+      if (this.scene === "406" && this.authoredCutscene) return;
       if (this.activeObject === "exit") return this.returnToForest();
-      if (this.activeObject) return this.showToast("This authored scene is not playable yet");
+      if (this.scene === "406" && (this.activeObject === "diary" || this.activeObject === "diary memory")) return this.showChapterDiary(this.currentMemoryKey());
+      if (this.scene === "406" && this.activeObject === "watergun-crossing") return this.startAuthoredCutscene("echo", false);
+      if (this.scene === "406" && this.activeObject === "mcd-drop-memory") return this.startAuthoredCutscene("main", true);
+      if (this.scene === "406" && this.activeObject === "roadside-empty-car") return this.inspectAuthoredResidue(this.activeObject);
+      if (this.activeObject) return this.showToast("Walk closer to " + this.activeObject);
       return this.showToast("Walk through the authored scene");
     }
     if (this.scene === "ending") this.returnToForest();
@@ -1353,7 +1531,8 @@ export class WalkBackHomeApp {
   }
 
   private currentMemoryKey(): string {
-    return this.currentDoor && this.isChapterNode(this.currentDoor) ? this.currentDoor.chapterId : bakeryChapter.id;
+    if (this.currentDoor && this.isChapterNode(this.currentDoor)) return this.currentDoor.chapterId;
+    return Object.values(chapterRegistry).find((chapter) => chapter.runtimeScene === this.scene)?.id ?? bakeryChapter.id;
   }
 
   private allDoors(): ForestNode[] {
@@ -1383,6 +1562,61 @@ export class WalkBackHomeApp {
     return progress;
   }
 
+  private startChapterMemoryRun(chapterId: string, eventId: string, mode: ChapterExperienceMode): void {
+    this.chapterMemoryRun = startChapterMemoryExperience({
+      chapterId,
+      eventId,
+      mode,
+      baselineTendencies: this.tendencies,
+      firstCompletionPending: !this.completedMemoryEvents.has(eventId)
+    });
+  }
+
+  private currentRunProgressFor(chapterId: string): ChapterProgress {
+    const progress = this.progressFor(chapterId);
+    return this.chapterMemoryRun?.chapterId === chapterId
+      ? currentRunProgress(progress, this.chapterMemoryRun)
+      : progress;
+  }
+
+  private recordChapterExperienceChoice(chapterId: string, eventId: string, mode: ChapterExperienceMode, choice: Choice): void {
+    if (!this.chapterMemoryRun || this.chapterMemoryRun.chapterId !== chapterId || this.chapterMemoryRun.eventId !== eventId) {
+      this.startChapterMemoryRun(chapterId, eventId, mode);
+    }
+    this.chapterMemoryRun = applyChapterExperienceChoice(this.chapterMemoryRun!, choice);
+  }
+
+  private completeChapterMemoryRun(chapterId: string, eventId: string, reflection: Pick<ReturnType<typeof resolveChapterReflection>, "quoteId" | "tone">): void {
+    const run = this.chapterMemoryRun?.chapterId === chapterId && this.chapterMemoryRun.eventId === eventId ? this.chapterMemoryRun : null;
+    const firstCompletion = !this.completedMemoryEvents.has(eventId);
+    const persistedProgress = this.progressFor(chapterId);
+    const currentProgress = run ? currentRunProgress(persistedProgress, run) : persistedProgress;
+    if (firstCompletion) {
+      if (run) {
+        this.tendencies = { ...run.tendencies };
+        this.choices.push(...run.choiceIds);
+      }
+      this.completedMemoryEvents.add(eventId);
+      this.readMemories.add(eventId);
+    }
+    const finishedProgress = firstCompletion ? markChapterMemoryRead(currentProgress) : persistedProgress;
+    this.chapterProgress.set(chapterId, finishChapterWalkthrough(finishedProgress, reflection.quoteId, reflection.tone));
+    this.walkedThroughMemories.add(chapterId);
+    this.room.residueIds = [...new Set([...(this.room.residueIds ?? []), chapterId])];
+  }
+
+  private commitChapterMemoryRunTendencies(chapterId: string, eventId: string): void {
+    const run = this.chapterMemoryRun?.chapterId === chapterId && this.chapterMemoryRun.eventId === eventId ? this.chapterMemoryRun : null;
+    if (!run || this.completedMemoryEvents.has(eventId)) {
+      this.completedMemoryEvents.add(eventId);
+      this.readMemories.add(eventId);
+      return;
+    }
+    this.tendencies = { ...run.tendencies };
+    this.choices.push(...run.choiceIds);
+    this.completedMemoryEvents.add(eventId);
+    this.readMemories.add(eventId);
+  }
   private finishCurrentChapterWalkthrough(): void {
     const door = this.currentDoor;
     if (!door || !this.isChapterNode(door)) return;
@@ -1442,9 +1676,11 @@ export class WalkBackHomeApp {
     this.scene = chapter.runtimeScene;
     this.player = { ...this.currentSceneLayout(chapter.runtimeScene).spawn };
     this.dialogue = new DialogueSystem(chapter.dialogue);
+    this.startChapterMemoryRun(chapterId, chapter.canonicalClosure.historicalEventId, "automatic");
     this.labisCutscene = null;
     this.labisDialogueOpen = false;
     this.resetMarch30Runtime();
+    this.resetAuthoredRuntime();
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
     this.focusStage();
@@ -1462,27 +1698,53 @@ export class WalkBackHomeApp {
 
   private resetBakeryDialogue(): void {
     this.dialogue = new DialogueSystem(bakeryChapter.dialogue);
+    this.startChapterMemoryRun("bakery-day", chapterRegistry["bakery-day"].canonicalClosure.historicalEventId, "manual-replay");
     this.showToast("Friend A is ready to talk again");
   }
 
   private showDiaryMemory(): void {
-    const door = this.currentDoor ?? forestEntries[1];
-    const chapterId = this.chapterIdFor(door);
+    this.showChapterDiary(this.currentMemoryKey());
+  }
+
+  private showChapterDiary(chapterId: string): void {
+    const chapter = chapterRegistry[chapterId];
+    const entry = findChapterDiaryEntry(this.diaryEntries, chapterId, chapter?.diaryEntryId);
+    if (!entry) {
+      this.showToast("This chapter has no canonical diary page yet");
+      return;
+    }
     this.readMemories.add(chapterId);
     this.chapterProgress.set(chapterId, markChapterMemoryRead(this.progressFor(chapterId)));
-    const editableDiary = this.diaryEntries.find((entry) => entry.chapterId === chapterId);
-    const memoryText: string[] = editableDiary
-      ? editableDiary.body.split(/\r?\n/).filter(Boolean)
-      : "memoryText" in door && Array.isArray(door.memoryText) ? door.memoryText : (chapterRegistry[chapterId]?.memoryText ?? bakeryChapter.memoryText ?? []);
-    const diaryDate = editableDiary?.date ?? door.date;
-    const diaryTitle = editableDiary?.title ?? door.title;
-    const lines = memoryText.map((line: string, index: number) => index === 0 ? `<h2>${this.escapeHtml(diaryDate)} · ${this.escapeHtml(diaryTitle)}</h2><p>${this.escapeHtml(line)}</p>` : `<p>${this.escapeHtml(line)}</p>`).join("");
-    this.overlay.innerHTML = `<div class="modal diary-memory"><div class="diary-memory-scroll">${lines}</div><div class="memory-actions"><button data-action="close">Close</button><button data-action="forest">Exit to forest</button></div></div>`;
+    this.showChapterDiaryFrame(entry);
     this.showToast("Diary memory read");
-    this.focusStage();
     this.autosave();
   }
 
+  private showChapterDiaryFrame(entry: DiaryEntry): void {
+    const paragraphs = (entry.body || "Empty draft")
+      .split(/\n{2,}|\r?\n/)
+      .filter(Boolean)
+      .map((line) => `<p>${this.escapeHtml(line)}</p>`)
+      .join("");
+    const meta = [entry.location, entry.weather, entry.mood ? `心情：${entry.mood}` : ""]
+      .filter(Boolean)
+      .map((item) => this.escapeHtml(String(item)))
+      .join(" · ");
+    this.overlay.classList.remove("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = `
+      <div class="modal diary-memory chapter-diary-memory" role="dialog" aria-modal="true" aria-label="Chapter diary">
+        <div class="diary-memory-scroll">
+          <h2>${this.escapeHtml(entry.date)} · ${this.escapeHtml(entry.title)}</h2>
+          ${meta ? `<p class="journal-reading-meta">${meta}</p>` : ""}
+          ${paragraphs}
+        </div>
+        <div class="memory-actions">
+          <button data-action="close">Close</button>
+          <button data-action="edit-chapter-diary" data-id="${this.escapeHtml(entry.id)}" data-chapter="${this.escapeHtml(entry.chapterId ?? "")}">Edit in Journal</button>
+        </div>
+      </div>`;
+    this.focusStage();
+  }
   private inspectPastry(): void {
     this.overlay.innerHTML = `<div class="modal"><h2>Pastry</h2><p>The pastry is smaller than the story made it. It does not start a conversation by itself.</p><button data-action="close">Close</button><button data-action="forest">Exit to forest</button></div>`;
     this.focusStage();
@@ -1542,10 +1804,12 @@ export class WalkBackHomeApp {
     } else {
       const choice = node.choices.find((item) => item.id === choiceId);
       if (choice) {
-        this.tendencies = this.dialogue.choose(choice, this.tendencies);
         const chapterId = this.currentMemoryKey();
-        this.chapterProgress.set(chapterId, recordChapterChoice(this.progressFor(chapterId), choice.id, this.tendencies));
-        this.choices.push(choice.id);
+        const chapter = chapterRegistry[chapterId];
+        if (chapter) {
+          this.dialogue.choose(choice, this.currentRunProgressFor(chapterId).tendencies);
+          this.recordChapterExperienceChoice(chapterId, chapter.canonicalClosure.historicalEventId, "manual-replay", choice);
+        }
         this.showToast(`Choice: ${choice.label}`);
       }
     }
@@ -1571,7 +1835,6 @@ export class WalkBackHomeApp {
     if (!point) return;
     this.labisOverlayMode = "choice";
     this.labisActiveChoice = id;
-    this.labisActiveEcho = null;
     this.overlay.classList.add("dialogue-open", "lightweight-presentation");
     this.overlay.innerHTML = renderReflectionChoice({
       prompt: point.prompt,
@@ -1630,14 +1893,8 @@ export class WalkBackHomeApp {
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
     if (after === "motor-choice") this.showLabisChoice("motor");
-    if (after === "photo-choice") {
-      this.markActiveLabisEchoDiscovered();
-      this.showLabisChoice("photo");
-    }
-    if (after === "filter-choice") {
-      this.markActiveLabisEchoDiscovered();
-      this.showLabisChoice("filter");
-    }
+    if (after === "photo-choice") this.showLabisChoice("photo");
+    if (after === "filter-choice") this.showLabisChoice("filter");
     if (after === "finish-echo") this.finishLabisEcho();
     if (after === "show-reflection") this.showLabisMemoryReflection();
     if (after === "finish-chicken-cake") this.finishLabisEcho(true);
@@ -1685,14 +1942,14 @@ export class WalkBackHomeApp {
   private startLabisEcho(echo: LabisEcho): void {
     this.labisActiveEcho = echo;
     this.labisVignetteStartedAt = performance.now();
-    const replay = this.completedMemoryEvents.has(echo.id);
+    this.startChapterMemoryRun("labis-motor-day", echo.id, "manual-replay");
     if (echo.id === "july19-photo-threat") {
       return this.showLabisDialogueQueue([
         { speaker: "ET", text: "诶？" },
         { speaker: "ET", text: "拍起来。" },
         { speaker: "ET", text: "以后可以威胁 MS。" },
         { speaker: "MS", text: "蛤？" }
-      ], replay ? "finish-echo" : "photo-choice");
+      ], "photo-choice");
     }
     if (echo.id === "july19-chicken-porridge") {
       return this.showLabisDialogueQueue([
@@ -1731,8 +1988,6 @@ export class WalkBackHomeApp {
       ], "filter-choice");
     }
     if (echo.id === "july19-chicken-cake") {
-      this.completedMemoryEvents.add(echo.id);
-      this.readMemories.add(echo.id);
       this.labisOverlayMode = "vignette";
       const src = labisAssetManifest.chickenCake;
       const hasImage = this.isLabisImageReady(src);
@@ -1749,12 +2004,10 @@ export class WalkBackHomeApp {
     window.setTimeout(() => this.finishLabisEcho(true), 360);
   }
 
-  private finishLabisEcho(keepDiscovery = false): void {
+  private finishLabisEcho(_keepDiscovery = false): void {
     const echo = this.labisActiveEcho;
-    if (echo && (keepDiscovery || !this.completedMemoryEvents.has(echo.id))) {
-      this.completedMemoryEvents.add(echo.id);
-      this.readMemories.add(echo.id);
-    }
+    if (echo) this.commitChapterMemoryRunTendencies("labis-motor-day", echo.id);
+    else if (this.chapterMemoryRun?.chapterId === "labis-motor-day" && this.chapterMemoryRun.eventId === "july19-motor-learning") this.commitChapterMemoryRunTendencies("labis-motor-day", "july19-motor-learning");
     this.labisOverlayMode = null;
     this.labisActiveEcho = null;
     this.overlay.classList.remove("dialogue-open");
@@ -1763,20 +2016,11 @@ export class WalkBackHomeApp {
     this.autosave();
   }
 
-  private markActiveLabisEchoDiscovered(): void {
-    const echo = this.labisActiveEcho;
-    if (!echo) return;
-    this.completedMemoryEvents.add(echo.id);
-    this.readMemories.add(echo.id);
-    this.autosave();
-  }
 
   private showLabisMemoryReflection(): void {
-    const reflection = resolveLabisMemoryReflection(this.progressFor("labis-motor-day").tendencies);
-    const progress = markChapterDialogueComplete(this.progressFor("labis-motor-day"));
-    this.chapterProgress.set("labis-motor-day", finishChapterWalkthrough(progress, reflection.id, "accepting"));
-    this.walkedThroughMemories.add("labis-motor-day");
-    this.room.residueIds = [...new Set([...(this.room.residueIds ?? []), "labis-motor-day"])];
+    const progress = this.currentRunProgressFor("labis-motor-day");
+    const reflection = resolveLabisMemoryReflection(progress.tendencies);
+    this.completeChapterMemoryRun("labis-motor-day", "july19-motor-learning", { quoteId: reflection.id, tone: "accepting" });
     this.labisReflectionLines = reflection.lines;
     this.labisOverlayMode = "reflection";
     this.overlay.classList.add("dialogue-open", "lightweight-presentation");
@@ -1803,10 +2047,9 @@ export class WalkBackHomeApp {
   }
 
   private recordLabisChoice(choice: Choice): void {
-    this.tendencies = applyChoice(this.tendencies, choice);
-    const progress = recordChapterChoice(this.progressFor("labis-motor-day"), choice.id, this.tendencies);
-    this.chapterProgress.set("labis-motor-day", progress);
-    this.choices.push(choice.id);
+    const eventId = this.labisActiveEcho?.id ?? "july19-motor-learning";
+    const mode = this.labisActiveEcho ? "manual-replay" : this.labisReplayMode ? "manual-replay" : "automatic";
+    this.recordChapterExperienceChoice("labis-motor-day", eventId, mode, choice);
   }
 
   private responseLines(response: string): string[] {
@@ -1819,22 +2062,24 @@ export class WalkBackHomeApp {
   }
 
   private showEndingQuote(): void {
-    const progress = markChapterDialogueComplete(this.progressFor(this.currentMemoryKey()));
-    const reflection = resolveChapterReflection(chapterRegistry[this.currentMemoryKey()], progress);
-    this.chapterProgress.set(this.currentMemoryKey(), finishChapterWalkthrough(progress, reflection.quoteId, reflection.tone));
-    this.walkedThroughMemories.add(this.currentMemoryKey());
-    this.room.residueIds = [...new Set([...(this.room.residueIds ?? []), this.currentMemoryKey()])];
+    const chapterId = this.currentMemoryKey();
+    const chapter = chapterRegistry[chapterId];
+    if (!chapter) return;
+    const progress = this.currentRunProgressFor(chapterId);
+    const reflection = resolveChapterReflection(chapter, progress);
+    this.completeChapterMemoryRun(chapterId, chapter.canonicalClosure.historicalEventId, reflection);
     this.renderEndingQuote("after the conversation", "The rain slows", reflection);
     this.audio.ping("ending");
     this.autosave();
   }
 
   private showChapterEndingQuote(kicker: string, title: string, leadLines: string[] = []): void {
-    const progress = markChapterDialogueComplete(this.progressFor(this.currentMemoryKey()));
-    const reflection = resolveChapterReflection(chapterRegistry[this.currentMemoryKey()], progress);
-    this.chapterProgress.set(this.currentMemoryKey(), finishChapterWalkthrough(progress, reflection.quoteId, reflection.tone));
-    this.walkedThroughMemories.add(this.currentMemoryKey());
-    this.room.residueIds = [...new Set([...(this.room.residueIds ?? []), this.currentMemoryKey()])];
+    const chapterId = this.currentMemoryKey();
+    const chapter = chapterRegistry[chapterId];
+    if (!chapter) return;
+    const progress = this.currentRunProgressFor(chapterId);
+    const reflection = resolveChapterReflection(chapter, progress);
+    this.completeChapterMemoryRun(chapterId, chapter.canonicalClosure.historicalEventId, reflection);
     this.renderEndingQuote(kicker, title, reflection, leadLines);
     this.audio.ping("ending");
   }
@@ -1894,6 +2139,8 @@ export class WalkBackHomeApp {
     this.labisLessonChoiceIndex = -1;
     this.labisLessonLeadLines = [];
     this.resetMarch30Runtime();
+    this.resetAuthoredRuntime();
+    this.chapterMemoryRun = null;
     this.scene = "forest";
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
@@ -1945,9 +2192,89 @@ export class WalkBackHomeApp {
 
   private drawAuthoredScene(time: number): void {
     if (this.scene === "330-corridor") return this.drawMarch30Scene(time);
+    if (this.scene === "406") return this.drawApril06Scene(time);
     this.drawScene(this.currentSceneLayout(), time, "authored");
   }
 
+  private drawApril06Scene(time: number): void {
+    const layout = this.currentSceneLayout();
+    const image = this.sceneImage(layout);
+    const viewport = this.sceneViewport(layout);
+    const scale = this.canvas.width / viewport.w;
+    const camera = this.sceneCamera(layout, viewport.w, viewport.h);
+    this.ctx.drawImage(image, camera.x, camera.y, viewport.w, viewport.h, 0, 0, this.canvas.width, this.canvas.height);
+    if (!image.complete || image.naturalWidth === 0) this.ctx.fillStyle = "rgba(20,16,28,.18)";
+    if (this.authoredCutscene) {
+      this.ctx.fillStyle = "rgba(226, 181, 109, .10)";
+      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+    const diary = layout.interactions.find((interaction) => interaction.id === "diary" || interaction.id === "diary memory");
+    if (diary) this.drawSharedDiaryBookProp(diary, camera.x, camera.y, scale, time);
+    const actors = this.authoredCutscene ? [...this.authoredCutscene.actors.values()] : [];
+    const mujiScreen = { x: (this.player.x - camera.x) * scale, y: (this.player.y - camera.y) * scale };
+    const drawables = [
+      ...actors.map((actor) => ({ y: actor.y, draw: () => drawSceneActor(this.ctx, actor, camera.x, camera.y, scale, april06Assets, this.authoredImages) })),
+      { y: this.player.y, draw: () => { this.ctx.save(); this.ctx.globalAlpha = this.authoredCutscene ? 0.34 : 1; this.drawMuji(mujiScreen, time, scale); this.ctx.restore(); } }
+    ].sort((a, b) => a.y - b.y);
+    drawables.forEach((item) => item.draw());
+    if (this.authoredCutscene) {
+      for (const prop of this.authoredCutscene.props.values()) if (prop.visible) this.drawAuthoredProp(prop, camera.x, camera.y, scale);
+      for (const effect of this.authoredCutscene.effects.values()) this.drawAuthoredEffect(effect, camera.x, camera.y, scale);
+    } else if (!this.authoredOverlayMode) {
+      this.drawAuthoredInteractionTells(layout, camera.x, camera.y, scale, time);
+    }
+    const vignette = this.ctx.createRadialGradient(this.canvas.width / 2, this.canvas.height / 2, 160, this.canvas.width / 2, this.canvas.height / 2, this.canvas.height * 0.82);
+    vignette.addColorStop(0, "rgba(0,0,0,0)");
+    vignette.addColorStop(1, "rgba(0,0,0,.28)");
+    this.ctx.fillStyle = vignette;
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+  }
+
+  private drawAuthoredProp(prop: { id: string; assetId: string; owner?: string; position?: Point; visible: boolean }, cameraX: number, cameraY: number, scale: number): void {
+    const asset = april06Assets[prop.assetId as keyof typeof april06Assets];
+    const image = asset ? this.authoredImages.get(asset.path) : undefined;
+    if (!asset || !image || !image.complete || image.naturalWidth === 0) return;
+    const owner = prop.owner ? this.authoredCutscene?.actors.get(prop.owner) : undefined;
+    const position = owner ? { x: owner.x + (owner.id === "et" ? -18 : 18), y: owner.y - 62 } : prop.position;
+    if (!position) return;
+    drawSceneSpriteAsset(this.ctx, image, asset, position, cameraX, cameraY, scale, owner?.facing ?? "right", 1, prop.id === "mcd" ? 72 : 120);
+  }
+
+  private drawAuthoredEffect(effect: { id: string; kind: "water-vfx" | "dissolve"; position?: Point; progress: number }, cameraX: number, cameraY: number, scale: number): void {
+    if (effect.id !== "alza-headlights" || !effect.position) return;
+    const asset = april06Assets.headlights;
+    const image = this.authoredImages.get(asset.path);
+    if (!image || !image.complete || image.naturalWidth === 0) return;
+    drawSceneSpriteAsset(this.ctx, image, asset, effect.position, cameraX, cameraY, scale, "left", Math.max(0, 0.54 * (1 - effect.progress)), 160);
+  }
+
+  private drawAuthoredInteractionTells(layout: SceneLayout, cameraX: number, cameraY: number, scale: number, time: number): void {
+    const anchors = layout.echoAnchors ? [resolveSceneEchoAnchor(layout, "watergun-crossing")].filter((anchor): anchor is NonNullable<typeof anchor> => Boolean(anchor)) : [];
+    const points = [...layout.interactions.map((item) => ({ id: item.id, x: item.x, y: item.y, radius: item.radius })), ...anchors.map((anchor) => ({ id: "watergun-crossing", x: anchor.x, y: anchor.y, radius: anchor.radius }))];
+    for (const point of points) {
+      const x = (point.x - cameraX) * scale;
+      const y = (point.y - cameraY) * scale;
+      const active = this.activeObject === point.id;
+      const pulse = Math.sin(time / 360) * 0.5 + 0.5;
+      const radius = (active ? 22 + pulse * 4 : 14 + pulse * 2) * scale;
+      const glowRadius = (active ? 44 : 28) * scale;
+      const glow = this.ctx.createRadialGradient(x, y, 1, x, y, glowRadius);
+      glow.addColorStop(0, active ? "rgba(255, 229, 166, .52)" : "rgba(255, 226, 154, .30)");
+      glow.addColorStop(1, "rgba(213, 166, 87, 0)");
+      this.ctx.fillStyle = glow;
+      this.ctx.beginPath();
+      this.ctx.arc(x, y, glowRadius, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.save();
+      this.ctx.globalAlpha = active ? 0.86 : 0.58;
+      this.ctx.strokeStyle = active ? "rgba(255, 231, 172, .92)" : "rgba(255, 231, 172, .70)";
+      this.ctx.lineWidth = active ? 1.4 * scale : 1 * scale;
+      this.ctx.beginPath();
+      this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+      this.ctx.stroke();
+      this.ctx.restore();
+    }
+  }
   private drawMarch30Scene(time: number): void {
     const layout = this.currentSceneLayout();
     const image = this.sceneImage(layout);
@@ -2142,7 +2469,7 @@ export class WalkBackHomeApp {
       const memorySpot = this.sceneInteractionById(layout, "diary-memory");
       const friend = this.sceneInteractionById(layout, "friend-a");
       const pastry = this.sceneInteractionById(layout, "pastry");
-      if (memorySpot) this.drawMemorySpot(memorySpot, cameraX, cameraY, scale, time);
+      if (memorySpot) this.drawSharedDiaryBookProp(memorySpot, cameraX, cameraY, scale, time);
       if (pastry) this.drawBakeryPastry(pastry, cameraX, cameraY, scale, time);
       if (friend) this.drawFriendA(friend, cameraX, cameraY, scale);
     }
@@ -2225,9 +2552,14 @@ export class WalkBackHomeApp {
   }
 
   private drawLabisDiaryBookProp(diaryMemory: SceneInteraction, cameraX: number, cameraY: number, scale: number, time: number): void {
+    this.drawSharedDiaryBookProp(diaryMemory, cameraX, cameraY, scale, time);
+  }
+
+  private drawSharedDiaryBookProp(diaryMemory: SceneInteraction, cameraX: number, cameraY: number, scale: number, time: number): void {
     const x = (diaryMemory.x - cameraX) * scale;
     const y = (diaryMemory.y - cameraY) * scale;
     const pulse = Math.sin(time / 460) * 0.5 + 0.5;
+    const image = this.labisImages.get(sharedChapterDiaryBookAssetPath);
     this.ctx.save();
     this.ctx.globalAlpha = 0.56 + pulse * 0.24;
     const glow = this.ctx.createRadialGradient(x, y - 22 * scale, 3 * scale, x, y - 22 * scale, 72 * scale);
@@ -2237,7 +2569,12 @@ export class WalkBackHomeApp {
     this.ctx.beginPath();
     this.ctx.arc(x, y - 22 * scale, 72 * scale, 0, Math.PI * 2);
     this.ctx.fill();
-    this.drawLabisImage(labisAssetPath("ms", "holding_book"), x, y + 18 * scale, 128 * scale, 104 * scale) || this.drawMemoryTableFallback(x, y, scale * 1.05);
+    if (image?.complete && image.naturalWidth > 0) {
+      this.ctx.imageSmoothingEnabled = false;
+      this.ctx.drawImage(image, x - 64 * scale, y - 86 * scale, 128 * scale, 104 * scale);
+    } else {
+      this.drawMemoryTableFallback(x, y, scale * 1.05);
+    }
     this.ctx.restore();
   }
 
@@ -2582,7 +2919,9 @@ export class WalkBackHomeApp {
     this.syncGameplayChromeVisibility();
     const labisPrompt = this.scene === "labis" && this.labisCutscene ? "Memory is playing" : this.scene === "labis" && this.activeObject === "exit" ? "Press E · 回到 Memory Forest" : this.scene === "labis" && this.activeObject ? `Press E · ${this.activeObject}` : "";
     const march30Prompt = this.scene === "330-corridor" && this.march30Cutscene ? "Memory is rebuilding" : this.scene === "330-corridor" && this.activeObject ? `Press E · ${this.activeObject}` : "";
-    const rawText = this.scene === "forest" && this.activeDoor ? `Press E · ${this.activeDoor.date} ${this.activeDoor.title}` : this.scene === "bakery" && this.activeObject ? `Press E · ${this.activeObject}` : labisPrompt || march30Prompt || (this.scene === "muji-room" && this.activeRoomInteraction ? `Press E · ${this.activeRoomInteraction.label}` : "WASD / arrows · E / Enter");
+    const authoredLabel = this.scene === "406" && this.activeObject === "watergun-crossing" ? "morning echo" : this.scene === "406" && this.activeObject === "mcd-drop-memory" ? "MCD memory" : this.scene === "406" && this.activeObject === "roadside-empty-car" ? "empty car" : this.activeObject;
+    const authoredPrompt = this.scene === "406" && this.authoredCutscene ? "Memory is playing" : this.scene === "406" && authoredLabel ? "Press E · " + authoredLabel : "";
+    const rawText = this.scene === "forest" && this.activeDoor ? `Press E · ${this.activeDoor.date} ${this.activeDoor.title}` : this.scene === "bakery" && this.activeObject ? `Press E · ${this.activeObject}` : labisPrompt || march30Prompt || authoredPrompt || (this.scene === "muji-room" && this.activeRoomInteraction ? `Press E · ${this.activeRoomInteraction.label}` : "WASD / arrows · E / Enter");
     const text = this.mobileHudPrompt(rawText);
     this.input.setTouchInteractionLabel(this.touchActionText(rawText));
     const forestMonth = this.scene === "forest" ? `<div class="forest-month-hud" aria-label="Forest month"><button data-action="forest-month-prev" aria-label="Previous forest month">‹</button><strong>${this.escapeHtml(this.currentForestMonth().label)}</strong><button data-action="forest-month-next" aria-label="Next forest month">›</button></div>` : "";
@@ -3152,6 +3491,13 @@ export class WalkBackHomeApp {
   }
 
   private restoreJournalOrigin(): void {
+    if (this.chapterDiaryReturnId) {
+      const chapterId = this.chapterDiaryReturnId;
+      this.chapterDiaryReturnId = "";
+      this.journalReturnSnapshot = null;
+      this.showChapterDiary(chapterId);
+      return;
+    }
     const snapshot = this.journalReturnSnapshot ? journalReturnTarget(this.journalReturnSnapshot) : null;
     this.journalReturnSnapshot = null;
     if (!snapshot) {
@@ -3761,7 +4107,10 @@ export class WalkBackHomeApp {
     this.selectedChapter = savedEntry.title;
     this.journalMoreMenuOpen = false;
     this.endJournalEditor();
-    this.showDiaryReader(savedEntry.id);
+    const chapterId = this.chapterDiaryReturnId;
+    this.chapterDiaryReturnId = "";
+    if (chapterId) this.showChapterDiary(chapterId);
+    else this.showDiaryReader(savedEntry.id);
     this.showToast(index >= 0 ? "Diary updated" : "Diary entry added");
     this.autosave();
   }
@@ -6023,10 +6372,12 @@ export class WalkBackHomeApp {
     this.tendencies = state.tendencies;
     this.readMemories = new Set(state.readMemories);
     this.completedMemoryEvents = new Set(state.completedMemoryEvents ?? []);
+    this.chapterMemoryRun = null;
     this.room = { ...this.room, ...state.room };
     this.personalPlayer = { ...this.personalPlayer, ...(state.personalPlayer ?? this.save.loadPersonalPlayer() ?? {}) };
     this.normalizePersonalPlayerToggles();
     if (this.isAuthoredRuntimeScene()) {
+      this.resetAuthoredRuntime();
       this.currentDoor = this.allDoors().find((door) => this.isChapterNode(door) && chapterRegistry[door.chapterId]?.runtimeScene === this.scene) ?? this.currentDoor;
     }
     if (this.scene === "labis") {
@@ -6059,6 +6410,8 @@ export class WalkBackHomeApp {
     this.choices = [];
     this.readMemories.clear();
     this.completedMemoryEvents.clear();
+    this.resetAuthoredRuntime();
+    this.chapterMemoryRun = null;
     this.chapterTriggerSessions.clear();
     this.chapterProgress.clear();
     this.reflectionWall = migrateLegacyReflectionWall(this.reflectionWall, this.room);

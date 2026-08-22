@@ -4,6 +4,8 @@ import type { AuthoredForestEntry } from "./ChapterRegistry.js";
 import { diaryEntriesToForestMemories, diaryEntriesToTimeline, updateDiaryMemoryKind, type DiaryForestMemory, type DiaryTimelineItem, type DiaryTimelineSort } from "./DiaryImport.js";
 import { makeDiaryEntry, normalizeDiaryEntry } from "./DiaryImport.js";
 
+export const sharedChapterDiaryBookAssetPath = "assets/labis/book-with-ms-photos.png";
+
 export function createDiaryLibrary(entries: DiaryEntry[] = [], legacyArtifacts: string[] = []): DiaryLibraryState {
   return {
     version: 1,
@@ -31,6 +33,14 @@ export function seedAuthoredChapterDiaryEntries(library: DiaryLibraryState): Dia
     const exists = next.entries.some((item) => item.id === entry.id || item.chapterId === entry.chapterId);
     return exists ? next : upsertDiaryEntry(next, entry);
   }, library);
+}
+
+export function findChapterDiaryEntry(entries: DiaryEntry[], chapterId: string, diaryEntryId?: string): DiaryEntry | null {
+  if (diaryEntryId) {
+    const stable = entries.find((entry) => entry.id === diaryEntryId);
+    if (stable) return stable;
+  }
+  return entries.find((entry) => entry.chapterId === chapterId) ?? null;
 }
 
 export function openDiaryPageForDate(library: DiaryLibraryState, date: string): { library: DiaryLibraryState; entry: DiaryEntry; created: boolean } {

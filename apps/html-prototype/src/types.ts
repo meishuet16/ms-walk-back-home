@@ -31,6 +31,7 @@ export type DialogueNode = {
 
 export type HtmlChapterScene = {
   id: string;
+  diaryEntryId?: string;
   date: string;
   title: string;
   mood: string;
@@ -293,6 +294,7 @@ export type ChapterReflectionQuote = {
   title?: string;
   lines: string[];
   afterline?: string;
+  preference?: Partial<Tendencies>;
 };
 
 export type ChapterReflection = {

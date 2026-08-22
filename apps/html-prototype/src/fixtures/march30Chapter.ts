@@ -2,6 +2,7 @@ import type { ChapterDefinition } from "../types.js";
 
 export const march30Chapter: ChapterDefinition = {
   id: "march30-too-fated",
+  diaryEntryId: "authored-diary-march30-too-fated",
   runtimeScene: "330-corridor",
   date: "03.30",
   title: "Too Fated",
@@ -11,7 +12,6 @@ export const march30Chapter: ChapterDefinition = {
   characters: ["Muji", "MS", "ET"],
   objects: ["bench", "elevator", "gift", "water gun", "Xiaoba charms", "jacket"],
   evidence: ["authored-330-corridor-scene-layout"],
-  memoryText: ["03.30 · Too Fated", "A quiet walk through the 330 corridor reconstructs a morning: a bench, three sprays of water, a jacket wipe, and the next elevator."],
   dialogue: [],
   canonicalClosure: {
     historicalEventId: "march30-bench-memory",

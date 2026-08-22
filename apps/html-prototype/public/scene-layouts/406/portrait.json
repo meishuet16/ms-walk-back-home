@@ -1,0 +1,20 @@
+{
+  "sceneId": "406",
+  "label": "406",
+  "orientation": "portrait",
+  "asset": "assets/scenes/406-portrait.png",
+  "size": {
+    "w": 941,
+    "h": 1672
+  },
+  "spawn": {
+    "x": 470.5,
+    "y": 836
+  },
+  "obstacles": [],
+  "interactions": [],
+  "triggers": [],
+  "placementSlots": [],
+  "echoAnchors": {},
+  "anchors": {}
+}

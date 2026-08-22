@@ -1,6 +1,7 @@
 import { bakeryChapter, forestDoors } from "../fixtures/chapterPlan.js";
 import { labisMotorChapter } from "../fixtures/labisMotorChapter.js";
 import { march30Chapter } from "../fixtures/march30Chapter.js";
+import { april06Chapter } from "../fixtures/april06Chapter.js";
 import type { ChapterDefinition } from "../types.js";
 
 export type AuthoredForestEntry = (typeof forestDoors)[number];
@@ -45,7 +46,8 @@ export const chapterRegistry: Record<string, ChapterDefinition> = {
     ]
   },
   "labis-motor-day": labisMotorChapter,
-  "march30-too-fated": march30Chapter
+  "march30-too-fated": march30Chapter,
+  "april06-not-gone-yet": april06Chapter
 };
 
 export const forestEntries = forestDoors;

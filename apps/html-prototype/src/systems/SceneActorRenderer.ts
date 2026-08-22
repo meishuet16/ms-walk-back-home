@@ -1,3 +1,16 @@
+import type { Point } from "./CollisionSystem.js";
+
+export type SceneSpriteAsset = {
+  path: string;
+  source: { x: number; y: number; w: number; h: number };
+  visibleBounds?: { x: number; y: number; w: number; h: number };
+  feet: { x: number; y: number };
+  materialScale?: number;
+  mirrorForLeft?: boolean;
+};
+
+export type SceneSpriteImageMap = Map<string, CanvasImageSource>;
+
 export type ActorFacing = "down" | "up" | "left" | "right";
 export type SceneActorKind = "human" | "motor" | "compound-motor";
 export type SceneActorExpression =
@@ -38,8 +51,14 @@ export function moveSceneActor(actor: SceneActor, x: number, y: number): SceneAc
   return { ...actor, x, y };
 }
 
-export function drawSceneActor(ctx: CanvasRenderingContext2D, actor: SceneActor, cameraX: number, cameraY: number, scale: number): void {
+export function drawSceneActor(ctx: CanvasRenderingContext2D, actor: SceneActor, cameraX: number, cameraY: number, scale: number, spriteAssets?: Record<string, SceneSpriteAsset>, images?: SceneSpriteImageMap): void {
   if (!actor.visible || actor.opacity === 0) return;
+  const spriteAsset = actor.sprite ? spriteAssets?.[actor.sprite.assetId] : undefined;
+  const image = spriteAsset && images ? images.get(spriteAsset.path) : undefined;
+  if (actor.sprite && spriteAsset && image && isImageReady(image)) {
+    drawSceneSpriteAsset(ctx, image, spriteAsset, { x: actor.x, y: actor.y }, cameraX, cameraY, scale, actor.facing, actor.opacity ?? 1);
+    return;
+  }
   ctx.save();
   ctx.globalAlpha = actor.opacity ?? 1;
   const x = (actor.x - cameraX) * scale;
@@ -51,6 +70,47 @@ export function drawSceneActor(ctx: CanvasRenderingContext2D, actor: SceneActor,
   }
   drawHuman(ctx, x, y, scale, actor);
   ctx.restore();
+}
+
+export function drawSceneSpriteAsset(
+  ctx: CanvasRenderingContext2D,
+  image: CanvasImageSource,
+  asset: SceneSpriteAsset,
+  position: Point,
+  cameraX: number,
+  cameraY: number,
+  scale: number,
+  facing: ActorFacing = "right",
+  opacity = 1,
+  baseHeight = 154
+): void {
+  const destinationHeight = baseHeight * (asset.materialScale ?? 1) * scale;
+  const destinationWidth = destinationHeight * asset.source.w / asset.source.h;
+  const visible = asset.visibleBounds ?? { x: 0, y: 0, w: asset.source.w, h: asset.source.h };
+  const visibleLeft = visible.x / asset.source.w * destinationWidth;
+  const visibleTop = visible.y / asset.source.h * destinationHeight;
+  const visibleWidth = visible.w / asset.source.w * destinationWidth;
+  const visibleHeight = visible.h / asset.source.h * destinationHeight;
+  const feetX = (position.x - cameraX) * scale;
+  const feetY = (position.y - cameraY) * scale;
+  const left = feetX - asset.feet.x * destinationWidth;
+  const top = feetY - asset.feet.y * destinationHeight;
+  ctx.save();
+  ctx.globalAlpha = opacity;
+  ctx.imageSmoothingEnabled = false;
+  if (asset.mirrorForLeft && facing === "left") {
+    ctx.translate(left + destinationWidth, top);
+    ctx.scale(-1, 1);
+    ctx.drawImage(image, asset.source.x + visible.x, asset.source.y + visible.y, visible.w, visible.h, visibleLeft, visibleTop, visibleWidth, visibleHeight);
+  } else {
+    ctx.drawImage(image, asset.source.x + visible.x, asset.source.y + visible.y, visible.w, visible.h, left + visibleLeft, top + visibleTop, visibleWidth, visibleHeight);
+  }
+  ctx.restore();
+}
+
+function isImageReady(image: CanvasImageSource): boolean {
+  if (typeof HTMLImageElement !== "undefined" && image instanceof HTMLImageElement) return image.complete && image.naturalWidth > 0;
+  return true;
 }
 
 function drawHuman(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, actor: SceneActor): void {

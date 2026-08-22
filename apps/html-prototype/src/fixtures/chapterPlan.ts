@@ -11,6 +11,7 @@ export type ForestDoor = {
 
 export const bakeryChapter: HtmlChapterScene = {
   id: "bakery-day",
+  diaryEntryId: "authored-diary-bakery-day",
   date: "07.28",
   title: "Yumido Bread",
   mood: "warm, unfinished",
@@ -19,13 +20,6 @@ export const bakeryChapter: HtmlChapterScene = {
   characters: ["Friend A"],
   objects: ["pastry", "window", "door"],
   evidence: ["fictional-fixture-evidence"],
-  memoryText: [
-    "07.28 · Yumido Bread",
-    "今天雨很细，面包店的玻璃一直蒙着雾。我和她坐在靠窗的位置，桌上只有一块很小的甜面包。她把纸袋推给我，说其实不是想要我道歉，只是想知道我有没有听见她。",
-    "我当时一直看着收银台旁边的灯，假装在想别的事。其实我听见了。只是如果我承认听见，就好像要承认自己也让她一个人站在那里很久。",
-    "后来我们没有吵架，也没有和好。雨停之前，她说：如果你不知道怎么回答，至少不要把我说的话改成比较容易接受的版本。",
-    "我把这一天记得很乱。Muji 今天回来，不是为了替过去改台词，是为了把那句没有被认真接住的话，原样放回桌上。"
-  ],
   dialogue: [
     { id: "friend-asks", speaker: "她", portrait:{ src: "assets/friend-a.png",height: 180
 }, text: "你读完了那一天。奇怪吧，日记只写了几行，可人会在没写下来的地方长大。那天我不是真的要你解释，我只是想知道：如果一句话没有被接住，它会不会一辈子都在原地等。", choices: [
@@ -55,5 +49,6 @@ export const forestDoors: ForestDoor[] = [
   { id: "yumido", date: "07.28", title: "Yumido Bread", x: 1120, y: 210, chapterId: "bakery-day" },
   { id: "night", date: "07.27", title: "Night Walk", x: 430, y: 300, chapterId: "night-bakery" },
   { id: "palapes", date: "07.26", title: "Palapes Meeting", x: 1240, y: 660, chapterId: "palapes-bakery" },
-  { id: "march30-too-fated", date: "03.30", title: "Too Fated", x: 0, y: 0, chapterId: "march30-too-fated" }
+  { id: "march30-too-fated", date: "03.30", title: "Too Fated", x: 0, y: 0, chapterId: "march30-too-fated" },
+  { id: "april06-not-gone-yet", date: "04.06", title: "还没走啊？", x: 0, y: 0, chapterId: "april06-not-gone-yet" }
 ];

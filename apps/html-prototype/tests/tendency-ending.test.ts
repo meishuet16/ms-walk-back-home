@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { chapterRegistry } from "../src/systems/ChapterRegistry.js";
+import { april06Chapter } from "../src/fixtures/april06Chapter.js";
 import { resolveChapterReflection } from "../src/systems/EndingResolver.js";
 import { applyChoice, emptyTendencies } from "../src/systems/TendencySystem.js";
 import type { ChapterProgress, Choice } from "../src/types.js";
@@ -38,4 +39,23 @@ test("reflection resolver keeps historical closure fixed across different choice
   assert.deepEqual(notReady.closureLines, rewriting.closureLines);
   assert.notEqual(accepting.quoteId, notReady.quoteId);
   assert.notEqual(notReady.quoteId, rewriting.quoteId);
+});
+
+test("April 6 reflection quotes follow authored tendency preferences", () => {
+  const base: ChapterProgress = {
+    chapterId: april06Chapter.id,
+    state: "visited",
+    visited: true,
+    memoryRead: true,
+    dialogueCompleted: true,
+    walkedThrough: false,
+    choices: [],
+    tendencies: emptyTendencies()
+  };
+  const accepting = resolveChapterReflection(april06Chapter, { ...base, choices: ["delivery-anonymity-car"], tendencies: { ...emptyTendencies(), acceptance: 1, companionship: 1 } });
+  const holding = resolveChapterReflection(april06Chapter, { ...base, choices: ["delivery-anonymity-direct"], tendencies: { ...emptyTendencies(), honesty: 1, closeness: 1 } });
+  const notReady = resolveChapterReflection(april06Chapter, { ...base, choices: ["delivery-anonymity-quiet"], tendencies: { ...emptyTendencies(), concealment: 1, distance: 1 } });
+  assert.equal(accepting.quoteId, "april06-accepting");
+  assert.equal(holding.quoteId, "april06-holding");
+  assert.equal(notReady.quoteId, "april06-not-ready");
 });

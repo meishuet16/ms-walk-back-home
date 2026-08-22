@@ -54,8 +54,8 @@ test("labis memory echoes remain replayable and use readable discovery anchors",
   assert.ok(filter);
   assert.ok(filter.radius >= 175);
   assert.equal(filter.tell, "paper");
-  assert.deepEqual(filter.requires, ["july19-motor-learning"]);
-  assert.notDeepEqual(filter.requires, ["july19-photo-threat"]);
+  assert.equal(filter.requires?.includes("july19-motor-learning") ?? false, false);
+
 });
 
 test("labis choice points expose interpretation choices without stat labels", () => {

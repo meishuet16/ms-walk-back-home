@@ -473,3 +473,9 @@ function stableHash(value: string): number {
   }
   return hash >>> 0;
 }
+
+export function resolveSceneEchoAnchor(layout: SceneLayout, semanticId: string): EchoAnchor | null {
+  if (semanticId !== "watergun-crossing") return layout.echoAnchors[semanticId] ?? null;
+  const key = layout.orientation === "portrait" ? "r-watergun-crossing" : "watergun-crossing";
+  return layout.echoAnchors[key] ?? null;
+}

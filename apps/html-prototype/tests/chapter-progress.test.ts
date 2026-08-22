@@ -30,7 +30,7 @@ test("canonical closure marks a chapter walked through and preserves first refle
   assert.equal(replayed.reflectionTone, "accepting");
 });
 
-test("automatic Chapter trigger stays consumed after cutscene completion", () => {
+test("automatic Chapter trigger is once per visit and resets on re-entry", () => {
   let session = createChapterTriggerSession("labis-motor-day");
   const first = consumeAutomaticChapterTrigger(session);
   assert.equal(first.allowed, true);
@@ -38,5 +38,14 @@ test("automatic Chapter trigger stays consumed after cutscene completion", () =>
 
   assert.equal(consumeAutomaticChapterTrigger(session).allowed, false);
   session = resetChapterTriggerSession(session);
+  assert.equal(consumeAutomaticChapterTrigger(session).allowed, true);
+});
+
+test("historical completion does not block a fresh automatic visit", () => {
+  let session = createChapterTriggerSession("april06-not-gone-yet");
+  const first = consumeAutomaticChapterTrigger(session);
+  assert.equal(first.allowed, true);
+  session = resetChapterTriggerSession(first.session);
+
   assert.equal(consumeAutomaticChapterTrigger(session).allowed, true);
 });

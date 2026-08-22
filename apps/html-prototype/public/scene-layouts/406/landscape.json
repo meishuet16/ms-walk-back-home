@@ -1,0 +1,20 @@
+{
+  "sceneId": "406",
+  "label": "406",
+  "orientation": "landscape",
+  "asset": "assets/scenes/406-landscape.png",
+  "size": {
+    "w": 960,
+    "h": 540
+  },
+  "spawn": {
+    "x": 480,
+    "y": 270
+  },
+  "obstacles": [],
+  "interactions": [],
+  "triggers": [],
+  "placementSlots": [],
+  "echoAnchors": {},
+  "anchors": {}
+}

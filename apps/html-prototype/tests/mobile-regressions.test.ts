@@ -145,7 +145,8 @@ test("authored chapters use a generic SceneLayout runtime path and remain replay
   assert.match(appSource, /private updateAuthoredScene/);
   assert.match(appSource, /private drawAuthoredScene/);
   assert.match(appSource, /chapter\.runtimeScene/);
-  assert.match(appSource, /This authored scene is not playable yet/);
+  assert.doesNotMatch(appSource, /This authored scene is not playable yet/);
+  assert.match(appSource, /private drawApril06Scene/);
   assert.match(appSource, /if \(action === "forest"\)/);
   assert.doesNotMatch(appSource, /const action = state === "walkedThrough" \? "Remember"/);
 });
