@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { extname, join, resolve } from "node:path";
 import { networkInterfaces } from "node:os";
@@ -21,6 +21,7 @@ const mime = {
 const sceneRoot = resolve(root, "public/scene-layouts");
 const servedSceneRoot = resolve(root, "dist/scene-layouts");
 const distSceneRoot = resolve(root, "dist/public/scene-layouts");
+const assetsRoot = resolve(root, "public/assets");
 
 createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://localhost:${port}`);
@@ -71,17 +72,24 @@ async function handleDebugRequest(req, res, url) {
       await upsertManifestScene(layout.sceneId, layout.label);
       return sendJson(res, 200, { ok: true, layout });
     }
+    if (req.method === "GET" && url.pathname === "/__debug/assets") {
+      return sendJson(res, 200, { assets: await listProjectAssets() });
+    }
     if (req.method === "POST" && url.pathname === "/__debug/add-scene") {
       const body = await readJson(req);
       const sceneId = sanitizeSceneId(body?.sceneId ?? "");
       const label = sanitizeLabel(body?.label ?? sceneId);
+      const orientation = sanitizeOrientation(body?.orientation ?? "landscape");
       if (!sceneId) return sendJson(res, 400, { error: "Scene ID is required." });
-      const landscape = makeDefaultLayout(sceneId, label, "landscape");
-      const portrait = makeDefaultLayout(sceneId, label, "portrait");
-      await writeLayout(landscape);
-      await writeLayout(portrait);
+      const targetFile = resolveSceneFile(sceneId, orientation);
+      if (existsSync(targetFile)) {
+        return sendJson(res, 409, { error: "Scene identity already exists.", existing: true, sceneId, orientation });
+      }
+      const landscape = orientation === "landscape" ? makeDefaultLayout(sceneId, label, "landscape") : makeDefaultLayout(sceneId, label, "landscape");
+      const portrait = orientation === "portrait" ? makeDefaultLayout(sceneId, label, "portrait") : makeDefaultLayout(sceneId, label, "portrait");
+      await writeLayout(orientation === "landscape" ? landscape : portrait);
       await upsertManifestScene(sceneId, label);
-      return sendJson(res, 200, { ok: true, scene: { id: sceneId, label }, layouts: { landscape, portrait } });
+      return sendJson(res, 200, { ok: true, scene: { id: sceneId, label }, orientation, layouts: { landscape, portrait } });
     }
     return sendJson(res, 404, { error: "Unknown debug endpoint." });
   } catch (error) {
@@ -234,6 +242,20 @@ function makeDefaultLayout(sceneId, label, orientation) {
   };
 }
 
+async function listProjectAssets() {
+  const results = [];
+  async function visit(directory, prefix) {
+    if (!existsSync(directory)) return;
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      const absolute = resolve(directory, entry.name);
+      const relative = prefix ? prefix + "/" + entry.name : entry.name;
+      if (entry.isDirectory()) await visit(absolute, relative);
+      else if (/\.(png|webp|jpg|jpeg)$/i.test(entry.name)) results.push("assets/" + relative.replace(/\\/g, "/"));
+    }
+  }
+  await visit(assetsRoot, "");
+  return results.sort();
+}
 function sendJson(res, status, body) {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
   res.end(JSON.stringify(body));

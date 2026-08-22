@@ -113,3 +113,33 @@ test("Labis echoes resolve through orientation-aware anchors for rendering and p
   assert.match(appSource, /drawLabisMemoryTells[\s\S]*resolveLabisEchoesForCurrentLayout/);
   assert.match(appSource, /drawLabisEchoVisual[\s\S]*resolveLabisEchoForCurrentLayout/);
 });
+
+
+test("Scene Debug keeps preview, groups, history, and approval state outside SceneLayout", () => {
+  const layout = cloneSceneLayout(getSceneLayout("forest", "landscape"));
+  assert.deepEqual(Object.keys(layout).sort(), [
+    "anchors",
+    "asset",
+    "echoAnchors",
+    "interactions",
+    "label",
+    "obstacles",
+    "orientation",
+    "placementSlots",
+    "sceneId",
+    "size",
+    "spawn",
+    "triggers"
+  ]);
+  assert.match(editorSource, /previewState/);
+  assert.match(editorSource, /historyPast/);
+  assert.doesNotMatch(editorSource, /layout\.preview/);
+});
+
+test("Add Scene protects sceneId and orientation identity before writing", () => {
+  assert.match(editorSource, /orientation: this\.orientation/);
+  assert.match(editorSource, /body\.existing/);
+  assert.match(devServerSource, /sendJson\(res, 409/);
+  assert.match(devServerSource, /Scene identity already exists/);
+  assert.match(devServerSource, /targetFile/);
+});

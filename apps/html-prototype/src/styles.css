@@ -5183,3 +5183,96 @@ canvas {
     height: 66px;
   }
 }
+
+.scene-debug-authoring,
+.scene-debug-preview-controls {
+  display: grid;
+  gap: 7px;
+  padding: 9px;
+  border: 1px solid #314455;
+  border-radius: 6px;
+  background: rgba(18, 29, 40, .72);
+}
+.scene-debug-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.scene-debug-actions button {
+  flex: 1 1 110px;
+}
+.scene-debug-point-list,
+.scene-debug-preview-list {
+  display: grid;
+  gap: 4px;
+  max-height: 190px;
+  overflow: auto;
+  border: 1px solid #314455;
+  padding: 5px;
+}
+.scene-debug-point-row,
+.scene-debug-preview-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 7px;
+  align-items: center;
+  font-size: 11px;
+}
+.scene-debug-point-row span,
+.scene-debug-preview-row span {
+  color: #9fb1bd;
+  overflow-wrap: anywhere;
+}
+.scene-debug-point-row button,
+.scene-debug-preview-row button {
+  grid-column: 2;
+  font-size: 11px;
+  padding: 3px 6px;
+}
+.scene-debug-preview-row strong {
+  overflow-wrap: anywhere;
+}
+.scene-debug-artboard [data-debug-preview-layer] {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.scene-debug-preview-item {
+  position: absolute;
+  max-width: none;
+  transform-origin: center bottom;
+  border: 1px dashed rgba(255, 255, 255, .65);
+}
+.scene-debug-preview-item[data-preview-bounds="true"] {
+  outline: 1px dashed rgba(255, 221, 128, .9);
+}
+.scene-debug-preview-anchor {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  margin: -5px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #ff4f9a;
+}
+@media (max-width: 860px) {
+  .scene-debug-panel {
+    max-height: none;
+  }
+  .scene-debug-stage {
+    min-height: 55dvh;
+    padding: 10px;
+  }
+  .scene-debug-artboard img {
+    max-height: 62dvh;
+  }
+}
+@media (max-width: 520px) {
+  .scene-debug-inline {
+    grid-template-columns: 1fr;
+  }
+  .scene-debug-tools {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
