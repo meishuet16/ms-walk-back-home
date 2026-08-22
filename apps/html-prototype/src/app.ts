@@ -5,7 +5,7 @@ import { march30Assets, march30EchoActions, march30EchoReflectionChoices, march3
 import { canStartLabisMotorMemory, labisDiaryMemorySpot, labisInteractionForPoint, labisMotorMemoryActions } from "./fixtures/labisMotorMemory.js";
 import { labisAssetManifest, labisAssetPath, labisProductionAssetPaths } from "./fixtures/labisAssetRegistry.js";
 import { labisChoicePoints, labisEchoes, resolveLabisMemoryReflection, type LabisChoicePoint, type LabisEcho } from "./fixtures/labisMemoryEchoes.js";
-import type { ChapterDefinition, ChapterProgress, Choice, DiaryEntry, DiaryLibraryState, DiaryMedia, DiaryMediaCrop, JournalBookCoverCrop, JourneyState, MemoryKind, MusicSort, PersonalMusicLibraryState, PersonalPlayerState, ReflectionNote, ReflectionWallFilter, ReflectionWallSort, ReflectionWallState, ReflectionWallView, RoomJourneyState, SceneId, SyncedLyricLine, Tendencies, UserMusicTrack } from "./types.js";
+import type { ChapterDefinition, ChapterProgress, Choice, DiaryEntry, DiaryLibraryState, DiaryMedia, DiaryMediaCrop, JournalBookCoverCrop, JourneyState, MemoryKind, MusicSort, PersonalMusicLibraryState, PersonalPlayerState, ReflectionNote, ReflectionWallFilter, ReflectionWallSort, ReflectionWallState, ReflectionWallView, RoomJourneyState, SceneId, SyncedLyricLine, Tendencies, ToolboxPersistedState, UserMusicTrack } from "./types.js";
 import { AudioManager } from "./systems/AudioManager.js";
 import { AccountManager } from "./systems/AccountManager.js";
 import { loadAppConfig } from "./systems/AppConfig.js";
@@ -66,6 +66,17 @@ import {
   type VinylRecord
 } from "./systems/MujiRoom.js";
 import { SaveManager } from "./systems/SaveManager.js";
+import { createToolboxState, confirmTool, backTool, moveToolSelection, selectTool, type ToolboxToolId, type ToolboxView as ToolboxScreen } from "./systems/ToolboxModel.js";
+import { addSpinChoice, createSpinPreset, deleteSpinPreset, removeSpinChoice, renameSpinPreset, spinChoice, type SpinPreset } from "./systems/SpinWheel.js";
+import { applyCalculatorInput } from "./systems/Calculator.js";
+import { convertUnit, unitsForCategory } from "./systems/UnitConverter.js";
+import { convertCurrency, fetchCurrencyRates, type CurrencyCode, type CurrencyRatePayload } from "./systems/CurrencyRates.js";
+import { createTimerState, pauseTimer, resetTimer, startTimer, timerRemaining, stopwatchElapsed, type TimerState } from "./systems/TimerTool.js";
+import { addDateDays, dateDifference } from "./systems/DateTool.js";
+import { renderToolbox, type ToolboxRenderState } from "./systems/ToolboxView.js";
+import { defaultWindowLocation, fetchOpenMeteoLocations, fetchOpenMeteoWeather, weatherCacheStatus, weatherVisualFor, type WeatherSnapshot, type WindowLocation } from "./systems/LivingWindow.js";
+import { calculateMoonPhase, type MoonPhase } from "./systems/MoonPhase.js";
+import { drawSceneAsset, drawSceneMask } from "./systems/LivingWindowRenderer.js";
 import type { MusicScene } from "./systems/SceneMusic.js";
 import { SupabaseSync } from "./systems/SupabaseSync.js";
 import { emptyTendencies } from "./systems/TendencySystem.js";
@@ -107,7 +118,12 @@ const assets = {
   room: "assets/muji-room.png",
   roomFallback: "assets/room-panel.jpg",
   map: "assets/map-panel.jpg",
-  timeline: "assets/timeline-panel.jpg"
+  timeline: "assets/timeline-panel.jpg",
+  weatherClouds: "assets/muji-room/weather/muji-room-weather-runtime-assets/clouds.png",
+  weatherMoon: "assets/muji-room/weather/muji-room-weather-runtime-assets/moon-phases.png",
+  weatherRain: "assets/muji-room/weather/muji-room-weather-runtime-assets/rain-vfx.png",
+  weatherMaskLandscape: "assets/muji-room/weather/muji-room-weather-runtime-assets/window-mask-landscape.png",
+  weatherMaskPortrait: "assets/muji-room/weather/muji-room-weather-runtime-assets/window-mask-portrait.png"
 };
 
 function img(src: string): HTMLImageElement {
@@ -161,7 +177,12 @@ export class WalkBackHomeApp {
     labis: img(assets.labis),
     muji: img(assets.muji),
     friend: img(assets.friend),
-    room: img(assets.roomFallback)
+    room: img(assets.roomFallback),
+    weatherClouds: img(assets.weatherClouds),
+    weatherMoon: img(assets.weatherMoon),
+    weatherRain: img(assets.weatherRain),
+    weatherMaskLandscape: img(assets.weatherMaskLandscape),
+    weatherMaskPortrait: img(assets.weatherMaskPortrait)
   };
   private scene: SceneId = "title";
   private player: Point = { x: 880, y: 690 };
@@ -244,6 +265,39 @@ export class WalkBackHomeApp {
   private lrclibLyricsRequestToken = 0;
   private forceTouchControls = false;
   private settings = { rain: true, muted: false, volume: 0.45, compact: false, reducedMotion: false, musicEnabled: true, musicScene: "bakery" as MusicScene };
+  private toolboxOpen = false;
+  private toolboxView: ToolboxScreen = createToolboxState();
+  private toolboxPresets: SpinPreset[] = [createSpinPreset("today", "今天吃什么", ["A", "B", "C"]), createSpinPreset("names", "Random names", ["Mochi", "Muji", "Mimi"])]
+  private selectedToolboxPresetId = "today";
+  private spinResult = "";
+  private calculatorDisplay = "0";
+  private converterCategory = "length";
+  private converterAmount = "1";
+  private converterFrom = "cm";
+  private converterTo = "m";
+  private converterResult = "";
+  private currencyAmount = "1";
+  private currencyFrom: CurrencyCode = "MYR";
+  private currencyTo: CurrencyCode = "USD";
+  private currencyPayload: CurrencyRatePayload | null = null;
+  private currencyResult = "";
+  private currencyStatus = "";
+  private timerMode: "timer" | "stopwatch" = "timer";
+  private timerState: TimerState = createTimerState("timer", 10 * 60 * 1000);
+  private dateStart = new Date().toISOString().slice(0, 10);
+  private dateEnd = new Date().toISOString().slice(0, 10);
+  private dateDays = "1";
+  private dateResult = "";
+  private livingWindowLocation: WindowLocation = defaultWindowLocation;
+  private livingWindowWeather: WeatherSnapshot | null = null;
+  private livingWindowMoon: MoonPhase = calculateMoonPhase();
+  private livingWindowPanelOpen = false;
+  private livingWindowLocationQuery = "";
+  private livingWindowLocationResults: WindowLocation[] = [];
+  private livingWindowStatus = "";
+  private livingWindowLoading = false;
+  private weatherCanvas = document.createElement("canvas");
+  private weatherCtx = this.weatherCanvas.getContext("2d")!;
   private room: RoomJourneyState = createDefaultRoomState();
   private reflectionWall: ReflectionWallState = createReflectionWallState();
   private reflectionWallView: ReflectionWallView = "wall";
@@ -340,6 +394,7 @@ export class WalkBackHomeApp {
       void this.audio.ensurePlaying();
     }, { passive: true });
     root.addEventListener("keydown", () => void this.audio.ensurePlaying());
+    window.addEventListener("keydown", (event) => this.handleToolboxKeydown(event));
     this.applyAccountSession(this.account.current());
     this.bootstrapDiaryLibrary();
     void this.hydrateCloudAccount();
@@ -552,6 +607,14 @@ export class WalkBackHomeApp {
     if (action === "scrapbook-layer") this.layerSelectedScrapbookElement(target.dataset.direction as "front" | "back");
     if (action === "scrapbook-delete") this.deleteSelectedScrapbookElement();
     if (action === "set-memory-kind") this.setDiaryMemoryKind(target.dataset.id ?? "", target.dataset.kind as MemoryKind);
+    if (["living-window-close", "living-window-refresh", "window-location-search", "window-location-select", "window-use-location"].includes(action)) {
+      void this.handleLivingWindowAction(action, target);
+      return;
+    }
+    if (["toolbox-close", "toolbox-select", "toolbox-confirm", "toolbox-back", "toolbox-spin-add", "toolbox-spin-remove", "toolbox-spin", "toolbox-preset-new", "toolbox-preset-rename", "toolbox-preset-delete", "calculator-key", "currency-swap", "currency-refresh", "timer-mode", "timer-start", "timer-pause", "timer-reset", "date-difference", "date-add", "date-subtract"].includes(action)) {
+      void this.handleToolboxAction(action, target);
+      return;
+    }
     if (action === "room-window") this.roomWindow();
     if (action === "room-lamp") this.roomLamp();
     if (action === "room-letter") this.openReflectionWall();
@@ -573,7 +636,7 @@ export class WalkBackHomeApp {
     if (action === "room-diary") this.roomDiary();
     if (action === "room-records") this.showRecords();
     if (action === "close-records") this.closeRecords();
-    if (action === "room-residue") this.inspectRoomResidue();
+    if (action === "room-toolbox") this.openToolbox();
     if (action === "select-vinyl") void this.selectVinyl(target.dataset.record ?? "");
     if (action === "vinyl-pause") void this.pauseVinyl();
     if (action === "music-prev") void this.playAdjacentPersonalTrack(-1);
@@ -686,6 +749,272 @@ export class WalkBackHomeApp {
     if (action === "choice") this.choose(target.dataset.choice ?? "");
   }
 
+  private handleToolboxKeydown(event: KeyboardEvent): void {
+    if (this.livingWindowPanelOpen && event.key.toLowerCase() === "escape") {
+      this.closeLivingWindow();
+      event.preventDefault();
+      return;
+    }
+    if (!this.toolboxOpen) return;
+    const key = event.key.toLowerCase();
+    if (key === "escape") {
+      const next = backTool(this.toolboxView);
+      if (next) {
+        this.toolboxView = next;
+        this.renderToolboxOverlay();
+      } else this.closeToolbox();
+      event.preventDefault();
+      return;
+    }
+    if (this.toolboxView.screen === "root" && ["arrowup", "arrowdown", "arrowleft", "arrowright"].includes(key)) {
+      const columns = this.currentSceneLayout("muji-room").orientation === "portrait" ? 2 : 3;
+      this.toolboxView = moveToolSelection(this.toolboxView, key.replace("arrow", "") as "up" | "down" | "left" | "right", columns);
+      this.renderToolboxOverlay();
+      event.preventDefault();
+      return;
+    }
+    if (key === "enter" || key === "e") {
+      if (this.toolboxView.screen === "root") this.toolboxView = confirmTool(this.toolboxView);
+      else if (this.toolboxView.selected === "calculator") this.calculatorDisplay = applyCalculatorInput(this.calculatorDisplay, "equals");
+      this.renderToolboxOverlay();
+      event.preventDefault();
+    }
+  }
+
+  private openToolbox(): void {
+    this.toolboxOpen = true;
+    this.toolboxView = createToolboxState({ selected: this.toolboxView.selected });
+    this.room.visits += 1;
+    this.renderToolboxOverlay();
+    this.focusStage();
+  }
+
+  private closeToolbox(): void {
+    if (!this.toolboxOpen) return;
+    this.toolboxOpen = false;
+    this.toolboxView = createToolboxState({ selected: this.toolboxView.selected });
+    this.persistToolboxState();
+    this.overlay.classList.remove("toolbox-overlay");
+    this.overlay.innerHTML = "";
+    this.syncGameplayChromeVisibility();
+    this.focusStage();
+  }
+
+  private renderToolboxOverlay(): void {
+    const preset = this.toolboxPresets.find((item) => item.id === this.selectedToolboxPresetId) ?? this.toolboxPresets[0];
+    if (!preset) return;
+    const units = unitsForCategory(this.converterCategory);
+    if (!units.includes(this.converterFrom)) this.converterFrom = units[0] ?? "";
+    if (!units.includes(this.converterTo)) this.converterTo = units[1] ?? units[0] ?? "";
+    const converted = convertUnit(this.converterCategory, Number(this.converterAmount), this.converterFrom, this.converterTo);
+    this.converterResult = converted === null ? "" : String(Number(converted.toFixed(6)));
+    const currencyValue = this.currencyPayload ? convertCurrency(Number(this.currencyAmount), this.currencyFrom, this.currencyTo, this.currencyPayload) : null;
+    this.currencyResult = currencyValue === null ? this.currencyResult : `${Number(currencyValue.toFixed(6))} ${this.currencyTo}`;
+    const now = performance.now();
+    const state: ToolboxRenderState = {
+      view: this.toolboxView,
+      presets: this.toolboxPresets,
+      selectedPresetId: this.selectedToolboxPresetId,
+      spinChoices: preset.choices,
+      spinResult: this.spinResult,
+      calculatorDisplay: this.calculatorDisplay,
+      converterCategory: this.converterCategory,
+      converterAmount: this.converterAmount,
+      converterFrom: this.converterFrom,
+      converterTo: this.converterTo,
+      converterResult: this.converterResult,
+      currencyAmount: this.currencyAmount,
+      currencyFrom: this.currencyFrom,
+      currencyTo: this.currencyTo,
+      currencyResult: this.currencyResult,
+      currencyStatus: this.currencyStatus,
+      timerMode: this.timerMode,
+      timerDurationSeconds: String(Math.round(this.timerState.durationMs / 1000)),
+      timerRemaining: this.formatToolboxDuration(timerRemaining(this.timerState, now)),
+      stopwatchElapsed: this.formatToolboxDuration(stopwatchElapsed(this.timerState, now)),
+      dateStart: this.dateStart,
+      dateEnd: this.dateEnd,
+      dateDays: this.dateDays,
+      dateResult: this.dateResult
+    };
+    this.overlay.classList.add("toolbox-overlay");
+    this.overlay.classList.remove("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = renderToolbox(state);
+    this.syncGameplayChromeVisibility();
+  }
+
+  private async handleToolboxAction(action: string, target: HTMLElement): Promise<void> {
+    if (action === "toolbox-close") return this.closeToolbox();
+    if (action === "toolbox-select") {
+      const tool = target.dataset.tool as ToolboxToolId;
+      if (tool) this.toolboxView = selectTool(this.toolboxView, tool);
+      this.persistToolboxState();
+      return this.renderToolboxOverlay();
+    }
+    if (action === "toolbox-confirm") {
+      this.toolboxView = confirmTool(this.toolboxView);
+      this.persistToolboxState();
+      return this.renderToolboxOverlay();
+    }
+    if (action === "toolbox-back") {
+      const next = backTool(this.toolboxView);
+      if (next) this.toolboxView = next;
+      else return this.closeToolbox();
+      return this.renderToolboxOverlay();
+    }
+    const preset = this.toolboxPresets.find((item) => item.id === this.selectedToolboxPresetId);
+    if (action === "toolbox-spin-add" && preset) {
+      const input = this.overlay.querySelector<HTMLInputElement>("#toolbox-spin-choice");
+      preset.choices = addSpinChoice(preset.choices, input?.value ?? "");
+      this.persistToolboxState();
+      return this.renderToolboxOverlay();
+    }
+    if (action === "toolbox-spin-remove" && preset) {
+      preset.choices = removeSpinChoice(preset.choices, Number(target.dataset.index));
+      this.persistToolboxState();
+      return this.renderToolboxOverlay();
+    }
+    if (action === "toolbox-spin" && preset) {
+      this.spinResult = spinChoice(preset.choices) ?? "No choices yet";
+      return this.renderToolboxOverlay();
+    }
+    if (action === "toolbox-preset-new") {
+      const id = `preset-${Date.now()}`;
+      this.toolboxPresets.push(createSpinPreset(id, "New preset", []));
+      this.selectedToolboxPresetId = id;
+      this.persistToolboxState();
+      return this.renderToolboxOverlay();
+    }
+    if (action === "toolbox-preset-rename" && preset) {
+      const next = window.prompt("Preset name", preset.name)?.trim();
+      if (next) preset.name = renameSpinPreset(preset, next).name;
+      this.persistToolboxState();
+      return this.renderToolboxOverlay();
+    }
+    if (action === "toolbox-preset-delete" && preset && this.toolboxPresets.length > 1) {
+      this.toolboxPresets = deleteSpinPreset(this.toolboxPresets, preset.id);
+      this.selectedToolboxPresetId = this.toolboxPresets[0].id;
+      this.persistToolboxState();
+      return this.renderToolboxOverlay();
+    }
+    if (action === "calculator-key") {
+      this.calculatorDisplay = applyCalculatorInput(this.calculatorDisplay, target.dataset.key ?? "");
+      return this.renderToolboxOverlay();
+    }
+    if (action === "currency-swap") {
+      [this.currencyFrom, this.currencyTo] = [this.currencyTo, this.currencyFrom];
+      this.persistToolboxState();
+      return this.renderToolboxOverlay();
+    }
+    if (action === "currency-refresh") {
+      await this.refreshCurrencyRates();
+      return;
+    }
+    if (action === "timer-mode") {
+      this.timerMode = target.dataset.mode === "stopwatch" ? "stopwatch" : "timer";
+      this.timerState = createTimerState(this.timerMode, this.timerState.durationMs);
+      return this.renderToolboxOverlay();
+    }
+    if (action === "timer-start") {
+      if (this.timerMode === "timer") this.timerState.durationMs = Math.max(0, Number(this.timerDurationFromPanel()) * 1000);
+      this.timerState = startTimer(this.timerState, performance.now());
+      return this.renderToolboxOverlay();
+    }
+    if (action === "timer-pause") {
+      this.timerState = pauseTimer(this.timerState, performance.now());
+      return this.renderToolboxOverlay();
+    }
+    if (action === "timer-reset") {
+      this.timerState = resetTimer(this.timerState);
+      return this.renderToolboxOverlay();
+    }
+    if (action === "date-difference") {
+      this.dateResult = String(dateDifference(this.dateStart, this.dateEnd) ?? "Choose valid dates");
+      return this.renderToolboxOverlay();
+    }
+    if (action === "date-add" || action === "date-subtract") {
+      const days = Number(this.dateDays) || 0;
+      this.dateResult = addDateDays(this.dateStart, action === "date-subtract" ? -days : days) ?? "Choose a valid date";
+      return this.renderToolboxOverlay();
+    }
+  }
+
+  private timerDurationFromPanel(): number {
+    const minutes = Number(this.overlay.querySelector<HTMLInputElement>('[data-toolbox-field="timer-minutes"]')?.value ?? 0) || 0;
+    const seconds = Number(this.overlay.querySelector<HTMLInputElement>('[data-toolbox-field="timer-seconds"]')?.value ?? 0) || 0;
+    return Math.max(0, minutes * 60 + seconds);
+  }
+
+  private handleToolboxFieldInput(target: HTMLElement): void {
+    const field = target.dataset.toolboxField;
+    const value = target instanceof HTMLInputElement || target instanceof HTMLSelectElement ? target.value : "";
+    if (field === "spin-choice") return;
+    if (field === "converter-amount") this.converterAmount = value;
+    if (field === "currency-amount") this.currencyAmount = value;
+    if (field === "timer-minutes" || field === "timer-seconds") this.timerState.durationMs = Math.max(0, this.timerDurationFromPanel() * 1000);
+    if (field === "date-start") this.dateStart = value;
+    if (field === "date-end") this.dateEnd = value;
+    if (field === "date-days") this.dateDays = value;
+  }
+
+  private handleToolboxFieldChange(target: HTMLElement): void {
+    const field = target.dataset.toolboxField;
+    const value = target instanceof HTMLInputElement || target instanceof HTMLSelectElement ? target.value : "";
+    if (field === "spin-preset") this.selectedToolboxPresetId = value;
+    if (field === "converter-category") {
+      this.converterCategory = value;
+      const units = unitsForCategory(value);
+      this.converterFrom = units[0] ?? "";
+      this.converterTo = units[1] ?? units[0] ?? "";
+    }
+    if (field === "converter-from") this.converterFrom = value;
+    if (field === "converter-to") this.converterTo = value;
+    if (field === "currency-from") this.currencyFrom = value as CurrencyCode;
+    if (field === "currency-to") this.currencyTo = value as CurrencyCode;
+    this.persistToolboxState();
+    this.renderToolboxOverlay();
+  }
+
+  private async refreshCurrencyRates(): Promise<void> {
+    this.currencyStatus = "Loading latest available rate…";
+    this.renderToolboxOverlay();
+    try {
+      this.currencyPayload = await fetchCurrencyRates(this.currencyFrom);
+      this.currencyStatus = `Latest working day: ${this.currencyPayload.date}`;
+      this.persistToolboxState();
+    } catch {
+      this.currencyStatus = "Rate unavailable. No fabricated value shown.";
+    }
+    this.renderToolboxOverlay();
+  }
+
+  private persistToolboxState(): void {
+    const state: ToolboxPersistedState = {
+      version: 1,
+      selected: this.toolboxView.selected,
+      selectedPresetId: this.selectedToolboxPresetId,
+      converterUnits: { category: this.converterCategory, from: this.converterFrom, to: this.converterTo },
+      currencyFrom: this.currencyFrom,
+      currencyTo: this.currencyTo,
+      presets: this.toolboxPresets
+    };
+    this.save.saveToolboxState(state);
+  }
+
+  private formatToolboxDuration(milliseconds: number): string {
+    const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+  private refreshToolboxTimerDisplay(now: number): void {
+    const display = this.overlay.querySelector<HTMLOutputElement>(".timer-display");
+    if (!display) return;
+    display.textContent = this.timerMode === "timer"
+      ? this.formatToolboxDuration(timerRemaining(this.timerState, now))
+      : this.formatToolboxDuration(stopwatchElapsed(this.timerState, now));
+  }
+
   private resumeAfterRecordsClose(action: string): boolean {
     return !["close-records", "close", "vinyl-pause", "toggle-records-more-menu", "toggle-records-song-sheet"].includes(action);
   }
@@ -732,7 +1061,7 @@ export class WalkBackHomeApp {
       void this.showRecords();
       return;
     }
-    if (interaction.id === "residue") return this.inspectRoomResidue();
+    if (interaction.id === "toolbox") return this.openToolbox();
     if (interaction.id === "reflection") return this.openReflectionWall();
   }
 
@@ -889,14 +1218,16 @@ export class WalkBackHomeApp {
     this.last = time;
     this.syncSceneOrientation();
     const input = this.input.read();
-    if (input.interact) this.interact();
-    if (this.scene === "forest") this.updateForest(input.x, input.y, dt);
-    if (this.scene === "bakery") this.updateBakery(input.x, input.y, dt);
-    if (this.scene === "labis") this.updateLabis(input.x, input.y, dt);
-    if (this.scene === "muji-room") this.updateMujiRoom(input.x, input.y, dt);
-    if (this.scene === "330-corridor") this.updateMarch30Scene(input.x, input.y, dt);
-    else if (this.isAuthoredRuntimeScene()) this.updateAuthoredScene(input.x, input.y, dt);
+    if (input.interact && !this.toolboxOpen && !this.livingWindowPanelOpen) this.interact();
+    const frameInput = (this.toolboxOpen || this.livingWindowPanelOpen) && this.scene === "muji-room" ? { x: 0, y: 0 } : input;
+    if (this.scene === "forest") this.updateForest(frameInput.x, frameInput.y, dt);
+    if (this.scene === "bakery") this.updateBakery(frameInput.x, frameInput.y, dt);
+    if (this.scene === "labis") this.updateLabis(frameInput.x, frameInput.y, dt);
+    if (this.scene === "muji-room") this.updateMujiRoom(frameInput.x, frameInput.y, dt);
+    if (this.scene === "330-corridor") this.updateMarch30Scene(frameInput.x, frameInput.y, dt);
+    else if (this.isAuthoredRuntimeScene()) this.updateAuthoredScene(frameInput.x, frameInput.y, dt);
     this.draw(time);
+    if (this.toolboxOpen && this.toolboxView.screen === "tool" && this.toolboxView.selected === "timer") this.refreshToolboxTimerDisplay(time);
     this.syncPersonalPlaybackState();
     if (this.recordsPanelOpen) this.refreshRecordsPlaybackUI();
     this.updatePersonalMusicOverlay();
@@ -950,6 +1281,18 @@ export class WalkBackHomeApp {
   }
 
   private bootstrapDiaryLibrary(): void {
+    this.hydrateLivingWindowState();
+    const savedToolbox = this.save.loadToolboxState();
+    if (savedToolbox) {
+      this.toolboxView = createToolboxState(savedToolbox);
+      this.selectedToolboxPresetId = savedToolbox.selectedPresetId || this.selectedToolboxPresetId;
+      this.converterCategory = savedToolbox.converterUnits.category || this.converterCategory;
+      this.converterFrom = savedToolbox.converterUnits.from || this.converterFrom;
+      this.converterTo = savedToolbox.converterUnits.to || this.converterTo;
+      this.currencyFrom = savedToolbox.currencyFrom as CurrencyCode;
+      this.currencyTo = savedToolbox.currencyTo as CurrencyCode;
+      if (savedToolbox.presets?.length) this.toolboxPresets = savedToolbox.presets.map((item) => createSpinPreset(item.id, item.name, item.choices));
+    }
     this.musicLibrary = this.save.loadMusicLibrary() ?? this.musicLibrary;
     this.personalPlayer = { ...this.personalPlayer, ...(this.save.loadPersonalPlayer() ?? {}) };
     this.reflectionWall = this.save.loadReflectionWall() ?? this.reflectionWall;
@@ -976,6 +1319,7 @@ export class WalkBackHomeApp {
   }
 
   private loadAccountLocalState(): void {
+    this.hydrateLivingWindowState();
     this.musicLibrary = this.save.loadMusicLibrary() ?? { version: 1, savedAt: new Date().toISOString(), tracks: [] };
     this.personalPlayer = { ...createDefaultPersonalPlayerState(), ...(this.save.loadPersonalPlayer() ?? {}) };
     this.normalizePersonalPlayerToggles();
@@ -1510,6 +1854,11 @@ export class WalkBackHomeApp {
   }
 
   private interact(): void {
+    if (this.toolboxOpen) {
+      if (this.toolboxView.screen === "root") this.toolboxView = confirmTool(this.toolboxView);
+      this.renderToolboxOverlay();
+      return;
+    }
     if (this.scene === "title") return this.newMemory();
     if (this.scene === "forest" && this.activeDoor) return this.previewDoor(this.activeDoor);
     if (this.scene === "bakery") {
@@ -2886,12 +3235,13 @@ export class WalkBackHomeApp {
     const layout = this.currentSceneLayout("muji-room");
     const lamp = this.roomInteractionById(layout, "lamp");
     const windowInteraction = this.roomInteractionById(layout, "window");
-    const residue = this.roomInteractionById(layout, "residue");
+    const toolbox = this.roomInteractionById(layout, "toolbox");
     if (layout.orientation === "landscape") {
       const scale = this.canvas.width / 960;
-      this.ctx.drawImage(this.images.room, 0, 0, this.canvas.width, this.canvas.height);
+      drawSceneAsset(this.ctx, this.images.room, layout.orientation, layout.size, { w: this.canvas.width, h: this.canvas.height });
       if (!this.images.room.complete || this.images.room.naturalWidth === 0) this.drawRoomFallback(scale);
-      if (residue) this.drawRoomResidue(residue, scale);
+      if (toolbox) this.drawRoomToolbox(toolbox, scale);
+      if (this.room.windowFocus && windowInteraction) this.drawLivingWindowWeather(time, windowInteraction, layout);
       if (this.room.lampOn && lamp) this.drawLampGlow(lamp, scale);
       this.drawMuji({ x: this.player.x * scale, y: this.player.y * scale }, time, scale);
       if (this.room.windowFocus && windowInteraction) {
@@ -2900,7 +3250,6 @@ export class WalkBackHomeApp {
         this.drawWindowFocus(windowInteraction, time, scale);
       }
       for (const interaction of roomInteractions) {
-        if (interaction.id === "residue" && !this.room.residueIds?.length) continue;
         this.drawRoomInteractionHint(interaction, this.activeRoomInteraction?.id === interaction.id, time, scale);
       }
       return;
@@ -2908,9 +3257,10 @@ export class WalkBackHomeApp {
     const image = this.sceneImage(layout);
     const viewport = this.sceneViewport(layout);
     const scale = this.canvas.width / viewport.w;
-    this.ctx.drawImage(image, 0, 0, viewport.w, viewport.h, 0, 0, this.canvas.width, this.canvas.height);
+    drawSceneAsset(this.ctx, image, layout.orientation, layout.size, { w: this.canvas.width, h: this.canvas.height });
     if (!image.complete || image.naturalWidth === 0) this.drawRoomFallback(scale);
-    if (residue) this.drawRoomResidue(residue, scale);
+    if (toolbox) this.drawRoomToolbox(toolbox, scale);
+    if (this.room.windowFocus && windowInteraction) this.drawLivingWindowWeather(time, windowInteraction, layout);
     if (this.room.lampOn && lamp) this.drawLampGlow(lamp, scale);
     this.drawMuji({ x: this.player.x * scale, y: this.player.y * scale }, time, scale);
     if (this.room.windowFocus && windowInteraction) {
@@ -2919,7 +3269,6 @@ export class WalkBackHomeApp {
       this.drawWindowFocus(windowInteraction, time, scale);
     }
     for (const interaction of layout.interactions) {
-      if (interaction.id === "residue" && !this.room.residueIds?.length) continue;
       this.drawRoomInteractionHint(interaction, this.activeRoomInteraction?.id === interaction.id, time, scale);
     }
   }
@@ -2972,6 +3321,51 @@ export class WalkBackHomeApp {
     this.ctx.fillRect(706 * scale, 314 * scale, 132 * scale, 112 * scale);
   }
 
+  private drawLivingWindowWeather(time: number, interaction: SceneInteraction | RoomInteraction, layout: SceneLayout): void {
+    const weather = this.livingWindowWeather;
+    const visual = weatherVisualFor({ code: weather?.current.condition.code ?? 0, precipitationMm: weather?.current.precipitationMm ?? 0 });
+    const canvasSize = { w: this.canvas.width, h: this.canvas.height };
+    this.weatherCanvas.width = canvasSize.w;
+    this.weatherCanvas.height = canvasSize.h;
+    const ctx = this.weatherCtx;
+    const viewport = this.sceneViewport(layout);
+    const scale = this.canvas.width / viewport.w;
+    ctx.clearRect(0, 0, canvasSize.w, canvasSize.h);
+    ctx.fillStyle = visual.tint;
+    ctx.fillRect(0, 0, canvasSize.w, canvasSize.h);
+    const x = (interaction.x - 200) * scale;
+    const y = (interaction.y - 108) * scale;
+    const w = 292 * scale;
+    const h = 176 * scale;
+    ctx.save();
+    ctx.globalAlpha = visual.cloudOpacity;
+    if (this.images.weatherClouds.complete && this.images.weatherClouds.naturalWidth > 0) {
+      for (let index = 0; index < 4; index += 1) {
+        const frame = (index + Math.floor(time / 1200)) % 6;
+        ctx.drawImage(this.images.weatherClouds, (frame % 3) * 128, Math.floor(frame / 3) * 64, 128, 64, x - 26 * scale + ((index * 92 + time / (46 + index * 5)) % Math.max(1, w + 100 * scale)), y + (index % 2) * 32 * scale, 128 * scale, 64 * scale);
+      }
+    }
+    ctx.globalAlpha = 1;
+    if (visual.layer === "clear" || visual.layer === "cloud") {
+      const moon = this.livingWindowMoon.index;
+      if (this.images.weatherMoon.complete && this.images.weatherMoon.naturalWidth > 0) ctx.drawImage(this.images.weatherMoon, moon * 64, 0, 64, 64, x + w - 84 * scale, y + 22 * scale, 64 * scale, 64 * scale);
+    }
+    if (visual.rainOpacity > 0 && this.images.weatherRain.complete && this.images.weatherRain.naturalWidth > 0) {
+      ctx.globalAlpha = visual.rainOpacity;
+      const frame = Math.floor(time / 130) % 4;
+      for (let tileX = -1; tileX < 4; tileX += 1) for (let tileY = -1; tileY < 3; tileY += 1) ctx.drawImage(this.images.weatherRain, frame * 256, 0, 256, 256, x + tileX * 256 * scale, y + tileY * 256 * scale, 256 * scale, 256 * scale);
+    }
+    if (visual.fogOpacity > 0) { ctx.globalAlpha = visual.fogOpacity; ctx.fillStyle = "rgba(224, 231, 220, .68)"; ctx.fillRect(x, y, w, h); }
+    if (visual.lightning && Math.sin(time / 1700) > .97) { ctx.globalAlpha = .52; ctx.fillStyle = "#e9f1ff"; ctx.fillRect(x, y, w, h); }
+    ctx.restore();
+    const mask = layout.orientation === "portrait" ? this.images.weatherMaskPortrait : this.images.weatherMaskLandscape;
+    if (!mask.complete || mask.naturalWidth === 0) return;
+    ctx.save();
+    ctx.globalCompositeOperation = "destination-in";
+    drawSceneMask(ctx, mask, layout.orientation, layout.size, canvasSize);
+    ctx.restore();
+    this.ctx.drawImage(this.weatherCanvas, 0, 0, canvasSize.w, canvasSize.h);
+  }
   private drawWindowFocus(interaction: SceneInteraction | RoomInteraction, time: number, scale: number): void {
     const x = (interaction.x - 200) * scale;
     const y = (interaction.y - 108) * scale;
@@ -3003,8 +3397,7 @@ export class WalkBackHomeApp {
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
-  private drawRoomResidue(interaction: SceneInteraction | RoomInteraction, scale: number): void {
-    if (!this.room.residueIds?.length) return;
+  private drawRoomToolbox(interaction: SceneInteraction | RoomInteraction, scale: number): void {
     this.ctx.fillStyle = "#d5b06d";
     this.ctx.fillRect((interaction.x - 20) * scale, (interaction.y - 16) * scale, 38 * scale, 18 * scale);
     this.ctx.fillStyle = "#7f5937";
@@ -3031,7 +3424,8 @@ export class WalkBackHomeApp {
     const authoredRuntime = this.authoredRuntimeForScene();
     const authoredLabel = authoredRuntime && this.activeObject === "watergun-crossing" ? "morning echo" : authoredRuntime && this.activeObject === "mcd-drop-memory" ? "MCD memory" : authoredRuntime && this.activeObject === "roadside-empty-car" ? "empty car" : this.activeObject;
     const authoredPrompt = authoredRuntime && this.authoredCutscene ? "Memory is playing" : authoredRuntime && authoredLabel ? "Press E · " + authoredLabel : "";
-    const rawText = this.scene === "forest" && this.activeDoor ? `Press E · ${this.activeDoor.date} ${this.activeDoor.title}` : this.scene === "bakery" && this.activeObject ? `Press E · ${this.activeObject}` : labisPrompt || march30Prompt || authoredPrompt || (this.scene === "muji-room" && this.activeRoomInteraction ? `Press E · ${this.activeRoomInteraction.label}` : "WASD / arrows · E / Enter");
+    const roomPromptLabel = this.activeRoomInteraction?.id === "toolbox" ? "工具箱" : this.activeRoomInteraction?.label ?? "";
+    const rawText = this.scene === "forest" && this.activeDoor ? `Press E · ${this.activeDoor.date} ${this.activeDoor.title}` : this.scene === "bakery" && this.activeObject ? `Press E · ${this.activeObject}` : labisPrompt || march30Prompt || authoredPrompt || (this.scene === "muji-room" && this.activeRoomInteraction ? `Press E · ${roomPromptLabel}` : "WASD / arrows · E / Enter");
     const text = this.mobileHudPrompt(rawText);
     this.input.setTouchInteractionLabel(this.touchActionText(rawText));
     const forestMonth = this.scene === "forest" ? `<div class="forest-month-hud" aria-label="Forest month"><button data-action="forest-month-prev" aria-label="Previous forest month">‹</button><strong>${this.escapeHtml(this.currentForestMonth().label)}</strong><button data-action="forest-month-next" aria-label="Next forest month">›</button></div>` : "";
@@ -4337,6 +4731,14 @@ export class WalkBackHomeApp {
 
   private handleInput(event: Event): void {
     const target = event.target as HTMLElement;
+    if (this.livingWindowPanelOpen && target.closest(".living-window-panel")) {
+      if (target instanceof HTMLInputElement && target.dataset.windowField === "location-query") this.livingWindowLocationQuery = target.value;
+      return;
+    }
+    if (this.toolboxOpen && target.closest(".toolbox-panel")) {
+      this.handleToolboxFieldInput(target);
+      return;
+    }
     if (target instanceof HTMLInputElement && target.id === "reflection-search") {
       this.reflectionWallSearch = target.value;
       this.refreshReflectionWallOnly();
@@ -4840,6 +5242,11 @@ export class WalkBackHomeApp {
 
   private async handleChange(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
+    if (this.livingWindowPanelOpen && input.closest(".living-window-panel")) return;
+    if (this.toolboxOpen && input.closest(".toolbox-panel")) {
+      this.handleToolboxFieldChange(input);
+      return;
+    }
     if (input.id === "timeline-date-scope" || input.id === "timeline-date-input") {
       this.timelineFilterAppliedMessage = "";
       const dateInput = this.overlay.querySelector<HTMLInputElement>("#timeline-date-input");
@@ -5435,12 +5842,84 @@ export class WalkBackHomeApp {
     this.autosave();
   }
 
+  private renderLivingWindowOverlay(): void {
+    const weather = this.livingWindowWeather;
+    const probability = weather?.current.precipitationProbabilityPercent === null || weather?.current.precipitationProbabilityPercent === undefined ? "Hourly precipitation probability unavailable" : `Next-hour precipitation probability: ${weather.current.precipitationProbabilityPercent}%`;
+    const current = weather ? `<div class="window-weather-reading"><strong>${this.escapeHtml(weather.current.condition.label)}</strong><span>${weather.current.temperatureC.toFixed(1)}°C · feels ${weather.current.apparentTemperatureC.toFixed(1)}°C</span><span>Current precipitation: ${weather.current.precipitationMm.toFixed(1)} mm</span><span>${this.escapeHtml(probability)}</span><span>Wind ${weather.current.windSpeedKmh.toFixed(1)} km/h · humidity ${weather.current.humidityPercent}%</span><span>Daily maximum precipitation probability: ${weather.daily.precipitationProbabilityMaxPercent === null ? "unavailable" : `${weather.daily.precipitationProbabilityMaxPercent}%`}</span></div>` : `<p class="window-weather-empty">No live weather yet. The window can still show the local Moon and cached state.</p>`;
+    const results = this.livingWindowLocationResults.map((location, index) => `<button data-action="window-location-select" data-index="${index}">${this.escapeHtml(location.name)}${location.country ? ` · ${this.escapeHtml(location.country)}` : ""}</button>`).join("");
+    this.overlay.classList.add("window-overlay");
+    this.overlay.classList.remove("dialogue-open", "lightweight-presentation", "toolbox-overlay");
+    this.overlay.innerHTML = `<div class="modal game-panel living-window-panel" role="dialog" aria-modal="true" aria-label="Living Window"><header class="window-panel-header"><div><span class="toolbox-kicker">LIVING WINDOW · OPEN-METEO</span><h2>${this.escapeHtml(this.livingWindowLocation.name)}</h2><p>${this.escapeHtml(this.livingWindowLocation.country ?? "")}</p></div><button data-action="living-window-close" aria-label="Close Living Window">×</button></header><div class="window-panel-grid"><section><h3>Outside now</h3>${current}<div class="window-panel-actions"><button class="primary" data-action="living-window-refresh">Refresh weather</button><button data-action="window-use-location">Use my location</button></div><p class="window-status" aria-live="polite">${this.escapeHtml(this.livingWindowStatus)}</p></section><section><h3>Local Moon</h3><div class="window-moon-reading"><span class="moon-glyph">◐</span><strong>${this.escapeHtml(this.livingWindowMoon.label)}</strong><span>${this.livingWindowMoon.illuminationPercent}% illuminated · day ${this.livingWindowMoon.ageDays.toFixed(1)}</span></div><h3>Location</h3><div class="window-location-search"><input data-window-field="location-query" value="${this.escapeHtml(this.livingWindowLocationQuery)}" placeholder="Search a city" aria-label="Search a city"><button data-action="window-location-search">Search</button></div><div class="window-location-results">${results}</div></section></div><footer class="window-panel-foot">Provider: Open-Meteo · offline cache is used when the network is unavailable.</footer></div>`;
+    this.syncGameplayChromeVisibility();
+  }
+
+  private async handleLivingWindowAction(action: string, target: HTMLElement): Promise<void> {
+    if (action === "living-window-close") return this.closeLivingWindow();
+    if (action === "living-window-refresh") return this.loadLivingWindowWeather();
+    if (action === "window-location-search") {
+      this.livingWindowStatus = "Searching locations…";
+      this.renderLivingWindowOverlay();
+      try { this.livingWindowLocationResults = await fetchOpenMeteoLocations(this.livingWindowLocationQuery); this.livingWindowStatus = this.livingWindowLocationResults.length ? "Choose a location to update the window." : "No matching locations found."; } catch { this.livingWindowStatus = "Location search unavailable offline."; }
+      return this.renderLivingWindowOverlay();
+    }
+    if (action === "window-location-select") {
+      const location = this.livingWindowLocationResults[Number(target.dataset.index)];
+      if (!location) return;
+      this.livingWindowLocation = location;
+      this.livingWindowLocationResults = [];
+      this.persistLivingWindowState();
+      return this.loadLivingWindowWeather();
+    }
+    if (action === "window-use-location") {
+      if (!navigator.geolocation) { this.livingWindowStatus = "Browser location is unavailable."; return this.renderLivingWindowOverlay(); }
+      this.livingWindowStatus = "Requesting browser location…";
+      this.renderLivingWindowOverlay();
+      await new Promise<void>((resolve) => navigator.geolocation.getCurrentPosition((position) => { this.livingWindowLocation = { name: "Current location", country: "Browser", latitude: position.coords.latitude, longitude: position.coords.longitude, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }; this.persistLivingWindowState(); resolve(); }, () => { this.livingWindowStatus = "Browser location was not granted."; resolve(); }, { enableHighAccuracy: false, maximumAge: 300000, timeout: 8000 }));
+      return this.loadLivingWindowWeather();
+    }
+  }
+
+  private async loadLivingWindowWeather(): Promise<void> {
+    this.livingWindowLoading = true;
+    this.livingWindowStatus = "Loading current weather…";
+    this.renderLivingWindowOverlay();
+    try { this.livingWindowWeather = await fetchOpenMeteoWeather(this.livingWindowLocation); this.livingWindowStatus = "Live weather loaded · current precipitation and probability are separate readings."; this.persistLivingWindowState(); } catch { const cache = weatherCacheStatus(this.livingWindowWeather); this.livingWindowStatus = cache === "fresh" || cache === "stale" ? `Offline · showing ${cache} cached weather.` : "Offline · no cached weather available."; }
+    finally { this.livingWindowLoading = false; if (this.livingWindowPanelOpen) this.renderLivingWindowOverlay(); }
+  }
+
+  private closeLivingWindow(): void {
+    this.livingWindowPanelOpen = false;
+    this.room.windowFocus = false;
+    this.overlay.classList.remove("window-overlay");
+    this.overlay.innerHTML = "";
+    this.syncGameplayChromeVisibility();
+    this.persistLivingWindowState();
+    this.autosave();
+  }
+
+  private persistLivingWindowState(): void { this.save.saveLivingWindowState({ version: 1, location: this.livingWindowLocation, weather: this.livingWindowWeather, currency: null }); }
+
+  private hydrateLivingWindowState(): void {
+    const saved = this.save.loadLivingWindowState();
+    if (!saved) return;
+    if (saved.location) this.livingWindowLocation = saved.location;
+    if (saved.weather && typeof saved.weather === "object") this.livingWindowWeather = saved.weather as WeatherSnapshot;
+    const cache = weatherCacheStatus(this.livingWindowWeather);
+    if (cache === "fresh" || cache === "stale") this.livingWindowStatus = `${cache === "fresh" ? "Cached" : "Stale cached"} weather ready.`;
+  }
   private roomWindow(): void {
     this.room.visits += 1;
     this.room.windowFocus = !this.room.windowFocus;
     this.room.reflections.push("Outside the window, the forest stays where it is.");
-    this.showToast(this.room.windowFocus ? "Rain closer" : "Window released");
-    this.overlay.innerHTML = "";
+    if (this.room.windowFocus) {
+      this.livingWindowPanelOpen = true;
+      this.livingWindowMoon = calculateMoonPhase();
+      this.renderLivingWindowOverlay();
+      void this.loadLivingWindowWeather();
+    } else {
+      this.closeLivingWindow();
+    }
+    this.showToast(this.room.windowFocus ? "The living window opens" : "Window released");
     this.autosave();
   }
 

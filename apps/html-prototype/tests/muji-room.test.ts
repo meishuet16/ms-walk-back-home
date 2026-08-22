@@ -74,3 +74,9 @@ test("custom vinyl covers are stored on room journey state by record id", () => 
 
   assert.equal(state.vinylCovers?.["audio-forest"], "data:image/png;base64,cover");
 });
+
+test("Muji Room table interaction is the toolbox at the existing position", () => {
+  const toolbox = roomInteractions.find((interaction) => interaction.id === "toolbox");
+  assert.deepEqual(toolbox, { id: "toolbox", label: "Toolbox", x: 562, y: 316, radius: 62 });
+  assert.equal(roomInteractions.map((interaction) => String(interaction.id)).includes("residue"), false);
+});

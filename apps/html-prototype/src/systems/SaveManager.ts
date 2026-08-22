@@ -1,4 +1,4 @@
-import type { DiaryLibraryState, JourneyState, PersonalMusicLibraryState, PersonalPlayerState, ReflectionWallState, SaveState } from "../types.js";
+import type { DiaryLibraryState, JourneyState, LivingWindowPersistedState, PersonalMusicLibraryState, PersonalPlayerState, ReflectionWallState, SaveState, ToolboxPersistedState } from "../types.js";
 import { normalizeDiaryEntry } from "./DiaryImport.js";
 import { normalizePlaybackMode } from "./PersonalMusic.js";
 import { createReflectionWallState, migrateLegacyReflectionWall, normalizeReflectionWallState } from "./ReflectionWall.js";
@@ -10,6 +10,8 @@ const journeyKey = "walk-back-home:html-prototype:v2:journey";
 const musicLibraryKey = "walk-back-home:html-prototype:v1:music-library";
 const personalPlayerKey = "walk-back-home:html-prototype:v1:personal-player";
 const reflectionWallKey = "walk-back-home:html-prototype:v1:reflection-wall";
+const toolboxStateKey = "walk-back-home:html-prototype:v1:toolbox";
+const livingWindowStateKey = "walk-back-home:html-prototype:v1:living-window";
 
 export class SaveManager {
   constructor(private ownerId = "") {}
@@ -62,6 +64,21 @@ export class SaveManager {
     return normalizeReflectionWallState(this.parseRaw(localStorage.getItem(this.ownerKey(reflectionWallKey))));
   }
 
+  saveToolboxState(state: ToolboxPersistedState): void {
+    localStorage.setItem(this.ownerKey(toolboxStateKey), JSON.stringify(state));
+  }
+
+  loadToolboxState(): ToolboxPersistedState | null {
+    return this.parseVersioned<ToolboxPersistedState>(localStorage.getItem(this.ownerKey(toolboxStateKey)));
+  }
+
+  saveLivingWindowState(state: LivingWindowPersistedState): void {
+    localStorage.setItem(this.ownerKey(livingWindowStateKey), JSON.stringify(state));
+  }
+
+  loadLivingWindowState(): LivingWindowPersistedState | null {
+    return this.parseVersioned<LivingWindowPersistedState>(localStorage.getItem(this.ownerKey(livingWindowStateKey)));
+  }
   resetJourney(): void {
     localStorage.removeItem(this.ownerKey(journeyKey));
   }

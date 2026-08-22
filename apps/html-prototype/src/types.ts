@@ -155,6 +155,22 @@ export type ReflectionTone = "accepting" | "holding" | "not-ready" | "rewriting"
 
 export type ChapterProgressState = "unseen" | "visited" | "walkedThrough";
 
+export type ToolboxPersistedState = {
+  version: 1;
+  selected: string;
+  selectedPresetId: string;
+  converterUnits: Record<string, string>;
+  currencyFrom: string;
+  currencyTo: string;
+  presets?: Array<{ id: string; name: string; choices: string[] }>;
+};
+
+export type LivingWindowPersistedState = {
+  version: 1;
+  location: { id?: number; name: string; country?: string; latitude: number; longitude: number; timezone?: string } | null;
+  weather: unknown;
+  currency: unknown;
+};
 export type RoomJourneyState = {
   visits: number;
   reflections: string[];

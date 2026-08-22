@@ -2,7 +2,7 @@ import type { Point, Rect } from "./CollisionSystem.js";
 import { inAnyRect } from "./CollisionSystem.js";
 import type { RoomJourneyState } from "../types.js";
 
-export type RoomInteractionId = "door" | "journal" | "lamp" | "window" | "records" | "residue" | "reflection";
+export type RoomInteractionId = "door" | "journal" | "lamp" | "window" | "records" | "toolbox" | "reflection";
 
 export type RoomInteraction = {
   id: RoomInteractionId;
@@ -75,7 +75,7 @@ export const roomInteractions: RoomInteraction[] = [
   { id: "lamp", label: "Lamp", x: 218, y: 210, radius: 58 },
   { id: "window", label: "Look Outside", x: 486, y: 164, radius: 80 },
   { id: "records", label: "Records", x: 748, y: 356, radius: 46 },
-  { id: "residue", label: "Examine", x: 562, y: 316, radius: 62 },
+  { id: "toolbox", label: "Toolbox", x: 562, y: 316, radius: 62 },
   { id: "reflection", label: "Reflection Note", x: 504, y: 450, radius: 62 }
 ];
 

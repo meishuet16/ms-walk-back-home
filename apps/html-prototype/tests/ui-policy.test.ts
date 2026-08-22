@@ -71,7 +71,7 @@ test("Muji Room objects can be activated by tapping their scene positions", () =
 test("Muji Room landscape keeps the original dedicated runtime path", () => {
   assert.match(appSource, /if \(layout\.orientation === "landscape"\)[\s\S]*moveRoomPlayer\(this\.player, x, y, dt\)/);
   assert.match(appSource, /if \(layout\.orientation === "landscape"\)[\s\S]*nearestRoomInteraction\(this\.player\)/);
-  assert.match(appSource, /if \(layout\.orientation === "landscape"\)[\s\S]*this\.ctx\.drawImage\(this\.images\.room, 0, 0, this\.canvas\.width, this\.canvas\.height\)/);
+  assert.match(appSource, /if \(layout\.orientation === "landscape"\)[\s\S]*drawSceneAsset\(this\.ctx, this\.images\.room/);
   assert.match(appSource, /for \(const interaction of roomInteractions\)/);
 });
 
@@ -81,7 +81,7 @@ test("Muji Room portrait reuses existing room effect rendering for lamp and wind
   assert.match(appSource, /if \(this\.room\.lampOn && lamp\) this\.drawLampGlow\(lamp, scale\)/);
   assert.match(appSource, /if \(this\.room\.windowFocus && windowInteraction\)[\s\S]*this\.drawWindowFocus\(windowInteraction, time, scale\)/);
   assert.match(appSource, /activateRoomInteraction\(this\.activeRoomInteraction\)/);
-  for (const id of ["door", "journal", "lamp", "window", "records", "residue", "reflection"]) {
+  for (const id of ["door", "journal", "lamp", "window", "records", "toolbox", "reflection"]) {
     assert.match(appSource, new RegExp(`interaction\\.id === "${id}"`));
   }
 });

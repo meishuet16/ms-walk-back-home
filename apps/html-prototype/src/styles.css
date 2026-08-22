@@ -5205,3 +5205,126 @@ canvas {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Muji Toolbox: a stage-contained RPG utility shell. */
+.toolbox-overlay {
+  position: absolute;
+  inset: 0;
+  padding: clamp(14px, 3vw, 32px);
+  pointer-events: auto;
+  background: rgba(13, 17, 25, .42);
+  backdrop-filter: blur(2px);
+}
+.toolbox-panel {
+  width: min(640px, 100%);
+  max-height: min(88%, 720px);
+  overflow: auto;
+  padding: clamp(16px, 3vw, 24px);
+  border: 2px solid #b88449;
+  border-radius: 8px;
+  color: #f2dfbb;
+  background: linear-gradient(145deg, #30231e, #17151a 70%);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, .62), inset 0 0 0 1px rgba(255, 233, 176, .16);
+}
+.toolbox-header,
+.toolbox-toolbar,
+.toolbox-footer,
+.toolbox-field-row,
+.toolbox-two-col,
+.toolbox-sub-actions,
+.toolbox-utility .settings-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.toolbox-header,
+.toolbox-toolbar,
+.toolbox-footer { justify-content: space-between; }
+.toolbox-header { border-bottom: 1px solid rgba(232, 200, 139, .26); padding-bottom: 12px; }
+.toolbox-kicker { color: #d9a85f; font-size: 10px; letter-spacing: .18em; }
+.toolbox-panel h2 { margin: 4px 0 0; color: #fff0c8; font-size: clamp(22px, 4vw, 32px); }
+.toolbox-close { font-size: 24px; line-height: 1; }
+.toolbox-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
+.toolbox-slot {
+  display: grid;
+  min-width: 0;
+  min-height: 92px;
+  place-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  color: #e9d4ad;
+  border: 1px solid rgba(220, 174, 103, .34);
+  background: rgba(55, 38, 29, .76);
+  text-align: center;
+}
+.toolbox-slot.selected,
+.toolbox-slot:focus-visible { border-color: #f4ca79; background: linear-gradient(180deg, rgba(129, 83, 39, .9), rgba(70, 42, 28, .94)); box-shadow: 0 0 0 2px rgba(244, 202, 121, .18); }
+.toolbox-slot-icon { font-size: 25px; }
+.toolbox-footer { align-items: end; gap: 14px; padding-top: 12px; border-top: 1px solid rgba(232, 200, 139, .18); }
+.toolbox-footer div { display: grid; gap: 3px; min-width: 0; }
+.toolbox-footer span { color: #cbb997; font-size: 13px; line-height: 1.35; }
+.toolbox-confirm,
+.toolbox-panel button.primary { color: #25170d; background: #e4b96b; border-color: #ffd990; font-weight: 700; }
+.toolbox-toolbar { margin-bottom: 12px; color: #cbb997; font-size: 12px; }
+.toolbox-tool-body { min-width: 0; }
+.toolbox-utility { display: grid; gap: 12px; }
+.toolbox-utility label { display: grid; gap: 5px; color: #ddc89f; font-size: 12px; }
+.toolbox-utility input,
+.toolbox-utility select { width: 100%; min-width: 0; box-sizing: border-box; color: #f9e9c8; border: 1px solid rgba(232, 200, 139, .34); background: #211a19; }
+.toolbox-two-col { align-items: stretch; }
+.toolbox-two-col > *, .toolbox-field-row > * { flex: 1 1 0; min-width: 0; }
+.toolbox-field-row { flex-wrap: wrap; }
+.toolbox-result,
+.calculator-display,
+.timer-display { display: block; min-height: 34px; padding: 8px 10px; color: #ffe6a9; border: 1px solid rgba(232, 200, 139, .28); background: rgba(9, 9, 13, .48); font-variant-numeric: tabular-nums; }
+.calculator-display { text-align: right; font-size: 25px; overflow: auto; }
+.calculator-keys { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+.calculator-keys .wide { grid-column: span 2; }
+.spin-wheel-disc { display: grid; place-items: center; min-height: 100px; border: 1px dashed rgba(244, 202, 121, .42); border-radius: 50%; background: radial-gradient(circle, rgba(213, 166, 87, .25), rgba(26, 20, 19, .15) 62%); }
+.spin-wheel-disc strong { color: #fff0c8; }
+.spin-choice-list { display: grid; gap: 5px; max-height: 130px; overflow: auto; margin: 0; padding: 0; list-style: none; }
+.spin-choice-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 8px; background: rgba(255, 230, 174, .07); }
+.spin-choice-list li.empty { color: #ad9b7e; }
+.toolbox-sub-actions { justify-content: flex-end; flex-wrap: wrap; }
+.toolbox-status { min-height: 1.2em; margin: 0; color: #b9c9b0; font-size: 12px; }
+.timer-display { text-align: center; font-size: clamp(34px, 8vw, 56px); letter-spacing: .08em; }
+@media (max-width: 700px) {
+  .overlay.toolbox-overlay { position: absolute; inset: 0; padding: 12px; place-items: center; }
+  .toolbox-panel { width: min(100%, 620px); max-height: 80%; padding: 14px; }
+  .toolbox-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .toolbox-slot { min-height: 76px; }
+  .toolbox-footer { grid-template-columns: 1fr; display: grid; align-items: stretch; }
+  .toolbox-confirm { width: 100%; }
+  .toolbox-two-col { align-items: stretch; }
+}
+
+/* Living Window weather card; the canvas underneath remains the scene of record. */
+.window-overlay { position: absolute; inset: 0; padding: clamp(14px, 3vw, 30px); pointer-events: auto; background: rgba(8, 14, 22, .34); backdrop-filter: blur(2px); }
+.living-window-panel { width: min(720px, 100%); max-height: min(88%, 720px); overflow: auto; padding: clamp(16px, 3vw, 24px); color: #e8e7d7; background: linear-gradient(145deg, #1c2a31, #11171d 72%); border-color: #70929a; }
+.window-panel-header, .window-panel-actions, .window-location-search, .window-panel-foot { display: flex; align-items: center; gap: 8px; }
+.window-panel-header { justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid rgba(180, 218, 210, .22); }
+.window-panel-header h2 { margin: 4px 0 2px; color: #e7f3e4; }
+.window-panel-header p { margin: 0; color: #abc5bd; }
+.window-panel-header > button { font-size: 24px; }
+.window-panel-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin: 16px 0; }
+.window-panel-grid h3 { margin: 0 0 9px; color: #d3e7d1; }
+.window-weather-reading, .window-moon-reading { display: grid; gap: 7px; padding: 12px; border: 1px solid rgba(180, 218, 210, .24); background: rgba(9, 15, 19, .38); color: #c3d6cc; }
+.window-weather-reading strong, .window-moon-reading strong { color: #eff5df; font-size: 18px; }
+.window-panel-actions { flex-wrap: wrap; margin-top: 12px; }
+.window-status { min-height: 1.2em; color: #a5c5b6; font-size: 12px; }
+.window-moon-reading { place-items: center; text-align: center; margin-bottom: 16px; }
+.moon-glyph { color: #f8eab9; font-size: 48px; line-height: 1; }
+.window-location-search { align-items: stretch; }
+.window-location-search input { min-width: 0; flex: 1 1 auto; color: #edf4df; border: 1px solid rgba(180, 218, 210, .28); background: #111a1d; }
+.window-location-results { display: grid; gap: 5px; margin-top: 8px; }
+.window-location-results button { text-align: left; }
+.window-panel-foot { justify-content: flex-end; color: #91aaa4; font-size: 11px; border-top: 1px solid rgba(180, 218, 210, .18); padding-top: 10px; }
+@media (max-width: 700px) {
+  .overlay.window-overlay { position: absolute; inset: 0; padding: 12px; place-items: center; }
+  .living-window-panel { width: min(100%, 620px); max-height: 80%; padding: 14px; }
+  .window-panel-grid { grid-template-columns: 1fr; gap: 14px; }
+  .window-panel-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .window-panel-actions button { min-width: 0; }
+  .window-location-search { display: grid; grid-template-columns: 1fr auto; }
+  .window-panel-foot { display: block; line-height: 1.4; }
+}
