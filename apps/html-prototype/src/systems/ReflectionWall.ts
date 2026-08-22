@@ -46,7 +46,7 @@ export function reflectionWallCanvasHeight(
 ): number {
   const baseHeight = Math.max(1, options.baseHeight ?? 620);
   const columns = Math.max(1, Math.floor(options.columns ?? 5));
-  const rowHeight = Math.max(1, options.rowHeight ?? 150);
+  const rowHeight = Math.max(1, options.rowHeight ?? 220);
   const bottomPadding = Math.max(0, options.bottomPadding ?? 80);
   const rows = Math.max(1, Math.ceil(Math.max(0, noteCount) / columns));
   return Math.max(baseHeight, rows * rowHeight + bottomPadding);

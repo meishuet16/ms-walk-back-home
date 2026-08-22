@@ -124,3 +124,6 @@ test("portrait wall canvas grows when memo count needs more vertical rows", () =
   assert.ok(crowded > base);
   assert.equal(reflectionWallCanvasHeight(16), crowded);
 });
+test("portrait wall gives 14 notes extra scroll space", () => {
+  assert.ok(reflectionWallCanvasHeight(14) > 620);
+});
