@@ -487,3 +487,9 @@ test("Backup / Sync exposes readable copy and persistent cloud operation feedbac
   assert.match(appSource, /const cloudActionDisabled = this\.backupSyncOperation \? "disabled" : ""/);
   assert.match(appSource, /Imported Records audio and covers stayed on this device/);
 });
+test("Reflection Wall portrait wall grows its scroll canvas with memo count", () => {
+  assert.match(appSource, /reflectionWallCanvasHeight\(this\.reflectionWall\.notes\.length\)/);
+  assert.match(appSource, /--reflection-wall-canvas-height/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.reflection-wall-surface[\s\S]*min-height:\s*var\(--reflection-wall-canvas-height/);
+  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.reflection-wall-surface[\s\S]*overflow-y:\s*auto/);
+});

@@ -4728,9 +4728,10 @@ canvas {
   .reflection-wall-surface {
     width: 100%;
     min-width: 0;
-    min-height: 0;
+    min-height: var(--reflection-wall-canvas-height, 620px);
     height: auto;
-    overflow: auto;
+    overflow-x: auto;
+    overflow-y: auto;
     touch-action: pan-x pan-y;
   }
   .reflection-stack,
