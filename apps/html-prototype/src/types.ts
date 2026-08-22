@@ -169,7 +169,7 @@ export type RoomJourneyState = {
 };
 
 export type ReflectionNoteSource = "manual" | "chapter";
-export type ReflectionWallView = "wall" | "stack" | "list";
+export type ReflectionWallView = "wall" | "list";
 export type ReflectionWallFilter = "all" | "today" | "week" | "month" | "manual" | "chapter" | "pinned" | "favorites";
 export type ReflectionWallSort = "manual" | "newest" | "oldest";
 

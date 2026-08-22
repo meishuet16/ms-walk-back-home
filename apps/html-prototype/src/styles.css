@@ -2037,22 +2037,6 @@ canvas {
   background: #695943;
   color: #fff0cf;
 }
-.reflection-wall-surface {
-  position: relative;
-  min-width: 960px;
-  min-height: 620px;
-  overflow: auto;
-  overscroll-behavior: contain;
-  touch-action: pan-x pan-y;
-  background:
-    linear-gradient(90deg, rgba(87, 71, 53, .035) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(87, 71, 53, .035) 1px, transparent 1px),
-    #ddd2c0;
-  background-size: 42px 42px;
-  border: 1px solid rgba(82, 62, 42, .22);
-  box-shadow: inset 0 0 55px rgba(96, 72, 48, .13);
-}
-.wall-note,
 .reflection-stack-card {
   width: 170px;
   min-height: 126px;
@@ -2065,30 +2049,7 @@ canvas {
   color: #3b2f24;
   text-align: left;
   box-shadow: 0 11px 18px rgba(50, 34, 18, .18);
-  cursor: grab;
-}
-.wall-note {
-  position: absolute;
-  touch-action: none;
-}
-.wall-note span,
-.reflection-stack-card span {
-  display: -webkit-box;
-  -webkit-line-clamp: 5;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  white-space: pre-wrap;
-  line-height: 1.35;
-}
-.wall-note small,
-.reflection-stack-card small,
-.reflection-detail small {
-  color: rgba(52, 39, 28, .72);
-  font-size: 11px;
-  line-height: 1.3;
-}
-.wall-note.faded {
-  opacity: .22;
+  cursor: pointer;
 }
 .paper-cream-torn { background: #f4ead3; }
 .paper-blue-lined { background: linear-gradient(#d8e5eb 23px, #bfd0d8 24px); background-size: 100% 24px; }
@@ -2116,6 +2077,47 @@ canvas {
   display: grid;
   align-content: start;
   gap: 8px;
+}
+.reflection-note-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+.reflection-flag-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  padding: 3px 7px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .02em;
+}
+.reflection-flag-badge.pinned,
+.reflection-flag-action.pinned.active {
+  background: #f5d28f;
+  border-color: #b87922;
+  color: #5b3107;
+}
+.reflection-flag-badge.favorite,
+.reflection-flag-action.favorite.active {
+  background: #f1bfd0;
+  border-color: #ad4f73;
+  color: #681d3d;
+}
+.reflection-flag-action {
+  min-height: 38px;
+  font-weight: 750;
+}
+.reflection-flag-action:not(.active) {
+  background: rgba(255, 248, 232, .66);
+  border-color: rgba(89, 69, 48, .25);
+}
+.reflection-list-row .reflection-note-flags {
+  grid-column: 1 / -1;
 }
 .reflection-list-row {
   display: grid;
@@ -2157,21 +2159,9 @@ canvas {
   gap: 7px;
   margin: 12px 0;
 }
-.reflection-wall-empty {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-content: center;
-  text-align: center;
-  color: #6d5a43;
-}
 @media (max-width: 760px) {
   .reflection-wall-toolbar {
     grid-template-columns: 1fr;
-  }
-  .reflection-wall-surface {
-    min-width: 820px;
-    min-height: 620px;
   }
   .reflection-wall-modal {
     width: calc(100vw - 12px);
@@ -4725,15 +4715,6 @@ canvas {
     border-radius: 50%;
     font-size: 28px;
   }
-  .reflection-wall-surface {
-    width: 100%;
-    min-width: 0;
-    min-height: var(--reflection-wall-canvas-height, 620px);
-    height: auto;
-    overflow-x: auto;
-    overflow-y: auto;
-    touch-action: pan-x pan-y;
-  }
   .reflection-stack,
   .reflection-list {
     min-height: 0;
@@ -4743,58 +4724,6 @@ canvas {
     overflow-y: auto;
     overscroll-behavior: contain;
     padding-bottom: calc(24px + env(safe-area-inset-bottom));
-  }
-  .wall-note {
-    width: min(170px, calc(100vw - 48px));
-    max-width: calc(100vw - 48px);
-    min-height: 120px;
-    overflow-wrap: anywhere;
-    white-space: normal;
-    text-align: left;
-  }
-  .wall-note[data-dragging="true"] {
-    outline: 2px solid rgba(204, 142, 57, .9);
-    outline-offset: 3px;
-  }
-  .wall-note-body {
-    width: 100%;
-    min-height: 100%;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    box-shadow: none;
-    color: inherit;
-    text-align: left;
-  }
-  .reflection-note-tools {
-    position: absolute;
-    top: -12px;
-    right: -10px;
-    display: none;
-    gap: 4px;
-    opacity: .96;
-  }
-  .wall-note.selected .reflection-note-tools {
-    display: flex;
-  }
-  .reflection-note-tools button {
-    min-width: 26px;
-    min-height: 26px;
-    padding: 2px 5px;
-    border-radius: 999px;
-    font-size: 11px;
-  }
-  .wall-note span {
-    display: block;
-    max-width: 100%;
-    max-height: 72px;
-    overflow: hidden;
-    overflow-wrap: anywhere;
-  }
-  .wall-note small {
-    display: block;
-    max-width: 100%;
-    overflow-wrap: anywhere;
   }
   .mobile-editor-toolbar {
     grid-template-columns: repeat(3, minmax(0, 1fr));

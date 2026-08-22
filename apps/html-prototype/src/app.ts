@@ -31,7 +31,7 @@ import { ParticleSystem } from "./systems/ParticleSystem.js";
 import { BundledLyricsLoader, trackIdentity } from "./systems/BundledLyrics.js";
 import { LrclibLyricsProvider } from "./systems/LrclibLyrics.js";
 import { activeLyricIndexAt, adjacentTrackIdForControl, applyBatchMusicMetadata, clampLyricsOverlay, createDefaultPersonalPlayerState, filterAndSortMusic, isBuiltInTrackId, lyricWindowForTime, nextTrackIdForPlayback, normalizePlaybackMode, parseLrc, personalMusicShouldPlayInScene, removeSelectedMusicTracks, removeUserMusicTrack, selectAllMusicTrackIds, type BatchMusicMetadata } from "./systems/PersonalMusic.js";
-import { changeReflectionPaper, clampReflectionNotePosition, createChapterReflectionNote, createReflectionNote, createReflectionWallState, deleteReflectionNote, migrateLegacyReflectionWall, moveReflectionNote, reflectionPaperStyles, reflectionWallCanvasHeight, toggleReflectionNoteFlag, updateReflectionNote, visibleReflectionNotes } from "./systems/ReflectionWall.js";
+import { changeReflectionPaper, createChapterReflectionNote, createReflectionNote, createReflectionWallState, deleteReflectionNote, migrateLegacyReflectionWall, reflectionPaperStyles, toggleReflectionNoteFlag, updateReflectionNote, visibleReflectionNotes } from "./systems/ReflectionWall.js";
 import { drawSceneActor, drawSceneSpriteAsset, type SceneSpriteAsset } from "./systems/SceneActorRenderer.js";
 import { getSceneLayout, loadSceneLayoutOverrides, resolveForestDynamicPlacements, resolveSceneAssetPath, resolveSceneEchoAnchor, sceneLayoutManifest, selectSceneOrientation, type SceneInteraction, type SceneLayout, type SceneLayoutId, type SceneOrientation } from "./systems/SceneLayouts.js";
 import {
@@ -188,7 +188,6 @@ export class WalkBackHomeApp {
   private pendingJournalMediaDeleteId = "";
   private journalCropMediaId = "";
   private journalCropDrag: { mode: string; startX: number; startY: number; startCrop: DiaryMediaCrop } | null = null;
-  private selectedReflectionNoteId = "";
   private selectedTimelineEntryIds = new Set<string>();
   private timelineDeleteConfirmOpen = false;
   private timelineSort: DiaryTimelineSort = "date-desc";
@@ -251,7 +250,6 @@ export class WalkBackHomeApp {
   private reflectionWallFilter: ReflectionWallFilter = "all";
   private reflectionWallSort: ReflectionWallSort = "manual";
   private reflectionWallSearch = "";
-  private reflectionWallDrag: { noteId: string; offsetX: number; offsetY: number } | null = null;
   private chapterProgress = new Map<string, ChapterProgress>();
   private chapterMemoryRun: ChapterMemoryExperienceRun | null = null;
   private dialogue = new DialogueSystem(bakeryChapter.dialogue);
@@ -331,8 +329,6 @@ export class WalkBackHomeApp {
     root.addEventListener("pointerup", () => {
       this.journalCropDrag = null;
       this.scrapbookDrag = null;
-      this.overlay.querySelector<HTMLElement>(".wall-note[data-dragging=\"true\"]")?.removeAttribute("data-dragging");
-      this.reflectionWallDrag = null;
       if (this.lyricsDrag || this.lyricsResize) this.autosave();
       this.lyricsDrag = null;
       this.lyricsResize = null;
@@ -563,7 +559,6 @@ export class WalkBackHomeApp {
     if (action === "reflection-wall") this.openReflectionWall();
     if (action === "reflection-note-new") this.showReflectionComposer();
     if (action === "reflection-note-save") this.saveReflectionComposer(target.dataset.note ?? "");
-    if (action === "reflection-note-select") this.selectReflectionWallNote(target.dataset.note ?? "");
     if (action === "reflection-note-open") this.showReflectionDetail(target.dataset.note ?? "");
     if (action === "reflection-note-edit") this.showReflectionComposer(target.dataset.note ?? "");
     if (action === "reflection-note-delete") this.deleteReflectionWallNote(target.dataset.note ?? "");
@@ -5327,23 +5322,6 @@ export class WalkBackHomeApp {
       return;
     }
     const pointerTarget = event.target as HTMLElement;
-    const note = pointerTarget.closest<HTMLElement>(".wall-note");
-    const wall = (event.target as HTMLElement).closest<HTMLElement>(".reflection-wall-surface");
-    const noteDragHandle = pointerTarget.closest(".reflection-note-drag-handle");
-    if (note && wall && noteDragHandle) {
-      const wallRect = wall.getBoundingClientRect();
-      const noteData = this.reflectionWall.notes.find((item) => item.id === note.dataset.note);
-      if (noteData) {
-        this.reflectionWallDrag = {
-          noteId: noteData.id,
-          offsetX: ((event.clientX - wallRect.left) / wallRect.width) * 100 - noteData.x,
-          offsetY: ((event.clientY - wallRect.top) / wallRect.height) * 100 - noteData.y
-        };
-        note.dataset.dragging = "true";
-        event.preventDefault();
-      }
-      return;
-    }
     const lyrics = (event.target as HTMLElement).closest<HTMLElement>(".floating-lyrics");
     if (lyrics && (event.target as HTMLElement).closest(".floating-drag-handle") && !(event.target as HTMLElement).closest(".floating-controls-bar,button,input,select,textarea")) {
       const rect = lyrics.getBoundingClientRect();
@@ -5400,26 +5378,6 @@ export class WalkBackHomeApp {
       }, this.canvas.width, this.canvas.height);
       this.save.savePersonalPlayer(this.personalPlayer);
       this.updatePersonalMusicOverlay();
-      event.preventDefault();
-      return;
-    }
-    if (this.reflectionWallDrag) {
-      const wall = this.overlay.querySelector<HTMLElement>(".reflection-wall-surface");
-      if (!wall) return;
-      const rect = wall.getBoundingClientRect();
-      const x = ((event.clientX - rect.left) / rect.width) * 100 - this.reflectionWallDrag.offsetX;
-      const y = ((event.clientY - rect.top) / rect.height) * 100 - this.reflectionWallDrag.offsetY;
-      const position = clampReflectionNotePosition({ x, y }, this.reflectionWallNoteDimensions());
-      this.reflectionWall = moveReflectionNote(this.reflectionWall, this.reflectionWallDrag.noteId, position);
-      this.save.saveReflectionWall(this.reflectionWall);
-      const note = this.overlay.querySelector<HTMLElement>(`.wall-note[data-note="${CSS.escape(this.reflectionWallDrag.noteId)}"]`);
-      const next = this.reflectionWall.notes.find((item) => item.id === this.reflectionWallDrag?.noteId);
-      if (note && next) {
-        const nextPosition = clampReflectionNotePosition(next, this.reflectionWallNoteDimensions());
-        note.style.left = `${nextPosition.x}%`;
-        note.style.top = `${nextPosition.y}%`;
-        note.dataset.dragging = "true";
-      }
       event.preventDefault();
       return;
     }
@@ -5503,6 +5461,7 @@ export class WalkBackHomeApp {
   }
 
   private openReflectionWall(): void {
+    const filterMenuOpen = this.overlay.querySelector<HTMLDetailsElement>(".reflection-wall-filter-menu")?.open ?? false;
     this.recordsPanelOpen = false;
     this.reflectionWall = migrateLegacyReflectionWall(this.reflectionWall, this.room);
     this.save.saveReflectionWall(this.reflectionWall);
@@ -5512,20 +5471,18 @@ export class WalkBackHomeApp {
       filter: this.reflectionWallFilter,
       search: this.reflectionWallSearch
     });
-    const matchingIds = new Set(notes.map((note) => note.id));
     const toolbar = this.renderReflectionToolbar(notes.length);
     const body = this.reflectionWallView === "wall"
-      ? this.renderReflectionWallSurface(matchingIds)
-      : this.reflectionWallView === "stack"
-        ? this.renderReflectionStack(notes)
-        : this.renderReflectionList(notes);
+      ? this.renderReflectionStack(notes)
+      : this.renderReflectionList(notes);
     this.overlay.innerHTML = `<div class="modal reflection-wall-modal">${toolbar}${body}</div>`;
+    if (filterMenuOpen) this.overlay.querySelector<HTMLDetailsElement>(".reflection-wall-filter-menu")!.open = true;
     this.focusStage();
   }
 
   private renderReflectionToolbar(count: number): string {
-    const filters: Array<[ReflectionWallFilter, string]> = [["all", "All Time"], ["today", "Today"], ["week", "This Week"], ["month", "This Month"], ["manual", "My Notes"], ["chapter", "Chapter Notes"], ["pinned", "Pinned"], ["favorites", "Favorites"]];
-    const views: Array<[ReflectionWallView, string]> = [["wall", "Wall"], ["stack", "Stack"], ["list", "List"]];
+    const filters: Array<[ReflectionWallFilter, string]> = [["all", "All Time"], ["today", "Today"], ["week", "This Week"], ["month", "This Month"], ["manual", "My Notes"], ["chapter", "Chapter Notes"], ["pinned", "Pinned"], ["favorites", "Favourites"]];
+    const views: Array<[ReflectionWallView, string]> = [["wall", "Wall"], ["list", "List"]];
     const sorts: Array<[ReflectionWallSort, string]> = [["manual", "Manual Wall Order"], ["newest", "Newest First"], ["oldest", "Oldest First"]];
     return `<div class="reflection-wall-toolbar">
       <div><h2>Reflection Wall</h2><p>${count} note${count === 1 ? "" : "s"}</p></div>
@@ -5540,12 +5497,6 @@ export class WalkBackHomeApp {
     </div>`;
   }
 
-  private renderReflectionWallSurface(matchingIds: Set<string>): string {
-    const canvasHeight = reflectionWallCanvasHeight(this.reflectionWall.notes.length);
-    const notes = this.reflectionWall.notes.map((note) => this.renderWallNote(note, matchingIds.has(note.id))).join("");
-    return `<section class="reflection-wall-surface" style="--reflection-wall-canvas-height:${canvasHeight}px" aria-label="Reflection Wall">${notes || `<div class="reflection-wall-empty"><p>The wall is quiet.</p><button data-action="reflection-note-new">Leave a note</button></div>`}</section>`;
-  }
-
   private refreshReflectionWallOnly(): void {
     const notes = visibleReflectionNotes(this.reflectionWall, {
       view: this.reflectionWallView,
@@ -5555,46 +5506,15 @@ export class WalkBackHomeApp {
     });
     const count = this.overlay.querySelector<HTMLElement>(".reflection-wall-toolbar p");
     if (count) count.textContent = `${notes.length} note${notes.length === 1 ? "" : "s"}`;
-    const matchingIds = new Set(notes.map((note) => note.id));
+    const currentBody = this.overlay.querySelector<HTMLElement>(".reflection-stack, .reflection-list");
+    if (!currentBody) return;
     const nextBody = this.reflectionWallView === "wall"
-      ? this.renderReflectionWallSurface(matchingIds)
-      : this.reflectionWallView === "stack"
-        ? this.renderReflectionStack(notes)
-        : this.renderReflectionList(notes);
-    const currentBody = this.overlay.querySelector<HTMLElement>(".reflection-wall-surface, .reflection-stack, .reflection-list");
-    if (!currentBody) return this.openReflectionWall();
+      ? this.renderReflectionStack(notes)
+      : this.renderReflectionList(notes);
     const wrapper = document.createElement("div");
     wrapper.innerHTML = nextBody;
     const replacement = wrapper.firstElementChild;
     if (replacement) currentBody.replaceWith(replacement);
-  }
-
-  private selectReflectionWallNote(noteId: string): void {
-    this.selectedReflectionNoteId = this.selectedReflectionNoteId === noteId ? "" : noteId;
-    this.refreshReflectionWallOnly();
-  }
-
-  private renderWallNote(note: ReflectionNote, visible: boolean): string {
-    const faded = this.reflectionWallSearch.trim() || this.reflectionWallFilter !== "all" ? (visible ? "" : " faded") : "";
-    const selected = this.selectedReflectionNoteId === note.id;
-    const position = clampReflectionNotePosition(note, this.reflectionWallNoteDimensions());
-    return `<article class="wall-note paper-${this.escapeHtml(note.styleId)}${faded} ${selected ? "selected" : ""}" data-note="${this.escapeHtml(note.id)}" style="left:${position.x}%;top:${position.y}%;transform:translate(-50%,-50%) rotate(${note.rotation}deg);">
-      <button class="wall-note-body" data-action="reflection-note-select" data-note="${this.escapeHtml(note.id)}">
-        <span>${this.escapeHtml(note.text)}</span>
-        <small>${this.escapeHtml(this.formatReflectionTimestamp(note.createdAt))}${note.updatedAt ? `<br>edited ${this.escapeHtml(this.formatReflectionTimestamp(note.updatedAt))}` : ""}</small>
-      </button>
-      <div class="reflection-note-tools" aria-label="Note tools">
-        <button class="reflection-note-drag-handle" data-action="reflection-note-drag" data-note="${this.escapeHtml(note.id)}" aria-label="Drag note">↕</button>
-        <button data-action="reflection-note-edit" data-note="${this.escapeHtml(note.id)}" aria-label="Edit note">🖊</button>
-        <button data-action="reflection-note-delete" data-note="${this.escapeHtml(note.id)}" aria-label="Remove note">×</button>
-      </div>
-    </article>`;
-  }
-
-  private reflectionWallNoteDimensions(): { widthPercent: number; heightPercent: number; edgePercent: number } {
-    return window.matchMedia("(max-width: 700px)").matches
-      ? { widthPercent: 52, heightPercent: 34, edgePercent: 6 }
-      : { widthPercent: 28, heightPercent: 24, edgePercent: 4 };
   }
 
   private renderReflectionStack(notes: ReflectionNote[]): string {
@@ -5607,12 +5527,19 @@ export class WalkBackHomeApp {
     return `<div class="reflection-stack">${sections || `<p>The wall is quiet.</p>`}</div>`;
   }
 
-  private renderStackCard(note: ReflectionNote): string {
-    return `<button class="reflection-stack-card paper-${this.escapeHtml(note.styleId)}" data-action="reflection-note-open" data-note="${this.escapeHtml(note.id)}"><span>${this.escapeHtml(note.text)}</span><small>${this.escapeHtml(this.formatReflectionTimestamp(note.createdAt))}</small></button>`;
+  private renderReflectionFlags(note: ReflectionNote): string {
+    const flags = [
+      note.pinned ? `<span class="reflection-flag-badge pinned" aria-label="Pinned">📌 Pinned</span>` : "",
+      note.favorite ? `<span class="reflection-flag-badge favorite" aria-label="Favourite">★ Favourite</span>` : ""
+    ].filter(Boolean).join("");
+    return flags ? `<div class="reflection-note-flags" aria-label="Note flags">${flags}</div>` : "";
   }
 
+  private renderStackCard(note: ReflectionNote): string {
+    return `<button class="reflection-stack-card paper-${this.escapeHtml(note.styleId)}" data-action="reflection-note-open" data-note="${this.escapeHtml(note.id)}"><span>${this.escapeHtml(note.text)}</span>${this.renderReflectionFlags(note)}<small>${this.escapeHtml(this.formatReflectionTimestamp(note.createdAt))}</small></button>`;
+  }
   private renderReflectionList(notes: ReflectionNote[]): string {
-    const rows = notes.map((note) => `<button class="reflection-list-row" data-action="reflection-note-open" data-note="${this.escapeHtml(note.id)}"><strong>${this.escapeHtml(this.formatReflectionTimestamp(note.createdAt))}</strong><span>${this.escapeHtml(note.text)}</span></button>`).join("");
+    const rows = notes.map((note) => `<button class="reflection-list-row" data-action="reflection-note-open" data-note="${this.escapeHtml(note.id)}"><strong>${this.escapeHtml(this.formatReflectionTimestamp(note.createdAt))}</strong><span>${this.escapeHtml(note.text)}</span>${this.renderReflectionFlags(note)}</button>`).join("");
     return `<div class="reflection-list">${rows || `<p>The wall is quiet.</p>`}</div>`;
   }
 
@@ -5657,8 +5584,8 @@ export class WalkBackHomeApp {
       <small>${this.escapeHtml(this.formatReflectionTimestamp(note.createdAt))}${note.updatedAt ? `<br>edited ${this.escapeHtml(this.formatReflectionTimestamp(note.updatedAt))}` : ""}</small>
       <div class="settings-row">
         <button data-action="reflection-note-edit" data-note="${this.escapeHtml(note.id)}">Edit</button>
-        <button data-action="reflection-note-pin" data-note="${this.escapeHtml(note.id)}">${note.pinned ? "Unpin" : "Pin"}</button>
-        <button data-action="reflection-note-favorite" data-note="${this.escapeHtml(note.id)}">${note.favorite ? "Unfavorite" : "Favorite"}</button>
+        <button class="reflection-flag-action pinned${note.pinned ? " active" : ""}" data-action="reflection-note-pin" data-note="${this.escapeHtml(note.id)}">📌 ${note.pinned ? "Pinned" : "Pin"}</button>
+        <button class="reflection-flag-action favorite${note.favorite ? " active" : ""}" data-action="reflection-note-favorite" data-note="${this.escapeHtml(note.id)}">★ Favourite</button>
         <button data-action="reflection-note-delete" data-note="${this.escapeHtml(note.id)}">Delete</button>
       </div>
       <div class="reflection-paper-grid">${papers}</div>
@@ -5675,11 +5602,16 @@ export class WalkBackHomeApp {
   }
 
   private toggleReflectionFlag(noteId: string, flag: "pinned" | "favorite"): void {
-    this.reflectionWall = toggleReflectionNoteFlag(this.reflectionWall, noteId, flag);
+    const note = this.reflectionWall.notes.find((item) => item.id === noteId);
+    const next = toggleReflectionNoteFlag(this.reflectionWall, noteId, flag);
+    if (next === this.reflectionWall && flag === "pinned" && !note?.pinned) {
+      this.showToast("You can pin up to 10 notes");
+      return;
+    }
+    this.reflectionWall = next;
     this.save.saveReflectionWall(this.reflectionWall);
     this.showReflectionDetail(noteId);
   }
-
   private changeReflectionNotePaper(noteId: string, styleId: string): void {
     this.reflectionWall = changeReflectionPaper(this.reflectionWall, noteId, styleId);
     this.save.saveReflectionWall(this.reflectionWall);
@@ -5695,7 +5627,7 @@ export class WalkBackHomeApp {
   }
 
   private setReflectionWallView(view: ReflectionWallView): void {
-    if (view === "wall" || view === "stack" || view === "list") this.reflectionWallView = view;
+    if (view === "wall" || view === "list") this.reflectionWallView = view;
     this.openReflectionWall();
   }
 

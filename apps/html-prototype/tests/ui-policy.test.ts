@@ -260,13 +260,6 @@ test("Journal reader returns to its originating surface and keeps the scroll pos
   assert.match(appSource, /handleMonthCoverInput[\s\S]*this\.openMonthlyBook\(monthKey\)/);
 });
 
-test("Reflection Wall keeps portrait notes inside the usable surface", () => {
-  assert.match(appSource, /clampReflectionNotePosition/);
-  assert.match(appSource, /reflectionWallNoteDimensions/);
-  assert.match(appSource, /transform:translate\(-50%,\s*-50%\)/);
-  assert.doesNotMatch(stylesSource, /\.wall-note\s*\{[^}]*transform:\s*none\s*!important/);
-});
-
 test("Music is one shell-level top-right toggle and legacy menu actions are removed", () => {
   const settingsSource = appSource.match(/private settingsContent\(\): string \{[\s\S]*?\n  \}/)?.[0] ?? "";
   assert.equal((appSource.match(/data-action="music"/g) ?? []).length, 1);
@@ -315,8 +308,6 @@ test("mobile portrait and landscape layouts have explicit touch behavior", () =>
   assert.match(appSource, /this\.root\.dataset\.forceTouch/);
   assert.doesNotMatch(appSource, /Rotate screen to landscape/);
   assert.match(stylesSource, /\.rotate-hint[\s\S]*display:\s*none\s*!important/);
-  assert.match(stylesSource, /\.reflection-wall-surface[\s\S]*touch-action:\s*pan-x pan-y/);
-  assert.match(stylesSource, /\.wall-note[\s\S]*touch-action:\s*none/);
   assert.match(stylesSource, /@media\s*\(orientation:\s*landscape\)\s*and\s*\(max-height:\s*520px\)/);
   assert.match(stylesSource, /\.paper-fields[\s\S]*position:\s*static/);
 });
@@ -458,10 +449,6 @@ test("journal mobile timeline books and pdf expose editorial structures", () => 
 test("mobile journal reflection and pdf surfaces fill the portrait viewport", () => {
   assert.match(appSource, /reflection-wall-filter-menu/);
   assert.match(appSource, /reflection-wall-close-button/);
-  assert.match(appSource, /reflection-note-tools/);
-  assert.match(appSource, /selectedReflectionNoteId/);
-  assert.match(appSource, /data-action="reflection-note-select"/);
-  assert.match(appSource, /data-action="reflection-note-drag"/);
   assert.match(appSource, /data-action="reflection-note-delete"/);
   assert.match(appSource, /refreshReflectionWallOnly/);
   assert.doesNotMatch(appSource, /target instanceof HTMLInputElement && target\.id === "reflection-search"[\s\S]{0,120}this\.openReflectionWall\(\)/);
@@ -470,9 +457,6 @@ test("mobile journal reflection and pdf surfaces fill the portrait viewport", ()
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.reflection-wall-modal[\s\S]*min-height:\s*100dvh/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.reflection-chip-row[\s\S]*display:\s*none/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.reflection-wall-filter-menu\[open\]\s+\.reflection-chip-row[\s\S]*display:\s*flex/);
-  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.wall-note[\s\S]*max-width:\s*calc\(100vw - 48px\)/);
-  assert.doesNotMatch(stylesSource, /\.wall-note\s*\{[^}]*transform:\s*none\s*!important/);
-  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.wall-note\[data-dragging="true"\][\s\S]*outline/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.game-panel[\s\S]*color:\s*#3c2b1c/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.overlay[\s\S]*padding:\s*0/);
 }
@@ -487,9 +471,31 @@ test("Backup / Sync exposes readable copy and persistent cloud operation feedbac
   assert.match(appSource, /const cloudActionDisabled = this\.backupSyncOperation \? "disabled" : ""/);
   assert.match(appSource, /Imported Records audio and covers stayed on this device/);
 });
-test("Reflection Wall portrait wall grows its scroll canvas with memo count", () => {
-  assert.match(appSource, /reflectionWallCanvasHeight\(this\.reflectionWall\.notes\.length\)/);
-  assert.match(appSource, /--reflection-wall-canvas-height/);
-  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.reflection-wall-surface[\s\S]*min-height:\s*var\(--reflection-wall-canvas-height/);
-  assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.reflection-wall-surface[\s\S]*overflow-y:\s*auto/);
+test("Reflection Wall uses Stack as Wall and removes the freeform canvas", () => {
+  assert.match(appSource, /const views:.*\[\["wall", "Wall"\], \["list", "List"\]\]/);
+  assert.match(appSource, /this\.reflectionWallView === "wall"[\s\S]*this\.renderReflectionStack/);
+  assert.doesNotMatch(appSource, /renderReflectionWallSurface/);
+  assert.doesNotMatch(appSource, /reflection-wall-canvas/);
+});
+
+test("Reflection Wall shows prominent Pin and Favourite state", () => {
+  assert.match(appSource, /reflection-note-flags/);
+  assert.match(appSource, /reflection-flag-action/);
+  assert.match(appSource, /📌 Pinned/);
+  assert.match(appSource, /★ Favourite/);
+  assert.match(stylesSource, /reflection-note-flags/);
+  assert.match(stylesSource, /reflection-flag-action[\s\S]*active/);
+});
+
+test("Reflection Wall search keeps its input while refreshing notes", () => {
+  const refresh = appSource.match(/private refreshReflectionWallOnly\(\): void \{[\s\S]*?\n  \}/)?.[0] ?? "";
+  assert.match(refresh, /reflection-wall-toolbar p/);
+  assert.match(refresh, /currentBody\.replaceWith/);
+  assert.doesNotMatch(refresh, /this\.openReflectionWall\(\)/);
+});
+test("Reflection Wall keeps the filter menu open while changing filters", () => {
+  assert.match(appSource, /filterMenuOpen/);
+  assert.match(appSource, /reflection-wall-filter-menu.*open/);
+  assert.match(appSource, /Favourites/);
+  assert.match(appSource, /Pinned/);
 });
