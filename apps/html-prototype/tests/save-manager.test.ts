@@ -213,3 +213,14 @@ test("reflection wall persists separately from resettable journey state", () => 
   assert.equal(manager.loadJourney(), null);
   assert.equal(manager.loadReflectionWall()?.notes[0].text, "墙上的纸还在");
 });
+
+test("toolbox and living window state use versioned local namespaces", () => {
+  installStorage();
+  const manager = new SaveManager();
+  const toolbox = { version: 1 as const, selected: "spin-wheel", selectedPresetId: "today", converterUnits: { lengthFrom: "cm" }, currencyFrom: "MYR", currencyTo: "USD" };
+  const livingWindow = { version: 1 as const, location: { name: "Kuala Lumpur", latitude: 3.139, longitude: 101.6869 }, weather: null, currency: null };
+  manager.saveToolboxState(toolbox);
+  manager.saveLivingWindowState(livingWindow);
+  assert.deepEqual(manager.loadToolboxState(), toolbox);
+  assert.deepEqual(manager.loadLivingWindowState(), livingWindow);
+});

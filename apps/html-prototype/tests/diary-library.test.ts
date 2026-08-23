@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
-import { createDiaryLibrary, deleteDiaryEntriesByIds, deleteDiaryEntryById, forestNodesForMonth, getDiaryForestMemories, getDiaryTimeline, seedAuthoredChapterDiaryEntries, setDiaryEntryKind, upsertDiaryEntry } from "../src/systems/DiaryLibrary.js";
+import { createDiaryLibrary, deleteDiaryEntriesByIds, deleteDiaryEntryById, findChapterDiaryEntry, forestNodesForMonth, getDiaryForestMemories, getDiaryTimeline, seedAuthoredChapterDiaryEntries, setDiaryEntryKind, sharedChapterDiaryBookAssetPath, upsertDiaryEntry } from "../src/systems/DiaryLibrary.js";
 import { forestDoors } from "../src/fixtures/chapterPlan.js";
+import { chapterRegistry } from "../src/systems/ChapterRegistry.js";
 import { makeDiaryEntry } from "../src/systems/DiaryImport.js";
+
+const appSource = readFileSync(new URL("../../src/app.ts", import.meta.url), "utf8");
 
 test("diary library timeline includes diary-only entries while forest does not", () => {
   const library = upsertDiaryEntry(createDiaryLibrary(), makeDiaryEntry("2026-08-09", "Ordinary Day", "Lunch and class."));
@@ -50,11 +54,43 @@ test("March 30 seeds its 330 corridor diary as an editable chapter entry", () =>
   assert.match(march30.body, /three sprays of water/);
 });
 
+test("playable chapters resolve one canonical diary entry by stable id and live edits", () => {
+  const seeded = seedAuthoredChapterDiaryEntries(createDiaryLibrary());
+  const original = findChapterDiaryEntry(seeded.entries, "april06-not-gone-yet", "authored-diary-april06-not-gone-yet");
+  assert.ok(original);
+  assert.equal(original?.id, "authored-diary-april06-not-gone-yet");
+
+  const edited = upsertDiaryEntry(seeded, { ...original!, body: "A current fictional April 6 note." });
+  assert.equal(findChapterDiaryEntry(edited.entries, "april06-not-gone-yet", original?.id)?.body, "A current fictional April 6 note.");
+  assert.equal(edited.entries.filter((entry) => entry.chapterId === "april06-not-gone-yet").length, 1);
+});
+
+test("every playable chapter points to one seeded canonical diary entry and the shared book asset is singular", () => {
+  const seeded = seedAuthoredChapterDiaryEntries(createDiaryLibrary());
+  for (const chapter of Object.values(chapterRegistry)) {
+    assert.ok(chapter.diaryEntryId);
+    assert.equal(findChapterDiaryEntry(seeded.entries, chapter.id, chapter.diaryEntryId)?.id, chapter.diaryEntryId);
+  }
+  assert.equal(sharedChapterDiaryBookAssetPath, "assets/labis/book-with-ms-photos.png");
+  assert.equal(seeded.entries.filter((entry) => entry.id === "authored-diary-april06-not-gone-yet").length, 1);
+});
+
 test("authored March 30 has one Forest node while its Journal entry remains editable", () => {
   const library = seedAuthoredChapterDiaryEntries(createDiaryLibrary());
   const nodes = forestNodesForMonth(forestDoors, library, "2026-03");
   assert.equal(nodes.filter((node) => "chapterId" in node && node.chapterId === "march30-too-fated").length, 1);
   assert.equal(nodes.some((node) => "userEntryId" in node && node.userEntryId === "authored-diary-march30-too-fated"), false);
+});
+
+test("Chapter diary opens its centered memory frame while keeping Journal editing available", () => {
+  const chapterDiaryMethodStart = appSource.indexOf("private showChapterDiary(chapterId: string)");
+  const chapterDiaryMethodEnd = appSource.indexOf("private inspectPastry", chapterDiaryMethodStart);
+  const chapterDiaryMethod = appSource.slice(chapterDiaryMethodStart, chapterDiaryMethodEnd);
+
+  assert.match(chapterDiaryMethod, /this\.showChapterDiaryFrame\(entry\)/);
+  assert.doesNotMatch(chapterDiaryMethod, /this\.showDiaryReader\(entry\.id\)/);
+  assert.match(appSource, /data-action="edit-chapter-diary"/);
+  assert.match(appSource, /upsertDiaryPageDraft\(this\.makeDiaryLibrary\(\), savedEntry\)/);
 });
 
 test("timeline defaults to date descending and can sort ascending", () => {

@@ -211,6 +211,14 @@ export const sceneLayoutManifest: SceneLayoutManifest = {
   }
 };
 
+export function resolveSceneAssetPath(layout: Pick<SceneLayout, "sceneId" | "orientation" | "asset">): string {
+  const authoredPath = safeText(layout.asset);
+  const defaultPath = `assets/scenes/${layout.sceneId}-${layout.orientation}.png`;
+  return authoredPath === defaultPath
+    ? `assets/${layout.sceneId}/${layout.sceneId}-${layout.orientation}.png`
+    : authoredPath;
+}
+
 export function getSceneLayout(sceneId: string, orientation: SceneOrientation): SceneLayout {
   const scene = sceneLayoutManifest[sceneId];
   if (!scene) throw new Error(`Unknown scene layout: ${sceneId}`);
@@ -472,4 +480,10 @@ function stableHash(value: string): number {
     hash = Math.imul(hash, 16777619);
   }
   return hash >>> 0;
+}
+
+export function resolveSceneEchoAnchor(layout: SceneLayout, semanticId: string): EchoAnchor | null {
+  if (semanticId !== "watergun-crossing") return layout.echoAnchors[semanticId] ?? null;
+  const key = layout.orientation === "portrait" ? "r-watergun-crossing" : "watergun-crossing";
+  return layout.echoAnchors[key] ?? null;
 }

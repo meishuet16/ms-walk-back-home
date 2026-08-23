@@ -7,7 +7,7 @@ export type Ending = {
   lines: string[];
 };
 
-function toneFromProgress(progress: ChapterProgress): ReflectionTone {
+function toneFromProgress(progress: ChapterProgress): ReflectionTone | null {
   const picked = new Set(progress.choices);
   if (picked.has("labis-final-photo")) return "rewriting";
   if (picked.has("labis-final-happy")) return "holding";
@@ -16,12 +16,26 @@ function toneFromProgress(progress: ChapterProgress): ReflectionTone {
   if (picked.has("pretty") || picked.has("rewrite-me")) return "rewriting";
   if (picked.has("quiet") || picked.has("remember-me") || picked.has("sad") || picked.has("labis-teach-hold") || picked.has("labis-release-hold")) return "holding";
   if (picked.has("unimportant") || picked.has("silent-leave")) return "not-ready";
-  return "accepting";
+  return null;
+}
+
+function preferredQuote(chapter: ChapterDefinition, progress: ChapterProgress): ChapterDefinition["reflectionQuotes"][number] | null {
+  const candidates = chapter.reflectionQuotes
+    .map((quote, index) => ({ quote, index, preference: quote.preference }))
+    .filter((item) => item.preference);
+  if (candidates.length === 0) return null;
+  const scored = candidates.map((item) => ({
+    ...item,
+    score: Object.entries(item.preference ?? {}).reduce((total, [key, weight]) => total + (progress.tendencies[key as keyof Tendencies] ?? 0) * (weight ?? 0), 0)
+  }));
+  scored.sort((a, b) => b.score - a.score || a.index - b.index);
+  return scored[0].score > 0 ? scored[0].quote : null;
 }
 
 export function resolveChapterReflection(chapter: ChapterDefinition, progress: ChapterProgress): ChapterReflection {
-  const tone = toneFromProgress(progress);
-  const quote = chapter.reflectionQuotes.find((item) => item.tone === tone) ?? chapter.reflectionQuotes[0];
+  const explicitTone = toneFromProgress(progress);
+  const preferred = explicitTone === null ? preferredQuote(chapter, progress) : null;
+  const quote = preferred ?? chapter.reflectionQuotes.find((item) => item.tone === (explicitTone ?? "accepting")) ?? chapter.reflectionQuotes[0];
   return {
     tone: quote.tone,
     quoteId: quote.id,

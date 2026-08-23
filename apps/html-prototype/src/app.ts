@@ -1,17 +1,21 @@
 import { bakeryChapter } from "./fixtures/chapterPlan.js";
+import { april05Assets, april05Chapter, april05EchoActions, april05EchoAnchors, april05MainMemoryActions, april05ReflectionChoices, resolveApril05Actions, type April05EchoId } from "./fixtures/april05Chapter.js";
+import { april06Assets, april06Chapter, april06EchoActions, april06MainMemoryActions, april06ReflectionChoices, resolveApril06Actions } from "./fixtures/april06Chapter.js";
+import { may23Assets, may23Chapter, may23EchoAnchors, may23ReflectionChoices, resolveMay23Actions } from "./fixtures/may23Chapter.js";
 import { march30Assets, march30EchoActions, march30EchoReflectionChoices, march30MainMemoryActions, march30ReflectionChoices, resolveMarch30Closing, resolveMarch30CutsceneActions } from "./fixtures/march30Memory.js";
 import { canStartLabisMotorMemory, labisDiaryMemorySpot, labisInteractionForPoint, labisMotorMemoryActions } from "./fixtures/labisMotorMemory.js";
 import { labisAssetManifest, labisAssetPath, labisProductionAssetPaths } from "./fixtures/labisAssetRegistry.js";
 import { labisChoicePoints, labisEchoes, resolveLabisMemoryReflection, type LabisChoicePoint, type LabisEcho } from "./fixtures/labisMemoryEchoes.js";
-import type { ChapterProgress, Choice, DiaryEntry, DiaryLibraryState, DiaryMedia, DiaryMediaCrop, JournalBookCoverCrop, JourneyState, MemoryKind, MusicSort, PersonalMusicLibraryState, PersonalPlayerState, ReflectionNote, ReflectionWallFilter, ReflectionWallSort, ReflectionWallState, ReflectionWallView, RoomJourneyState, SceneId, SyncedLyricLine, Tendencies, UserMusicTrack } from "./types.js";
+import type { ChapterDefinition, ChapterProgress, Choice, DiaryEntry, DiaryLibraryState, DiaryMedia, DiaryMediaCrop, JournalBookCoverCrop, JourneyState, MemoryKind, MusicSort, PersonalMusicLibraryState, PersonalPlayerState, ReflectionNote, ReflectionWallFilter, ReflectionWallSort, ReflectionWallState, ReflectionWallView, RoomJourneyState, SceneId, SyncedLyricLine, Tendencies, ToolboxPersistedState, UserMusicTrack } from "./types.js";
 import { AudioManager } from "./systems/AudioManager.js";
 import { AccountManager } from "./systems/AccountManager.js";
 import { loadAppConfig } from "./systems/AppConfig.js";
 import { chapterRegistry, forestEntries, routeForestEntry, type AuthoredForestEntry } from "./systems/ChapterRegistry.js";
-import { beginChapterVisit, consumeAutomaticChapterTrigger, createChapterTriggerSession, finishChapterWalkthrough, initialChapterProgress, markChapterDialogueComplete, markChapterMemoryRead, recordChapterChoice, type ChapterTriggerSession } from "./systems/ChapterProgressManager.js";
+import { beginChapterVisit, consumeAutomaticChapterTrigger, createChapterTriggerSession, finishChapterWalkthrough, initialChapterProgress, markChapterMemoryRead, type ChapterTriggerSession } from "./systems/ChapterProgressManager.js";
+import { applyChapterExperienceChoice, currentRunProgress, startChapterMemoryExperience, type ChapterExperienceMode, type ChapterMemoryExperienceRun } from "./systems/ChapterMemoryExperience.js";
 import { inAnyRect, type Point } from "./systems/CollisionSystem.js";
-import { CutsceneSystem } from "./systems/CutsceneSystem.js";
-import { createNewDiaryPage, deleteDiaryEntriesByIds, deleteDiaryEntryById, forestNodesForMonth, formatDiaryWeekday, getDiaryTimeline, openDiaryPageForDate, seedAuthoredChapterDiaryEntries, upsertDiaryEntry, upsertDiaryPageDraft } from "./systems/DiaryLibrary.js";
+import { CutsceneSystem, type CutsceneAction } from "./systems/CutsceneSystem.js";
+import { createNewDiaryPage, deleteDiaryEntriesByIds, deleteDiaryEntryById, findChapterDiaryEntry, forestNodesForMonth, formatDiaryWeekday, getDiaryTimeline, openDiaryPageForDate, seedAuthoredChapterDiaryEntries, sharedChapterDiaryBookAssetPath, upsertDiaryEntry, upsertDiaryPageDraft } from "./systems/DiaryLibrary.js";
 import { makeDiaryEntry, parseDiaryImport, updateDiaryMemoryKind, type DiaryForestMemory, type DiaryTimelineSort } from "./systems/DiaryImport.js";
 import { DialogueSystem } from "./systems/DialogueSystem.js";
 import { resolveChapterReflection, type Ending } from "./systems/EndingResolver.js";
@@ -28,10 +32,9 @@ import { ParticleSystem } from "./systems/ParticleSystem.js";
 import { BundledLyricsLoader, trackIdentity } from "./systems/BundledLyrics.js";
 import { LrclibLyricsProvider } from "./systems/LrclibLyrics.js";
 import { activeLyricIndexAt, adjacentTrackIdForControl, applyBatchMusicMetadata, clampLyricsOverlay, createDefaultPersonalPlayerState, filterAndSortMusic, isBuiltInTrackId, lyricWindowForTime, nextTrackIdForPlayback, normalizePlaybackMode, parseLrc, personalMusicShouldPlayInScene, removeSelectedMusicTracks, removeUserMusicTrack, selectAllMusicTrackIds, type BatchMusicMetadata } from "./systems/PersonalMusic.js";
-import { changeReflectionPaper, clampReflectionNotePosition, createChapterReflectionNote, createReflectionNote, createReflectionWallState, deleteReflectionNote, migrateLegacyReflectionWall, moveReflectionNote, reflectionPaperStyles, toggleReflectionNoteFlag, updateReflectionNote, visibleReflectionNotes } from "./systems/ReflectionWall.js";
-import { drawSceneActor } from "./systems/SceneActorRenderer.js";
-import { getSceneLayout, loadSceneLayoutOverrides, resolveForestDynamicPlacements, sceneLayoutManifest, selectSceneOrientation, type SceneInteraction, type SceneLayout, type SceneLayoutId, type SceneOrientation } from "./systems/SceneLayouts.js";
-import { applyChoice } from "./systems/TendencySystem.js";
+import { changeReflectionPaper, createChapterReflectionNote, createReflectionNote, createReflectionWallState, deleteReflectionNote, migrateLegacyReflectionWall, reflectionPaperStyles, toggleReflectionNoteFlag, updateReflectionNote, visibleReflectionNotes } from "./systems/ReflectionWall.js";
+import { drawSceneActor, drawSceneSpriteAsset, type SceneSpriteAsset } from "./systems/SceneActorRenderer.js";
+import { getSceneLayout, loadSceneLayoutOverrides, resolveForestDynamicPlacements, resolveSceneAssetPath, resolveSceneEchoAnchor, sceneLayoutManifest, selectSceneOrientation, type SceneInteraction, type SceneLayout, type SceneLayoutId, type SceneOrientation } from "./systems/SceneLayouts.js";
 import {
   addJournalMedia,
   addPhotoAttachment,
@@ -64,6 +67,17 @@ import {
   type VinylRecord
 } from "./systems/MujiRoom.js";
 import { SaveManager } from "./systems/SaveManager.js";
+import { createToolboxState, confirmTool, backTool, moveToolSelection, selectTool, type ToolboxToolId, type ToolboxView as ToolboxScreen } from "./systems/ToolboxModel.js";
+import { addSpinChoice, createSpinPreset, deleteSpinPreset, removeSpinChoice, renameSpinPreset, spinChoice, type SpinPreset } from "./systems/SpinWheel.js";
+import { applyCalculatorInput } from "./systems/Calculator.js";
+import { convertUnit, unitsForCategory } from "./systems/UnitConverter.js";
+import { convertCurrency, fetchCurrencyRates, type CurrencyCode, type CurrencyRatePayload } from "./systems/CurrencyRates.js";
+import { createTimerState, pauseTimer, resetTimer, startTimer, timerRemaining, stopwatchElapsed, type TimerState } from "./systems/TimerTool.js";
+import { addDateDays, dateDifference } from "./systems/DateTool.js";
+import { renderToolbox, type ToolboxRenderState } from "./systems/ToolboxView.js";
+import { defaultWindowLocation, fetchOpenMeteoLocations, fetchOpenMeteoWeather, weatherCacheStatus, weatherVisualFor, type WeatherSnapshot, type WindowLocation } from "./systems/LivingWindow.js";
+import { calculateMoonPhase, type MoonPhase } from "./systems/MoonPhase.js";
+import { drawSceneAsset, drawSceneMask } from "./systems/LivingWindowRenderer.js";
 import type { MusicScene } from "./systems/SceneMusic.js";
 import { SupabaseSync } from "./systems/SupabaseSync.js";
 import { emptyTendencies } from "./systems/TendencySystem.js";
@@ -83,6 +97,7 @@ type LabisDialogueLine = { speaker: string; text: string };
 type LabisDialogueAfter = "motor-choice" | "photo-choice" | "filter-choice" | "finish-echo" | "show-reflection" | "finish-chicken-cake" | null;
 type LabisOverlayMode = "dialogue" | "choice" | "vignette" | "reflection" | null;
 type March30OverlayMode = "dialogue" | "reflection" | "response" | "closing" | null;
+type AuthoredOverlayMode = "dialogue" | "choice" | "response" | null;
 type March30PortraitPropId = "gift" | "waterGun" | "ordinaryKeychain" | "phoneCharm";
 
 const propPortraitSheetDimensions: Record<March30PortraitPropId, { w: number; h: number }> = {
@@ -104,7 +119,12 @@ const assets = {
   room: "assets/muji-room.png",
   roomFallback: "assets/room-panel.jpg",
   map: "assets/map-panel.jpg",
-  timeline: "assets/timeline-panel.jpg"
+  timeline: "assets/timeline-panel.jpg",
+  weatherClouds: "assets/muji-room/weather/muji-room-weather-runtime-assets/clouds.png",
+  weatherMoon: "assets/muji-room/weather/muji-room-weather-runtime-assets/moon-phases.png",
+  weatherRain: "assets/muji-room/weather/muji-room-weather-runtime-assets/rain-vfx.png",
+  weatherMaskLandscape: "assets/muji-room/weather/muji-room-weather-runtime-assets/window-mask-landscape.png",
+  weatherMaskPortrait: "assets/muji-room/weather/muji-room-weather-runtime-assets/window-mask-portrait.png"
 };
 
 function img(src: string): HTMLImageElement {
@@ -113,6 +133,41 @@ function img(src: string): HTMLImageElement {
   return image;
 }
 
+type AuthoredRuntimeDefinition = {
+  chapter: ChapterDefinition;
+  assets: Record<string, SceneSpriteAsset>;
+  resolveActions: (layout: SceneLayout, mode: "main" | "echo", echoId?: string) => CutsceneAction[];
+  reflectionChoices: Array<{ id: string; prompt: string; choices: Choice[] }>;
+  echoAnchors: Record<string, string>;
+  triggerId?: string;
+  mainInteractionId?: string;
+};
+
+const authoredRuntimeByScene: Record<string, AuthoredRuntimeDefinition> = {
+  "405": {
+    chapter: april05Chapter,
+    assets: april05Assets,
+    resolveActions: (layout, mode, echoId) => resolveApril05Actions(layout, mode === "main" ? april05MainMemoryActions : april05EchoActions[echoId as April05EchoId] ?? []),
+    reflectionChoices: april05ReflectionChoices,
+    echoAnchors: april05EchoAnchors
+  },
+  "406": {
+    chapter: april06Chapter,
+    assets: april06Assets,
+    resolveActions: (layout, mode) => resolveApril06Actions(layout, mode === "main" ? april06MainMemoryActions : april06EchoActions),
+    reflectionChoices: april06ReflectionChoices,
+    echoAnchors: { "watergun-crossing": "watergun-crossing" }
+  },
+  "523": {
+    chapter: may23Chapter,
+    assets: may23Assets,
+    resolveActions: (layout, mode, echoId) => resolveMay23Actions(layout, mode, echoId),
+    reflectionChoices: may23ReflectionChoices,
+    echoAnchors: may23EchoAnchors,
+    triggerId: "hostel-lobby-arrival",
+    mainInteractionId: "hostel-lobby-memory"
+  }
+};
 export class WalkBackHomeApp {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -134,7 +189,12 @@ export class WalkBackHomeApp {
     labis: img(assets.labis),
     muji: img(assets.muji),
     friend: img(assets.friend),
-    room: img(assets.roomFallback)
+    room: img(assets.roomFallback),
+    weatherClouds: img(assets.weatherClouds),
+    weatherMoon: img(assets.weatherMoon),
+    weatherRain: img(assets.weatherRain),
+    weatherMaskLandscape: img(assets.weatherMaskLandscape),
+    weatherMaskPortrait: img(assets.weatherMaskPortrait)
   };
   private scene: SceneId = "title";
   private player: Point = { x: 880, y: 690 };
@@ -161,7 +221,6 @@ export class WalkBackHomeApp {
   private pendingJournalMediaDeleteId = "";
   private journalCropMediaId = "";
   private journalCropDrag: { mode: string; startX: number; startY: number; startCrop: DiaryMediaCrop } | null = null;
-  private selectedReflectionNoteId = "";
   private selectedTimelineEntryIds = new Set<string>();
   private timelineDeleteConfirmOpen = false;
   private timelineSort: DiaryTimelineSort = "date-desc";
@@ -172,6 +231,7 @@ export class WalkBackHomeApp {
   private timelineFilterAppliedMessage = "";
   private journalMode: "timeline" | "books" | "reader" = "timeline";
   private journalReturnSnapshot: JournalReturnSnapshot | null = null;
+  private chapterDiaryReturnId = "";
   private selectedTimelineMonthKey = "";
   private selectedBooksYear = "";
   private selectedBooksMonthKey = "";
@@ -217,14 +277,47 @@ export class WalkBackHomeApp {
   private lrclibLyricsRequestToken = 0;
   private forceTouchControls = false;
   private settings = { rain: true, muted: false, volume: 0.45, compact: false, reducedMotion: false, musicEnabled: true, musicScene: "bakery" as MusicScene };
+  private toolboxOpen = false;
+  private toolboxView: ToolboxScreen = createToolboxState();
+  private toolboxPresets: SpinPreset[] = [createSpinPreset("today", "今天吃什么", ["A", "B", "C"]), createSpinPreset("names", "Random names", ["Mochi", "Muji", "Mimi"])]
+  private selectedToolboxPresetId = "today";
+  private spinResult = "";
+  private calculatorDisplay = "0";
+  private converterCategory = "length";
+  private converterAmount = "1";
+  private converterFrom = "cm";
+  private converterTo = "m";
+  private converterResult = "";
+  private currencyAmount = "1";
+  private currencyFrom: CurrencyCode = "MYR";
+  private currencyTo: CurrencyCode = "USD";
+  private currencyPayload: CurrencyRatePayload | null = null;
+  private currencyResult = "";
+  private currencyStatus = "";
+  private timerMode: "timer" | "stopwatch" = "timer";
+  private timerState: TimerState = createTimerState("timer", 10 * 60 * 1000);
+  private dateStart = new Date().toISOString().slice(0, 10);
+  private dateEnd = new Date().toISOString().slice(0, 10);
+  private dateDays = "1";
+  private dateResult = "";
+  private livingWindowLocation: WindowLocation = defaultWindowLocation;
+  private livingWindowWeather: WeatherSnapshot | null = null;
+  private livingWindowMoon: MoonPhase = calculateMoonPhase();
+  private livingWindowPanelOpen = false;
+  private livingWindowLocationQuery = "";
+  private livingWindowLocationResults: WindowLocation[] = [];
+  private livingWindowStatus = "";
+  private livingWindowLoading = false;
+  private weatherCanvas = document.createElement("canvas");
+  private weatherCtx = this.weatherCanvas.getContext("2d")!;
   private room: RoomJourneyState = createDefaultRoomState();
   private reflectionWall: ReflectionWallState = createReflectionWallState();
   private reflectionWallView: ReflectionWallView = "wall";
   private reflectionWallFilter: ReflectionWallFilter = "all";
   private reflectionWallSort: ReflectionWallSort = "manual";
   private reflectionWallSearch = "";
-  private reflectionWallDrag: { noteId: string; offsetX: number; offsetY: number } | null = null;
   private chapterProgress = new Map<string, ChapterProgress>();
+  private chapterMemoryRun: ChapterMemoryExperienceRun | null = null;
   private dialogue = new DialogueSystem(bakeryChapter.dialogue);
   private labisCutscene: CutsceneSystem | null = null;
   private labisDialogueOpen = false;
@@ -248,6 +341,13 @@ export class WalkBackHomeApp {
   private march30OverlayMode: March30OverlayMode = null;
   private march30ReflectionIndex = 0;
   private march30ReflectionResponse = "";
+  private authoredCutscene: CutsceneSystem | null = null;
+  private authoredMode: "main" | "echo" | null = null;
+  private authoredReplayMode = false;
+  private authoredOverlayMode: AuthoredOverlayMode = null;
+  private authoredCheckpointId = "";
+  private authoredReflectionResponse = "";
+  private authoredImages = new Map<string, HTMLImageElement>();
   private sceneImages = new Map<string, HTMLImageElement>();
   private sceneOrientation: SceneOrientation = "landscape";
   private sceneLayoutLoadPromise: Promise<void> = Promise.resolve();
@@ -295,8 +395,6 @@ export class WalkBackHomeApp {
     root.addEventListener("pointerup", () => {
       this.journalCropDrag = null;
       this.scrapbookDrag = null;
-      this.overlay.querySelector<HTMLElement>(".wall-note[data-dragging=\"true\"]")?.removeAttribute("data-dragging");
-      this.reflectionWallDrag = null;
       if (this.lyricsDrag || this.lyricsResize) this.autosave();
       this.lyricsDrag = null;
       this.lyricsResize = null;
@@ -308,6 +406,7 @@ export class WalkBackHomeApp {
       void this.audio.ensurePlaying();
     }, { passive: true });
     root.addEventListener("keydown", () => void this.audio.ensurePlaying());
+    window.addEventListener("keydown", (event) => this.handleToolboxKeydown(event));
     this.applyAccountSession(this.account.current());
     this.bootstrapDiaryLibrary();
     void this.hydrateCloudAccount();
@@ -318,6 +417,9 @@ export class WalkBackHomeApp {
     this.images.room.src = assets.room;
     this.preloadLabisAssets();
     this.preloadMarch30Assets();
+    this.preloadApril06Assets();
+    this.preloadApril05Assets();
+    this.preloadMay23Assets();
     this.preloadSceneLayoutAssets();
     this.sceneLayoutLoadPromise = this.loadSavedSceneLayouts();
     this.audio.setVolume(this.settings.volume);
@@ -377,6 +479,11 @@ export class WalkBackHomeApp {
     if (action === "open-room") this.enterMujiRoom();
     if (action === "new-diary-entry") this.openNewDiaryPage();
     if (action === "open-diary-editor") this.showTimeline();
+    if (action === "edit-chapter-diary") {
+      this.chapterDiaryReturnId = target.dataset.chapter ?? "";
+      this.showDiaryEditor(target.dataset.id ?? "");
+      return;
+    }
     if (action === "open-diary-page") {
       this.captureJournalReturnSnapshot();
       this.showDiaryReader(target.dataset.id ?? "");
@@ -513,6 +620,14 @@ export class WalkBackHomeApp {
     if (action === "scrapbook-layer") this.layerSelectedScrapbookElement(target.dataset.direction as "front" | "back");
     if (action === "scrapbook-delete") this.deleteSelectedScrapbookElement();
     if (action === "set-memory-kind") this.setDiaryMemoryKind(target.dataset.id ?? "", target.dataset.kind as MemoryKind);
+    if (["living-window-close", "living-window-refresh", "window-location-search", "window-location-select", "window-use-location"].includes(action)) {
+      void this.handleLivingWindowAction(action, target);
+      return;
+    }
+    if (["toolbox-close", "toolbox-select", "toolbox-confirm", "toolbox-back", "toolbox-spin-add", "toolbox-spin-remove", "toolbox-spin", "toolbox-preset-new", "toolbox-preset-rename", "toolbox-preset-delete", "calculator-key", "currency-swap", "currency-refresh", "timer-mode", "timer-start", "timer-pause", "timer-reset", "date-difference", "date-add", "date-subtract"].includes(action)) {
+      void this.handleToolboxAction(action, target);
+      return;
+    }
     if (action === "room-window") this.roomWindow();
     if (action === "room-lamp") this.roomLamp();
     if (action === "room-letter") this.openReflectionWall();
@@ -520,7 +635,6 @@ export class WalkBackHomeApp {
     if (action === "reflection-wall") this.openReflectionWall();
     if (action === "reflection-note-new") this.showReflectionComposer();
     if (action === "reflection-note-save") this.saveReflectionComposer(target.dataset.note ?? "");
-    if (action === "reflection-note-select") this.selectReflectionWallNote(target.dataset.note ?? "");
     if (action === "reflection-note-open") this.showReflectionDetail(target.dataset.note ?? "");
     if (action === "reflection-note-edit") this.showReflectionComposer(target.dataset.note ?? "");
     if (action === "reflection-note-delete") this.deleteReflectionWallNote(target.dataset.note ?? "");
@@ -535,7 +649,7 @@ export class WalkBackHomeApp {
     if (action === "room-diary") this.roomDiary();
     if (action === "room-records") this.showRecords();
     if (action === "close-records") this.closeRecords();
-    if (action === "room-residue") this.inspectRoomResidue();
+    if (action === "room-toolbox") this.openToolbox();
     if (action === "select-vinyl") void this.selectVinyl(target.dataset.record ?? "");
     if (action === "vinyl-pause") void this.pauseVinyl();
     if (action === "music-prev") void this.playAdjacentPersonalTrack(-1);
@@ -634,6 +748,9 @@ export class WalkBackHomeApp {
     if (action === "labis-vignette-close") this.closeLabisKeyframeVignette();
     if (action === "labis-reflection-close") this.closeLabisReflection();
     if (action === "march30-dialogue-next") this.advanceMarch30Dialogue();
+    if (action === "authored-dialogue-next") this.advanceAuthoredDialogue();
+    if (action === "authored-reflection-choice") this.chooseAuthoredChoice(target.dataset.choice ?? "");
+    if (action === "authored-reflection-next") this.advanceAuthoredReflection();
     if (action === "march30-reflection-choice") this.chooseMarch30Reflection(target.dataset.choice ?? "");
     if (action === "march30-reflection-next") this.advanceMarch30Reflection();
     if (action === "march30-closing-close") {
@@ -643,6 +760,272 @@ export class WalkBackHomeApp {
     }
     if (action === "finish-memory") this.finishBakery();
     if (action === "choice") this.choose(target.dataset.choice ?? "");
+  }
+
+  private handleToolboxKeydown(event: KeyboardEvent): void {
+    if (this.livingWindowPanelOpen && event.key.toLowerCase() === "escape") {
+      this.closeLivingWindow();
+      event.preventDefault();
+      return;
+    }
+    if (!this.toolboxOpen) return;
+    const key = event.key.toLowerCase();
+    if (key === "escape") {
+      const next = backTool(this.toolboxView);
+      if (next) {
+        this.toolboxView = next;
+        this.renderToolboxOverlay();
+      } else this.closeToolbox();
+      event.preventDefault();
+      return;
+    }
+    if (this.toolboxView.screen === "root" && ["arrowup", "arrowdown", "arrowleft", "arrowright"].includes(key)) {
+      const columns = this.currentSceneLayout("muji-room").orientation === "portrait" ? 2 : 3;
+      this.toolboxView = moveToolSelection(this.toolboxView, key.replace("arrow", "") as "up" | "down" | "left" | "right", columns);
+      this.renderToolboxOverlay();
+      event.preventDefault();
+      return;
+    }
+    if (key === "enter" || key === "e") {
+      if (this.toolboxView.screen === "root") this.toolboxView = confirmTool(this.toolboxView);
+      else if (this.toolboxView.selected === "calculator") this.calculatorDisplay = applyCalculatorInput(this.calculatorDisplay, "equals");
+      this.renderToolboxOverlay();
+      event.preventDefault();
+    }
+  }
+
+  private openToolbox(): void {
+    this.toolboxOpen = true;
+    this.toolboxView = createToolboxState({ selected: this.toolboxView.selected });
+    this.room.visits += 1;
+    this.renderToolboxOverlay();
+    this.focusStage();
+  }
+
+  private closeToolbox(): void {
+    if (!this.toolboxOpen) return;
+    this.toolboxOpen = false;
+    this.toolboxView = createToolboxState({ selected: this.toolboxView.selected });
+    this.persistToolboxState();
+    this.overlay.classList.remove("toolbox-overlay");
+    this.overlay.innerHTML = "";
+    this.syncGameplayChromeVisibility();
+    this.focusStage();
+  }
+
+  private renderToolboxOverlay(): void {
+    const preset = this.toolboxPresets.find((item) => item.id === this.selectedToolboxPresetId) ?? this.toolboxPresets[0];
+    if (!preset) return;
+    const units = unitsForCategory(this.converterCategory);
+    if (!units.includes(this.converterFrom)) this.converterFrom = units[0] ?? "";
+    if (!units.includes(this.converterTo)) this.converterTo = units[1] ?? units[0] ?? "";
+    const converted = convertUnit(this.converterCategory, Number(this.converterAmount), this.converterFrom, this.converterTo);
+    this.converterResult = converted === null ? "" : String(Number(converted.toFixed(6)));
+    const currencyValue = this.currencyPayload ? convertCurrency(Number(this.currencyAmount), this.currencyFrom, this.currencyTo, this.currencyPayload) : null;
+    this.currencyResult = currencyValue === null ? this.currencyResult : `${Number(currencyValue.toFixed(6))} ${this.currencyTo}`;
+    const now = performance.now();
+    const state: ToolboxRenderState = {
+      view: this.toolboxView,
+      presets: this.toolboxPresets,
+      selectedPresetId: this.selectedToolboxPresetId,
+      spinChoices: preset.choices,
+      spinResult: this.spinResult,
+      calculatorDisplay: this.calculatorDisplay,
+      converterCategory: this.converterCategory,
+      converterAmount: this.converterAmount,
+      converterFrom: this.converterFrom,
+      converterTo: this.converterTo,
+      converterResult: this.converterResult,
+      currencyAmount: this.currencyAmount,
+      currencyFrom: this.currencyFrom,
+      currencyTo: this.currencyTo,
+      currencyResult: this.currencyResult,
+      currencyStatus: this.currencyStatus,
+      timerMode: this.timerMode,
+      timerDurationSeconds: String(Math.round(this.timerState.durationMs / 1000)),
+      timerRemaining: this.formatToolboxDuration(timerRemaining(this.timerState, now)),
+      stopwatchElapsed: this.formatToolboxDuration(stopwatchElapsed(this.timerState, now)),
+      dateStart: this.dateStart,
+      dateEnd: this.dateEnd,
+      dateDays: this.dateDays,
+      dateResult: this.dateResult
+    };
+    this.overlay.classList.add("toolbox-overlay");
+    this.overlay.classList.remove("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = renderToolbox(state);
+    this.syncGameplayChromeVisibility();
+  }
+
+  private async handleToolboxAction(action: string, target: HTMLElement): Promise<void> {
+    if (action === "toolbox-close") return this.closeToolbox();
+    if (action === "toolbox-select") {
+      const tool = target.dataset.tool as ToolboxToolId;
+      if (tool) this.toolboxView = selectTool(this.toolboxView, tool);
+      this.persistToolboxState();
+      return this.renderToolboxOverlay();
+    }
+    if (action === "toolbox-confirm") {
+      this.toolboxView = confirmTool(this.toolboxView);
+      this.persistToolboxState();
+      return this.renderToolboxOverlay();
+    }
+    if (action === "toolbox-back") {
+      const next = backTool(this.toolboxView);
+      if (next) this.toolboxView = next;
+      else return this.closeToolbox();
+      return this.renderToolboxOverlay();
+    }
+    const preset = this.toolboxPresets.find((item) => item.id === this.selectedToolboxPresetId);
+    if (action === "toolbox-spin-add" && preset) {
+      const input = this.overlay.querySelector<HTMLInputElement>("#toolbox-spin-choice");
+      preset.choices = addSpinChoice(preset.choices, input?.value ?? "");
+      this.persistToolboxState();
+      return this.renderToolboxOverlay();
+    }
+    if (action === "toolbox-spin-remove" && preset) {
+      preset.choices = removeSpinChoice(preset.choices, Number(target.dataset.index));
+      this.persistToolboxState();
+      return this.renderToolboxOverlay();
+    }
+    if (action === "toolbox-spin" && preset) {
+      this.spinResult = spinChoice(preset.choices) ?? "No choices yet";
+      return this.renderToolboxOverlay();
+    }
+    if (action === "toolbox-preset-new") {
+      const id = `preset-${Date.now()}`;
+      this.toolboxPresets.push(createSpinPreset(id, "New preset", []));
+      this.selectedToolboxPresetId = id;
+      this.persistToolboxState();
+      return this.renderToolboxOverlay();
+    }
+    if (action === "toolbox-preset-rename" && preset) {
+      const next = window.prompt("Preset name", preset.name)?.trim();
+      if (next) preset.name = renameSpinPreset(preset, next).name;
+      this.persistToolboxState();
+      return this.renderToolboxOverlay();
+    }
+    if (action === "toolbox-preset-delete" && preset && this.toolboxPresets.length > 1) {
+      this.toolboxPresets = deleteSpinPreset(this.toolboxPresets, preset.id);
+      this.selectedToolboxPresetId = this.toolboxPresets[0].id;
+      this.persistToolboxState();
+      return this.renderToolboxOverlay();
+    }
+    if (action === "calculator-key") {
+      this.calculatorDisplay = applyCalculatorInput(this.calculatorDisplay, target.dataset.key ?? "");
+      return this.renderToolboxOverlay();
+    }
+    if (action === "currency-swap") {
+      [this.currencyFrom, this.currencyTo] = [this.currencyTo, this.currencyFrom];
+      this.persistToolboxState();
+      return this.renderToolboxOverlay();
+    }
+    if (action === "currency-refresh") {
+      await this.refreshCurrencyRates();
+      return;
+    }
+    if (action === "timer-mode") {
+      this.timerMode = target.dataset.mode === "stopwatch" ? "stopwatch" : "timer";
+      this.timerState = createTimerState(this.timerMode, this.timerState.durationMs);
+      return this.renderToolboxOverlay();
+    }
+    if (action === "timer-start") {
+      if (this.timerMode === "timer") this.timerState.durationMs = Math.max(0, Number(this.timerDurationFromPanel()) * 1000);
+      this.timerState = startTimer(this.timerState, performance.now());
+      return this.renderToolboxOverlay();
+    }
+    if (action === "timer-pause") {
+      this.timerState = pauseTimer(this.timerState, performance.now());
+      return this.renderToolboxOverlay();
+    }
+    if (action === "timer-reset") {
+      this.timerState = resetTimer(this.timerState);
+      return this.renderToolboxOverlay();
+    }
+    if (action === "date-difference") {
+      this.dateResult = String(dateDifference(this.dateStart, this.dateEnd) ?? "Choose valid dates");
+      return this.renderToolboxOverlay();
+    }
+    if (action === "date-add" || action === "date-subtract") {
+      const days = Number(this.dateDays) || 0;
+      this.dateResult = addDateDays(this.dateStart, action === "date-subtract" ? -days : days) ?? "Choose a valid date";
+      return this.renderToolboxOverlay();
+    }
+  }
+
+  private timerDurationFromPanel(): number {
+    const minutes = Number(this.overlay.querySelector<HTMLInputElement>('[data-toolbox-field="timer-minutes"]')?.value ?? 0) || 0;
+    const seconds = Number(this.overlay.querySelector<HTMLInputElement>('[data-toolbox-field="timer-seconds"]')?.value ?? 0) || 0;
+    return Math.max(0, minutes * 60 + seconds);
+  }
+
+  private handleToolboxFieldInput(target: HTMLElement): void {
+    const field = target.dataset.toolboxField;
+    const value = target instanceof HTMLInputElement || target instanceof HTMLSelectElement ? target.value : "";
+    if (field === "spin-choice") return;
+    if (field === "converter-amount") this.converterAmount = value;
+    if (field === "currency-amount") this.currencyAmount = value;
+    if (field === "timer-minutes" || field === "timer-seconds") this.timerState.durationMs = Math.max(0, this.timerDurationFromPanel() * 1000);
+    if (field === "date-start") this.dateStart = value;
+    if (field === "date-end") this.dateEnd = value;
+    if (field === "date-days") this.dateDays = value;
+  }
+
+  private handleToolboxFieldChange(target: HTMLElement): void {
+    const field = target.dataset.toolboxField;
+    const value = target instanceof HTMLInputElement || target instanceof HTMLSelectElement ? target.value : "";
+    if (field === "spin-preset") this.selectedToolboxPresetId = value;
+    if (field === "converter-category") {
+      this.converterCategory = value;
+      const units = unitsForCategory(value);
+      this.converterFrom = units[0] ?? "";
+      this.converterTo = units[1] ?? units[0] ?? "";
+    }
+    if (field === "converter-from") this.converterFrom = value;
+    if (field === "converter-to") this.converterTo = value;
+    if (field === "currency-from") this.currencyFrom = value as CurrencyCode;
+    if (field === "currency-to") this.currencyTo = value as CurrencyCode;
+    this.persistToolboxState();
+    this.renderToolboxOverlay();
+  }
+
+  private async refreshCurrencyRates(): Promise<void> {
+    this.currencyStatus = "Loading latest available rate…";
+    this.renderToolboxOverlay();
+    try {
+      this.currencyPayload = await fetchCurrencyRates(this.currencyFrom);
+      this.currencyStatus = `Latest working day: ${this.currencyPayload.date}`;
+      this.persistToolboxState();
+    } catch {
+      this.currencyStatus = "Rate unavailable. No fabricated value shown.";
+    }
+    this.renderToolboxOverlay();
+  }
+
+  private persistToolboxState(): void {
+    const state: ToolboxPersistedState = {
+      version: 1,
+      selected: this.toolboxView.selected,
+      selectedPresetId: this.selectedToolboxPresetId,
+      converterUnits: { category: this.converterCategory, from: this.converterFrom, to: this.converterTo },
+      currencyFrom: this.currencyFrom,
+      currencyTo: this.currencyTo,
+      presets: this.toolboxPresets
+    };
+    this.save.saveToolboxState(state);
+  }
+
+  private formatToolboxDuration(milliseconds: number): string {
+    const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+  private refreshToolboxTimerDisplay(now: number): void {
+    const display = this.overlay.querySelector<HTMLOutputElement>(".timer-display");
+    if (!display) return;
+    display.textContent = this.timerMode === "timer"
+      ? this.formatToolboxDuration(timerRemaining(this.timerState, now))
+      : this.formatToolboxDuration(stopwatchElapsed(this.timerState, now));
   }
 
   private resumeAfterRecordsClose(action: string): boolean {
@@ -691,7 +1074,7 @@ export class WalkBackHomeApp {
       void this.showRecords();
       return;
     }
-    if (interaction.id === "residue") return this.inspectRoomResidue();
+    if (interaction.id === "toolbox") return this.openToolbox();
     if (interaction.id === "reflection") return this.openReflectionWall();
   }
 
@@ -710,6 +1093,30 @@ export class WalkBackHomeApp {
       const image = img(asset.path);
       image.addEventListener("error", () => this.march30Images.delete(asset.path), { once: true });
       this.march30Images.set(asset.path, image);
+    }
+  }
+
+  private preloadApril06Assets(): void {
+    for (const asset of Object.values(april06Assets)) {
+      const image = img(asset.path);
+      image.addEventListener("error", () => this.authoredImages.delete(asset.path), { once: true });
+      this.authoredImages.set(asset.path, image);
+    }
+  }
+
+  private preloadApril05Assets(): void {
+    for (const asset of Object.values(april05Assets)) {
+      const image = img(asset.path);
+      image.addEventListener("error", () => this.authoredImages.delete(asset.path), { once: true });
+      this.authoredImages.set(asset.path, image);
+    }
+  }
+
+  private preloadMay23Assets(): void {
+    for (const asset of Object.values(may23Assets)) {
+      const image = img(asset.path);
+      image.addEventListener("error", () => this.authoredImages.delete(asset.path), { once: true });
+      this.authoredImages.set(asset.path, image);
     }
   }
 
@@ -733,6 +1140,19 @@ export class WalkBackHomeApp {
 
   private hasSceneLayout(sceneId: string): boolean {
     return Boolean(sceneLayoutManifest[sceneId]);
+  }
+
+  private authoredRuntimeForScene(scene: SceneId = this.scene): AuthoredRuntimeDefinition | null {
+    return authoredRuntimeByScene[String(scene)] ?? null;
+  }
+
+  private authoredAssetsForScene(): Record<string, SceneSpriteAsset> {
+    return this.authoredRuntimeForScene()?.assets ?? april06Assets;
+  }
+
+  private authoredEchoPoint(layout: SceneLayout, id: string): { x: number; y: number; radius: number } | null {
+    const semanticId = this.authoredRuntimeForScene()?.echoAnchors[id];
+    return semanticId ? resolveSceneEchoAnchor(layout, semanticId) : null;
   }
 
   private isAuthoredRuntimeScene(): boolean {
@@ -760,10 +1180,11 @@ export class WalkBackHomeApp {
   }
 
   private sceneImage(layout: SceneLayout): HTMLImageElement {
-    const existing = this.sceneImages.get(layout.asset);
+    const assetPath = resolveSceneAssetPath(layout);
+    const existing = this.sceneImages.get(assetPath);
     if (existing) return existing;
-    const image = img(layout.asset);
-    this.sceneImages.set(layout.asset, image);
+    const image = img(assetPath);
+    this.sceneImages.set(assetPath, image);
     return image;
   }
 
@@ -818,14 +1239,16 @@ export class WalkBackHomeApp {
     this.last = time;
     this.syncSceneOrientation();
     const input = this.input.read();
-    if (input.interact) this.interact();
-    if (this.scene === "forest") this.updateForest(input.x, input.y, dt);
-    if (this.scene === "bakery") this.updateBakery(input.x, input.y, dt);
-    if (this.scene === "labis") this.updateLabis(input.x, input.y, dt);
-    if (this.scene === "muji-room") this.updateMujiRoom(input.x, input.y, dt);
-    if (this.scene === "330-corridor") this.updateMarch30Scene(input.x, input.y, dt);
-    else if (this.isAuthoredRuntimeScene()) this.updateAuthoredScene(input.x, input.y, dt);
+    if (input.interact && !this.toolboxOpen && !this.livingWindowPanelOpen) this.interact();
+    const frameInput = (this.toolboxOpen || this.livingWindowPanelOpen) && this.scene === "muji-room" ? { x: 0, y: 0 } : input;
+    if (this.scene === "forest") this.updateForest(frameInput.x, frameInput.y, dt);
+    if (this.scene === "bakery") this.updateBakery(frameInput.x, frameInput.y, dt);
+    if (this.scene === "labis") this.updateLabis(frameInput.x, frameInput.y, dt);
+    if (this.scene === "muji-room") this.updateMujiRoom(frameInput.x, frameInput.y, dt);
+    if (this.scene === "330-corridor") this.updateMarch30Scene(frameInput.x, frameInput.y, dt);
+    else if (this.isAuthoredRuntimeScene()) this.updateAuthoredScene(frameInput.x, frameInput.y, dt);
     this.draw(time);
+    if (this.toolboxOpen && this.toolboxView.screen === "tool" && this.toolboxView.selected === "timer") this.refreshToolboxTimerDisplay(time);
     this.syncPersonalPlaybackState();
     if (this.recordsPanelOpen) this.refreshRecordsPlaybackUI();
     this.updatePersonalMusicOverlay();
@@ -843,6 +1266,8 @@ export class WalkBackHomeApp {
     this.choices = [];
     this.readMemories.clear();
     this.completedMemoryEvents.clear();
+    this.resetAuthoredRuntime();
+    this.chapterMemoryRun = null;
     this.chapterTriggerSessions.clear();
     this.chapterProgress.clear();
     this.room = createDefaultRoomState();
@@ -877,6 +1302,18 @@ export class WalkBackHomeApp {
   }
 
   private bootstrapDiaryLibrary(): void {
+    this.hydrateLivingWindowState();
+    const savedToolbox = this.save.loadToolboxState();
+    if (savedToolbox) {
+      this.toolboxView = createToolboxState(savedToolbox);
+      this.selectedToolboxPresetId = savedToolbox.selectedPresetId || this.selectedToolboxPresetId;
+      this.converterCategory = savedToolbox.converterUnits.category || this.converterCategory;
+      this.converterFrom = savedToolbox.converterUnits.from || this.converterFrom;
+      this.converterTo = savedToolbox.converterUnits.to || this.converterTo;
+      this.currencyFrom = savedToolbox.currencyFrom as CurrencyCode;
+      this.currencyTo = savedToolbox.currencyTo as CurrencyCode;
+      if (savedToolbox.presets?.length) this.toolboxPresets = savedToolbox.presets.map((item) => createSpinPreset(item.id, item.name, item.choices));
+    }
     this.musicLibrary = this.save.loadMusicLibrary() ?? this.musicLibrary;
     this.personalPlayer = { ...this.personalPlayer, ...(this.save.loadPersonalPlayer() ?? {}) };
     this.reflectionWall = this.save.loadReflectionWall() ?? this.reflectionWall;
@@ -903,6 +1340,7 @@ export class WalkBackHomeApp {
   }
 
   private loadAccountLocalState(): void {
+    this.hydrateLivingWindowState();
     this.musicLibrary = this.save.loadMusicLibrary() ?? { version: 1, savedAt: new Date().toISOString(), tracks: [] };
     this.personalPlayer = { ...createDefaultPersonalPlayerState(), ...(this.save.loadPersonalPlayer() ?? {}) };
     this.normalizePersonalPlayerToggles();
@@ -941,16 +1379,183 @@ export class WalkBackHomeApp {
   }
 
   private updateAuthoredScene(x: number, y: number, dt: number): void {
+    const runtime = this.authoredRuntimeForScene();
     const layout = this.currentSceneLayout();
-    this.moveInLayout(x, y, dt, layout);
-    const interaction = layout.interactions.find((item) => Math.hypot(this.player.x - item.x, this.player.y - item.y) < item.radius);
+    if (!runtime) {
+      this.moveInLayout(x, y, dt, layout);
+      this.activeObject = "";
+      return;
+    }
+    if (this.authoredCutscene) {
+      if (this.authoredOverlayMode) {
+        this.activeObject = "";
+        return;
+      }
+      this.authoredCutscene.update(dt);
+      if (this.authoredCutscene.currentDialogue) this.showAuthoredDialogue();
+      else if (this.authoredCutscene.currentCheckpoint) this.showAuthoredChoice();
+      if (this.authoredCutscene.completed) this.finishAuthoredCutscene();
+      this.activeObject = "";
+      return;
+    }
+    if (this.authoredOverlayMode) {
+      this.activeObject = "";
+      return;
+    }
     const trigger = layout.triggers.find((item) => {
       const rect = item.rect;
       return this.player.x >= rect.x && this.player.x <= rect.x + rect.w && this.player.y >= rect.y && this.player.y <= rect.y + rect.h;
     });
-    this.activeObject = interaction?.id ?? trigger?.id ?? "";
+    const primaryTriggerId = runtime.triggerId ?? "main-memory";
+    if (trigger?.id === primaryTriggerId && trigger.chapterId === runtime.chapter.id && trigger.eventId === runtime.chapter.canonicalClosure.historicalEventId && trigger.once && this.consumeChapterTrigger(runtime.chapter.id)) {
+      this.startAuthoredCutscene("main", false);
+      return;
+    }
+    this.moveInLayout(x, y, dt, layout);
+    const interaction = layout.interactions.find((item) => Math.hypot(this.player.x - item.x, this.player.y - item.y) < item.radius);
+    const mainComplete = this.completedMemoryEvents.has(runtime.chapter.canonicalClosure.historicalEventId);
+    const echoActive = mainComplete
+      ? Object.keys(runtime.echoAnchors).find((id) => {
+          const point = this.authoredEchoPoint(layout, id);
+          return point ? Math.hypot(this.player.x - point.x, this.player.y - point.y) < point.radius : false;
+        })
+      : undefined;
+    const mainInteractionId = runtime.mainInteractionId ?? "main-memory-replay";
+    const optionalMemory = interaction?.id === "bus-stop-memory";
+    const availableInteraction = interaction && (optionalMemory || mainComplete || ["exit", "diary", "diary memory", "diary-memory", mainInteractionId].includes(interaction.id)) ? interaction : null;
+    this.activeObject = echoActive ?? availableInteraction?.id ?? "";
   }
 
+  private startAuthoredCutscene(mode: "main" | "echo", replay: boolean, echoId = ""): void {
+    const runtime = this.authoredRuntimeForScene();
+    if (!runtime) return;
+    const actions = runtime.resolveActions(this.currentSceneLayout(), mode, echoId);
+    this.authoredCutscene = new CutsceneSystem(actions);
+    this.authoredMode = mode;
+    this.authoredReplayMode = replay;
+    if (mode === "main") {
+      this.startChapterMemoryRun(runtime.chapter.id, runtime.chapter.canonicalClosure.historicalEventId, replay ? "manual-replay" : "automatic");
+    }
+    this.authoredOverlayMode = null;
+    this.authoredCheckpointId = "";
+    this.authoredReflectionResponse = "";
+    this.overlay.classList.remove("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = "";
+    if (mode === "main") {
+      this.showToast(replay ? "Replaying " + runtime.chapter.title : "The " + runtime.chapter.date + " memory begins");
+    } else {
+      this.showToast("A secondary memory surfaces.");
+    }
+  }
+  private showAuthoredDialogue(): void {
+    const dialogue = this.authoredCutscene?.currentDialogue;
+    if (!dialogue || this.authoredOverlayMode === "dialogue") return;
+    this.authoredOverlayMode = "dialogue";
+    this.overlay.classList.add("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = renderRpgDialogue({ speaker: dialogue.speaker, text: dialogue.text, action: "authored-dialogue-next" });
+    this.focusStage();
+  }
+
+  private advanceAuthoredDialogue(): void {
+    if (this.authoredOverlayMode !== "dialogue") return;
+    this.authoredCutscene?.advanceDialogue();
+    this.authoredOverlayMode = null;
+    this.overlay.classList.remove("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = "";
+  }
+
+  private showAuthoredChoice(): void {
+    const runtime = this.authoredRuntimeForScene();
+    const checkpoint = this.authoredCutscene?.currentCheckpoint;
+    if (!runtime || !checkpoint || this.authoredOverlayMode === "choice") return;
+
+    const point = runtime.reflectionChoices.find((item) => item.id === checkpoint);
+    if (!point) {
+      this.authoredCutscene?.resolveCheckpoint();
+      return;
+    }
+    this.authoredCheckpointId = checkpoint;
+    this.authoredOverlayMode = "choice";
+    this.overlay.classList.add("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = renderReflectionChoice({
+      kicker: runtime.chapter.date + " · " + runtime.chapter.location,
+      title: "你想怎样记住这一段？",
+      prompt: point.prompt,
+      choices: point.choices.map((choice) => ({ id: choice.id, label: choice.label })),
+      action: "authored-reflection-choice"
+    });
+    this.focusStage();
+  }
+
+  private chooseAuthoredChoice(choiceId: string): void {
+    const runtime = this.authoredRuntimeForScene();
+    const point = runtime?.reflectionChoices.find((item) => item.id === this.authoredCheckpointId);
+    const choice = point?.choices.find((item) => item.id === choiceId);
+    if (!runtime || !choice || !this.authoredCutscene?.currentCheckpoint) return;
+    this.recordChapterExperienceChoice(
+      runtime.chapter.id,
+      runtime.chapter.canonicalClosure.historicalEventId,
+      this.authoredReplayMode ? "manual-replay" : "automatic",
+      choice
+    );
+    this.authoredReflectionResponse = choice.response;
+    this.authoredOverlayMode = "response";
+    this.overlay.classList.add("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = renderReflection({
+      lines: [choice.response],
+      actions: '<button data-action="authored-reflection-next">Continue walking</button>'
+    });
+    this.autosave();
+  }
+
+  private advanceAuthoredReflection(): void {
+    if (this.authoredOverlayMode !== "response") return;
+    this.authoredCutscene?.resolveCheckpoint();
+    this.authoredOverlayMode = null;
+    this.authoredCheckpointId = "";
+    this.authoredReflectionResponse = "";
+    this.overlay.classList.remove("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = "";
+  }
+
+  private finishAuthoredCutscene(): void {
+    const runtime = this.authoredRuntimeForScene();
+    if (!this.authoredCutscene || !this.authoredMode || !runtime) return;
+    const mode = this.authoredMode;
+    this.authoredCutscene = null;
+    this.authoredMode = null;
+    this.authoredReplayMode = false;
+    this.authoredOverlayMode = null;
+    this.authoredCheckpointId = "";
+    this.authoredReflectionResponse = "";
+    this.overlay.classList.remove("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = "";
+    if (mode === "main") {
+      this.showChapterEndingQuote(runtime.chapter.date + " · " + runtime.chapter.location, runtime.chapter.title, runtime.chapter.canonicalClosure.lines);
+      this.autosave();
+      return;
+    }
+    this.showToast("The secondary echo fades without adding another event.");
+    this.autosave();
+  }
+  private inspectAuthoredResidue(id: string): void {
+    if (id === "mcd-drop-memory") return this.startAuthoredCutscene("main", true);
+    if (id === "roadside-empty-car") {
+      this.overlay.innerHTML = '<div class="modal"><h2>Roadside</h2><p>车已经不在了。这里只留下一个很短的空镜头。</p><button data-action="close">Close</button></div>';
+    } else {
+      return this.showToast("Walk through the lobby");
+    }
+    this.focusStage();
+  }
+
+  private resetAuthoredRuntime(): void {
+    this.authoredCutscene = null;
+    this.authoredMode = null;
+    this.authoredReplayMode = false;
+    this.authoredOverlayMode = null;
+    this.authoredCheckpointId = "";
+    this.authoredReflectionResponse = "";
+  }
   private updateMarch30Scene(x: number, y: number, dt: number): void {
     const layout = this.currentSceneLayout();
     if (this.march30Cutscene) {
@@ -974,8 +1579,7 @@ export class WalkBackHomeApp {
     }
     this.moveInLayout(x, y, dt, layout);
     const interaction = layout.interactions.find((item) => Math.hypot(this.player.x - item.x, this.player.y - item.y) < item.radius);
-    const mainSeen = this.completedMemoryEvents.has("march30-bench-memory");
-    this.activeObject = (interaction?.id === "bench-memory" || interaction?.id === "elevator") && !mainSeen ? "" : interaction?.id ?? "";
+    this.activeObject = interaction?.id ?? "";
   }
 
   private startMarch30Memory(replay: boolean): void {
@@ -983,6 +1587,7 @@ export class WalkBackHomeApp {
     this.march30Cutscene = new CutsceneSystem(resolveMarch30CutsceneActions(layout, march30MainMemoryActions));
     this.march30Mode = "main";
     this.march30ReplayMode = replay;
+    this.startChapterMemoryRun("march30-too-fated", "march30-bench-memory", replay ? "manual-replay" : "automatic");
     this.march30OverlayMode = null;
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
@@ -994,6 +1599,7 @@ export class WalkBackHomeApp {
     this.march30Cutscene = new CutsceneSystem(resolveMarch30CutsceneActions(layout, march30EchoActions));
     this.march30Mode = "echo";
     this.march30ReplayMode = replay;
+    this.startChapterMemoryRun("march30-too-fated", "march30-elevator-echo", "manual-replay");
     this.march30OverlayMode = null;
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
@@ -1061,15 +1667,8 @@ export class WalkBackHomeApp {
     this.march30OverlayMode = null;
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
-    if (mode === "main") {
-      this.completedMemoryEvents.add("march30-bench-memory");
-      this.readMemories.add("march30-bench-memory");
-      this.chapterProgress.set("march30-too-fated", markChapterMemoryRead(this.progressFor("march30-too-fated")));
-      this.showMarch30ReflectionChoice(1);
-    } else {
-      this.completedMemoryEvents.add("march30-elevator-echo");
-      this.showMarch30ReflectionChoice(2);
-    }
+    if (mode === "main") this.showMarch30ReflectionChoice(1);
+    else this.showMarch30ReflectionChoice(2);
     this.autosave();
   }
 
@@ -1092,9 +1691,8 @@ export class WalkBackHomeApp {
     const choices = this.march30ReflectionIndex === 1 ? march30ReflectionChoices : march30EchoReflectionChoices;
     const choice = choices.find((item) => item.id === choiceId);
     if (!choice) return;
-    this.tendencies = applyChoice(this.tendencies, choice);
-    this.choices.push(choice.id);
-    this.chapterProgress.set("march30-too-fated", recordChapterChoice(this.progressFor("march30-too-fated"), choice.id, this.tendencies));
+    const eventId = this.march30ReflectionIndex === 1 ? "march30-bench-memory" : "march30-elevator-echo";
+    this.recordChapterExperienceChoice("march30-too-fated", eventId, this.march30ReplayMode ? "manual-replay" : "automatic", choice);
     this.march30ReflectionResponse = choice.response ?? "";
     this.march30OverlayMode = "response";
     this.overlay.classList.add("dialogue-open", "lightweight-presentation");
@@ -1106,19 +1704,19 @@ export class WalkBackHomeApp {
   }
 
   private advanceMarch30Reflection(): void {
-    if (this.march30ReflectionIndex === 2) {
-      this.march30OverlayMode = "closing";
-      const quote = resolveMarch30Closing(this.tendencies);
-      this.overlay.classList.add("dialogue-open", "lightweight-presentation");
-      this.overlay.innerHTML = renderReflection({
-        kicker: "March 30 · 330 corridor",
-        lines: [quote],
-        actions: `<button data-action="reflection-keep-chapter" data-chapter="march30-too-fated" data-text="${this.escapeHtml(quote)}">Keep this</button><button data-action="march30-closing-close">Continue walking</button>`
-      });
-    } else {
-      this.march30OverlayMode = null;
-      this.overlay.innerHTML = "";
-    }
+    const chapterId = "march30-too-fated";
+    const eventId = this.march30ReflectionIndex === 1 ? "march30-bench-memory" : "march30-elevator-echo";
+    const progress = this.currentRunProgressFor(chapterId);
+    const quote = resolveMarch30Closing(progress.tendencies);
+    const reflection = resolveChapterReflection(chapterRegistry[chapterId], progress);
+    this.completeChapterMemoryRun(chapterId, eventId, reflection);
+    this.march30OverlayMode = "closing";
+    this.overlay.classList.add("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = renderReflection({
+      kicker: "March 30 · 330 corridor",
+      lines: [quote],
+      actions: `<button data-action="reflection-keep-chapter" data-chapter="march30-too-fated" data-text="${this.escapeHtml(quote)}">Keep this</button><button data-action="march30-closing-close">Continue walking</button>`
+    });
     this.autosave();
   }
 
@@ -1166,6 +1764,7 @@ export class WalkBackHomeApp {
     this.labisCutscene = new CutsceneSystem(this.labisMotorActionsForCurrentLayout());
     this.labisDialogueOpen = false;
     this.labisReplayMode = replay;
+    this.startChapterMemoryRun("labis-motor-day", "july19-motor-learning", replay ? "manual-replay" : "automatic");
     this.labisLessonChoiceIndex = -1;
     this.labisOverlayMode = null;
     this.labisActiveChoice = null;
@@ -1218,17 +1817,14 @@ export class WalkBackHomeApp {
   }
 
   private finishLabisMemoryEvent(): void {
-    const alreadyCompleted = this.labisReplayMode || this.completedMemoryEvents.has("july19-motor-learning");
-    this.completedMemoryEvents.add("july19-motor-learning");
-    this.readMemories.add("july19-motor-learning");
-    this.chapterProgress.set("labis-motor-day", markChapterMemoryRead(this.progressFor("labis-motor-day")));
+    const replay = this.labisReplayMode;
     this.labisCutscene = null;
     this.labisDialogueOpen = false;
     this.labisReplayMode = false;
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
-    this.showToast(alreadyCompleted ? "Memory replayed" : "✦ 第一次学会驾 motor · 07.19 · Labis");
-    if (!alreadyCompleted) this.showLabisChoice("motor");
+    this.showToast(replay ? "Memory replayed" : "✦ 第一次学会驾 motor · 07.19 · Labis");
+    this.showLabisChoice("motor");
     this.autosave();
   }
 
@@ -1282,6 +1878,11 @@ export class WalkBackHomeApp {
   }
 
   private interact(): void {
+    if (this.toolboxOpen) {
+      if (this.toolboxView.screen === "root") this.toolboxView = confirmTool(this.toolboxView);
+      this.renderToolboxOverlay();
+      return;
+    }
     if (this.scene === "title") return this.newMemory();
     if (this.scene === "forest" && this.activeDoor) return this.previewDoor(this.activeDoor);
     if (this.scene === "bakery") {
@@ -1320,8 +1921,21 @@ export class WalkBackHomeApp {
     }
     if (this.scene === "330-corridor") return this.interactMarch30();
     if (this.isAuthoredRuntimeScene()) {
+      const runtime = this.authoredRuntimeForScene();
+      if (!runtime) return this.showToast("Walk through the authored scene");
+      if (this.overlay.innerHTML.trim() && !this.authoredOverlayMode) return;
+      if (this.authoredOverlayMode === "dialogue") return this.advanceAuthoredDialogue();
+      if (this.authoredOverlayMode === "response") return this.advanceAuthoredReflection();
+      if (this.authoredOverlayMode === "choice" || this.authoredCutscene?.currentCheckpoint) return;
+      if (this.authoredCutscene) return;
       if (this.activeObject === "exit") return this.returnToForest();
-      if (this.activeObject) return this.showToast("This authored scene is not playable yet");
+      if (this.activeObject === "diary" || this.activeObject === "diary memory" || this.activeObject === "diary-memory") return this.showChapterDiary(this.currentMemoryKey());
+      if (this.activeObject === "bus-stop-memory") return this.startAuthoredCutscene("echo", false, "bus-stop-memory");
+      if (this.activeObject === (runtime.mainInteractionId ?? "main-memory-replay") || this.activeObject === "main-memory-replay" || this.activeObject === "mcd-drop-memory") return this.startAuthoredCutscene("main", true);
+      if (runtime.echoAnchors[this.activeObject]) return this.startAuthoredCutscene("echo", false, this.activeObject);
+      if (this.activeObject === "roadside-empty-car") return this.inspectAuthoredResidue(this.activeObject);
+      if (this.activeObject === "bench") return this.showToast("The bench keeps the ordinary part of the night.");
+      if (this.activeObject) return this.showToast("Walk closer to " + this.activeObject);
       return this.showToast("Walk through the authored scene");
     }
     if (this.scene === "ending") this.returnToForest();
@@ -1353,7 +1967,8 @@ export class WalkBackHomeApp {
   }
 
   private currentMemoryKey(): string {
-    return this.currentDoor && this.isChapterNode(this.currentDoor) ? this.currentDoor.chapterId : bakeryChapter.id;
+    if (this.currentDoor && this.isChapterNode(this.currentDoor)) return this.currentDoor.chapterId;
+    return Object.values(chapterRegistry).find((chapter) => chapter.runtimeScene === this.scene)?.id ?? bakeryChapter.id;
   }
 
   private allDoors(): ForestNode[] {
@@ -1383,6 +1998,61 @@ export class WalkBackHomeApp {
     return progress;
   }
 
+  private startChapterMemoryRun(chapterId: string, eventId: string, mode: ChapterExperienceMode): void {
+    this.chapterMemoryRun = startChapterMemoryExperience({
+      chapterId,
+      eventId,
+      mode,
+      baselineTendencies: this.tendencies,
+      firstCompletionPending: !this.completedMemoryEvents.has(eventId)
+    });
+  }
+
+  private currentRunProgressFor(chapterId: string): ChapterProgress {
+    const progress = this.progressFor(chapterId);
+    return this.chapterMemoryRun?.chapterId === chapterId
+      ? currentRunProgress(progress, this.chapterMemoryRun)
+      : progress;
+  }
+
+  private recordChapterExperienceChoice(chapterId: string, eventId: string, mode: ChapterExperienceMode, choice: Choice): void {
+    if (!this.chapterMemoryRun || this.chapterMemoryRun.chapterId !== chapterId || this.chapterMemoryRun.eventId !== eventId) {
+      this.startChapterMemoryRun(chapterId, eventId, mode);
+    }
+    this.chapterMemoryRun = applyChapterExperienceChoice(this.chapterMemoryRun!, choice);
+  }
+
+  private completeChapterMemoryRun(chapterId: string, eventId: string, reflection: Pick<ReturnType<typeof resolveChapterReflection>, "quoteId" | "tone">): void {
+    const run = this.chapterMemoryRun?.chapterId === chapterId && this.chapterMemoryRun.eventId === eventId ? this.chapterMemoryRun : null;
+    const firstCompletion = !this.completedMemoryEvents.has(eventId);
+    const persistedProgress = this.progressFor(chapterId);
+    const currentProgress = run ? currentRunProgress(persistedProgress, run) : persistedProgress;
+    if (firstCompletion) {
+      if (run) {
+        this.tendencies = { ...run.tendencies };
+        this.choices.push(...run.choiceIds);
+      }
+      this.completedMemoryEvents.add(eventId);
+      this.readMemories.add(eventId);
+    }
+    const finishedProgress = firstCompletion ? markChapterMemoryRead(currentProgress) : persistedProgress;
+    this.chapterProgress.set(chapterId, finishChapterWalkthrough(finishedProgress, reflection.quoteId, reflection.tone));
+    this.walkedThroughMemories.add(chapterId);
+    this.room.residueIds = [...new Set([...(this.room.residueIds ?? []), chapterId])];
+  }
+
+  private commitChapterMemoryRunTendencies(chapterId: string, eventId: string): void {
+    const run = this.chapterMemoryRun?.chapterId === chapterId && this.chapterMemoryRun.eventId === eventId ? this.chapterMemoryRun : null;
+    if (!run || this.completedMemoryEvents.has(eventId)) {
+      this.completedMemoryEvents.add(eventId);
+      this.readMemories.add(eventId);
+      return;
+    }
+    this.tendencies = { ...run.tendencies };
+    this.choices.push(...run.choiceIds);
+    this.completedMemoryEvents.add(eventId);
+    this.readMemories.add(eventId);
+  }
   private finishCurrentChapterWalkthrough(): void {
     const door = this.currentDoor;
     if (!door || !this.isChapterNode(door)) return;
@@ -1442,9 +2112,11 @@ export class WalkBackHomeApp {
     this.scene = chapter.runtimeScene;
     this.player = { ...this.currentSceneLayout(chapter.runtimeScene).spawn };
     this.dialogue = new DialogueSystem(chapter.dialogue);
+    this.startChapterMemoryRun(chapterId, chapter.canonicalClosure.historicalEventId, "automatic");
     this.labisCutscene = null;
     this.labisDialogueOpen = false;
     this.resetMarch30Runtime();
+    this.resetAuthoredRuntime();
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
     this.focusStage();
@@ -1462,27 +2134,53 @@ export class WalkBackHomeApp {
 
   private resetBakeryDialogue(): void {
     this.dialogue = new DialogueSystem(bakeryChapter.dialogue);
+    this.startChapterMemoryRun("bakery-day", chapterRegistry["bakery-day"].canonicalClosure.historicalEventId, "manual-replay");
     this.showToast("Friend A is ready to talk again");
   }
 
   private showDiaryMemory(): void {
-    const door = this.currentDoor ?? forestEntries[1];
-    const chapterId = this.chapterIdFor(door);
+    this.showChapterDiary(this.currentMemoryKey());
+  }
+
+  private showChapterDiary(chapterId: string): void {
+    const chapter = chapterRegistry[chapterId];
+    const entry = findChapterDiaryEntry(this.diaryEntries, chapterId, chapter?.diaryEntryId);
+    if (!entry) {
+      this.showToast("This chapter has no canonical diary page yet");
+      return;
+    }
     this.readMemories.add(chapterId);
     this.chapterProgress.set(chapterId, markChapterMemoryRead(this.progressFor(chapterId)));
-    const editableDiary = this.diaryEntries.find((entry) => entry.chapterId === chapterId);
-    const memoryText: string[] = editableDiary
-      ? editableDiary.body.split(/\r?\n/).filter(Boolean)
-      : "memoryText" in door && Array.isArray(door.memoryText) ? door.memoryText : (chapterRegistry[chapterId]?.memoryText ?? bakeryChapter.memoryText ?? []);
-    const diaryDate = editableDiary?.date ?? door.date;
-    const diaryTitle = editableDiary?.title ?? door.title;
-    const lines = memoryText.map((line: string, index: number) => index === 0 ? `<h2>${this.escapeHtml(diaryDate)} · ${this.escapeHtml(diaryTitle)}</h2><p>${this.escapeHtml(line)}</p>` : `<p>${this.escapeHtml(line)}</p>`).join("");
-    this.overlay.innerHTML = `<div class="modal diary-memory"><div class="diary-memory-scroll">${lines}</div><div class="memory-actions"><button data-action="close">Close</button><button data-action="forest">Exit to forest</button></div></div>`;
+    this.showChapterDiaryFrame(entry);
     this.showToast("Diary memory read");
-    this.focusStage();
     this.autosave();
   }
 
+  private showChapterDiaryFrame(entry: DiaryEntry): void {
+    const paragraphs = (entry.body || "Empty draft")
+      .split(/\n{2,}|\r?\n/)
+      .filter(Boolean)
+      .map((line) => `<p>${this.escapeHtml(line)}</p>`)
+      .join("");
+    const meta = [entry.location, entry.weather, entry.mood ? `心情：${entry.mood}` : ""]
+      .filter(Boolean)
+      .map((item) => this.escapeHtml(String(item)))
+      .join(" · ");
+    this.overlay.classList.remove("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = `
+      <div class="modal diary-memory chapter-diary-memory" role="dialog" aria-modal="true" aria-label="Chapter diary">
+        <div class="diary-memory-scroll">
+          <h2>${this.escapeHtml(entry.date)} · ${this.escapeHtml(entry.title)}</h2>
+          ${meta ? `<p class="journal-reading-meta">${meta}</p>` : ""}
+          ${paragraphs}
+        </div>
+        <div class="memory-actions">
+          <button data-action="close">Close</button>
+          <button data-action="edit-chapter-diary" data-id="${this.escapeHtml(entry.id)}" data-chapter="${this.escapeHtml(entry.chapterId ?? "")}">Edit in Journal</button>
+        </div>
+      </div>`;
+    this.focusStage();
+  }
   private inspectPastry(): void {
     this.overlay.innerHTML = `<div class="modal"><h2>Pastry</h2><p>The pastry is smaller than the story made it. It does not start a conversation by itself.</p><button data-action="close">Close</button><button data-action="forest">Exit to forest</button></div>`;
     this.focusStage();
@@ -1542,10 +2240,12 @@ export class WalkBackHomeApp {
     } else {
       const choice = node.choices.find((item) => item.id === choiceId);
       if (choice) {
-        this.tendencies = this.dialogue.choose(choice, this.tendencies);
         const chapterId = this.currentMemoryKey();
-        this.chapterProgress.set(chapterId, recordChapterChoice(this.progressFor(chapterId), choice.id, this.tendencies));
-        this.choices.push(choice.id);
+        const chapter = chapterRegistry[chapterId];
+        if (chapter) {
+          this.dialogue.choose(choice, this.currentRunProgressFor(chapterId).tendencies);
+          this.recordChapterExperienceChoice(chapterId, chapter.canonicalClosure.historicalEventId, "manual-replay", choice);
+        }
         this.showToast(`Choice: ${choice.label}`);
       }
     }
@@ -1571,7 +2271,6 @@ export class WalkBackHomeApp {
     if (!point) return;
     this.labisOverlayMode = "choice";
     this.labisActiveChoice = id;
-    this.labisActiveEcho = null;
     this.overlay.classList.add("dialogue-open", "lightweight-presentation");
     this.overlay.innerHTML = renderReflectionChoice({
       prompt: point.prompt,
@@ -1630,14 +2329,8 @@ export class WalkBackHomeApp {
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
     if (after === "motor-choice") this.showLabisChoice("motor");
-    if (after === "photo-choice") {
-      this.markActiveLabisEchoDiscovered();
-      this.showLabisChoice("photo");
-    }
-    if (after === "filter-choice") {
-      this.markActiveLabisEchoDiscovered();
-      this.showLabisChoice("filter");
-    }
+    if (after === "photo-choice") this.showLabisChoice("photo");
+    if (after === "filter-choice") this.showLabisChoice("filter");
     if (after === "finish-echo") this.finishLabisEcho();
     if (after === "show-reflection") this.showLabisMemoryReflection();
     if (after === "finish-chicken-cake") this.finishLabisEcho(true);
@@ -1685,14 +2378,14 @@ export class WalkBackHomeApp {
   private startLabisEcho(echo: LabisEcho): void {
     this.labisActiveEcho = echo;
     this.labisVignetteStartedAt = performance.now();
-    const replay = this.completedMemoryEvents.has(echo.id);
+    this.startChapterMemoryRun("labis-motor-day", echo.id, "manual-replay");
     if (echo.id === "july19-photo-threat") {
       return this.showLabisDialogueQueue([
         { speaker: "ET", text: "诶？" },
         { speaker: "ET", text: "拍起来。" },
         { speaker: "ET", text: "以后可以威胁 MS。" },
         { speaker: "MS", text: "蛤？" }
-      ], replay ? "finish-echo" : "photo-choice");
+      ], "photo-choice");
     }
     if (echo.id === "july19-chicken-porridge") {
       return this.showLabisDialogueQueue([
@@ -1731,8 +2424,6 @@ export class WalkBackHomeApp {
       ], "filter-choice");
     }
     if (echo.id === "july19-chicken-cake") {
-      this.completedMemoryEvents.add(echo.id);
-      this.readMemories.add(echo.id);
       this.labisOverlayMode = "vignette";
       const src = labisAssetManifest.chickenCake;
       const hasImage = this.isLabisImageReady(src);
@@ -1749,12 +2440,10 @@ export class WalkBackHomeApp {
     window.setTimeout(() => this.finishLabisEcho(true), 360);
   }
 
-  private finishLabisEcho(keepDiscovery = false): void {
+  private finishLabisEcho(_keepDiscovery = false): void {
     const echo = this.labisActiveEcho;
-    if (echo && (keepDiscovery || !this.completedMemoryEvents.has(echo.id))) {
-      this.completedMemoryEvents.add(echo.id);
-      this.readMemories.add(echo.id);
-    }
+    if (echo) this.commitChapterMemoryRunTendencies("labis-motor-day", echo.id);
+    else if (this.chapterMemoryRun?.chapterId === "labis-motor-day" && this.chapterMemoryRun.eventId === "july19-motor-learning") this.commitChapterMemoryRunTendencies("labis-motor-day", "july19-motor-learning");
     this.labisOverlayMode = null;
     this.labisActiveEcho = null;
     this.overlay.classList.remove("dialogue-open");
@@ -1763,20 +2452,11 @@ export class WalkBackHomeApp {
     this.autosave();
   }
 
-  private markActiveLabisEchoDiscovered(): void {
-    const echo = this.labisActiveEcho;
-    if (!echo) return;
-    this.completedMemoryEvents.add(echo.id);
-    this.readMemories.add(echo.id);
-    this.autosave();
-  }
 
   private showLabisMemoryReflection(): void {
-    const reflection = resolveLabisMemoryReflection(this.progressFor("labis-motor-day").tendencies);
-    const progress = markChapterDialogueComplete(this.progressFor("labis-motor-day"));
-    this.chapterProgress.set("labis-motor-day", finishChapterWalkthrough(progress, reflection.id, "accepting"));
-    this.walkedThroughMemories.add("labis-motor-day");
-    this.room.residueIds = [...new Set([...(this.room.residueIds ?? []), "labis-motor-day"])];
+    const progress = this.currentRunProgressFor("labis-motor-day");
+    const reflection = resolveLabisMemoryReflection(progress.tendencies);
+    this.completeChapterMemoryRun("labis-motor-day", "july19-motor-learning", { quoteId: reflection.id, tone: "accepting" });
     this.labisReflectionLines = reflection.lines;
     this.labisOverlayMode = "reflection";
     this.overlay.classList.add("dialogue-open", "lightweight-presentation");
@@ -1803,10 +2483,9 @@ export class WalkBackHomeApp {
   }
 
   private recordLabisChoice(choice: Choice): void {
-    this.tendencies = applyChoice(this.tendencies, choice);
-    const progress = recordChapterChoice(this.progressFor("labis-motor-day"), choice.id, this.tendencies);
-    this.chapterProgress.set("labis-motor-day", progress);
-    this.choices.push(choice.id);
+    const eventId = this.labisActiveEcho?.id ?? "july19-motor-learning";
+    const mode = this.labisActiveEcho ? "manual-replay" : this.labisReplayMode ? "manual-replay" : "automatic";
+    this.recordChapterExperienceChoice("labis-motor-day", eventId, mode, choice);
   }
 
   private responseLines(response: string): string[] {
@@ -1819,22 +2498,24 @@ export class WalkBackHomeApp {
   }
 
   private showEndingQuote(): void {
-    const progress = markChapterDialogueComplete(this.progressFor(this.currentMemoryKey()));
-    const reflection = resolveChapterReflection(chapterRegistry[this.currentMemoryKey()], progress);
-    this.chapterProgress.set(this.currentMemoryKey(), finishChapterWalkthrough(progress, reflection.quoteId, reflection.tone));
-    this.walkedThroughMemories.add(this.currentMemoryKey());
-    this.room.residueIds = [...new Set([...(this.room.residueIds ?? []), this.currentMemoryKey()])];
+    const chapterId = this.currentMemoryKey();
+    const chapter = chapterRegistry[chapterId];
+    if (!chapter) return;
+    const progress = this.currentRunProgressFor(chapterId);
+    const reflection = resolveChapterReflection(chapter, progress);
+    this.completeChapterMemoryRun(chapterId, chapter.canonicalClosure.historicalEventId, reflection);
     this.renderEndingQuote("after the conversation", "The rain slows", reflection);
     this.audio.ping("ending");
     this.autosave();
   }
 
   private showChapterEndingQuote(kicker: string, title: string, leadLines: string[] = []): void {
-    const progress = markChapterDialogueComplete(this.progressFor(this.currentMemoryKey()));
-    const reflection = resolveChapterReflection(chapterRegistry[this.currentMemoryKey()], progress);
-    this.chapterProgress.set(this.currentMemoryKey(), finishChapterWalkthrough(progress, reflection.quoteId, reflection.tone));
-    this.walkedThroughMemories.add(this.currentMemoryKey());
-    this.room.residueIds = [...new Set([...(this.room.residueIds ?? []), this.currentMemoryKey()])];
+    const chapterId = this.currentMemoryKey();
+    const chapter = chapterRegistry[chapterId];
+    if (!chapter) return;
+    const progress = this.currentRunProgressFor(chapterId);
+    const reflection = resolveChapterReflection(chapter, progress);
+    this.completeChapterMemoryRun(chapterId, chapter.canonicalClosure.historicalEventId, reflection);
     this.renderEndingQuote(kicker, title, reflection, leadLines);
     this.audio.ping("ending");
   }
@@ -1894,6 +2575,8 @@ export class WalkBackHomeApp {
     this.labisLessonChoiceIndex = -1;
     this.labisLessonLeadLines = [];
     this.resetMarch30Runtime();
+    this.resetAuthoredRuntime();
+    this.chapterMemoryRun = null;
     this.scene = "forest";
     this.overlay.classList.remove("dialogue-open");
     this.overlay.innerHTML = "";
@@ -1945,9 +2628,136 @@ export class WalkBackHomeApp {
 
   private drawAuthoredScene(time: number): void {
     if (this.scene === "330-corridor") return this.drawMarch30Scene(time);
+    if (this.authoredRuntimeForScene()) return this.drawAuthoredSceneRuntime(time);
     this.drawScene(this.currentSceneLayout(), time, "authored");
   }
 
+  private drawApril06Scene(time: number): void {
+    this.drawAuthoredSceneRuntime(time);
+  }
+
+  private drawAuthoredSceneRuntime(time: number): void {
+    const layout = this.currentSceneLayout();
+    const image = this.sceneImage(layout);
+    const viewport = this.sceneViewport(layout);
+    const scale = this.canvas.width / viewport.w;
+    const camera = this.sceneCamera(layout, viewport.w, viewport.h);
+    this.ctx.drawImage(image, camera.x, camera.y, viewport.w, viewport.h, 0, 0, this.canvas.width, this.canvas.height);
+    if (!image.complete || image.naturalWidth === 0) this.ctx.fillStyle = "rgba(20,16,28,.18)";
+    if (this.authoredCutscene) {
+      this.ctx.fillStyle = "rgba(226, 181, 109, .10)";
+      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+    const diary = layout.interactions.find((interaction) => interaction.id === "diary" || interaction.id === "diary memory" || interaction.id === "diary-memory");
+    if (diary) this.drawSharedDiaryBookProp(diary, camera.x, camera.y, scale, time);
+    const actors = this.authoredCutscene ? [...this.authoredCutscene.actors.values()] : [];
+    const mujiScreen = { x: (this.player.x - camera.x) * scale, y: (this.player.y - camera.y) * scale };
+    const drawables = [
+      ...actors.map((actor) => ({ y: actor.y, draw: () => drawSceneActor(this.ctx, actor, camera.x, camera.y, scale, this.authoredAssetsForScene(), this.authoredImages) })),
+      { y: this.player.y, draw: () => { this.ctx.save(); this.ctx.globalAlpha = this.authoredCutscene ? 0.34 : 1; this.drawMuji(mujiScreen, time, scale); this.ctx.restore(); } }
+    ].sort((a, b) => a.y - b.y);
+    drawables.forEach((item) => item.draw());
+    if (this.authoredCutscene) {
+      for (const prop of this.authoredCutscene.props.values()) if (prop.visible) this.drawAuthoredProp(prop, camera.x, camera.y, scale);
+      for (const effect of this.authoredCutscene.effects.values()) this.drawAuthoredEffect(effect, camera.x, camera.y, scale);
+    } else if (!this.authoredOverlayMode) {
+      this.drawAuthoredInteractionTells(layout, camera.x, camera.y, scale, time);
+    }
+    const vignette = this.ctx.createRadialGradient(this.canvas.width / 2, this.canvas.height / 2, 160, this.canvas.width / 2, this.canvas.height / 2, this.canvas.height * 0.82);
+    vignette.addColorStop(0, "rgba(0,0,0,0)");
+    vignette.addColorStop(1, "rgba(0,0,0,.28)");
+    this.ctx.fillStyle = vignette;
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+  }
+
+  private drawAuthoredProp(prop: { id: string; assetId: string; owner?: string; position?: Point; visible: boolean }, cameraX: number, cameraY: number, scale: number): void {
+    const asset = this.authoredAssetsForScene()[prop.assetId];
+    const image = asset ? this.authoredImages.get(asset.path) : undefined;
+    if (!asset || !image || !image.complete || image.naturalWidth === 0) return;
+    const owner = prop.owner ? this.authoredCutscene?.actors.get(prop.owner) : undefined;
+    const position = owner ? { x: owner.x + (owner.id === "et" ? -18 : 18), y: owner.y - 62 } : prop.position;
+    if (!position) return;
+    const baseHeight = prop.id === "mcd" ? 72 : prop.assetId === "water-gun" ? 70 : 120;
+    drawSceneSpriteAsset(this.ctx, image, asset, position, cameraX, cameraY, scale, owner?.facing ?? "right", 1, baseHeight);
+  }
+
+  private drawAuthoredEffect(effect: { id: string; kind: "water-vfx" | "dissolve"; actor?: string; target?: string; frame?: number; position?: Point; progress: number }, cameraX: number, cameraY: number, scale: number): void {
+    if (effect.kind === "dissolve") {
+      if (effect.id !== "alza-headlights" || !effect.position) return;
+      const asset = this.authoredAssetsForScene()["headlights"];
+      const image = asset ? this.authoredImages.get(asset.path) : undefined;
+      if (!asset || !image || !image.complete || image.naturalWidth === 0) return;
+      drawSceneSpriteAsset(this.ctx, image, asset, effect.position, cameraX, cameraY, scale, "left", Math.max(0, 0.54 * (1 - effect.progress)), 160);
+      return;
+    }
+    const sourceAsset = march30Assets.waterVfx;
+    const frameIndex = effect.frame ?? 0;
+    const frame = sourceAsset.frames[frameIndex];
+    const bounds = sourceAsset.visibleBounds?.[frameIndex];
+    const runtimeAssets = this.authoredAssetsForScene();
+    const actor = effect.actor ? this.authoredCutscene?.actors.get(effect.actor) : undefined;
+    const target = effect.target ? this.authoredCutscene?.actors.get(effect.target) : undefined;
+    const actorAsset = actor?.sprite ? runtimeAssets[actor.sprite.assetId] : undefined;
+    const image = this.march30Images.get(sourceAsset.path);
+    if (!frame || !bounds || !actor || !target || !actorAsset || !image?.complete || image.naturalWidth === 0) return;
+    const actorHeight = 154 * (actorAsset.materialScale ?? 1) * scale;
+    const actorWidth = actorHeight * actorAsset.source.w / actorAsset.source.h;
+    const actorLeft = (actor.x - cameraX) * scale - actorAsset.feet.x * actorWidth;
+    const actorTop = (actor.y - cameraY) * scale - actorAsset.feet.y * actorHeight;
+    const nozzle = actorAsset.nozzleOrigin ?? { x: 0.78, y: 0.42 };
+    const nozzleX = actor.facing === "left" && actorAsset.mirrorForLeft ? 1 - nozzle.x : nozzle.x;
+    const start = { x: actorLeft + nozzleX * actorWidth, y: actorTop + nozzle.y * actorHeight };
+    const targetAsset = target.sprite ? runtimeAssets[target.sprite.assetId] : undefined;
+    const targetHeight = 154 * (targetAsset?.materialScale ?? 1) * scale;
+    const targetWidth = targetAsset ? targetHeight * targetAsset.source.w / targetAsset.source.h : 46 * scale;
+    const targetX = (target.x - cameraX) * scale + (target.facing === "right" ? -0.12 : 0.12) * targetWidth;
+    const targetY = (target.y - cameraY) * scale - targetHeight * 0.62;
+    const dx = targetX - start.x;
+    const dy = targetY - start.y;
+    const distance = Math.hypot(dx, dy) * Math.max(0.35, effect.progress);
+    this.ctx.save();
+    this.ctx.globalAlpha = 0.8;
+    this.ctx.translate(start.x, start.y);
+    this.ctx.rotate(Math.atan2(dy, dx));
+    this.ctx.imageSmoothingEnabled = false;
+    this.ctx.drawImage(image, frame.source.x + bounds.x, frame.source.y + bounds.y, bounds.w, bounds.h, 0, -4 * MARCH30_MATERIAL_SCALE * scale, Math.max(12 * MARCH30_MATERIAL_SCALE * scale, distance), 8 * MARCH30_MATERIAL_SCALE * scale);
+    this.ctx.restore();
+  }
+  private drawAuthoredInteractionTells(layout: SceneLayout, cameraX: number, cameraY: number, scale: number, time: number): void {
+    const runtime = this.authoredRuntimeForScene();
+    if (!runtime) return;
+    const echoPoints = Object.keys(runtime.echoAnchors)
+      .map((id) => {
+        const point = this.authoredEchoPoint(layout, id);
+        return point ? { id, x: point.x, y: point.y, radius: point.radius } : null;
+      })
+      .filter((point): point is { id: string; x: number; y: number; radius: number } => Boolean(point));
+    const interactionPoints = layout.interactions.map((item) => ({ id: item.id, x: item.x, y: item.y, radius: item.radius }));
+    const points = [...interactionPoints, ...echoPoints.filter((echo) => !interactionPoints.some((interaction) => Math.hypot(interaction.x - echo.x, interaction.y - echo.y) < 1))];
+    for (const point of points) {
+      const x = (point.x - cameraX) * scale;
+      const y = (point.y - cameraY) * scale;
+      const active = this.activeObject === point.id;
+      const pulse = Math.sin(time / 360) * 0.5 + 0.5;
+      const radius = (active ? 22 + pulse * 4 : 14 + pulse * 2) * scale;
+      const glowRadius = (active ? 44 : 28) * scale;
+      const glow = this.ctx.createRadialGradient(x, y, 1, x, y, glowRadius);
+      glow.addColorStop(0, active ? "rgba(255, 229, 166, .52)" : "rgba(255, 226, 154, .30)");
+      glow.addColorStop(1, "rgba(213, 166, 87, 0)");
+      this.ctx.fillStyle = glow;
+      this.ctx.beginPath();
+      this.ctx.arc(x, y, glowRadius, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.save();
+      this.ctx.globalAlpha = active ? 0.86 : 0.58;
+      this.ctx.strokeStyle = active ? "rgba(255, 231, 172, .92)" : "rgba(255, 231, 172, .70)";
+      this.ctx.lineWidth = active ? 1.4 * scale : 1 * scale;
+      this.ctx.beginPath();
+      this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+      this.ctx.stroke();
+      this.ctx.restore();
+    }
+  }
   private drawMarch30Scene(time: number): void {
     const layout = this.currentSceneLayout();
     const image = this.sceneImage(layout);
@@ -2142,7 +2952,7 @@ export class WalkBackHomeApp {
       const memorySpot = this.sceneInteractionById(layout, "diary-memory");
       const friend = this.sceneInteractionById(layout, "friend-a");
       const pastry = this.sceneInteractionById(layout, "pastry");
-      if (memorySpot) this.drawMemorySpot(memorySpot, cameraX, cameraY, scale, time);
+      if (memorySpot) this.drawSharedDiaryBookProp(memorySpot, cameraX, cameraY, scale, time);
       if (pastry) this.drawBakeryPastry(pastry, cameraX, cameraY, scale, time);
       if (friend) this.drawFriendA(friend, cameraX, cameraY, scale);
     }
@@ -2225,9 +3035,14 @@ export class WalkBackHomeApp {
   }
 
   private drawLabisDiaryBookProp(diaryMemory: SceneInteraction, cameraX: number, cameraY: number, scale: number, time: number): void {
+    this.drawSharedDiaryBookProp(diaryMemory, cameraX, cameraY, scale, time);
+  }
+
+  private drawSharedDiaryBookProp(diaryMemory: SceneInteraction, cameraX: number, cameraY: number, scale: number, time: number): void {
     const x = (diaryMemory.x - cameraX) * scale;
     const y = (diaryMemory.y - cameraY) * scale;
     const pulse = Math.sin(time / 460) * 0.5 + 0.5;
+    const image = this.labisImages.get(sharedChapterDiaryBookAssetPath);
     this.ctx.save();
     this.ctx.globalAlpha = 0.56 + pulse * 0.24;
     const glow = this.ctx.createRadialGradient(x, y - 22 * scale, 3 * scale, x, y - 22 * scale, 72 * scale);
@@ -2237,7 +3052,12 @@ export class WalkBackHomeApp {
     this.ctx.beginPath();
     this.ctx.arc(x, y - 22 * scale, 72 * scale, 0, Math.PI * 2);
     this.ctx.fill();
-    this.drawLabisImage(labisAssetPath("ms", "holding_book"), x, y + 18 * scale, 128 * scale, 104 * scale) || this.drawMemoryTableFallback(x, y, scale * 1.05);
+    if (image?.complete && image.naturalWidth > 0) {
+      this.ctx.imageSmoothingEnabled = false;
+      this.ctx.drawImage(image, x - 64 * scale, y - 86 * scale, 128 * scale, 104 * scale);
+    } else {
+      this.drawMemoryTableFallback(x, y, scale * 1.05);
+    }
     this.ctx.restore();
   }
 
@@ -2440,12 +3260,13 @@ export class WalkBackHomeApp {
     const layout = this.currentSceneLayout("muji-room");
     const lamp = this.roomInteractionById(layout, "lamp");
     const windowInteraction = this.roomInteractionById(layout, "window");
-    const residue = this.roomInteractionById(layout, "residue");
+    const toolbox = this.roomInteractionById(layout, "toolbox");
     if (layout.orientation === "landscape") {
       const scale = this.canvas.width / 960;
-      this.ctx.drawImage(this.images.room, 0, 0, this.canvas.width, this.canvas.height);
+      drawSceneAsset(this.ctx, this.images.room, layout.orientation, layout.size, { w: this.canvas.width, h: this.canvas.height });
       if (!this.images.room.complete || this.images.room.naturalWidth === 0) this.drawRoomFallback(scale);
-      if (residue) this.drawRoomResidue(residue, scale);
+      if (toolbox) this.drawRoomToolbox(toolbox, scale);
+      if (this.room.windowFocus && windowInteraction) this.drawLivingWindowWeather(time, windowInteraction, layout);
       if (this.room.lampOn && lamp) this.drawLampGlow(lamp, scale);
       this.drawMuji({ x: this.player.x * scale, y: this.player.y * scale }, time, scale);
       if (this.room.windowFocus && windowInteraction) {
@@ -2454,7 +3275,6 @@ export class WalkBackHomeApp {
         this.drawWindowFocus(windowInteraction, time, scale);
       }
       for (const interaction of roomInteractions) {
-        if (interaction.id === "residue" && !this.room.residueIds?.length) continue;
         this.drawRoomInteractionHint(interaction, this.activeRoomInteraction?.id === interaction.id, time, scale);
       }
       return;
@@ -2462,9 +3282,10 @@ export class WalkBackHomeApp {
     const image = this.sceneImage(layout);
     const viewport = this.sceneViewport(layout);
     const scale = this.canvas.width / viewport.w;
-    this.ctx.drawImage(image, 0, 0, viewport.w, viewport.h, 0, 0, this.canvas.width, this.canvas.height);
+    drawSceneAsset(this.ctx, image, layout.orientation, layout.size, { w: this.canvas.width, h: this.canvas.height });
     if (!image.complete || image.naturalWidth === 0) this.drawRoomFallback(scale);
-    if (residue) this.drawRoomResidue(residue, scale);
+    if (toolbox) this.drawRoomToolbox(toolbox, scale);
+    if (this.room.windowFocus && windowInteraction) this.drawLivingWindowWeather(time, windowInteraction, layout);
     if (this.room.lampOn && lamp) this.drawLampGlow(lamp, scale);
     this.drawMuji({ x: this.player.x * scale, y: this.player.y * scale }, time, scale);
     if (this.room.windowFocus && windowInteraction) {
@@ -2473,7 +3294,6 @@ export class WalkBackHomeApp {
       this.drawWindowFocus(windowInteraction, time, scale);
     }
     for (const interaction of layout.interactions) {
-      if (interaction.id === "residue" && !this.room.residueIds?.length) continue;
       this.drawRoomInteractionHint(interaction, this.activeRoomInteraction?.id === interaction.id, time, scale);
     }
   }
@@ -2526,6 +3346,51 @@ export class WalkBackHomeApp {
     this.ctx.fillRect(706 * scale, 314 * scale, 132 * scale, 112 * scale);
   }
 
+  private drawLivingWindowWeather(time: number, interaction: SceneInteraction | RoomInteraction, layout: SceneLayout): void {
+    const weather = this.livingWindowWeather;
+    const visual = weatherVisualFor({ code: weather?.current.condition.code ?? 0, precipitationMm: weather?.current.precipitationMm ?? 0 });
+    const canvasSize = { w: this.canvas.width, h: this.canvas.height };
+    this.weatherCanvas.width = canvasSize.w;
+    this.weatherCanvas.height = canvasSize.h;
+    const ctx = this.weatherCtx;
+    const viewport = this.sceneViewport(layout);
+    const scale = this.canvas.width / viewport.w;
+    ctx.clearRect(0, 0, canvasSize.w, canvasSize.h);
+    ctx.fillStyle = visual.tint;
+    ctx.fillRect(0, 0, canvasSize.w, canvasSize.h);
+    const x = (interaction.x - 200) * scale;
+    const y = (interaction.y - 108) * scale;
+    const w = 292 * scale;
+    const h = 176 * scale;
+    ctx.save();
+    ctx.globalAlpha = visual.cloudOpacity;
+    if (this.images.weatherClouds.complete && this.images.weatherClouds.naturalWidth > 0) {
+      for (let index = 0; index < 4; index += 1) {
+        const frame = (index + Math.floor(time / 1200)) % 6;
+        ctx.drawImage(this.images.weatherClouds, (frame % 3) * 128, Math.floor(frame / 3) * 64, 128, 64, x - 26 * scale + ((index * 92 + time / (46 + index * 5)) % Math.max(1, w + 100 * scale)), y + (index % 2) * 32 * scale, 128 * scale, 64 * scale);
+      }
+    }
+    ctx.globalAlpha = 1;
+    if (visual.layer === "clear" || visual.layer === "cloud") {
+      const moon = this.livingWindowMoon.index;
+      if (this.images.weatherMoon.complete && this.images.weatherMoon.naturalWidth > 0) ctx.drawImage(this.images.weatherMoon, moon * 64, 0, 64, 64, x + w - 84 * scale, y + 22 * scale, 64 * scale, 64 * scale);
+    }
+    if (visual.rainOpacity > 0 && this.images.weatherRain.complete && this.images.weatherRain.naturalWidth > 0) {
+      ctx.globalAlpha = visual.rainOpacity;
+      const frame = Math.floor(time / 130) % 4;
+      for (let tileX = -1; tileX < 4; tileX += 1) for (let tileY = -1; tileY < 3; tileY += 1) ctx.drawImage(this.images.weatherRain, frame * 256, 0, 256, 256, x + tileX * 256 * scale, y + tileY * 256 * scale, 256 * scale, 256 * scale);
+    }
+    if (visual.fogOpacity > 0) { ctx.globalAlpha = visual.fogOpacity; ctx.fillStyle = "rgba(224, 231, 220, .68)"; ctx.fillRect(x, y, w, h); }
+    if (visual.lightning && Math.sin(time / 1700) > .97) { ctx.globalAlpha = .52; ctx.fillStyle = "#e9f1ff"; ctx.fillRect(x, y, w, h); }
+    ctx.restore();
+    const mask = layout.orientation === "portrait" ? this.images.weatherMaskPortrait : this.images.weatherMaskLandscape;
+    if (!mask.complete || mask.naturalWidth === 0) return;
+    ctx.save();
+    ctx.globalCompositeOperation = "destination-in";
+    drawSceneMask(ctx, mask, layout.orientation, layout.size, canvasSize);
+    ctx.restore();
+    this.ctx.drawImage(this.weatherCanvas, 0, 0, canvasSize.w, canvasSize.h);
+  }
   private drawWindowFocus(interaction: SceneInteraction | RoomInteraction, time: number, scale: number): void {
     const x = (interaction.x - 200) * scale;
     const y = (interaction.y - 108) * scale;
@@ -2557,8 +3422,7 @@ export class WalkBackHomeApp {
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
-  private drawRoomResidue(interaction: SceneInteraction | RoomInteraction, scale: number): void {
-    if (!this.room.residueIds?.length) return;
+  private drawRoomToolbox(interaction: SceneInteraction | RoomInteraction, scale: number): void {
     this.ctx.fillStyle = "#d5b06d";
     this.ctx.fillRect((interaction.x - 20) * scale, (interaction.y - 16) * scale, 38 * scale, 18 * scale);
     this.ctx.fillStyle = "#7f5937";
@@ -2582,7 +3446,11 @@ export class WalkBackHomeApp {
     this.syncGameplayChromeVisibility();
     const labisPrompt = this.scene === "labis" && this.labisCutscene ? "Memory is playing" : this.scene === "labis" && this.activeObject === "exit" ? "Press E · 回到 Memory Forest" : this.scene === "labis" && this.activeObject ? `Press E · ${this.activeObject}` : "";
     const march30Prompt = this.scene === "330-corridor" && this.march30Cutscene ? "Memory is rebuilding" : this.scene === "330-corridor" && this.activeObject ? `Press E · ${this.activeObject}` : "";
-    const rawText = this.scene === "forest" && this.activeDoor ? `Press E · ${this.activeDoor.date} ${this.activeDoor.title}` : this.scene === "bakery" && this.activeObject ? `Press E · ${this.activeObject}` : labisPrompt || march30Prompt || (this.scene === "muji-room" && this.activeRoomInteraction ? `Press E · ${this.activeRoomInteraction.label}` : "WASD / arrows · E / Enter");
+    const authoredRuntime = this.authoredRuntimeForScene();
+    const authoredLabel = authoredRuntime && this.activeObject === "watergun-crossing" ? "morning echo" : authoredRuntime && this.activeObject === "mcd-drop-memory" ? "MCD memory" : authoredRuntime && this.activeObject === "roadside-empty-car" ? "empty car" : this.activeObject;
+    const authoredPrompt = authoredRuntime && this.authoredCutscene ? "Memory is playing" : authoredRuntime && authoredLabel ? "Press E · " + authoredLabel : "";
+    const roomPromptLabel = this.activeRoomInteraction?.id === "toolbox" ? "工具箱" : this.activeRoomInteraction?.label ?? "";
+    const rawText = this.scene === "forest" && this.activeDoor ? `Press E · ${this.activeDoor.date} ${this.activeDoor.title}` : this.scene === "bakery" && this.activeObject ? `Press E · ${this.activeObject}` : labisPrompt || march30Prompt || authoredPrompt || (this.scene === "muji-room" && this.activeRoomInteraction ? `Press E · ${roomPromptLabel}` : "WASD / arrows · E / Enter");
     const text = this.mobileHudPrompt(rawText);
     this.input.setTouchInteractionLabel(this.touchActionText(rawText));
     const forestMonth = this.scene === "forest" ? `<div class="forest-month-hud" aria-label="Forest month"><button data-action="forest-month-prev" aria-label="Previous forest month">‹</button><strong>${this.escapeHtml(this.currentForestMonth().label)}</strong><button data-action="forest-month-next" aria-label="Next forest month">›</button></div>` : "";
@@ -3152,6 +4020,13 @@ export class WalkBackHomeApp {
   }
 
   private restoreJournalOrigin(): void {
+    if (this.chapterDiaryReturnId) {
+      const chapterId = this.chapterDiaryReturnId;
+      this.chapterDiaryReturnId = "";
+      this.journalReturnSnapshot = null;
+      this.showChapterDiary(chapterId);
+      return;
+    }
     const snapshot = this.journalReturnSnapshot ? journalReturnTarget(this.journalReturnSnapshot) : null;
     this.journalReturnSnapshot = null;
     if (!snapshot) {
@@ -3761,7 +4636,10 @@ export class WalkBackHomeApp {
     this.selectedChapter = savedEntry.title;
     this.journalMoreMenuOpen = false;
     this.endJournalEditor();
-    this.showDiaryReader(savedEntry.id);
+    const chapterId = this.chapterDiaryReturnId;
+    this.chapterDiaryReturnId = "";
+    if (chapterId) this.showChapterDiary(chapterId);
+    else this.showDiaryReader(savedEntry.id);
     this.showToast(index >= 0 ? "Diary updated" : "Diary entry added");
     this.autosave();
   }
@@ -3878,6 +4756,14 @@ export class WalkBackHomeApp {
 
   private handleInput(event: Event): void {
     const target = event.target as HTMLElement;
+    if (this.livingWindowPanelOpen && target.closest(".living-window-panel")) {
+      if (target instanceof HTMLInputElement && target.dataset.windowField === "location-query") this.livingWindowLocationQuery = target.value;
+      return;
+    }
+    if (this.toolboxOpen && target.closest(".toolbox-panel")) {
+      this.handleToolboxFieldInput(target);
+      return;
+    }
     if (target instanceof HTMLInputElement && target.id === "reflection-search") {
       this.reflectionWallSearch = target.value;
       this.refreshReflectionWallOnly();
@@ -4381,6 +5267,11 @@ export class WalkBackHomeApp {
 
   private async handleChange(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
+    if (this.livingWindowPanelOpen && input.closest(".living-window-panel")) return;
+    if (this.toolboxOpen && input.closest(".toolbox-panel")) {
+      this.handleToolboxFieldChange(input);
+      return;
+    }
     if (input.id === "timeline-date-scope" || input.id === "timeline-date-input") {
       this.timelineFilterAppliedMessage = "";
       const dateInput = this.overlay.querySelector<HTMLInputElement>("#timeline-date-input");
@@ -4863,23 +5754,6 @@ export class WalkBackHomeApp {
       return;
     }
     const pointerTarget = event.target as HTMLElement;
-    const note = pointerTarget.closest<HTMLElement>(".wall-note");
-    const wall = (event.target as HTMLElement).closest<HTMLElement>(".reflection-wall-surface");
-    const noteDragHandle = pointerTarget.closest(".reflection-note-drag-handle");
-    if (note && wall && noteDragHandle) {
-      const wallRect = wall.getBoundingClientRect();
-      const noteData = this.reflectionWall.notes.find((item) => item.id === note.dataset.note);
-      if (noteData) {
-        this.reflectionWallDrag = {
-          noteId: noteData.id,
-          offsetX: ((event.clientX - wallRect.left) / wallRect.width) * 100 - noteData.x,
-          offsetY: ((event.clientY - wallRect.top) / wallRect.height) * 100 - noteData.y
-        };
-        note.dataset.dragging = "true";
-        event.preventDefault();
-      }
-      return;
-    }
     const lyrics = (event.target as HTMLElement).closest<HTMLElement>(".floating-lyrics");
     if (lyrics && (event.target as HTMLElement).closest(".floating-drag-handle") && !(event.target as HTMLElement).closest(".floating-controls-bar,button,input,select,textarea")) {
       const rect = lyrics.getBoundingClientRect();
@@ -4939,26 +5813,6 @@ export class WalkBackHomeApp {
       event.preventDefault();
       return;
     }
-    if (this.reflectionWallDrag) {
-      const wall = this.overlay.querySelector<HTMLElement>(".reflection-wall-surface");
-      if (!wall) return;
-      const rect = wall.getBoundingClientRect();
-      const x = ((event.clientX - rect.left) / rect.width) * 100 - this.reflectionWallDrag.offsetX;
-      const y = ((event.clientY - rect.top) / rect.height) * 100 - this.reflectionWallDrag.offsetY;
-      const position = clampReflectionNotePosition({ x, y }, this.reflectionWallNoteDimensions());
-      this.reflectionWall = moveReflectionNote(this.reflectionWall, this.reflectionWallDrag.noteId, position);
-      this.save.saveReflectionWall(this.reflectionWall);
-      const note = this.overlay.querySelector<HTMLElement>(`.wall-note[data-note="${CSS.escape(this.reflectionWallDrag.noteId)}"]`);
-      const next = this.reflectionWall.notes.find((item) => item.id === this.reflectionWallDrag?.noteId);
-      if (note && next) {
-        const nextPosition = clampReflectionNotePosition(next, this.reflectionWallNoteDimensions());
-        note.style.left = `${nextPosition.x}%`;
-        note.style.top = `${nextPosition.y}%`;
-        note.dataset.dragging = "true";
-      }
-      event.preventDefault();
-      return;
-    }
     if (this.lyricsDrag) {
       const stageRect = this.stage.getBoundingClientRect();
       const scaleX = this.canvas.width / stageRect.width;
@@ -5013,12 +5867,84 @@ export class WalkBackHomeApp {
     this.autosave();
   }
 
+  private renderLivingWindowOverlay(): void {
+    const weather = this.livingWindowWeather;
+    const probability = weather?.current.precipitationProbabilityPercent === null || weather?.current.precipitationProbabilityPercent === undefined ? "Hourly precipitation probability unavailable" : `Next-hour precipitation probability: ${weather.current.precipitationProbabilityPercent}%`;
+    const current = weather ? `<div class="window-weather-reading"><strong>${this.escapeHtml(weather.current.condition.label)}</strong><span>${weather.current.temperatureC.toFixed(1)}°C · feels ${weather.current.apparentTemperatureC.toFixed(1)}°C</span><span>Current precipitation: ${weather.current.precipitationMm.toFixed(1)} mm</span><span>${this.escapeHtml(probability)}</span><span>Wind ${weather.current.windSpeedKmh.toFixed(1)} km/h · humidity ${weather.current.humidityPercent}%</span><span>Daily maximum precipitation probability: ${weather.daily.precipitationProbabilityMaxPercent === null ? "unavailable" : `${weather.daily.precipitationProbabilityMaxPercent}%`}</span></div>` : `<p class="window-weather-empty">No live weather yet. The window can still show the local Moon and cached state.</p>`;
+    const results = this.livingWindowLocationResults.map((location, index) => `<button data-action="window-location-select" data-index="${index}">${this.escapeHtml(location.name)}${location.country ? ` · ${this.escapeHtml(location.country)}` : ""}</button>`).join("");
+    this.overlay.classList.add("window-overlay");
+    this.overlay.classList.remove("dialogue-open", "lightweight-presentation", "toolbox-overlay");
+    this.overlay.innerHTML = `<div class="modal game-panel living-window-panel" role="dialog" aria-modal="true" aria-label="Living Window"><header class="window-panel-header"><div><span class="toolbox-kicker">LIVING WINDOW · OPEN-METEO</span><h2>${this.escapeHtml(this.livingWindowLocation.name)}</h2><p>${this.escapeHtml(this.livingWindowLocation.country ?? "")}</p></div><button data-action="living-window-close" aria-label="Close Living Window">×</button></header><div class="window-panel-grid"><section><h3>Outside now</h3>${current}<div class="window-panel-actions"><button class="primary" data-action="living-window-refresh">Refresh weather</button><button data-action="window-use-location">Use my location</button></div><p class="window-status" aria-live="polite">${this.escapeHtml(this.livingWindowStatus)}</p></section><section><h3>Local Moon</h3><div class="window-moon-reading"><span class="moon-glyph">◐</span><strong>${this.escapeHtml(this.livingWindowMoon.label)}</strong><span>${this.livingWindowMoon.illuminationPercent}% illuminated · day ${this.livingWindowMoon.ageDays.toFixed(1)}</span></div><h3>Location</h3><div class="window-location-search"><input data-window-field="location-query" value="${this.escapeHtml(this.livingWindowLocationQuery)}" placeholder="Search a city" aria-label="Search a city"><button data-action="window-location-search">Search</button></div><div class="window-location-results">${results}</div></section></div><footer class="window-panel-foot">Provider: Open-Meteo · offline cache is used when the network is unavailable.</footer></div>`;
+    this.syncGameplayChromeVisibility();
+  }
+
+  private async handleLivingWindowAction(action: string, target: HTMLElement): Promise<void> {
+    if (action === "living-window-close") return this.closeLivingWindow();
+    if (action === "living-window-refresh") return this.loadLivingWindowWeather();
+    if (action === "window-location-search") {
+      this.livingWindowStatus = "Searching locations…";
+      this.renderLivingWindowOverlay();
+      try { this.livingWindowLocationResults = await fetchOpenMeteoLocations(this.livingWindowLocationQuery); this.livingWindowStatus = this.livingWindowLocationResults.length ? "Choose a location to update the window." : "No matching locations found."; } catch { this.livingWindowStatus = "Location search unavailable offline."; }
+      return this.renderLivingWindowOverlay();
+    }
+    if (action === "window-location-select") {
+      const location = this.livingWindowLocationResults[Number(target.dataset.index)];
+      if (!location) return;
+      this.livingWindowLocation = location;
+      this.livingWindowLocationResults = [];
+      this.persistLivingWindowState();
+      return this.loadLivingWindowWeather();
+    }
+    if (action === "window-use-location") {
+      if (!navigator.geolocation) { this.livingWindowStatus = "Browser location is unavailable."; return this.renderLivingWindowOverlay(); }
+      this.livingWindowStatus = "Requesting browser location…";
+      this.renderLivingWindowOverlay();
+      await new Promise<void>((resolve) => navigator.geolocation.getCurrentPosition((position) => { this.livingWindowLocation = { name: "Current location", country: "Browser", latitude: position.coords.latitude, longitude: position.coords.longitude, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }; this.persistLivingWindowState(); resolve(); }, () => { this.livingWindowStatus = "Browser location was not granted."; resolve(); }, { enableHighAccuracy: false, maximumAge: 300000, timeout: 8000 }));
+      return this.loadLivingWindowWeather();
+    }
+  }
+
+  private async loadLivingWindowWeather(): Promise<void> {
+    this.livingWindowLoading = true;
+    this.livingWindowStatus = "Loading current weather…";
+    this.renderLivingWindowOverlay();
+    try { this.livingWindowWeather = await fetchOpenMeteoWeather(this.livingWindowLocation); this.livingWindowStatus = "Live weather loaded · current precipitation and probability are separate readings."; this.persistLivingWindowState(); } catch { const cache = weatherCacheStatus(this.livingWindowWeather); this.livingWindowStatus = cache === "fresh" || cache === "stale" ? `Offline · showing ${cache} cached weather.` : "Offline · no cached weather available."; }
+    finally { this.livingWindowLoading = false; if (this.livingWindowPanelOpen) this.renderLivingWindowOverlay(); }
+  }
+
+  private closeLivingWindow(): void {
+    this.livingWindowPanelOpen = false;
+    this.room.windowFocus = false;
+    this.overlay.classList.remove("window-overlay");
+    this.overlay.innerHTML = "";
+    this.syncGameplayChromeVisibility();
+    this.persistLivingWindowState();
+    this.autosave();
+  }
+
+  private persistLivingWindowState(): void { this.save.saveLivingWindowState({ version: 1, location: this.livingWindowLocation, weather: this.livingWindowWeather, currency: null }); }
+
+  private hydrateLivingWindowState(): void {
+    const saved = this.save.loadLivingWindowState();
+    if (!saved) return;
+    if (saved.location) this.livingWindowLocation = saved.location;
+    if (saved.weather && typeof saved.weather === "object") this.livingWindowWeather = saved.weather as WeatherSnapshot;
+    const cache = weatherCacheStatus(this.livingWindowWeather);
+    if (cache === "fresh" || cache === "stale") this.livingWindowStatus = `${cache === "fresh" ? "Cached" : "Stale cached"} weather ready.`;
+  }
   private roomWindow(): void {
     this.room.visits += 1;
     this.room.windowFocus = !this.room.windowFocus;
     this.room.reflections.push("Outside the window, the forest stays where it is.");
-    this.showToast(this.room.windowFocus ? "Rain closer" : "Window released");
-    this.overlay.innerHTML = "";
+    if (this.room.windowFocus) {
+      this.livingWindowPanelOpen = true;
+      this.livingWindowMoon = calculateMoonPhase();
+      this.renderLivingWindowOverlay();
+      void this.loadLivingWindowWeather();
+    } else {
+      this.closeLivingWindow();
+    }
+    this.showToast(this.room.windowFocus ? "The living window opens" : "Window released");
     this.autosave();
   }
 
@@ -5039,6 +5965,7 @@ export class WalkBackHomeApp {
   }
 
   private openReflectionWall(): void {
+    const filterMenuOpen = this.overlay.querySelector<HTMLDetailsElement>(".reflection-wall-filter-menu")?.open ?? false;
     this.recordsPanelOpen = false;
     this.reflectionWall = migrateLegacyReflectionWall(this.reflectionWall, this.room);
     this.save.saveReflectionWall(this.reflectionWall);
@@ -5048,20 +5975,18 @@ export class WalkBackHomeApp {
       filter: this.reflectionWallFilter,
       search: this.reflectionWallSearch
     });
-    const matchingIds = new Set(notes.map((note) => note.id));
     const toolbar = this.renderReflectionToolbar(notes.length);
     const body = this.reflectionWallView === "wall"
-      ? this.renderReflectionWallSurface(matchingIds)
-      : this.reflectionWallView === "stack"
-        ? this.renderReflectionStack(notes)
-        : this.renderReflectionList(notes);
+      ? this.renderReflectionStack(notes)
+      : this.renderReflectionList(notes);
     this.overlay.innerHTML = `<div class="modal reflection-wall-modal">${toolbar}${body}</div>`;
+    if (filterMenuOpen) this.overlay.querySelector<HTMLDetailsElement>(".reflection-wall-filter-menu")!.open = true;
     this.focusStage();
   }
 
   private renderReflectionToolbar(count: number): string {
-    const filters: Array<[ReflectionWallFilter, string]> = [["all", "All Time"], ["today", "Today"], ["week", "This Week"], ["month", "This Month"], ["manual", "My Notes"], ["chapter", "Chapter Notes"], ["pinned", "Pinned"], ["favorites", "Favorites"]];
-    const views: Array<[ReflectionWallView, string]> = [["wall", "Wall"], ["stack", "Stack"], ["list", "List"]];
+    const filters: Array<[ReflectionWallFilter, string]> = [["all", "All Time"], ["today", "Today"], ["week", "This Week"], ["month", "This Month"], ["manual", "My Notes"], ["chapter", "Chapter Notes"], ["pinned", "Pinned"], ["favorites", "Favourites"]];
+    const views: Array<[ReflectionWallView, string]> = [["wall", "Wall"], ["list", "List"]];
     const sorts: Array<[ReflectionWallSort, string]> = [["manual", "Manual Wall Order"], ["newest", "Newest First"], ["oldest", "Oldest First"]];
     return `<div class="reflection-wall-toolbar">
       <div><h2>Reflection Wall</h2><p>${count} note${count === 1 ? "" : "s"}</p></div>
@@ -5076,11 +6001,6 @@ export class WalkBackHomeApp {
     </div>`;
   }
 
-  private renderReflectionWallSurface(matchingIds: Set<string>): string {
-    const notes = this.reflectionWall.notes.map((note) => this.renderWallNote(note, matchingIds.has(note.id))).join("");
-    return `<section class="reflection-wall-surface" aria-label="Reflection Wall">${notes || `<div class="reflection-wall-empty"><p>The wall is quiet.</p><button data-action="reflection-note-new">Leave a note</button></div>`}</section>`;
-  }
-
   private refreshReflectionWallOnly(): void {
     const notes = visibleReflectionNotes(this.reflectionWall, {
       view: this.reflectionWallView,
@@ -5090,46 +6010,15 @@ export class WalkBackHomeApp {
     });
     const count = this.overlay.querySelector<HTMLElement>(".reflection-wall-toolbar p");
     if (count) count.textContent = `${notes.length} note${notes.length === 1 ? "" : "s"}`;
-    const matchingIds = new Set(notes.map((note) => note.id));
+    const currentBody = this.overlay.querySelector<HTMLElement>(".reflection-stack, .reflection-list");
+    if (!currentBody) return;
     const nextBody = this.reflectionWallView === "wall"
-      ? this.renderReflectionWallSurface(matchingIds)
-      : this.reflectionWallView === "stack"
-        ? this.renderReflectionStack(notes)
-        : this.renderReflectionList(notes);
-    const currentBody = this.overlay.querySelector<HTMLElement>(".reflection-wall-surface, .reflection-stack, .reflection-list");
-    if (!currentBody) return this.openReflectionWall();
+      ? this.renderReflectionStack(notes)
+      : this.renderReflectionList(notes);
     const wrapper = document.createElement("div");
     wrapper.innerHTML = nextBody;
     const replacement = wrapper.firstElementChild;
     if (replacement) currentBody.replaceWith(replacement);
-  }
-
-  private selectReflectionWallNote(noteId: string): void {
-    this.selectedReflectionNoteId = this.selectedReflectionNoteId === noteId ? "" : noteId;
-    this.refreshReflectionWallOnly();
-  }
-
-  private renderWallNote(note: ReflectionNote, visible: boolean): string {
-    const faded = this.reflectionWallSearch.trim() || this.reflectionWallFilter !== "all" ? (visible ? "" : " faded") : "";
-    const selected = this.selectedReflectionNoteId === note.id;
-    const position = clampReflectionNotePosition(note, this.reflectionWallNoteDimensions());
-    return `<article class="wall-note paper-${this.escapeHtml(note.styleId)}${faded} ${selected ? "selected" : ""}" data-note="${this.escapeHtml(note.id)}" style="left:${position.x}%;top:${position.y}%;transform:translate(-50%,-50%) rotate(${note.rotation}deg);">
-      <button class="wall-note-body" data-action="reflection-note-select" data-note="${this.escapeHtml(note.id)}">
-        <span>${this.escapeHtml(note.text)}</span>
-        <small>${this.escapeHtml(this.formatReflectionTimestamp(note.createdAt))}${note.updatedAt ? `<br>edited ${this.escapeHtml(this.formatReflectionTimestamp(note.updatedAt))}` : ""}</small>
-      </button>
-      <div class="reflection-note-tools" aria-label="Note tools">
-        <button class="reflection-note-drag-handle" data-action="reflection-note-drag" data-note="${this.escapeHtml(note.id)}" aria-label="Drag note">↕</button>
-        <button data-action="reflection-note-edit" data-note="${this.escapeHtml(note.id)}" aria-label="Edit note">🖊</button>
-        <button data-action="reflection-note-delete" data-note="${this.escapeHtml(note.id)}" aria-label="Remove note">×</button>
-      </div>
-    </article>`;
-  }
-
-  private reflectionWallNoteDimensions(): { widthPercent: number; heightPercent: number; edgePercent: number } {
-    return window.matchMedia("(max-width: 700px)").matches
-      ? { widthPercent: 52, heightPercent: 34, edgePercent: 6 }
-      : { widthPercent: 28, heightPercent: 24, edgePercent: 4 };
   }
 
   private renderReflectionStack(notes: ReflectionNote[]): string {
@@ -5142,12 +6031,19 @@ export class WalkBackHomeApp {
     return `<div class="reflection-stack">${sections || `<p>The wall is quiet.</p>`}</div>`;
   }
 
-  private renderStackCard(note: ReflectionNote): string {
-    return `<button class="reflection-stack-card paper-${this.escapeHtml(note.styleId)}" data-action="reflection-note-open" data-note="${this.escapeHtml(note.id)}"><span>${this.escapeHtml(note.text)}</span><small>${this.escapeHtml(this.formatReflectionTimestamp(note.createdAt))}</small></button>`;
+  private renderReflectionFlags(note: ReflectionNote): string {
+    const flags = [
+      note.pinned ? `<span class="reflection-flag-badge pinned" aria-label="Pinned">📌 Pinned</span>` : "",
+      note.favorite ? `<span class="reflection-flag-badge favorite" aria-label="Favourite">★ Favourite</span>` : ""
+    ].filter(Boolean).join("");
+    return flags ? `<div class="reflection-note-flags" aria-label="Note flags">${flags}</div>` : "";
   }
 
+  private renderStackCard(note: ReflectionNote): string {
+    return `<button class="reflection-stack-card paper-${this.escapeHtml(note.styleId)}" data-action="reflection-note-open" data-note="${this.escapeHtml(note.id)}"><span>${this.escapeHtml(note.text)}</span>${this.renderReflectionFlags(note)}<small>${this.escapeHtml(this.formatReflectionTimestamp(note.createdAt))}</small></button>`;
+  }
   private renderReflectionList(notes: ReflectionNote[]): string {
-    const rows = notes.map((note) => `<button class="reflection-list-row" data-action="reflection-note-open" data-note="${this.escapeHtml(note.id)}"><strong>${this.escapeHtml(this.formatReflectionTimestamp(note.createdAt))}</strong><span>${this.escapeHtml(note.text)}</span></button>`).join("");
+    const rows = notes.map((note) => `<button class="reflection-list-row" data-action="reflection-note-open" data-note="${this.escapeHtml(note.id)}"><strong>${this.escapeHtml(this.formatReflectionTimestamp(note.createdAt))}</strong><span>${this.escapeHtml(note.text)}</span>${this.renderReflectionFlags(note)}</button>`).join("");
     return `<div class="reflection-list">${rows || `<p>The wall is quiet.</p>`}</div>`;
   }
 
@@ -5192,8 +6088,8 @@ export class WalkBackHomeApp {
       <small>${this.escapeHtml(this.formatReflectionTimestamp(note.createdAt))}${note.updatedAt ? `<br>edited ${this.escapeHtml(this.formatReflectionTimestamp(note.updatedAt))}` : ""}</small>
       <div class="settings-row">
         <button data-action="reflection-note-edit" data-note="${this.escapeHtml(note.id)}">Edit</button>
-        <button data-action="reflection-note-pin" data-note="${this.escapeHtml(note.id)}">${note.pinned ? "Unpin" : "Pin"}</button>
-        <button data-action="reflection-note-favorite" data-note="${this.escapeHtml(note.id)}">${note.favorite ? "Unfavorite" : "Favorite"}</button>
+        <button class="reflection-flag-action pinned${note.pinned ? " active" : ""}" data-action="reflection-note-pin" data-note="${this.escapeHtml(note.id)}">📌 ${note.pinned ? "Pinned" : "Pin"}</button>
+        <button class="reflection-flag-action favorite${note.favorite ? " active" : ""}" data-action="reflection-note-favorite" data-note="${this.escapeHtml(note.id)}">★ Favourite</button>
         <button data-action="reflection-note-delete" data-note="${this.escapeHtml(note.id)}">Delete</button>
       </div>
       <div class="reflection-paper-grid">${papers}</div>
@@ -5210,11 +6106,16 @@ export class WalkBackHomeApp {
   }
 
   private toggleReflectionFlag(noteId: string, flag: "pinned" | "favorite"): void {
-    this.reflectionWall = toggleReflectionNoteFlag(this.reflectionWall, noteId, flag);
+    const note = this.reflectionWall.notes.find((item) => item.id === noteId);
+    const next = toggleReflectionNoteFlag(this.reflectionWall, noteId, flag);
+    if (next === this.reflectionWall && flag === "pinned" && !note?.pinned) {
+      this.showToast("You can pin up to 10 notes");
+      return;
+    }
+    this.reflectionWall = next;
     this.save.saveReflectionWall(this.reflectionWall);
     this.showReflectionDetail(noteId);
   }
-
   private changeReflectionNotePaper(noteId: string, styleId: string): void {
     this.reflectionWall = changeReflectionPaper(this.reflectionWall, noteId, styleId);
     this.save.saveReflectionWall(this.reflectionWall);
@@ -5230,7 +6131,7 @@ export class WalkBackHomeApp {
   }
 
   private setReflectionWallView(view: ReflectionWallView): void {
-    if (view === "wall" || view === "stack" || view === "list") this.reflectionWallView = view;
+    if (view === "wall" || view === "list") this.reflectionWallView = view;
     this.openReflectionWall();
   }
 
@@ -6023,10 +6924,12 @@ export class WalkBackHomeApp {
     this.tendencies = state.tendencies;
     this.readMemories = new Set(state.readMemories);
     this.completedMemoryEvents = new Set(state.completedMemoryEvents ?? []);
+    this.chapterMemoryRun = null;
     this.room = { ...this.room, ...state.room };
     this.personalPlayer = { ...this.personalPlayer, ...(state.personalPlayer ?? this.save.loadPersonalPlayer() ?? {}) };
     this.normalizePersonalPlayerToggles();
     if (this.isAuthoredRuntimeScene()) {
+      this.resetAuthoredRuntime();
       this.currentDoor = this.allDoors().find((door) => this.isChapterNode(door) && chapterRegistry[door.chapterId]?.runtimeScene === this.scene) ?? this.currentDoor;
     }
     if (this.scene === "labis") {
@@ -6059,6 +6962,8 @@ export class WalkBackHomeApp {
     this.choices = [];
     this.readMemories.clear();
     this.completedMemoryEvents.clear();
+    this.resetAuthoredRuntime();
+    this.chapterMemoryRun = null;
     this.chapterTriggerSessions.clear();
     this.chapterProgress.clear();
     this.reflectionWall = migrateLegacyReflectionWall(this.reflectionWall, this.room);

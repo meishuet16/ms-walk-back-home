@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { labisMotorChapter } from "../src/fixtures/labisMotorChapter.js";
 import { canStartLabisMotorMemory, labisDiaryMemorySpot, labisInteractionForPoint, labisMemoryTriggers, labisMotorMemoryActions } from "../src/fixtures/labisMotorMemory.js";
@@ -7,7 +8,9 @@ import { CutsceneSystem } from "../src/systems/CutsceneSystem.js";
 import { activeMemoryTrigger } from "../src/systems/MemoryTrigger.js";
 import { SaveManager } from "../src/systems/SaveManager.js";
 import { emptyTendencies } from "../src/systems/TendencySystem.js";
-import { labisChoicePoints, resolveLabisMemoryReflection } from "../src/fixtures/labisMemoryEchoes.js";
+import { labisChoicePoints, labisEchoes, resolveLabisMemoryReflection } from "../src/fixtures/labisMemoryEchoes.js";
+
+const appSource = readFileSync(new URL("../../src/app.ts", import.meta.url), "utf8");
 
 class MemoryStorage {
   private values = new Map<string, string>();
@@ -41,10 +44,10 @@ test("labis motor day is registered as a labis runtime chapter", () => {
   assert.equal(routeForestEntry(door).kind, "implemented-chapter");
 });
 
-test("labis memory trigger respects once-completed events", () => {
+test("labis memory trigger remains available after historical completion", () => {
   const trigger = labisMemoryTriggers[0];
   assert.equal(activeMemoryTrigger({ x: trigger.rect.x + 20, y: trigger.rect.y + 20 }, labisMemoryTriggers, new Set())?.eventId, "july19-motor-learning");
-  assert.equal(activeMemoryTrigger({ x: trigger.rect.x + 20, y: trigger.rect.y + 20 }, labisMemoryTriggers, new Set(["july19-motor-learning"])), null);
+  assert.equal(activeMemoryTrigger({ x: trigger.rect.x + 20, y: trigger.rect.y + 20 }, labisMemoryTriggers, new Set(["july19-motor-learning"]))?.eventId, "july19-motor-learning");
 });
 
 test("labis motor trigger can start from quiet exploration without forcing diary first", () => {
@@ -59,6 +62,26 @@ test("labis diary memory remains repeatable and is not covered by the motor trig
   assert.equal(labisInteractionForPoint(point, new Set(), new Set()), "diary memory");
   assert.equal(labisInteractionForPoint(point, new Set(["labis-motor-day"]), new Set()), "diary memory");
   assert.equal(canStartLabisMotorMemory(point, new Set(["labis-motor-day"]), new Set()), false);
+});
+
+test("Labis photo manual and last-night echoes do not require motor completion", () => {
+  for (const id of ["july19-photo-threat", "july19-filter-evening", "july19-chicken-cake"]) {
+    const echo = labisEchoes.find((item) => item.id === id);
+    assert.ok(echo);
+    assert.equal(echo?.requires?.includes("july19-motor-learning") ?? false, false);
+  }
+});
+
+test("Labis ending reflection completes the canonical motor event after optional echoes", () => {
+  const finishEchoStart = appSource.indexOf("private finishLabisEcho");
+  const reflectionStart = appSource.indexOf("private showLabisMemoryReflection");
+  const finishEcho = appSource.slice(finishEchoStart, reflectionStart);
+  const reflection = appSource.slice(reflectionStart, appSource.indexOf("private closeLabisReflection", reflectionStart));
+
+  assert.match(finishEcho, /if \(echo\) this\.commitChapterMemoryRunTendencies\("labis-motor-day", echo\.id\)/);
+  assert.match(finishEcho, /else if \(this\.chapterMemoryRun\?\.chapterId === "labis-motor-day"[\s\S]*commitChapterMemoryRunTendencies\("labis-motor-day", "july19-motor-learning"\)/);
+  assert.match(reflection, /this\.completeChapterMemoryRun\("labis-motor-day", "july19-motor-learning"/);
+  assert.doesNotMatch(reflection, /this\.chapterMemoryRun\?\.eventId/);
 });
 
 test("labis chapter offers three interpretation choice points and four memory reflections", () => {

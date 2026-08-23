@@ -81,7 +81,7 @@ test("committed portrait overrides load authored fields instead of empty default
     const muji = getSceneLayout("muji-room", "portrait");
     assert.notDeepEqual(muji.spawn, { x: 470.5, y: 836 });
     assert.ok(muji.obstacles.length > 0);
-    assert.deepEqual(muji.interactions.map((item) => item.id), ["door", "lamp", "journal", "window", "records", "residue", "reflection"]);
+    assert.deepEqual(muji.interactions.map((item) => item.id), ["door", "lamp", "journal", "window", "records", "toolbox", "reflection"]);
     assert.ok(getSceneLayout("forest", "portrait").obstacles.length > 0);
     assert.ok(getSceneLayout("bakery", "portrait").interactions.length > 0);
     assert.ok(getSceneLayout("labis", "portrait").triggers.length > 0);
@@ -145,7 +145,8 @@ test("authored chapters use a generic SceneLayout runtime path and remain replay
   assert.match(appSource, /private updateAuthoredScene/);
   assert.match(appSource, /private drawAuthoredScene/);
   assert.match(appSource, /chapter\.runtimeScene/);
-  assert.match(appSource, /This authored scene is not playable yet/);
+  assert.doesNotMatch(appSource, /This authored scene is not playable yet/);
+  assert.match(appSource, /private drawApril06Scene/);
   assert.match(appSource, /if \(action === "forest"\)/);
   assert.doesNotMatch(appSource, /const action = state === "walkedThrough" \? "Remember"/);
 });

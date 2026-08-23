@@ -31,6 +31,7 @@ export type DialogueNode = {
 
 export type HtmlChapterScene = {
   id: string;
+  diaryEntryId?: string;
   date: string;
   title: string;
   mood: string;
@@ -154,6 +155,22 @@ export type ReflectionTone = "accepting" | "holding" | "not-ready" | "rewriting"
 
 export type ChapterProgressState = "unseen" | "visited" | "walkedThrough";
 
+export type ToolboxPersistedState = {
+  version: 1;
+  selected: string;
+  selectedPresetId: string;
+  converterUnits: Record<string, string>;
+  currencyFrom: string;
+  currencyTo: string;
+  presets?: Array<{ id: string; name: string; choices: string[] }>;
+};
+
+export type LivingWindowPersistedState = {
+  version: 1;
+  location: { id?: number; name: string; country?: string; latitude: number; longitude: number; timezone?: string } | null;
+  weather: unknown;
+  currency: unknown;
+};
 export type RoomJourneyState = {
   visits: number;
   reflections: string[];
@@ -168,7 +185,7 @@ export type RoomJourneyState = {
 };
 
 export type ReflectionNoteSource = "manual" | "chapter";
-export type ReflectionWallView = "wall" | "stack" | "list";
+export type ReflectionWallView = "wall" | "list";
 export type ReflectionWallFilter = "all" | "today" | "week" | "month" | "manual" | "chapter" | "pinned" | "favorites";
 export type ReflectionWallSort = "manual" | "newest" | "oldest";
 
@@ -293,6 +310,7 @@ export type ChapterReflectionQuote = {
   title?: string;
   lines: string[];
   afterline?: string;
+  preference?: Partial<Tendencies>;
 };
 
 export type ChapterReflection = {

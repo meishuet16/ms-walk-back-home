@@ -2,15 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   changeReflectionPaper,
-  clampReflectionNotePosition,
   createChapterReflectionNote,
   createReflectionNote,
   createReflectionWallState,
   filterReflectionNotes,
   migrateLegacyReflectionWall,
-  moveReflectionNote,
   searchReflectionNotes,
   sortReflectionNotes,
+  toggleReflectionNoteFlag,
   updateReflectionNote,
   visibleReflectionNotes
 } from "../src/systems/ReflectionWall.js";
@@ -49,18 +48,15 @@ test("editing preserves createdAt and position while setting updatedAt", () => {
   assert.equal(edited.notes[0].y, 30);
 });
 
-test("dragging and paper changes preserve note identity and timestamps", () => {
+test("paper changes preserve note identity and timestamps", () => {
   const state = createReflectionNote(createReflectionWallState(), "keep me", { now, styleId: "cream-torn" });
   const id = state.notes[0].id;
-  const moved = moveReflectionNote(state, id, { x: 80, y: 76 });
-  const changed = changeReflectionPaper(moved, id, "sage-memo", new Date("2026-08-12T01:00:00.000Z"));
+  const changed = changeReflectionPaper(state, id, "sage-memo", new Date("2026-08-12T01:00:00.000Z"));
 
   assert.equal(changed.notes[0].id, id);
   assert.equal(changed.notes[0].createdAt, "2026-08-11T11:42:00.000Z");
   assert.equal(changed.notes[0].updatedAt, "2026-08-12T01:00:00.000Z");
   assert.equal(changed.notes[0].styleId, "sage-memo");
-  assert.equal(changed.notes[0].x, 80);
-  assert.equal(changed.notes[0].y, 76);
 });
 
 test("unicode search and filters do not mutate persisted wall coordinates", () => {
@@ -83,11 +79,19 @@ test("sorting and alternate views never overwrite manual wall layout", () => {
   assert.deepEqual(sortReflectionNotes(state.notes, "newest").map((note) => note.text), ["new", "old"]);
   assert.deepEqual(sortReflectionNotes(state.notes, "oldest").map((note) => note.text), ["old", "new"]);
   assert.equal(visibleReflectionNotes(state, { view: "list", sort: "newest", search: "" })[0].text, "new");
-  assert.equal(visibleReflectionNotes(state, { view: "stack", sort: "oldest", search: "" })[0].text, "old");
+  assert.equal(visibleReflectionNotes(state, { view: "wall", sort: "oldest", search: "" })[0].text, "old");
   assert.deepEqual(state.notes.map((note) => ({ id: note.id, x: note.x, y: note.y })), before);
 });
 
-test("legacy room reflection migrates once without deleting old journey fields", () => {
+test("pinned notes stay above unpinned notes in every Wall ordering", () => {
+  let state = createReflectionNote(createReflectionWallState(), "unpinned first", { now });
+  state = createReflectionNote(state, "pinned second", { now: new Date("2026-08-12T00:00:00.000Z") });
+  state = { ...state, notes: state.notes.map((note) => note.text === "pinned second" ? { ...note, pinned: true } : note) };
+
+  for (const sort of ["manual", "newest", "oldest"] as const) {
+    assert.equal(visibleReflectionNotes(state, { view: "wall", sort, search: "" })[0].text, "pinned second");
+  }
+});test("legacy room reflection migrates once without deleting old journey fields", () => {
   const migrated = migrateLegacyReflectionWall(createReflectionWallState(), {
     reflectionNote: "old wall note",
     reflections: ["The lamp turns on softly.", "Reflection: second old note"]
@@ -109,9 +113,22 @@ test("kept chapter reflection notes remain after replaying the same ending", () 
   assert.equal(replayed.notes.length, 2);
 });
 
-test("reflection note center is clamped by its rendered dimensions", () => {
-  assert.deepEqual(
-    clampReflectionNotePosition({ x: 99, y: 99 }, { widthPercent: 32, heightPercent: 28, edgePercent: 4 }),
-    { x: 80, y: 82 }
-  );
+test("reflection wall caps pinned notes at ten while allowing unpinning", () => {
+  const state = createReflectionWallState();
+  const notes = Array.from({ length: 11 }, (_, index) => ({
+    id: `note-${index}`,
+    text: `Note ${index}`,
+    createdAt: now.toISOString(),
+    styleId: "cream-torn",
+    x: 50,
+    y: 50,
+    rotation: 0,
+    source: "manual" as const,
+    pinned: index < 10
+  }));
+  const capped = toggleReflectionNoteFlag({ ...state, notes }, "note-10", "pinned");
+  assert.equal(capped.notes.filter((note) => note.pinned).length, 10);
+  assert.equal(capped.notes.find((note) => note.id === "note-10")?.pinned, false);
+  const unpinned = toggleReflectionNoteFlag(capped, "note-0", "pinned");
+  assert.equal(unpinned.notes.find((note) => note.id === "note-0")?.pinned, false);
 });

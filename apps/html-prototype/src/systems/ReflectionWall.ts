@@ -28,26 +28,6 @@ type VisibleOptions = {
   now?: Date;
 };
 
-export type ReflectionNoteDimensions = {
-  widthPercent: number;
-  heightPercent: number;
-  edgePercent?: number;
-};
-
-export function clampReflectionNotePosition(
-  position: { x: number; y: number },
-  dimensions: ReflectionNoteDimensions = { widthPercent: 28, heightPercent: 24, edgePercent: 4 }
-): { x: number; y: number } {
-  const edge = Math.max(0, dimensions.edgePercent ?? 4);
-  const minX = edge + Math.max(0, dimensions.widthPercent) / 2;
-  const maxX = 100 - edge - Math.max(0, dimensions.widthPercent) / 2;
-  const minY = edge + Math.max(0, dimensions.heightPercent) / 2;
-  const maxY = 100 - edge - Math.max(0, dimensions.heightPercent) / 2;
-  return {
-    x: Math.round(Math.max(minX, Math.min(maxX, position.x)) * 100) / 100,
-    y: Math.round(Math.max(minY, Math.min(maxY, position.y)) * 100) / 100
-  };
-}
 
 export function createReflectionWallState(now = new Date()): ReflectionWallState {
   return {
@@ -103,12 +83,6 @@ export function updateReflectionNote(state: ReflectionWallState, id: string, tex
   }, now);
 }
 
-export function moveReflectionNote(state: ReflectionWallState, id: string, position: { x: number; y: number }, now = new Date()): ReflectionWallState {
-  return saveWall({
-    ...state,
-    notes: state.notes.map((note) => note.id === id ? { ...note, x: clampPercent(position.x), y: clampPercent(position.y) } : note)
-  }, now);
-}
 
 export function changeReflectionPaper(state: ReflectionWallState, id: string, styleId: string, now = new Date()): ReflectionWallState {
   const nextStyle = validStyleId(styleId) ? styleId : selectPaperStyle(id);
@@ -119,6 +93,9 @@ export function changeReflectionPaper(state: ReflectionWallState, id: string, st
 }
 
 export function toggleReflectionNoteFlag(state: ReflectionWallState, id: string, flag: "pinned" | "favorite", now = new Date()): ReflectionWallState {
+  const current = state.notes.find((note) => note.id === id);
+  if (!current) return state;
+  if (flag === "pinned" && !current.pinned && state.notes.filter((note) => note.pinned).length >= 10) return state;
   return saveWall({
     ...state,
     notes: state.notes.map((note) => note.id === id ? { ...note, [flag]: !note[flag], updatedAt: now.toISOString() } : note)
@@ -153,7 +130,8 @@ export function sortReflectionNotes(notes: ReflectionNote[], sort: ReflectionWal
 
 export function visibleReflectionNotes(state: ReflectionWallState, options: VisibleOptions): ReflectionNote[] {
   const filtered = filterReflectionNotes(searchReflectionNotes(state.notes, options.search), options.filter ?? "all", options.now);
-  return options.view === "wall" && options.sort === "manual" ? [...filtered] : sortReflectionNotes(filtered, options.sort);
+  const ordered = options.view === "wall" && options.sort === "manual" ? [...filtered] : sortReflectionNotes(filtered, options.sort);
+  return [...ordered].sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)));
 }
 
 export function migrateLegacyReflectionWall(state: ReflectionWallState, room: Partial<RoomJourneyState> | null | undefined, now = new Date()): ReflectionWallState {
