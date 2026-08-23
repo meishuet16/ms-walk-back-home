@@ -5328,3 +5328,93 @@ canvas {
   .window-location-search { display: grid; grid-template-columns: 1fr auto; }
   .window-panel-foot { display: block; line-height: 1.4; }
 }
+.scene-debug {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  grid-template-columns: minmax(300px, 340px) minmax(0, 1fr);
+}
+.scene-debug-panel {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.scene-debug-stage {
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+}
+.scene-debug-viewport-toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 8px;
+  border: 1px solid #314455;
+  background: #17222c;
+}
+.scene-debug-viewport-toolbar strong { margin-right: auto; color: #e6cb6a; }
+.scene-debug-viewport-scroll {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 24px;
+  background: #0b1117;
+  overscroll-behavior: contain;
+}
+.scene-debug-artboard {
+  width: max-content;
+  max-width: none;
+  transform-origin: top left;
+  will-change: transform;
+}
+.scene-debug-artboard img {
+  max-width: none;
+  max-height: none;
+}
+.scene-debug-workflow,
+.scene-debug-authoring,
+.scene-debug-preview-controls {
+  border: 1px solid #314455;
+  border-radius: 5px;
+  padding: 9px;
+  background: #101820;
+}
+.scene-debug-workflow { display: grid; gap: 8px; }
+.scene-debug-help { margin: 0; color: #9db0bd; font-size: 12px; line-height: 1.35; }
+.scene-debug-dirty {
+  padding: 5px 8px;
+  border: 1px solid #415568;
+  border-radius: 4px;
+  color: #9edfb8;
+  font-size: 12px;
+}
+.scene-debug-auto-summary,
+.scene-debug-manifest-status {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 8px;
+  border: 1px solid #705f2b;
+  background: #211e15;
+  color: #f5e4a8;
+  white-space: pre-wrap;
+}
+@media (max-width: 860px) {
+  .scene-debug {
+    height: 100dvh;
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(320px, 48dvh) minmax(0, 1fr);
+  }
+  .scene-debug-panel {
+    border-right: 0;
+    border-bottom: 1px solid #314455;
+  }
+  .scene-debug-stage { padding: 8px; }
+  .scene-debug-viewport-scroll { padding: 12px; }
+}

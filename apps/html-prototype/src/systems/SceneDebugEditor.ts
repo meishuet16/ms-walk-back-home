@@ -2,6 +2,10 @@ import { cloneSceneLayout, loadSceneLayoutOverrides, makeDefaultLayout, sceneLay
 import type { Point, Rect } from "./CollisionSystem.js";
 import { inAnyRect } from "./CollisionSystem.js";
 import { applyPointTextEdit, bulkAddPoints, createPointGroup, createDraftPoint, deleteGroup, deletePoints, filterPointEntries, moveGroup, movePoints, normalizeSceneId, parseAnchorManifest, pointEntries, portraitDraftFromLandscape, sceneIdentity, type EditorPointGroup, type EditorPointKey, type EditorPointKind, type PointFilter } from "./SceneDebugModel.js";
+import { buildAutoAuthorPlan, applyAutoAuthorPlan, type AutoAuthorPlan, type CollisionReviewEntry } from "./SceneDebugAutoAuthor.js"
+import { parseSceneAuthoringManifest, validateSceneAuthoringManifest, type ManifestValidationResult } from "./SceneDebugAuthoringManifest.js"
+import { validateConstraints, type ConstraintResult } from "./SceneDebugConstraints.js"
+import { clampZoom, centerPan, fitZoom } from "./SceneDebugViewport.js"
 import { addPreviewItem, approveCanonicalCandidate, copyAllApprovedMappings, copyImplementationHandoff, copyPreviewMapping, createPreviewItem, createPreviewState, removePreviewItem, updatePreviewAsset, type PreviewKind, type PreviewState } from "./SceneDebugPreview.js";
 
 type Tool = "select" | "spawn" | "collision" | "interaction" | "trigger" | "placement-slot" | "anchor" | "echo-anchor" | "preview";
@@ -37,6 +41,13 @@ export class SceneDebugEditor {
   private historyPast: SceneLayout[] = [];
   private historyFuture: SceneLayout[] = [];
   private pendingPreviewFile: File | null = null;
+  private manifestText = "";
+  private manifestValidation: ManifestValidationResult | null = null;
+  private autoAuthorPlan: AutoAuthorPlan | null = null;
+  private collisionReviews: CollisionReviewEntry[] = [];
+  private constraintResults: ConstraintResult[] = [];
+  private assetPaths = new Set<string>();
+  private viewportZoom = 1;
 
   constructor(private root: HTMLElement) {}
 
@@ -67,6 +78,18 @@ export class SceneDebugEditor {
           <label>Asset
             <input data-debug-field="asset" value="${this.escape(this.layout.asset)}">
           </label>
+          <div class="scene-debug-dirty" data-debug-dirty>${this.dirty ? "Unsaved changes" : "Saved"}</div>
+          <section class="scene-debug-workflow">
+            <h2>Scene Setup</h2>
+            <p class="scene-debug-help">Runtime SceneLayout stays unchanged. Authoring metadata and previews remain editor-only until an explicit save or handoff.</p>
+            <h2>Auto Author</h2>
+            <label>Scene Authoring Manifest v1 JSON
+              <textarea data-debug-field="authoring-manifest" rows="10" placeholder="{&quot;manifestVersion&quot;:1,...}">${this.escape(this.manifestText)}</textarea>
+            </label>
+            <div class="scene-debug-actions"><button data-debug-action="validate-manifest">Validate Manifest</button><button data-debug-action="build-auto-author">Build Auto Author Plan</button></div>
+            ${this.manifestStatusHtml()}
+            ${this.autoAuthorSummaryHtml()}
+          </section>
           <div class="scene-debug-tools">
             ${(["select", "spawn", "collision", "interaction", "trigger", ...(this.sceneId === "forest" ? ["placement-slot" as const] : []), "anchor", "echo-anchor", "preview"] as const).map((tool) => `<button data-debug-tool="${tool}" class="${this.tool === tool ? "active" : ""}">${this.label(tool)}</button>`).join("")}
           </div>
@@ -85,6 +108,8 @@ export class SceneDebugEditor {
             <label>Radius<input data-debug-field="new-radius" type="number" value="56"></label>
           </div>
           <section class="scene-debug-authoring">
+            <h2>Fine Tune / Advanced Manual Tools</h2>
+            <p class="scene-debug-help">Manual placement, collision, trigger, group, undo/redo, and point tools remain available as fallback.</p>
             <h2>Anchors & Echo Anchors</h2>
             <input data-debug-field="point-search" placeholder="Search by ID" value="${this.escape(this.pointSearch)}">
             <select data-debug-field="point-filter"><option value="all"${this.pointFilter === "all" ? " selected" : ""}>All</option><option value="anchors"${this.pointFilter === "anchors" ? " selected" : ""}>Anchors</option><option value="echo-anchors"${this.pointFilter === "echo-anchors" ? " selected" : ""}>Echo Anchors</option></select>
@@ -106,7 +131,8 @@ export class SceneDebugEditor {
           <button data-debug-action="copy-json">Copy JSON</button>
           <button data-debug-action="download-json">Download Backup JSON</button>
           <section class="scene-debug-preview-controls">
-            <h2>Temporary Preview</h2>
+            <h2>Preview & Handoff</h2>
+            <p class="scene-debug-help">Imported previews are PREVIEW ONLY. Approval is still explicit and only creates a copyable handoff.</p>
             <label>Preview kind<select data-debug-field="preview-kind"><option value="single">Single</option><option value="pair">Pair</option><option value="multi">Multi</option><option value="prop">Prop</option><option value="vfx">VFX</option></select></label><label>Project asset path<input data-debug-field="preview-path" placeholder="assets/405/example/frame.png"></label>
             <label>Anchor binding<input data-debug-field="preview-anchor" placeholder="optional anchor ID"></label>
             <label>Local PNG/WEBP<input data-debug-field="preview-file" type="file" accept="image/png,image/webp,image/jpeg"></label>
@@ -122,9 +148,18 @@ export class SceneDebugEditor {
           <pre class="scene-debug-status" data-debug-status></pre>
         </aside>
         <main class="scene-debug-stage">
-          <div class="scene-debug-artboard">
+          <div class="scene-debug-viewport-toolbar">
+            <strong>Viewport</strong>
+            <button data-debug-action="viewport-fit">Fit</button><button data-debug-action="viewport-100">100%</button>
+            <button data-debug-action="viewport-minus">−</button><span data-debug-zoom>${Math.round(this.viewportZoom * 100)}%</span><button data-debug-action="viewport-plus">+</button>
+            <button data-debug-action="viewport-center">Center</button>
+          </div>
+          <div class="scene-debug-viewport-scroll">
+            <div class="scene-debug-artboard" style="transform:scale(${this.viewportZoom}); transform-origin:top left;">
             <img data-debug-image src="${this.escape(this.layout.asset)}" alt="">
             <canvas data-debug-canvas></canvas><div data-debug-preview-layer></div>
+            </div>
+          </div>
           </div>
         </main>
       </div>`;
@@ -134,6 +169,104 @@ export class SceneDebugEditor {
   }
 
 
+  private manifestStatusHtml(): string {
+    if (!this.manifestValidation) return "";
+    const lines = this.manifestValidation.valid ? ["VALID", ...this.manifestValidation.warnings.map((item) => "Warning: " + item.message)] : this.manifestValidation.errors.map((item) => item.path + ": " + item.message);
+    return "<pre class=\"scene-debug-manifest-status\">" + this.escape(lines.join("\n")) + "</pre>";
+  }
+
+  private autoAuthorSummaryHtml(): string {
+    if (!this.autoAuthorPlan) return "";
+    const summary = this.autoAuthorPlan.summary;
+    return "<div class=\"scene-debug-auto-summary\"><strong>Plan ready · " + summary.orientation + "</strong><span>" + summary.counts.anchors + " anchors · " + summary.counts.obstacles + " collision drafts · " + summary.counts.previews + " previews</span><span>" + (summary.existingLayoutDetected ? "Existing orientation protected; apply requires explicit replacement." : "New layout candidate.") + "</span><div class=\"scene-debug-actions\"><button data-debug-action=\"apply-auto-author\" class=\"primary\">Apply Plan to Current Orientation</button><button data-debug-action=\"preserve-auto-author\">Keep Existing Layout</button></div></div>";
+  }
+
+  private async discoverManifestAssets(): Promise<void> {
+    try {
+      const response = await fetch("/__debug/assets");
+      const payload = await response.json() as { assets?: string[] };
+      this.assetPaths = new Set(payload.assets ?? []);
+    } catch {
+      this.assetPaths = new Set();
+    }
+  }
+
+  private async validateManifest(): Promise<void> {
+    const parsed = parseSceneAuthoringManifest(this.manifestText);
+    if (parsed.errors.length) {
+      this.manifestValidation = { manifest: null, errors: parsed.errors, warnings: [], valid: false };
+      this.autoAuthorPlan = null;
+      this.render();
+      return this.status("Manifest JSON is invalid.");
+    }
+    await this.discoverManifestAssets();
+    this.manifestValidation = validateSceneAuthoringManifest(parsed.value, this.assetPaths);
+    this.autoAuthorPlan = null;
+    this.render();
+    this.status(this.manifestValidation.valid ? "Manifest v1 is valid. Build a transactional Auto Author plan to review changes." : "Manifest validation found errors.");
+  }
+
+  private async buildAutoAuthor(): Promise<void> {
+    if (!this.manifestValidation?.valid || !this.manifestValidation.manifest) await this.validateManifest();
+    if (!this.manifestValidation?.valid || !this.manifestValidation.manifest) return;
+    try {
+      this.autoAuthorPlan = buildAutoAuthorPlan(this.manifestValidation.manifest, this.orientation, this.layout, { existingLayoutDetected: true, assetPaths: this.assetPaths });
+      this.render();
+      this.status("Auto Author plan ready. Review the summary, then explicitly apply or keep the existing orientation.");
+    } catch (error) {
+      this.status(error instanceof Error ? error.message : "Could not build Auto Author plan.");
+    }
+  }
+
+  private importAutoAuthorPreviews(): void {
+    if (!this.autoAuthorPlan) return;
+    for (const item of this.autoAuthorPlan.previews.filter((candidate) => candidate.status === "preview-only")) {
+      try {
+        this.previewState = addPreviewItem(this.previewState, createPreviewItem({ name: item.name, kind: item.kind, projectPath: item.asset, anchorId: item.anchorId }));
+      } catch {
+        // Validation already rejected unsafe paths.
+      }
+    }
+  }
+
+  private applyAutoAuthor(): void {
+    if (!this.autoAuthorPlan) return this.status("Build an Auto Author plan first.");
+    if (!window.confirm("Replace the current authored " + this.orientation + " editor layout with this reviewed candidate?")) return this.status("Auto Author apply cancelled; current layout is unchanged.");
+    const applied = applyAutoAuthorPlan(this.autoAuthorPlan, "replace-existing", this.layout);
+    this.recordHistory();
+    this.layout = applied.layout;
+    this.groups = this.autoAuthorPlan.groups;
+    this.collisionReviews = this.autoAuthorPlan.collisionReviews;
+    this.constraintResults = validateConstraints(this.layout, this.autoAuthorPlan.constraints as any);
+    this.importAutoAuthorPreviews();
+    this.markDirty();
+    this.render();
+    this.status("Auto Author applied in memory. Collision entries remain DRAFT / REVIEW REQUIRED; save is still explicit.");
+  }
+
+  private preserveAutoAuthor(): void {
+    this.autoAuthorPlan = null;
+    this.status("Existing orientation preserved. No SceneLayout coordinates changed.");
+    this.render();
+  }
+
+  private setViewportZoom(value: number): void {
+    this.viewportZoom = clampZoom(value);
+    this.render();
+  }
+
+  private setViewportFit(): void {
+    const stage = this.root.querySelector<HTMLElement>(".scene-debug-viewport-scroll");
+    this.viewportZoom = fitZoom(this.layout.size, { w: stage?.clientWidth || 900, h: stage?.clientHeight || 700 });
+    this.render();
+  }
+
+  private setViewportCenter(): void {
+    const stage = this.root.querySelector<HTMLElement>(".scene-debug-viewport-scroll");
+    const pan = centerPan(this.layout.size, { w: stage?.clientWidth || 900, h: stage?.clientHeight || 700 }, this.viewportZoom);
+    if (stage) { stage.scrollLeft = Math.max(0, -pan.x); stage.scrollTop = Math.max(0, -pan.y); }
+    this.status("Viewport centered; SceneLayout coordinates were not changed.");
+  }
   private pointManagerHtml(): string {
     const entries = filterPointEntries(this.layout, this.pointSearch, this.pointFilter);
     if (!entries.length) return "<p>No matching anchors.</p>";
@@ -272,7 +405,18 @@ export class SceneDebugEditor {
       this.markDirty();
       this.render();
     });
-    for (const button of Array.from(this.root.querySelectorAll<HTMLButtonElement>("[data-debug-tool]"))) {
+    this.root.querySelector<HTMLTextAreaElement>('[data-debug-field="authoring-manifest"]')?.addEventListener("input", (event) => {
+      this.manifestText = (event.target as HTMLTextAreaElement).value;
+    });
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="validate-manifest"]')?.addEventListener("click", () => void this.validateManifest());
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="build-auto-author"]')?.addEventListener("click", () => void this.buildAutoAuthor());
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="apply-auto-author"]')?.addEventListener("click", () => this.applyAutoAuthor());
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="preserve-auto-author"]')?.addEventListener("click", () => this.preserveAutoAuthor());
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="viewport-fit"]')?.addEventListener("click", () => this.setViewportFit());
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="viewport-100"]')?.addEventListener("click", () => this.setViewportZoom(1));
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="viewport-minus"]')?.addEventListener("click", () => this.setViewportZoom(this.viewportZoom - 0.1));
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="viewport-plus"]')?.addEventListener("click", () => this.setViewportZoom(this.viewportZoom + 0.1));
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="viewport-center"]')?.addEventListener("click", () => this.setViewportCenter());    for (const button of Array.from(this.root.querySelectorAll<HTMLButtonElement>("[data-debug-tool]"))) {
       button.addEventListener("click", () => {
         this.tool = button.dataset.debugTool as Tool;
         this.selected = null;
@@ -1122,7 +1266,3 @@ export class SceneDebugEditor {
     return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
   }
 }
-
-
-
-

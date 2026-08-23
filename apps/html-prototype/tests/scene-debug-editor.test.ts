@@ -8,6 +8,7 @@ const mainSource = readFileSync("src/main.ts", "utf8");
 const editorSource = readFileSync("src/systems/SceneDebugEditor.ts", "utf8");
 const devServerSource = readFileSync("scripts/dev-server.mjs", "utf8");
 const appSource = readFileSync("src/app.ts", "utf8");
+const stylesSource = readFileSync("src/styles.css", "utf8");
 
 test("debug scene mode mounts Scene Debug Editor v2 instead of normal gameplay", () => {
   assert.match(mainSource, /new URLSearchParams\(window\.location\.search\)\.get\("debug"\) === "scene"/);
@@ -142,4 +143,25 @@ test("Add Scene protects sceneId and orientation identity before writing", () =>
   assert.match(devServerSource, /sendJson\(res, 409/);
   assert.match(devServerSource, /Scene identity already exists/);
   assert.match(devServerSource, /targetFile/);
+});
+
+test("Scene Debug authoring workflow keeps metadata editor-only and panes independent", () => {
+  for (const label of ["Scene Authoring Manifest v1 JSON", "Validate Manifest", "Build Auto Author Plan", "PREVIEW ONLY", "Preview & Handoff", "Viewport", "Fit", "100%", "Center", "Fine Tune / Advanced Manual Tools"]) {
+    assert.match(editorSource, new RegExp(label.replace(/[+]/g, "\\+"), "i"));
+  }
+  assert.match(editorSource, /buildAutoAuthorPlan/);
+  assert.match(editorSource, /applyAutoAuthorPlan/);
+  assert.match(editorSource, /validateConstraints/);
+  assert.match(editorSource, /window\.confirm\("Replace the current authored/);
+  assert.match(stylesSource, /\.scene-debug-panel[\s\S]*overflow-y: auto/);
+  assert.match(stylesSource, /\.scene-debug-viewport-scroll[\s\S]*overflow: auto/);
+  assert.match(stylesSource, /\.scene-debug[\s\S]*height: 100dvh/);
+});
+
+test("Auto Author import does not serialize editor-only metadata", () => {
+  assert.doesNotMatch(editorSource, /layout\.groups/);
+  assert.doesNotMatch(editorSource, /layout\.preview/);
+  assert.doesNotMatch(editorSource, /layout\.constraints/);
+  assert.match(editorSource, /collisionReviews/);
+  assert.match(editorSource, /constraintResults/);
 });
