@@ -82,6 +82,8 @@ import { calculateMoonPhase, type MoonPhase } from "./systems/MoonPhase.js";
 import { drawSceneAsset } from "./systems/SceneAssetRenderer.js";
 import { deletePdfPages, imagesToPdf, mergePdfFiles, optimizePdf, parsePdfPageOperation, pdfOutputFilename, pdfToPngImages, reorderOrExtractPdf } from "./systems/PdfToolkit.js";
 import { mediaOutputFilename, processMediaFile } from "./systems/MediaToolkit.js";
+import { decodeMediaWaveform, waveformPeaksInView } from "./systems/MediaWaveform.js";
+import { createTrimTimeline, formatTimelineTime, parseTimelineTime, setPlayhead, setTrimBoundary, timeAtPixel, visibleDuration, zoomTimeline, type TrimTimelineState, type WaveformPeak } from "./systems/WaveformModel.js";
 import type { MusicScene } from "./systems/SceneMusic.js";
 import { SupabaseSync } from "./systems/SupabaseSync.js";
 import { emptyTendencies } from "./systems/TendencySystem.js";
@@ -328,6 +330,13 @@ export class WalkBackHomeApp {
   private mediaDuration = 0;
   private mediaProgress = 0;
   private mediaAbortController: AbortController | null = null;
+  private mediaTimeline: TrimTimelineState = createTrimTimeline(10_000);
+  private mediaPeaks: WaveformPeak[] = [];
+  private mediaPreviewUrl = "";
+  private mediaPreviewKind: "audio" | "video" = "audio";
+  private mediaLoadAbortController: AbortController | null = null;
+  private mediaWaveformDrag: "start" | "end" | "playhead" | null = null;
+  private mediaPlaybackFrame = 0;
   private room: RoomJourneyState = createDefaultRoomState();
   private reflectionWall: ReflectionWallState = createReflectionWallState();
   private reflectionWallView: ReflectionWallView = "wall";
@@ -412,6 +421,7 @@ export class WalkBackHomeApp {
     root.addEventListener("pointermove", (event) => this.handlePointerMove(event));
     root.addEventListener("pointerup", (event) => {
       this.handleToolboxPointerUp(event);
+      this.mediaWaveformDrag = null;
       this.journalCropDrag = null;
       this.scrapbookDrag = null;
       if (this.lyricsDrag || this.lyricsResize) this.autosave();
@@ -915,7 +925,12 @@ export class WalkBackHomeApp {
       mediaStart: this.mediaStart,
       mediaEnd: this.mediaEnd,
       mediaStatus: this.mediaStatus,
-      mediaProgress: this.mediaProgress
+      mediaProgress: this.mediaProgress,
+      mediaDurationLabel: this.mediaDuration > 0 ? formatTimelineTime(this.mediaTimeline.durationMs) : "",
+      mediaPreviewUrl: this.mediaPreviewUrl,
+      mediaPreviewKind: this.mediaPreviewKind,
+      mediaWaveformReady: this.mediaPeaks.length > 0,
+      mediaZoom: this.mediaTimeline.zoom
     };
     this.overlay.classList.add("toolbox-overlay");
     this.overlay.classList.remove("dialogue-open", "lightweight-presentation");
@@ -923,6 +938,7 @@ export class WalkBackHomeApp {
     this.syncSpinWheelForm();
     this.drawSpinWheelCanvas();
     this.syncGameplayChromeVisibility();
+    this.drawMediaWaveformCanvas();
   }
 
   private syncSpinWheelForm(): void {
@@ -1145,6 +1161,16 @@ export class WalkBackHomeApp {
       this.dateResult = relativeDateLabel(this.dateEnd);
       return this.renderToolboxOverlay();
     }
+    if (action === "media-zoom-in" || action === "media-zoom-out" || action === "media-zoom-reset") {
+      const zoom = action === "media-zoom-reset" ? 1 : this.mediaTimeline.zoom * (action === "media-zoom-in" ? 2 : .5);
+      this.mediaTimeline = zoomTimeline(this.mediaTimeline, zoom);
+      this.syncMediaTimelineControls();
+      return;
+    }
+    if (action === "media-play-selection") {
+      this.playMediaSelection();
+      return;
+    }
     if (action === "pdf-process") return this.processPdfLocally();
     if (action === "media-process") return this.processMediaLocally();
   }
@@ -1272,23 +1298,204 @@ export class WalkBackHomeApp {
     return document.getPageCount();
   }
 
-  private async prepareMediaFile(file: File | null): Promise<void> {
-    this.mediaDuration = 0;
-    if (!file) return;
+  private drawMediaWaveformCanvas(): void {
+    const canvas = this.overlay.querySelector<HTMLCanvasElement>("[data-media-waveform]");
+    if (!canvas || this.mediaDuration <= 0) return;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    const width = canvas.width;
+    const height = canvas.height;
+    const middle = height / 2;
+    const visibleMs = visibleDuration(this.mediaTimeline);
+    const toX = (timeMs: number) => ((timeMs - this.mediaTimeline.viewportStartMs) / visibleMs) * width;
+    context.clearRect(0, 0, width, height);
+    context.fillStyle = "#f3f0e7";
+    context.fillRect(0, 0, width, height);
+    context.strokeStyle = "rgba(61, 67, 64, .12)";
+    context.lineWidth = 1;
+    for (let index = 0; index <= 8; index += 1) {
+      const x = index * width / 8;
+      context.beginPath();
+      context.moveTo(x, 0);
+      context.lineTo(x, height);
+      context.stroke();
+    }
+    const peaks = waveformPeaksInView(this.mediaPeaks, this.mediaTimeline);
+    if (peaks.length) {
+      const barWidth = width / peaks.length;
+      context.fillStyle = "#56635d";
+      peaks.forEach((peak, index) => {
+        const top = middle + peak.min * middle * .82;
+        const bottom = middle + peak.max * middle * .82;
+        context.fillRect(index * barWidth, top, Math.max(1, barWidth - 1), Math.max(1, bottom - top));
+      });
+    } else {
+      context.fillStyle = "#6f7772";
+      context.font = "28px system-ui";
+      context.textAlign = "center";
+      context.fillText("Waveform preview unavailable", width / 2, middle);
+    }
+    const startX = toX(this.mediaTimeline.startMs);
+    const endX = toX(this.mediaTimeline.endMs);
+    context.fillStyle = "rgba(33, 38, 36, .22)";
+    context.fillRect(0, 0, Math.max(0, startX), height);
+    context.fillRect(Math.min(width, endX), 0, Math.max(0, width - endX), height);
+    context.fillStyle = "rgba(124, 143, 126, .13)";
+    context.fillRect(Math.max(0, startX), 0, Math.max(0, Math.min(width, endX) - Math.max(0, startX)), height);
+    const drawMarker = (x: number, color: string, label: string) => {
+      if (x < -2 || x > width + 2) return;
+      context.strokeStyle = color;
+      context.lineWidth = 4;
+      context.beginPath();
+      context.moveTo(x, 0);
+      context.lineTo(x, height);
+      context.stroke();
+      context.fillStyle = color;
+      context.fillRect(Math.max(0, x - 9), 0, 18, 22);
+      context.font = "20px system-ui";
+      context.textAlign = x > width - 130 ? "right" : "left";
+      context.fillText(label, x > width - 130 ? x - 12 : x + 12, height - 14);
+    };
+    drawMarker(startX, "#738a77", formatTimelineTime(this.mediaTimeline.startMs));
+    drawMarker(endX, "#2f3934", formatTimelineTime(this.mediaTimeline.endMs));
+    const playheadX = toX(this.mediaTimeline.playheadMs);
+    if (playheadX >= 0 && playheadX <= width) {
+      context.strokeStyle = "#bb7656";
+      context.lineWidth = 2;
+      context.beginPath();
+      context.moveTo(playheadX, 0);
+      context.lineTo(playheadX, height);
+      context.stroke();
+    }
+  }
+
+  private syncMediaTimelineControls(): void {
+    this.mediaStart = formatTimelineTime(this.mediaTimeline.startMs);
+    this.mediaEnd = formatTimelineTime(this.mediaTimeline.endMs);
+    const start = this.overlay.querySelector<HTMLInputElement>("[data-toolbox-field=media-start]");
+    const end = this.overlay.querySelector<HTMLInputElement>("[data-toolbox-field=media-end]");
+    const zoom = this.overlay.querySelector<HTMLOutputElement>(".media-zoom-controls output");
+    if (start && document.activeElement !== start) start.value = this.mediaStart;
+    if (end && document.activeElement !== end) end.value = this.mediaEnd;
+    if (zoom) zoom.value = this.mediaTimeline.zoom.toFixed(1) + "x";
+    this.drawMediaWaveformCanvas();
+  }
+
+  private updateMediaWaveformPointer(event: PointerEvent, canvas: HTMLCanvasElement, begin: boolean): void {
+    const rect = canvas.getBoundingClientRect();
+    const pixel = (event.clientX - rect.left) * canvas.width / Math.max(1, rect.width);
+    const value = timeAtPixel(this.mediaTimeline, pixel, canvas.width);
+    if (begin) {
+      const visibleMs = visibleDuration(this.mediaTimeline);
+      const startX = (this.mediaTimeline.startMs - this.mediaTimeline.viewportStartMs) / visibleMs * canvas.width;
+      const endX = (this.mediaTimeline.endMs - this.mediaTimeline.viewportStartMs) / visibleMs * canvas.width;
+      const threshold = 18 * canvas.width / Math.max(1, rect.width);
+      this.mediaWaveformDrag = Math.abs(pixel - startX) <= threshold ? "start" : Math.abs(pixel - endX) <= threshold ? "end" : "playhead";
+      canvas.setPointerCapture(event.pointerId);
+    }
+    if (this.mediaWaveformDrag === "start") this.mediaTimeline = setTrimBoundary(this.mediaTimeline, "start", Math.min(value, this.mediaTimeline.endMs - 1));
+    else if (this.mediaWaveformDrag === "end") this.mediaTimeline = setTrimBoundary(this.mediaTimeline, "end", Math.max(value, this.mediaTimeline.startMs + 1));
+    else this.mediaTimeline = setPlayhead(this.mediaTimeline, value);
+    this.syncMediaTimelineControls();
+    event.preventDefault();
+  }
+
+  private playMediaSelection(): void {
+    const media = this.overlay.querySelector<HTMLMediaElement>(".media-preview");
+    if (!media) return;
+    cancelAnimationFrame(this.mediaPlaybackFrame);
+    media.currentTime = this.mediaTimeline.startMs / 1000;
+    void media.play().then(() => {
+      const tick = () => {
+        this.mediaTimeline = setPlayhead(this.mediaTimeline, Math.round(media.currentTime * 1000));
+        this.drawMediaWaveformCanvas();
+        if (!media.paused && media.currentTime * 1000 < this.mediaTimeline.endMs) this.mediaPlaybackFrame = requestAnimationFrame(tick);
+        else if (media.currentTime * 1000 >= this.mediaTimeline.endMs) media.pause();
+      };
+      this.mediaPlaybackFrame = requestAnimationFrame(tick);
+    }).catch(() => {
+      this.mediaStatus = "Playback could not start. Use the media controls above.";
+      this.refreshToolboxMediaProgress();
+    });
+  }
+
+  private async readMediaDuration(file: File, timeoutMs = 5000): Promise<number> {
     const element = document.createElement(file.type.startsWith("video/") ? "video" : "audio");
     const url = URL.createObjectURL(file);
     element.preload = "metadata";
     element.src = url;
     try {
-      this.mediaDuration = await new Promise<number>((resolve) => {
-        element.addEventListener("loadedmetadata", () => resolve(Number.isFinite(element.duration) ? element.duration : 0), { once: true });
-        element.addEventListener("error", () => resolve(0), { once: true });
+      return await new Promise<number>((resolve, reject) => {
+        const timer = window.setTimeout(() => reject(new Error("Media metadata timed out")), timeoutMs);
+        element.addEventListener("loadedmetadata", () => {
+          window.clearTimeout(timer);
+          resolve(Number.isFinite(element.duration) ? Math.round(element.duration * 1000) : 0);
+        }, { once: true });
+        element.addEventListener("error", () => {
+          window.clearTimeout(timer);
+          reject(new Error("This media format could not be read"));
+        }, { once: true });
       });
-      if (this.mediaDuration > 0 && (Number(this.mediaEnd) <= 0 || Number(this.mediaEnd) > this.mediaDuration || this.mediaEnd === "10")) this.mediaEnd = String(Math.max(1, Math.floor(this.mediaDuration)));
     } finally {
       URL.revokeObjectURL(url);
     }
+  }
+
+  private async prepareMediaFile(file: File | null): Promise<void> {
+    this.mediaLoadAbortController?.abort();
+    this.mediaLoadAbortController = null;
+    this.mediaPeaks = [];
+    this.mediaDuration = 0;
+    if (this.mediaPreviewUrl) URL.revokeObjectURL(this.mediaPreviewUrl);
+    this.mediaPreviewUrl = "";
+    if (!file) {
+      this.mediaStatus = "";
+      if (this.toolboxOpen) this.renderToolboxOverlay();
+      return;
+    }
+    const controller = new AbortController();
+    this.mediaLoadAbortController = controller;
+    this.mediaPreviewKind = file.type.startsWith("video/") ? "video" : "audio";
+    this.mediaPreviewUrl = URL.createObjectURL(file);
+    this.mediaStatus = "Reading waveform locally...";
     if (this.toolboxOpen) this.renderToolboxOverlay();
+    let timeout = 0;
+    try {
+      const decoded = await Promise.race([
+        decodeMediaWaveform(file, 1600, controller.signal),
+        new Promise<never>((_, reject) => {
+          timeout = window.setTimeout(() => {
+            controller.abort();
+            reject(new Error("Waveform decoding timed out"));
+          }, 12_000);
+        })
+      ]);
+      if (this.mediaLoadAbortController !== controller) return;
+      this.mediaPeaks = decoded.peaks;
+      this.mediaDuration = decoded.durationMs / 1000;
+      this.mediaTimeline = createTrimTimeline(decoded.durationMs);
+      this.mediaStatus = "Waveform ready. Drag the markers or enter mm:ss.mmm.";
+    } catch (error) {
+      if (this.mediaLoadAbortController !== controller) return;
+      try {
+        const durationMs = await this.readMediaDuration(file);
+        if (this.mediaLoadAbortController !== controller) return;
+        if (durationMs <= 0) throw new Error("Media duration is unavailable");
+        this.mediaDuration = durationMs / 1000;
+        this.mediaTimeline = createTrimTimeline(durationMs);
+        this.mediaStatus = "Waveform unavailable for this format. Exact time trimming is still available.";
+      } catch (metadataError) {
+        this.mediaStatus = metadataError instanceof Error ? metadataError.message : error instanceof Error ? error.message : "Media could not be opened";
+      }
+    } finally {
+      window.clearTimeout(timeout);
+      if (this.mediaLoadAbortController === controller) this.mediaLoadAbortController = null;
+      if (this.mediaDuration > 0) {
+        this.mediaStart = formatTimelineTime(this.mediaTimeline.startMs);
+        this.mediaEnd = formatTimelineTime(this.mediaTimeline.endMs);
+      }
+      if (this.toolboxOpen) this.renderToolboxOverlay();
+    }
   }
   private async processMediaLocally(): Promise<void> {
     if (!this.mediaFile) {
@@ -1355,6 +1562,17 @@ export class WalkBackHomeApp {
     const value = target instanceof HTMLInputElement || target instanceof HTMLSelectElement ? target.value : "";
     const effect = toolboxFieldChangeEffect(field);
     if (effect === "draft-only") return;
+    if (field === "media-start" || field === "media-end") {
+      try {
+        this.mediaTimeline = setTrimBoundary(this.mediaTimeline, field === "media-start" ? "start" : "end", parseTimelineTime(value));
+        this.mediaStatus = "Selection updated.";
+        this.syncMediaTimelineControls();
+      } catch (error) {
+        this.mediaStatus = error instanceof Error ? error.message : "Enter time as mm:ss.mmm";
+        this.refreshToolboxMediaProgress();
+      }
+      return;
+    }
     if (field === "spin-preset") {
       this.selectedToolboxPresetId = value;
       this.persistToolboxState();
@@ -1381,6 +1599,7 @@ export class WalkBackHomeApp {
       this.mediaFile = target.files?.[0] ?? null;
       this.mediaFileName = this.mediaFile?.name ?? "";
       void this.prepareMediaFile(this.mediaFile);
+      return;
     }
     if (currencyPairChanged) {
       this.invalidateCurrencyState();
@@ -6138,6 +6357,12 @@ export class WalkBackHomeApp {
     this.renderToolboxOverlay();
   }
   private handlePointerDown(event: PointerEvent): void {
+    const waveform = (event.target as HTMLElement | null)?.closest<HTMLCanvasElement>("[data-media-waveform]");
+    if (waveform) {
+      this.updateMediaWaveformPointer(event, waveform, true);
+      return;
+    }
+
     const toolbox = (event.target as HTMLElement | null)?.closest<HTMLElement>(".toolbox-panel");
     if (toolbox && this.toolboxOpen && this.toolboxView.screen === "root" && !(event.target as HTMLElement).closest("input, textarea, select, [contenteditable=true]")) this.toolboxSwipeStartX = event.clientX;
     const cropTarget = (event.target as HTMLElement).closest<HTMLElement>("[data-action=\"journal-crop-drag\"]");
@@ -6191,6 +6416,12 @@ export class WalkBackHomeApp {
   }
 
   private handlePointerMove(event: PointerEvent): void {
+    if (this.mediaWaveformDrag) {
+      const waveform = this.overlay.querySelector<HTMLCanvasElement>("[data-media-waveform]");
+      if (waveform) this.updateMediaWaveformPointer(event, waveform, false);
+      return;
+    }
+
     if (this.journalCropDrag) {
       const stage = this.overlay.querySelector<HTMLElement>(".journal-crop-image-frame");
       const box = this.overlay.querySelector<HTMLElement>(".journal-crop-box");
