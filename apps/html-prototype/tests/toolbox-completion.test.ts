@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import test from "node:test";
 import { toolboxPages, createToolboxState, moveToolSelection, selectTool, confirmTool, toolboxToolRegistry } from "../src/systems/ToolboxModel.js";
-import { spinChoiceIndex, spinWheelGeometry, spinTargetRotation, winnerIndexAtPointer } from "../src/systems/SpinWheel.js";
+import { normalizeSelectedPresetId, spinChoiceIndex, spinWheelGeometry, spinTargetRotation, winnerIndexAtPointer } from "../src/systems/SpinWheel.js";
 import { evaluateCalculator, formatCalculatorValue } from "../src/systems/Calculator.js";
 import { convertUnit, formatUnitValue, swapUnits } from "../src/systems/UnitConverter.js";
 import { completeTimerIfNeeded, createTimerState, startTimer, timerRemaining } from "../src/systems/TimerTool.js";
-import { dateDifference, addDateDays, relativeDateLabel } from "../src/systems/DateTool.js";
+import { dateDifference, addDateDays, localDateString, relativeDateLabel } from "../src/systems/DateTool.js";
 
 test("toolbox registry keeps six-slot pages stable and leaves page two sparse", () => {
   const pages = toolboxPages();
@@ -55,4 +57,23 @@ test("date helpers support local-date relative labels", () => {
   assert.equal(addDateDays("2026-02-28", 2), "2026-03-02");
   assert.equal(relativeDateLabel("2026-09-09", "2026-08-23"), "17 days until");
   assert.equal(relativeDateLabel("2026-08-01", "2026-08-23"), "22 days since");
+});
+
+test("stale Spin preset ids restore to the first available preset", () => {
+  const presets = [{ id: "today", name: "Today", choices: ["A"] }, { id: "names", name: "Names", choices: ["Mochi"] }];
+  assert.equal(normalizeSelectedPresetId(presets, "deleted-preset"), "today");
+  assert.equal(normalizeSelectedPresetId(presets, "names"), "names");
+});
+
+test("local date helper uses the local calendar fields", () => {
+  const date = new Date(2026, 7, 23, 23, 59, 58);
+  const expected = [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
+  assert.equal(localDateString(date), expected);
+});
+
+test("Toolbox keyboard guards protect handled events and focused buttons", () => {
+  const source = readFileSync(resolve(process.cwd(), "src/app.ts"), "utf8");
+  assert.ok((source.match(/if \(event\.defaultPrevented\) return;/g) ?? []).length >= 2);
+  assert.match(source, /input, textarea, select, button, audio, video/);
+  assert.doesNotMatch(source, /focusedControl && event\.key !== "Escape"/);
 });

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { convertCurrency, currencyCacheStatus, fetchCurrencyRate, fetchCurrencyRates, parseCurrencyRateResponse } from "../src/systems/CurrencyRates.js";
+import { convertCurrency, currencyCacheStatus, currencyPayloadMatchesPair, currencyRequestIsCurrent, fetchCurrencyRate, fetchCurrencyRates, parseCurrencyRateResponse } from "../src/systems/CurrencyRates.js";
 
 const rows = [
   { base: "MYR", quote: "USD", rate: 0.23, date: "2026-08-22" },
@@ -36,4 +36,16 @@ test("currency fetch accepts v2 flat rows for a base cache", async () => {
   const fetcher: typeof fetch = (async () => new Response(JSON.stringify(rows), { status: 200 })) as typeof fetch;
   const payload = await fetchCurrencyRates("MYR", fetcher, () => "2026-08-23T00:00:00.000Z");
   assert.equal(payload.rates.USD, 0.23);
+});
+
+test("currency payloads are never valid for a different selected pair", () => {
+  const payload = parseCurrencyRateResponse(rows, "MYR", "2026-08-23T00:00:00.000Z", "USD")!;
+  assert.equal(currencyPayloadMatchesPair(payload, "MYR", "USD"), true);
+  assert.equal(currencyPayloadMatchesPair(payload, "MYR", "JPY"), false);
+});
+
+test("currency request identity rejects slower responses from an older pair", () => {
+  assert.equal(currencyRequestIsCurrent("MYR/USD", "MYR/JPY", 1, 2), false);
+  assert.equal(currencyRequestIsCurrent("MYR/JPY", "MYR/JPY", 2, 2), true);
+  assert.equal(currencyRequestIsCurrent("MYR/USD", "MYR/USD", 1, 1), true);
 });

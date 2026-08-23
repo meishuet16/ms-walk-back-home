@@ -59,6 +59,14 @@ export function currencyPairKey(base: CurrencyCode, quote: CurrencyCode): string
   return `${base}/${quote}`;
 }
 
+export function currencyPayloadMatchesPair(payload: CurrencyRatePayload | null | undefined, base: CurrencyCode, quote: CurrencyCode): boolean {
+  return payload?.base === base && payload.quote === quote;
+}
+
+export function currencyRequestIsCurrent(requestedPair: string, currentPair: string, requestId: number, currentRequestId: number): boolean {
+  return requestedPair === currentPair && requestId === currentRequestId;
+}
+
 export async function fetchCurrencyRate(base: CurrencyCode, quote: CurrencyCode, fetcher: typeof fetch = fetch, now: () => string = () => new Date().toISOString()): Promise<CurrencyRatePayload> {
   if (base === quote) return { base, quote, rate: 1, rates: { [quote]: 1 }, date: now().slice(0, 10), fetchedAt: now() };
   const response = await fetcher(`https://api.frankfurter.dev/v2/rate/${base}/${quote}`, { signal: AbortSignal.timeout(8000) });

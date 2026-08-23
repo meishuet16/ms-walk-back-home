@@ -16,6 +16,7 @@ await copyFile(resolve(root, "src/styles.css"), resolve(root, "dist/styles.css")
 await mkdir(resolve(root, "dist/browser/ffmpeg"), { recursive: true });
 await copyFile(resolve(root, "../../node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.js"), resolve(root, "dist/browser/ffmpeg/ffmpeg-core.js"));
 await copyFile(resolve(root, "../../node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.wasm"), resolve(root, "dist/browser/ffmpeg/ffmpeg-core.wasm"));
+await copyFile(resolve(root, "../../node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"), resolve(root, "dist/browser/pdf.worker.mjs"));
 await build({ entryPoints: [resolve(root, "dist/src/main.js")], bundle: true, format: "esm", splitting: true, outdir: resolve(root, "dist/browser"), platform: "browser", target: "es2022" });
 await writeFile(resolve(root, "dist/config.js"), `window.WALK_BACK_HOME_CONFIG = ${JSON.stringify({
   authProvider: process.env.WALK_BACK_HOME_AUTH_PROVIDER ?? "local",

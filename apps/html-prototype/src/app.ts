@@ -68,17 +68,17 @@ import {
 } from "./systems/MujiRoom.js";
 import { SaveManager } from "./systems/SaveManager.js";
 import { createToolboxState, confirmTool, backTool, moveToolSelection, moveToolboxPage, selectToolboxPage, selectTool, type ToolboxToolId, type ToolboxView as ToolboxScreen } from "./systems/ToolboxModel.js";
-import { addSpinChoice, createSpinPreset, deleteSpinPreset, removeSpinChoice, renameSpinPreset, spinChoiceIndex, spinTargetRotation, spinWheelGeometry, type SpinPreset } from "./systems/SpinWheel.js";
+import { addSpinChoice, createSpinPreset, deleteSpinPreset, normalizeSelectedPresetId, removeSpinChoice, renameSpinPreset, spinChoiceIndex, spinTargetRotation, spinWheelGeometry, type SpinPreset } from "./systems/SpinWheel.js";
 import { applyCalculatorInput, evaluateCalculator } from "./systems/Calculator.js";
 import { convertUnit, formatUnitValue, swapUnits, unitsForCategory } from "./systems/UnitConverter.js";
-import { convertCurrency, currencyCacheStatus, currencyCodes, currencyPairKey, fetchCurrencyRate, type CurrencyCode, type CurrencyRatePayload } from "./systems/CurrencyRates.js";
+import { convertCurrency, currencyCacheStatus, currencyCodes, currencyPairKey, currencyPayloadMatchesPair, currencyRequestIsCurrent, fetchCurrencyRate, type CurrencyCode, type CurrencyRatePayload } from "./systems/CurrencyRates.js";
 import { completeTimerIfNeeded, createTimerState, pauseTimer, resetTimer, startTimer, timerRemaining, stopwatchElapsed, type TimerState } from "./systems/TimerTool.js";
-import { addDateDays, dateDifference, relativeDateLabel } from "./systems/DateTool.js";
+import { addDateDays, dateDifference, localDateString, relativeDateLabel } from "./systems/DateTool.js";
 import { renderToolbox, type ToolboxRenderState } from "./systems/ToolboxView.js";
 import { createLivingWindowViewModel, defaultWindowLocation, fetchOpenMeteoLocations, fetchOpenMeteoWeather, livingWindowStatusCopy, weatherCacheStatus, weatherVisualFor, type WeatherSnapshot, type WindowLocation } from "./systems/LivingWindow.js";
 import { calculateMoonPhase, type MoonPhase } from "./systems/MoonPhase.js";
 import { drawSceneAsset, drawSceneMask, sceneTransformFor } from "./systems/LivingWindowRenderer.js";
-import { deletePdfPages, imagesToPdf, mergePdfFiles, optimizePdf, parsePageRange, pdfOutputFilename, pdfToPngImages, reorderOrExtractPdf } from "./systems/PdfToolkit.js";
+import { deletePdfPages, imagesToPdf, mergePdfFiles, optimizePdf, parsePdfPageOperation, pdfOutputFilename, pdfToPngImages, reorderOrExtractPdf } from "./systems/PdfToolkit.js";
 import { mediaOutputFilename, processMediaFile } from "./systems/MediaToolkit.js";
 import type { MusicScene } from "./systems/SceneMusic.js";
 import { SupabaseSync } from "./systems/SupabaseSync.js";
@@ -302,10 +302,11 @@ export class WalkBackHomeApp {
   private currencyRateText = "";
   private currencyResult = "";
   private currencyStatus = "";
+  private currencyRequestToken = 0;
   private timerMode: "timer" | "stopwatch" = "timer";
   private timerState: TimerState = createTimerState("timer", 10 * 60 * 1000);
-  private dateStart = new Date().toISOString().slice(0, 10);
-  private dateEnd = new Date().toISOString().slice(0, 10);
+  private dateStart = localDateString();
+  private dateEnd = localDateString();
   private dateDays = "1";
   private dateMode: "difference" | "add-subtract" | "until-since" = "difference";
   private dateResult = "";
@@ -789,9 +790,10 @@ export class WalkBackHomeApp {
   }
 
   private handleToolboxInputKeydown(event: KeyboardEvent): void {
+    if (event.defaultPrevented) return;
     if (!this.toolboxOpen || this.toolboxView.screen !== "tool") return;
     const target = event.target as HTMLElement | null;
-    if (target?.closest("input, textarea, select, [contenteditable=true]")) {
+    if (target?.closest("input, textarea, select, button, audio, video, [contenteditable=true], [role=slider]")) {
       if (event.key === "Enter" && target.dataset.toolboxField === "spin-choice") {
         event.preventDefault();
         const add = this.overlay.querySelector<HTMLElement>("[data-action=toolbox-spin-add]");
@@ -809,14 +811,15 @@ export class WalkBackHomeApp {
   }
 
   private handleToolboxKeydown(event: KeyboardEvent): void {
+    if (event.defaultPrevented) return;
     if (this.livingWindowPanelOpen && event.key.toLowerCase() === "escape") {
       this.closeLivingWindow();
       event.preventDefault();
       return;
     }
     if (!this.toolboxOpen) return;
-    const focusedControl = (event.target as HTMLElement | null)?.closest("input, textarea, select, audio, video, [contenteditable=true], [role=slider]");
-    if (focusedControl && event.key !== "Escape") return;
+    const focusedControl = (event.target as HTMLElement | null)?.closest("input, textarea, select, button, audio, video, [contenteditable=true], [role=slider]");
+    if (focusedControl) return;
     const key = event.key.toLowerCase();
     if (key === "escape") {
       const next = backTool(this.toolboxView);
@@ -870,8 +873,9 @@ export class WalkBackHomeApp {
     if (!units.includes(this.converterTo)) this.converterTo = units[1] ?? units[0] ?? "";
     const converted = convertUnit(this.converterCategory, Number(this.converterAmount), this.converterFrom, this.converterTo);
     this.converterResult = formatUnitValue(converted);
-    const currencyValue = this.currencyPayload ? convertCurrency(Number(this.currencyAmount), this.currencyFrom, this.currencyTo, this.currencyPayload) : null;
-    this.currencyResult = currencyValue === null ? this.currencyResult : `${Number(currencyValue.toFixed(6))} ${this.currencyTo}`;
+    const currencyPayload = currencyPayloadMatchesPair(this.currencyPayload, this.currencyFrom, this.currencyTo) ? this.currencyPayload : null;
+    const currencyValue = currencyPayload ? convertCurrency(Number(this.currencyAmount), this.currencyFrom, this.currencyTo, currencyPayload) : null;
+    this.currencyResult = currencyValue === null ? "" : `${Number(currencyValue.toFixed(6))} ${this.currencyTo}`;
     const now = performance.now();
     const state: ToolboxRenderState = {
       view: this.toolboxView,
@@ -999,9 +1003,11 @@ export class WalkBackHomeApp {
     }
     if (action === "currency-swap") {
       [this.currencyFrom, this.currencyTo] = [this.currencyTo, this.currencyFrom];
-      this.currencyPayload = this.currencyCache.get(currencyPairKey(this.currencyFrom, this.currencyTo)) ?? null;
+      this.invalidateCurrencyState();
       this.persistToolboxState();
-      return this.renderToolboxOverlay();
+      this.renderToolboxOverlay();
+      void this.refreshCurrencyRates();
+      return;
     }
     if (action === "currency-refresh") {
       await this.refreshCurrencyRates();
@@ -1145,10 +1151,9 @@ export class WalkBackHomeApp {
         this.pdfStatus = result.report.message + " · " + result.report.originalBytes + " → " + result.report.resultBytes + " bytes";
       } else {
         const pageCount = await this.pdfPageCount(first);
-        const rangeText = this.pdfRange.trim();
-        const pages = parsePageRange(rangeText, pageCount);
-        if (rangeText.toLowerCase().startsWith("delete:")) bytes = await deletePdfPages(first, pages);
-        else bytes = await reorderOrExtractPdf(first, pages);
+        const operation = parsePdfPageOperation(this.pdfRange, pageCount);
+        if (operation.deleteMode) bytes = await deletePdfPages(first, operation.pages);
+        else bytes = await reorderOrExtractPdf(first, operation.pages);
         filename = pdfOutputFilename(first.name, this.pdfMode === "extract" ? "pages" : "reordered");
       }
       this.downloadLocalBlob(new Blob([bytes.buffer as ArrayBuffer], { type: "application/pdf" }), filename);
@@ -1254,6 +1259,7 @@ export class WalkBackHomeApp {
     }
     if (field === "converter-from") this.converterFrom = value;
     if (field === "converter-to") this.converterTo = value;
+    const currencyPairChanged = field === "currency-from" || field === "currency-to";
     if (field === "currency-from") this.currencyFrom = value as CurrencyCode;
     if (field === "currency-to") this.currencyTo = value as CurrencyCode;
     if (field === "date-mode") this.dateMode = value as typeof this.dateMode;
@@ -1266,37 +1272,72 @@ export class WalkBackHomeApp {
       this.mediaFileName = this.mediaFile?.name ?? "";
       void this.prepareMediaFile(this.mediaFile);
     }
+    if (currencyPairChanged) {
+      this.invalidateCurrencyState();
+      this.persistToolboxState();
+      this.renderToolboxOverlay();
+      void this.refreshCurrencyRates();
+      return;
+    }
     this.persistToolboxState();
     this.renderToolboxOverlay();
   }
+  private invalidateCurrencyState(): void {
+    this.currencyPayload = null;
+    this.currencyResult = "";
+    this.currencyRateText = "";
+    this.currencyStatus = this.currencyFrom === this.currencyTo ? "Same currency" : "Rate unavailable";
+  }
   private async refreshCurrencyRates(): Promise<void> {
-    if (this.currencyFrom === this.currencyTo) {
+    const base = this.currencyFrom;
+    const quote = this.currencyTo;
+    const key = currencyPairKey(base, quote);
+    const requestId = ++this.currencyRequestToken;
+    const isCurrent = () => currencyRequestIsCurrent(key, currencyPairKey(this.currencyFrom, this.currencyTo), requestId, this.currencyRequestToken);
+    if (base === quote) {
       const now = new Date().toISOString();
-      this.currencyPayload = { base: this.currencyFrom, quote: this.currencyTo, rate: 1, rates: { [this.currencyTo]: 1 }, date: now.slice(0, 10), fetchedAt: now };
+      if (!isCurrent()) return;
+      this.currencyPayload = { base, quote, rate: 1, rates: { [quote]: 1 }, date: now.slice(0, 10), fetchedAt: now };
       this.currencyStatus = "Same currency";
       return this.renderToolboxOverlay();
     }
-    const key = currencyPairKey(this.currencyFrom, this.currencyTo);
-    this.currencyStatus = "Loading rate…";
+    const cached = this.currencyCache.get(key);
+    const matchingCached = currencyPayloadMatchesPair(cached, base, quote) ? cached : null;
+    if (matchingCached) {
+      this.currencyPayload = matchingCached;
+      this.currencyRateText = "1 " + base + " = " + String(matchingCached.rate) + " " + quote + " · " + matchingCached.date;
+      this.currencyStatus = "Cached · updated " + new Date(matchingCached.fetchedAt).toLocaleString();
+    } else {
+      this.currencyPayload = null;
+      this.currencyResult = "";
+      this.currencyRateText = "";
+      this.currencyStatus = "Loading rate…";
+    }
     this.renderToolboxOverlay();
     try {
-      this.currencyPayload = await fetchCurrencyRate(this.currencyFrom, this.currencyTo);
-      this.currencyCache.set(key, this.currencyPayload);
-      this.currencyRateText = "1 " + this.currencyFrom + " = " + String(this.currencyPayload.rate) + " " + this.currencyTo + " · " + this.currencyPayload.date;
+      const payload = await fetchCurrencyRate(base, quote);
+      if (!isCurrent() || !currencyPayloadMatchesPair(payload, base, quote)) return;
+      this.currencyPayload = payload;
+      this.currencyCache.set(key, payload);
+      this.currencyRateText = "1 " + base + " = " + String(payload.rate) + " " + quote + " · " + payload.date;
       this.currencyStatus = "Updated just now";
       this.persistToolboxState();
     } catch {
-      const cached = this.currencyCache.get(key);
-      if (cached) {
-        this.currencyPayload = cached;
-        this.currencyRateText = "1 " + this.currencyFrom + " = " + String(cached.rate) + " " + this.currencyTo + " · " + cached.date;
-        this.currencyStatus = "Cached · updated " + new Date(cached.fetchedAt).toLocaleString();
+      if (!isCurrent()) return;
+      const fallback = this.currencyCache.get(key);
+      const matchingFallback = currencyPayloadMatchesPair(fallback, base, quote) ? fallback : null;
+      if (matchingFallback) {
+        this.currencyPayload = matchingFallback;
+        this.currencyRateText = "1 " + base + " = " + String(matchingFallback.rate) + " " + quote + " · " + matchingFallback.date;
+        this.currencyStatus = "Cached · updated " + new Date(matchingFallback.fetchedAt).toLocaleString();
       } else {
         this.currencyPayload = null;
+        this.currencyResult = "";
         this.currencyRateText = "";
         this.currencyStatus = "Rate unavailable";
       }
     }
+    if (!isCurrent()) return;
     this.renderToolboxOverlay();
   }
   private persistToolboxState(): void {
@@ -1629,6 +1670,7 @@ export class WalkBackHomeApp {
         }
       }
       if (savedToolbox.presets?.length) this.toolboxPresets = savedToolbox.presets.map((item) => createSpinPreset(item.id, item.name, item.choices));
+      this.selectedToolboxPresetId = normalizeSelectedPresetId(this.toolboxPresets, this.selectedToolboxPresetId);
     }
     this.musicLibrary = this.save.loadMusicLibrary() ?? this.musicLibrary;
     this.personalPlayer = { ...this.personalPlayer, ...(this.save.loadPersonalPlayer() ?? {}) };
@@ -3862,14 +3904,14 @@ export class WalkBackHomeApp {
   }
 
   private showHome(): void {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateString();
     const recent = getDiaryTimeline(this.makeDiaryLibrary()).slice(0, 3).map((entry) => `<li>${this.escapeHtml(entry.date)} · ${this.escapeHtml(entry.title)}</li>`).join("");
     this.overlay.innerHTML = `<div class="modal game-panel"><h2>Today / Home</h2><p>${today}</p><div class="settings-row"><button data-action="new-diary-entry">Create New Journal</button><button data-action="open-map">Walk Back Home</button></div><h3>Recent diary</h3><ul>${recent || "<li>No diary entries yet.</li>"}</ul><button data-action="close">Close</button></div>`;
     this.focusStage();
   }
 
   private openTodayDiaryPage(): void {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateString();
     const opened = openDiaryPageForDate(this.makeDiaryLibrary(), today);
     this.applyDiaryLibrary(opened.library);
     this.showDiaryEditor(opened.entry.id);
@@ -4118,7 +4160,7 @@ export class WalkBackHomeApp {
 
   private openNewDiaryPage(): void {
     this.captureJournalReturnSnapshot();
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateString();
     const originalLibrary = this.makeDiaryLibrary();
     const opened = createNewDiaryPage(originalLibrary, today);
     this.applyDiaryLibrary(opened.library);
@@ -4862,7 +4904,7 @@ export class WalkBackHomeApp {
     const moreOpen = this.journalMoreMenuOpen;
     const editingBase = this.diaryEntries.find((entry) => entry.id === editId) ?? this.diaryEntries[0];
     const editing = editingBase ? this.pendingAudioEntry(editingBase) : editingBase;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateString();
     const dateValue = editing?.date ?? today;
     const weekday = formatDiaryWeekday(dateValue);
     const selectedMood = editing?.mood ?? "calm";

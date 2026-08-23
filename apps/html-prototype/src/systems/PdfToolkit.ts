@@ -20,6 +20,13 @@ export function parsePageRange(value: string, totalPages: number): number[] {
   return pages;
 }
 
+export function parsePdfPageOperation(value: string, totalPages: number): { deleteMode: boolean; pages: number[] } {
+  const trimmed = value.trim();
+  const deleteMode = /^delete\s*:/i.test(trimmed);
+  const expression = deleteMode ? trimmed.replace(/^delete\s*:/i, "").trim() : trimmed;
+  return { deleteMode, pages: parsePageRange(expression, totalPages) };
+}
+
 export function pdfOutputFilename(sourceName: string, suffix: string): string {
   const base = sourceName.replace(/\.[^.]+$/, "") || "document";
   return `${base}-${suffix}.pdf`;
@@ -96,6 +103,7 @@ async function decodeImageForPdf(file: File): Promise<{ bytes: ArrayBuffer; type
 
 export async function pdfToPngImages(file: Blob, scale = 1.5): Promise<Blob[]> {
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL("./pdf.worker.mjs", import.meta.url).href;
   const documentTask = pdfjs.getDocument({ data: await file.arrayBuffer() });
   const pdfDocument = await documentTask.promise;
   const images: Blob[] = [];

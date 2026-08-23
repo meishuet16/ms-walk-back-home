@@ -63,6 +63,10 @@ export function deleteSpinPreset(presets: SpinPreset[], id: string): SpinPreset[
   return presets.filter((preset) => preset.id !== id);
 }
 
+export function normalizeSelectedPresetId(presets: SpinPreset[], selectedId: string): string {
+  return presets.some((preset) => preset.id === selectedId) ? selectedId : presets[0]?.id ?? "";
+}
+
 function secureRandom(): number {
   const cryptoObject = globalThis.crypto;
   if (cryptoObject) {
