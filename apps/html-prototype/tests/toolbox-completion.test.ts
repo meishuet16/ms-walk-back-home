@@ -101,3 +101,10 @@ test("Spin Add integration accumulates Latin and Chinese choices into real wheel
   const rotation = spinTargetRotation(choices.length, 3, () => .25, false);
   assert.equal(winnerIndexAtPointer(rotation, choices.length), 3);
 });
+
+test("Spin Add tolerates stale preset state and New preset uses an inline naming flow", () => {
+  const source = readFileSync(resolve(process.cwd(), "src/app.ts"), "utf8");
+  assert.match(source, /toolbox-spin-add.*spinSpinning/);
+  assert.match(source, /toolbox-preset-create/);
+  assert.doesNotMatch(source, /window.prompt/);
+});

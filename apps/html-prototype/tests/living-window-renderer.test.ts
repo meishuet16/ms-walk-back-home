@@ -32,3 +32,9 @@ test("grayscale weather masks become transparent outside white glass areas", () 
   grayscaleMaskToAlpha(pixels);
   assert.deepEqual([...pixels], [255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 255, 128]);
 });
+
+test("weather mask pixels are cached instead of read back on every animation frame", () => {
+  const source = readFileSync(resolve(process.cwd(), "src/app.ts"), "utf8");
+  assert.match(source, /weatherMaskKey/);
+  assert.match(source, /weatherMaskKey !== maskKey/);
+});

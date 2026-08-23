@@ -325,6 +325,7 @@ export class WalkBackHomeApp {
   private weatherCtx = this.weatherCanvas.getContext("2d")!;
   private weatherMaskCanvas = document.createElement("canvas");
   private weatherMaskCtx = this.weatherMaskCanvas.getContext("2d")!;
+  private weatherMaskKey = "";
   private pdfMode = "merge";
   private pdfFiles: File[] = [];
   private pdfRange = "";
@@ -654,7 +655,7 @@ export class WalkBackHomeApp {
       void this.handleLivingWindowAction(action, target);
       return;
     }
-    if (["toolbox-close", "toolbox-select", "toolbox-confirm", "toolbox-back", "toolbox-page", "toolbox-page-prev", "toolbox-page-next", "toolbox-spin-add", "toolbox-spin-remove", "toolbox-spin", "toolbox-preset-new", "toolbox-preset-rename", "toolbox-preset-delete", "calculator-key", "converter-swap", "currency-swap", "currency-refresh", "timer-mode", "timer-start", "timer-pause", "timer-reset", "date-difference", "date-add", "date-subtract", "date-until-since", "pdf-process", "media-process"].includes(action)) {
+    if (["toolbox-close", "toolbox-select", "toolbox-confirm", "toolbox-back", "toolbox-page", "toolbox-page-prev", "toolbox-page-next", "toolbox-spin-add", "toolbox-spin-remove", "toolbox-spin", "toolbox-preset-new", "toolbox-preset-create", "toolbox-preset-rename", "toolbox-preset-delete", "calculator-key", "converter-swap", "currency-swap", "currency-refresh", "timer-mode", "timer-start", "timer-pause", "timer-reset", "date-difference", "date-add", "date-subtract", "date-until-since", "pdf-process", "media-process"].includes(action)) {
       void this.handleToolboxAction(action, target);
       return;
     }
@@ -958,7 +959,7 @@ export class WalkBackHomeApp {
       return this.renderToolboxOverlay();
     }
     const preset = this.toolboxPresets.find((item) => item.id === this.selectedToolboxPresetId);
-    if (action === "toolbox-spin-add" && preset && !this.spinSpinning) {
+    if (action === "toolbox-spin-add" && !this.spinSpinning) {
       const input = this.overlay.querySelector<HTMLInputElement>("#toolbox-spin-choice");
       const added = addSpinChoiceToPreset(this.toolboxPresets, this.selectedToolboxPresetId, input?.value ?? "");
       this.toolboxPresets = added.presets;
@@ -978,16 +979,26 @@ export class WalkBackHomeApp {
       void this.startSpinAnimation(preset.choices);
       return;
     }
-    if (action === "toolbox-preset-new" && !this.spinSpinning) {
+    if (action === "toolbox-preset-create" && !this.spinSpinning) {
+      const input = this.overlay.querySelector<HTMLInputElement>("[data-toolbox-field=spin-preset-name]");
+      const name = input?.value.trim() ?? "";
+      if (!name) { input?.focus(); return this.renderToolboxOverlay(); }
       const id = "preset-" + Date.now();
-      this.toolboxPresets.push(createSpinPreset(id, "New preset", []));
+      this.toolboxPresets.push(createSpinPreset(id, name, []));
       this.selectedToolboxPresetId = id;
+      if (input) input.value = "";
       this.persistToolboxState();
       return this.renderToolboxOverlay();
     }
+    if (action === "toolbox-preset-new" && !this.spinSpinning) {
+      this.overlay.querySelector<HTMLInputElement>("[data-toolbox-field=spin-preset-name]")?.focus();
+      return;
+    }
     if (action === "toolbox-preset-rename" && preset && !this.spinSpinning) {
-      const next = window.prompt("Preset name", preset.name)?.trim();
+      const input = this.overlay.querySelector<HTMLInputElement>("[data-toolbox-field=spin-preset-name]");
+      const next = input?.value.trim() ?? "";
       if (next) preset.name = renameSpinPreset(preset, next).name;
+      if (input) input.value = "";
       this.persistToolboxState();
       return this.renderToolboxOverlay();
     }
@@ -3751,13 +3762,17 @@ export class WalkBackHomeApp {
     ctx.restore();
     const mask = layout.orientation === "portrait" ? this.images.weatherMaskPortrait : this.images.weatherMaskLandscape;
     if (!mask.complete || mask.naturalWidth === 0) return;
-    this.weatherMaskCanvas.width = canvasSize.w;
-    this.weatherMaskCanvas.height = canvasSize.h;
-    this.weatherMaskCtx.clearRect(0, 0, canvasSize.w, canvasSize.h);
-    drawSceneMask(this.weatherMaskCtx, mask, layout.orientation, layout.size, canvasSize);
-    const maskPixels = this.weatherMaskCtx.getImageData(0, 0, canvasSize.w, canvasSize.h);
-    grayscaleMaskToAlpha(maskPixels.data);
-    this.weatherMaskCtx.putImageData(maskPixels, 0, 0);
+    const maskKey = [mask.src, layout.orientation, layout.size.w, layout.size.h, canvasSize.w, canvasSize.h].join("|");
+    if (this.weatherMaskKey !== maskKey) {
+      this.weatherMaskCanvas.width = canvasSize.w;
+      this.weatherMaskCanvas.height = canvasSize.h;
+      this.weatherMaskCtx.clearRect(0, 0, canvasSize.w, canvasSize.h);
+      drawSceneMask(this.weatherMaskCtx, mask, layout.orientation, layout.size, canvasSize);
+      const maskPixels = this.weatherMaskCtx.getImageData(0, 0, canvasSize.w, canvasSize.h);
+      grayscaleMaskToAlpha(maskPixels.data);
+      this.weatherMaskCtx.putImageData(maskPixels, 0, 0);
+      this.weatherMaskKey = maskKey;
+    }
     ctx.save();
     ctx.globalCompositeOperation = "destination-in";
     ctx.drawImage(this.weatherMaskCanvas, 0, 0, canvasSize.w, canvasSize.h);
