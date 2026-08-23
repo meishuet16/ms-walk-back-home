@@ -2,15 +2,16 @@ import type { ActorFacing, SceneActor, SceneActorKind } from "./SceneActorRender
 import type { DialoguePortrait } from "./PresentationRenderer.js";
 import type { Point } from "./CollisionSystem.js";
 
+export type CutsceneSprite = NonNullable<SceneActor["sprite"]>;
 export type CutsceneAction =
   | { type: "wait"; duration: number }
-  | { type: "spawn"; actor: string; kind: SceneActorKind; x: number; y: number; facing?: ActorFacing; expression?: SceneActor["expression"]; color?: string; label?: string; sprite?: SceneActor["sprite"]; opacity?: number }
-  | { type: "move"; actor: string; x: number; y: number; duration: number; expression?: SceneActor["expression"]; sprite?: SceneActor["sprite"]; facing?: ActorFacing }
-  | { type: "moveGroup"; duration: number; moves: Array<{ actor: string; x: number; y: number; expression?: SceneActor["expression"]; sprite?: SceneActor["sprite"]; facing?: ActorFacing }> }
+  | { type: "spawn"; actor: string; kind: SceneActorKind; x: number; y: number; facing?: ActorFacing; expression?: SceneActor["expression"]; color?: string; label?: string; sprite?: CutsceneSprite; opacity?: number; visualScale?: number }
+  | { type: "move"; actor: string; x: number; y: number; duration: number; expression?: SceneActor["expression"]; sprite?: CutsceneSprite; spriteCycle?: CutsceneSprite[]; spriteCycleDuration?: number; facing?: ActorFacing; movementDirection?: ActorFacing; arrivalFacing?: ActorFacing; visualScale?: number; startVisualScale?: number; dialogue?: CutsceneDialogue; dialogueAtProgress?: number }
+  | { type: "moveGroup"; duration: number; moves: Array<{ actor: string; x: number; y: number; expression?: SceneActor["expression"]; sprite?: CutsceneSprite; spriteCycle?: CutsceneSprite[]; spriteCycleDuration?: number; facing?: ActorFacing; visualScale?: number; startVisualScale?: number }> }
   | { type: "face"; actor: string; direction: ActorFacing }
   | { type: "expression"; actor: string; value: SceneActor["expression"] }
-  | { type: "sprite"; actor: string; sprite: NonNullable<SceneActor["sprite"]> }
-  | { type: "spriteGroup"; states: Array<{ actor: string; sprite: NonNullable<SceneActor["sprite"]> }> }
+  | { type: "sprite"; actor: string; sprite: CutsceneSprite; visualScale?: number }
+  | { type: "spriteGroup"; states: Array<{ actor: string; sprite: CutsceneSprite; visualScale?: number }> }
   | { type: "prop"; id: string; assetId: string; owner?: string; position?: Point; visible: boolean }
   | { type: "effect"; id: string; kind: "water-vfx" | "dissolve"; actor?: string; target?: string; frame?: number; position?: Point; duration: number }
   | { type: "fade"; actors: string[]; duration: number }
@@ -18,35 +19,16 @@ export type CutsceneAction =
   | { type: "checkpoint"; id: string }
   | { type: "despawn"; actor: string };
 
-export type CutsceneDialogue = {
-  speaker: string;
-  text: string;
-  portrait?: DialoguePortrait;
-};
-
-export type CutsceneProp = {
-  id: string;
-  assetId: string;
-  owner?: string;
-  position?: Point;
-  visible: boolean;
-};
-
-export type CutsceneEffect = {
-  id: string;
-  kind: "water-vfx" | "dissolve";
-  actor?: string;
-  target?: string;
-  frame?: number;
-  position?: Point;
-  progress: number;
-};
+export type CutsceneDialogue = { speaker: string; text: string; portrait?: DialoguePortrait };
+export type CutsceneProp = { id: string; assetId: string; owner?: string; position?: Point; visible: boolean };
+export type CutsceneEffect = { id: string; kind: "water-vfx" | "dissolve"; actor?: string; target?: string; frame?: number; position?: Point; progress: number };
 
 export class CutsceneSystem {
   private index = 0;
   private elapsed = 0;
   private moveStart: { x: number; y: number } | null = null;
   private moveGroupStart: Map<string, { x: number; y: number }> | null = null;
+  private moveDialogueShown = false;
   actors = new Map<string, SceneActor>();
   props = new Map<string, CutsceneProp>();
   effects = new Map<string, CutsceneEffect>();
@@ -74,6 +56,7 @@ export class CutsceneSystem {
   advanceDialogue(): void {
     if (!this.currentDialogue) return;
     this.currentDialogue = null;
+    if (this.moveDialogueShown) return;
     this.nextAction();
   }
 
@@ -94,14 +77,25 @@ export class CutsceneSystem {
     this.moveStart ??= { x: actor.x, y: actor.y };
     this.elapsed += dt;
     const t = Math.min(1, this.elapsed / Math.max(0.001, action.duration));
+    const movementDirection = action.movementDirection ?? action.facing ?? actor.facing;
+    const visualScale = action.visualScale === undefined
+      ? actor.visualScale
+      : (action.startVisualScale ?? actor.visualScale ?? action.visualScale) + (action.visualScale - (action.startVisualScale ?? actor.visualScale ?? action.visualScale)) * t;
     this.actors.set(action.actor, {
       ...actor,
       x: this.moveStart.x + (action.x - this.moveStart.x) * t,
       y: this.moveStart.y + (action.y - this.moveStart.y) * t,
       expression: action.expression ?? actor.expression,
-      sprite: action.sprite ?? actor.sprite,
-      facing: action.facing ?? actor.facing
+      sprite: this.cycleSprite(action.sprite ?? actor.sprite, action.spriteCycle, action.spriteCycleDuration),
+      facing: t >= 1 ? (action.arrivalFacing ?? action.facing ?? actor.facing) : movementDirection,
+      visualScale
     });
+
+    if (action.dialogue && !this.moveDialogueShown && t >= (action.dialogueAtProgress ?? 0.25)) {
+      this.moveDialogueShown = true;
+      this.currentDialogue = action.dialogue;
+      return;
+    }
     if (t >= 1) this.nextAction();
   }
 
@@ -118,16 +112,26 @@ export class CutsceneSystem {
       const actor = this.actors.get(move.actor);
       const start = this.moveGroupStart.get(move.actor);
       if (!actor || !start) continue;
+      const visualScale = move.visualScale === undefined
+        ? actor.visualScale
+        : (move.startVisualScale ?? actor.visualScale ?? move.visualScale) + (move.visualScale - (move.startVisualScale ?? actor.visualScale ?? move.visualScale)) * t;
       this.actors.set(move.actor, {
         ...actor,
         x: start.x + (move.x - start.x) * t,
         y: start.y + (move.y - start.y) * t,
         expression: move.expression ?? actor.expression,
-        sprite: move.sprite ?? actor.sprite,
-        facing: move.facing ?? actor.facing
+        sprite: this.cycleSprite(move.sprite ?? actor.sprite, move.spriteCycle, move.spriteCycleDuration),
+        facing: move.facing ?? actor.facing,
+        visualScale
       });
     }
+
     if (t >= 1) this.nextAction();
+  }
+
+  private cycleSprite(fallback: CutsceneSprite | undefined, cycle: CutsceneSprite[] | undefined, frameDuration = 0.16): CutsceneSprite | undefined {
+    if (!cycle?.length) return fallback;
+    return cycle[Math.floor(this.elapsed / Math.max(0.01, frameDuration)) % cycle.length];
   }
 
   private applyInstant(action: Exclude<CutsceneAction, { type: "wait" | "move" | "moveGroup" }>): void {
@@ -143,7 +147,8 @@ export class CutsceneSystem {
         kind: action.kind,
         color: action.color,
         sprite: action.sprite,
-        opacity: action.opacity ?? 1
+        opacity: action.opacity ?? 1,
+        visualScale: action.visualScale ?? 1
       });
       return this.nextAction();
     }
@@ -159,13 +164,13 @@ export class CutsceneSystem {
     }
     if (action.type === "sprite") {
       const actor = this.actors.get(action.actor);
-      if (actor) this.actors.set(action.actor, { ...actor, sprite: action.sprite });
+      if (actor) this.actors.set(action.actor, { ...actor, sprite: action.sprite, visualScale: action.visualScale ?? actor.visualScale });
       return this.nextAction();
     }
     if (action.type === "spriteGroup") {
       for (const state of action.states) {
         const actor = this.actors.get(state.actor);
-        if (actor) this.actors.set(state.actor, { ...actor, sprite: state.sprite });
+        if (actor) this.actors.set(state.actor, { ...actor, sprite: state.sprite, visualScale: state.visualScale ?? actor.visualScale });
       }
       return this.nextAction();
     }
@@ -216,5 +221,6 @@ export class CutsceneSystem {
     this.elapsed = 0;
     this.moveStart = null;
     this.moveGroupStart = null;
+    this.moveDialogueShown = false;
   }
 }

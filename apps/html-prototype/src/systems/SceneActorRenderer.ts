@@ -6,6 +6,7 @@ export type SceneSpriteAsset = {
   visibleBounds?: { x: number; y: number; w: number; h: number };
   feet: { x: number; y: number };
   materialScale?: number;
+  baseHeight?: number;
   nozzleOrigin?: { x: number; y: number };
   mirrorForLeft?: boolean;
 };
@@ -46,6 +47,7 @@ export type SceneActor = {
   color?: string;
   sprite?: { assetId: string; frame: number };
   opacity?: number;
+  visualScale?: number;
 };
 
 export function moveSceneActor(actor: SceneActor, x: number, y: number): SceneActor {
@@ -57,7 +59,7 @@ export function drawSceneActor(ctx: CanvasRenderingContext2D, actor: SceneActor,
   const spriteAsset = actor.sprite ? spriteAssets?.[actor.sprite.assetId] : undefined;
   const image = spriteAsset && images ? images.get(spriteAsset.path) : undefined;
   if (actor.sprite && spriteAsset && image && isImageReady(image)) {
-    drawSceneSpriteAsset(ctx, image, spriteAsset, { x: actor.x, y: actor.y }, cameraX, cameraY, scale, actor.facing, actor.opacity ?? 1);
+    drawSceneSpriteAsset(ctx, image, spriteAsset, { x: actor.x, y: actor.y }, cameraX, cameraY, scale, actor.facing, actor.opacity ?? 1, 154, actor.visualScale ?? 1);
     return;
   }
   ctx.save();
@@ -69,7 +71,7 @@ export function drawSceneActor(ctx: CanvasRenderingContext2D, actor: SceneActor,
     ctx.restore();
     return;
   }
-  drawHuman(ctx, x, y, scale, actor);
+  drawHuman(ctx, x, y, scale * (actor.visualScale ?? 1), actor);
   ctx.restore();
 }
 
@@ -83,9 +85,10 @@ export function drawSceneSpriteAsset(
   scale: number,
   facing: ActorFacing = "right",
   opacity = 1,
-  baseHeight = 154
+  baseHeight = 154,
+  spriteScale = 1
 ): void {
-  const destinationHeight = baseHeight * (asset.materialScale ?? 1) * scale;
+  const destinationHeight = (asset.baseHeight ?? baseHeight) * (asset.materialScale ?? 1) * scale * spriteScale;
   const destinationWidth = destinationHeight * asset.source.w / asset.source.h;
   const visible = asset.visibleBounds ?? { x: 0, y: 0, w: asset.source.w, h: asset.source.h };
   const visibleLeft = visible.x / asset.source.w * destinationWidth;

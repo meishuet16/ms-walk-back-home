@@ -1,6 +1,7 @@
 import { bakeryChapter } from "./fixtures/chapterPlan.js";
 import { april05Assets, april05Chapter, april05EchoActions, april05EchoAnchors, april05MainMemoryActions, april05ReflectionChoices, resolveApril05Actions, type April05EchoId } from "./fixtures/april05Chapter.js";
 import { april06Assets, april06Chapter, april06EchoActions, april06MainMemoryActions, april06ReflectionChoices, resolveApril06Actions } from "./fixtures/april06Chapter.js";
+import { may23Assets, may23Chapter, may23EchoAnchors, may23ReflectionChoices, resolveMay23Actions } from "./fixtures/may23Chapter.js";
 import { march30Assets, march30EchoActions, march30EchoReflectionChoices, march30MainMemoryActions, march30ReflectionChoices, resolveMarch30Closing, resolveMarch30CutsceneActions } from "./fixtures/march30Memory.js";
 import { canStartLabisMotorMemory, labisDiaryMemorySpot, labisInteractionForPoint, labisMotorMemoryActions } from "./fixtures/labisMotorMemory.js";
 import { labisAssetManifest, labisAssetPath, labisProductionAssetPaths } from "./fixtures/labisAssetRegistry.js";
@@ -138,6 +139,8 @@ type AuthoredRuntimeDefinition = {
   resolveActions: (layout: SceneLayout, mode: "main" | "echo", echoId?: string) => CutsceneAction[];
   reflectionChoices: Array<{ id: string; prompt: string; choices: Choice[] }>;
   echoAnchors: Record<string, string>;
+  triggerId?: string;
+  mainInteractionId?: string;
 };
 
 const authoredRuntimeByScene: Record<string, AuthoredRuntimeDefinition> = {
@@ -154,6 +157,15 @@ const authoredRuntimeByScene: Record<string, AuthoredRuntimeDefinition> = {
     resolveActions: (layout, mode) => resolveApril06Actions(layout, mode === "main" ? april06MainMemoryActions : april06EchoActions),
     reflectionChoices: april06ReflectionChoices,
     echoAnchors: { "watergun-crossing": "watergun-crossing" }
+  },
+  "523": {
+    chapter: may23Chapter,
+    assets: may23Assets,
+    resolveActions: (layout, mode, echoId) => resolveMay23Actions(layout, mode, echoId),
+    reflectionChoices: may23ReflectionChoices,
+    echoAnchors: may23EchoAnchors,
+    triggerId: "hostel-lobby-arrival",
+    mainInteractionId: "hostel-lobby-memory"
   }
 };
 export class WalkBackHomeApp {
@@ -407,6 +419,7 @@ export class WalkBackHomeApp {
     this.preloadMarch30Assets();
     this.preloadApril06Assets();
     this.preloadApril05Assets();
+    this.preloadMay23Assets();
     this.preloadSceneLayoutAssets();
     this.sceneLayoutLoadPromise = this.loadSavedSceneLayouts();
     this.audio.setVolume(this.settings.volume);
@@ -1099,6 +1112,14 @@ export class WalkBackHomeApp {
     }
   }
 
+  private preloadMay23Assets(): void {
+    for (const asset of Object.values(may23Assets)) {
+      const image = img(asset.path);
+      image.addEventListener("error", () => this.authoredImages.delete(asset.path), { once: true });
+      this.authoredImages.set(asset.path, image);
+    }
+  }
+
   private preloadSceneLayoutAssets(): void {
     for (const sceneId of Object.keys(sceneLayoutManifest)) {
       this.sceneImage(getSceneLayout(sceneId, "landscape"));
@@ -1385,7 +1406,8 @@ export class WalkBackHomeApp {
       const rect = item.rect;
       return this.player.x >= rect.x && this.player.x <= rect.x + rect.w && this.player.y >= rect.y && this.player.y <= rect.y + rect.h;
     });
-    if (trigger?.id === "main-memory" && trigger.chapterId === runtime.chapter.id && this.consumeChapterTrigger(runtime.chapter.id)) {
+    const primaryTriggerId = runtime.triggerId ?? "main-memory";
+    if (trigger?.id === primaryTriggerId && trigger.chapterId === runtime.chapter.id && trigger.eventId === runtime.chapter.canonicalClosure.historicalEventId && trigger.once && this.consumeChapterTrigger(runtime.chapter.id)) {
       this.startAuthoredCutscene("main", false);
       return;
     }
@@ -1398,7 +1420,9 @@ export class WalkBackHomeApp {
           return point ? Math.hypot(this.player.x - point.x, this.player.y - point.y) < point.radius : false;
         })
       : undefined;
-    const availableInteraction = interaction && (mainComplete || ["exit", "diary", "diary memory"].includes(interaction.id)) ? interaction : null;
+    const mainInteractionId = runtime.mainInteractionId ?? "main-memory-replay";
+    const optionalMemory = interaction?.id === "bus-stop-memory";
+    const availableInteraction = interaction && (optionalMemory || mainComplete || ["exit", "diary", "diary memory", "diary-memory", mainInteractionId].includes(interaction.id)) ? interaction : null;
     this.activeObject = echoActive ?? availableInteraction?.id ?? "";
   }
 
@@ -1905,8 +1929,9 @@ export class WalkBackHomeApp {
       if (this.authoredOverlayMode === "choice" || this.authoredCutscene?.currentCheckpoint) return;
       if (this.authoredCutscene) return;
       if (this.activeObject === "exit") return this.returnToForest();
-      if (this.activeObject === "diary" || this.activeObject === "diary memory") return this.showChapterDiary(this.currentMemoryKey());
-      if (this.activeObject === "main-memory-replay" || this.activeObject === "mcd-drop-memory") return this.startAuthoredCutscene("main", true);
+      if (this.activeObject === "diary" || this.activeObject === "diary memory" || this.activeObject === "diary-memory") return this.showChapterDiary(this.currentMemoryKey());
+      if (this.activeObject === "bus-stop-memory") return this.startAuthoredCutscene("echo", false, "bus-stop-memory");
+      if (this.activeObject === (runtime.mainInteractionId ?? "main-memory-replay") || this.activeObject === "main-memory-replay" || this.activeObject === "mcd-drop-memory") return this.startAuthoredCutscene("main", true);
       if (runtime.echoAnchors[this.activeObject]) return this.startAuthoredCutscene("echo", false, this.activeObject);
       if (this.activeObject === "roadside-empty-car") return this.inspectAuthoredResidue(this.activeObject);
       if (this.activeObject === "bench") return this.showToast("The bench keeps the ordinary part of the night.");
@@ -2623,7 +2648,7 @@ export class WalkBackHomeApp {
       this.ctx.fillStyle = "rgba(226, 181, 109, .10)";
       this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
-    const diary = layout.interactions.find((interaction) => interaction.id === "diary" || interaction.id === "diary memory");
+    const diary = layout.interactions.find((interaction) => interaction.id === "diary" || interaction.id === "diary memory" || interaction.id === "diary-memory");
     if (diary) this.drawSharedDiaryBookProp(diary, camera.x, camera.y, scale, time);
     const actors = this.authoredCutscene ? [...this.authoredCutscene.actors.values()] : [];
     const mujiScreen = { x: (this.player.x - camera.x) * scale, y: (this.player.y - camera.y) * scale };

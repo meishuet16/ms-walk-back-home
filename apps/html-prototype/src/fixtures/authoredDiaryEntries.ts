@@ -89,4 +89,22 @@ export const authoredChapterDiaryEntries: DiaryEntry[] = [
     photos: [],
     scrapbookLayout: { elements: [] }
   },
-];
+  {
+    id: "authored-diary-may23-i-arrived",
+    date: "2026-05-23",
+    title: "05.23 · 雨",
+    body: [
+      "05.23 · 雨",
+      "2026-05-23 · KTHO · Rain",
+      "我到了，你呢。那天我先在宿舍楼下等了一会儿，后来又走了一圈。",
+      "她和 Tung Ern 一起回来，又一起上楼。我在巴士站看着，手机一直没有亮。",
+      "19:29，她问我在哪里。我已经走了一半，还是回了头。"
+    ].join("\n\n"),
+    location: "KTHO",
+    weather: "Rain",
+    memoryKind: "chapter",
+    mood: "quiet",
+    chapterId: "may23-i-arrived",
+    photos: [],
+    scrapbookLayout: { elements: [] }
+  },];

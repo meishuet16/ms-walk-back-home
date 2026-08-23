@@ -3,6 +3,7 @@ import { labisMotorChapter } from "../fixtures/labisMotorChapter.js";
 import { march30Chapter } from "../fixtures/march30Chapter.js";
 import { april06Chapter } from "../fixtures/april06Chapter.js";
 import { april05Chapter } from "../fixtures/april05Chapter.js";
+import { may23Chapter } from "../fixtures/may23Chapter.js";
 import type { ChapterDefinition } from "../types.js";
 
 export type AuthoredForestEntry = (typeof forestDoors)[number];
@@ -49,7 +50,8 @@ export const chapterRegistry: Record<string, ChapterDefinition> = {
   "labis-motor-day": labisMotorChapter,
   "march30-too-fated": march30Chapter,
   "april05-come-down": april05Chapter,
-  "april06-not-gone-yet": april06Chapter
+  "april06-not-gone-yet": april06Chapter,
+  "may23-i-arrived": may23Chapter
 };
 
 export const forestEntries = forestDoors;
