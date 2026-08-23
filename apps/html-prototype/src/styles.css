@@ -5628,9 +5628,14 @@ canvas {
 .toolbox-pagination-indicators button { width: 24px; min-width: 24px; padding: 3px; border: 0; background: transparent; color: #a8906e; }
 .toolbox-pagination-indicators button.selected { color: #f4ca79; }
 .toolbox-slot.empty { pointer-events: none; border-style: dashed; opacity: .32; background: transparent; }
-.spin-wheel-stage { position: relative; display: grid; place-items: center; min-height: 220px; overflow: hidden; border: 1px solid rgba(244, 202, 121, .26); background: radial-gradient(circle, rgba(213, 166, 87, .16), rgba(26, 20, 19, .2) 66%); }
-.spin-wheel-canvas { width: min(100%, 360px); height: auto; aspect-ratio: 1; }
-.spin-pointer { position: absolute; top: 8px; z-index: 1; color: #ffe3a0; font-size: 22px; }
+.spin-wheel-tool { --instrument-charcoal: #161a1b; --instrument-steel: #566166; --instrument-ivory: #f0eadc; --instrument-sage: #9eae9b; }
+.spin-wheel-stage { position: relative; display: grid; place-items: center; min-height: 220px; overflow: hidden; border: 1px solid var(--instrument-steel); background: radial-gradient(circle, #303638 0, var(--instrument-charcoal) 68%); box-shadow: inset 0 0 0 1px rgba(240, 234, 220, .05); }
+.spin-wheel-canvas { width: min(100%, 360px); height: auto; aspect-ratio: 1; filter: drop-shadow(0 12px 20px rgba(0, 0, 0, .32)); }
+.spin-pointer { position: absolute; top: 8px; z-index: 1; color: var(--instrument-sage); font-size: 22px; }
+.spin-wheel-result { color: var(--instrument-sage); letter-spacing: .04em; }
+.spin-wheel-tool .spin-choice-list li { border-left: 2px solid var(--instrument-steel); background: rgba(240, 234, 220, .055); }
+.spin-wheel-tool :focus-visible { outline: 2px solid var(--instrument-sage); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .spin-wheel-tool * { scroll-behavior: auto; transition-duration: .01ms !important; } }
 .converter-value-row, .currency-pair, .file-tool-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
 .currency-pair { grid-template-columns: repeat(2, minmax(0, 1fr)) auto; }
 .file-tool { display: grid; gap: 10px; }

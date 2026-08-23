@@ -78,12 +78,19 @@ test("Toolbox keyboard guards protect handled events and focused buttons", () =>
   assert.doesNotMatch(source, /focusedControl && event\.key !== "Escape"/);
 });
 
-test("Spin Add integration uses the selected preset, clears the field, persists, and rerenders", () => {
+test("Spin actions patch stable regions without rebuilding the Toolbox root", () => {
   const source = readFileSync(resolve(process.cwd(), "src/app.ts"), "utf8");
   assert.match(source, /addSpinChoiceToPreset/);
-  assert.match(source, /renderToolboxOverlay[\s\S]*?normalizeSelectedPresetId/);
   assert.match(source, /data-action=toolbox-spin-add/);
-  assert.match(source, /this\.persistToolboxState\(\)[\s\S]*?this\.renderToolboxOverlay\(\)/);
+  assert.match(source, /refreshSpinWheelView/);
+  const addStart = source.indexOf('action === "toolbox-spin-add"');
+  const addEnd = source.indexOf('action === "toolbox-spin-remove"', addStart);
+  const createStart = source.indexOf('action === "toolbox-preset-create"');
+  const createEnd = source.indexOf('action === "toolbox-preset-new"', createStart);
+  assert.doesNotMatch(source.slice(addStart, addEnd), /renderToolboxOverlay/);
+  assert.doesNotMatch(source.slice(createStart, createEnd), /renderToolboxOverlay/);
+  assert.match(source.slice(addStart, addEnd), /refreshSpinWheelView/);
+  assert.match(source.slice(createStart, createEnd), /refreshSpinWheelView/);
 });
 test("Spin Add integration accumulates Latin and Chinese choices into real wheel segments", () => {
   let presets = [createSpinPreset("today", "Today", ["A"])];

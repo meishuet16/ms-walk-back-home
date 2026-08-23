@@ -76,6 +76,7 @@ import { convertCurrency, currencyCacheStatus, currencyCodes, currencyPairKey, c
 import { completeTimerIfNeeded, createTimerState, pauseTimer, resetTimer, startTimer, timerRemaining, stopwatchElapsed, type TimerState } from "./systems/TimerTool.js";
 import { addDateDays, dateDifference, localDateString, relativeDateLabel } from "./systems/DateTool.js";
 import { renderToolbox, type ToolboxRenderState } from "./systems/ToolboxView.js";
+import { toolboxFieldChangeEffect } from "./systems/ToolboxInteraction.js";
 import { createLivingWindowViewModel, defaultWindowLocation, fetchOpenMeteoLocations, fetchOpenMeteoWeather, livingWindowStatusCopy, weatherCacheStatus, type WeatherSnapshot, type WindowLocation } from "./systems/LivingWindow.js";
 import { calculateMoonPhase, type MoonPhase } from "./systems/MoonPhase.js";
 import { drawSceneAsset } from "./systems/SceneAssetRenderer.js";
@@ -938,6 +939,62 @@ export class WalkBackHomeApp {
       this.overlay.querySelector(".spin-wheel-tool")?.append(status);
     }
   }
+  private refreshSpinWheelView(options: { focusChoice?: boolean; focusPreset?: boolean } = {}): void {
+    if (!this.toolboxOpen || this.toolboxView.screen !== "tool" || this.toolboxView.selected !== "spin-wheel") return;
+    this.selectedToolboxPresetId = normalizeSelectedPresetId(this.toolboxPresets, this.selectedToolboxPresetId);
+    const preset = this.toolboxPresets.find((item) => item.id === this.selectedToolboxPresetId) ?? this.toolboxPresets[0];
+    if (!preset) return;
+    const panel = this.overlay.querySelector<HTMLElement>(".toolbox-panel");
+    const list = this.overlay.querySelector<HTMLElement>(".spin-choice-list");
+    const panelScroll = panel?.scrollTop ?? 0;
+    const listScroll = list?.scrollTop ?? 0;
+    const select = this.overlay.querySelector<HTMLSelectElement>("[data-toolbox-field=spin-preset]");
+    if (select) {
+      select.replaceChildren(...this.toolboxPresets.map((item) => {
+        const option = document.createElement("option");
+        option.value = item.id;
+        option.textContent = item.name;
+        option.selected = item.id === this.selectedToolboxPresetId;
+        return option;
+      }));
+    }
+    if (list) {
+      const rows = preset.choices.map((choice, index) => {
+        const row = document.createElement("li");
+        const label = document.createElement("span");
+        label.textContent = choice;
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.dataset.action = "toolbox-spin-remove";
+        remove.dataset.index = String(index);
+        remove.setAttribute("aria-label", "Remove " + choice);
+        remove.textContent = "x";
+        row.append(label, remove);
+        return row;
+      });
+      if (!rows.length) {
+        const empty = document.createElement("li");
+        empty.className = "empty";
+        empty.textContent = "Add a choice to begin.";
+        rows.push(empty);
+      }
+      list.replaceChildren(...rows);
+    }
+    const result = this.overlay.querySelector<HTMLElement>(".spin-wheel-result");
+    if (result) result.textContent = this.spinResult || (preset.choices.length ? "Ready" : "Add a choice to begin.");
+    const status = this.overlay.querySelector<HTMLElement>(".spin-wheel-tool .toolbox-status");
+    if (status) status.textContent = this.toolboxPersistenceStatus;
+    const spin = this.overlay.querySelector<HTMLButtonElement>("[data-action=toolbox-spin]");
+    if (spin) {
+      spin.disabled = this.spinSpinning || !preset.choices.length;
+      spin.textContent = this.spinSpinning ? "Spinning..." : "Spin";
+    }
+    this.drawSpinWheelCanvas();
+    if (panel) panel.scrollTop = panelScroll;
+    if (list) list.scrollTop = listScroll;
+    if (options.focusChoice) this.overlay.querySelector<HTMLInputElement>("[data-toolbox-field=spin-choice]")?.focus();
+    if (options.focusPreset) this.overlay.querySelector<HTMLInputElement>("[data-toolbox-field=spin-preset-name]")?.focus();
+  }
 
   private async handleToolboxAction(action: string, target: HTMLElement): Promise<void> {
     if (action === "toolbox-close") return this.closeToolbox();
@@ -968,19 +1025,27 @@ export class WalkBackHomeApp {
     if (action === "toolbox-spin-add" && !this.spinSpinning) {
       const input = this.overlay.querySelector<HTMLInputElement>("#toolbox-spin-choice");
       const added = addSpinChoiceToPreset(this.toolboxPresets, this.selectedToolboxPresetId, input?.value ?? this.spinChoiceDraft);
+      if (!added.added) {
+        this.toolboxPersistenceStatus = "Enter a unique choice";
+        this.refreshSpinWheelView({ focusChoice: true });
+        return;
+      }
       this.toolboxPresets = added.presets;
       this.selectedToolboxPresetId = added.selectedPresetId;
       this.spinChoiceDraft = "";
+      this.toolboxPersistenceStatus = "";
       if (input) input.value = "";
       this.spinResult = "";
       this.persistToolboxState();
-      return this.renderToolboxOverlay();
+      this.refreshSpinWheelView({ focusChoice: true });
+      return;
     }
     if (action === "toolbox-spin-remove" && preset && !this.spinSpinning) {
       preset.choices = removeSpinChoice(preset.choices, Number(target.dataset.index));
       this.spinResult = "";
       this.persistToolboxState();
-      return this.renderToolboxOverlay();
+      this.refreshSpinWheelView();
+      return;
     }
     if (action === "toolbox-spin" && preset && !this.spinSpinning) {
       void this.startSpinAnimation(preset.choices);
@@ -989,14 +1054,21 @@ export class WalkBackHomeApp {
     if (action === "toolbox-preset-create" && !this.spinSpinning) {
       const input = this.overlay.querySelector<HTMLInputElement>("[data-toolbox-field=spin-preset-name]");
       const name = (input?.value ?? this.spinPresetNameDraft).trim();
-      if (!name) { input?.focus(); return this.renderToolboxOverlay(); }
+      const duplicate = this.toolboxPresets.some((item) => item.name.toLocaleLowerCase() === name.toLocaleLowerCase());
+      if (!name || duplicate) {
+        this.toolboxPersistenceStatus = name ? "Preset name already exists" : "Enter a preset name";
+        this.refreshSpinWheelView({ focusPreset: true });
+        return;
+      }
       const id = "preset-" + Date.now();
       this.toolboxPresets.push(createSpinPreset(id, name, []));
       this.selectedToolboxPresetId = id;
       this.spinPresetNameDraft = "";
+      this.toolboxPersistenceStatus = "";
       if (input) input.value = "";
       this.persistToolboxState();
-      return this.renderToolboxOverlay();
+      this.refreshSpinWheelView({ focusPreset: true });
+      return;
     }
     if (action === "toolbox-preset-new" && !this.spinSpinning) {
       this.overlay.querySelector<HTMLInputElement>("[data-toolbox-field=spin-preset-name]")?.focus();
@@ -1009,13 +1081,15 @@ export class WalkBackHomeApp {
       this.spinPresetNameDraft = "";
       if (input) input.value = "";
       this.persistToolboxState();
-      return this.renderToolboxOverlay();
+      this.refreshSpinWheelView({ focusPreset: true });
+      return;
     }
     if (action === "toolbox-preset-delete" && preset && this.toolboxPresets.length > 1 && !this.spinSpinning) {
       this.toolboxPresets = deleteSpinPreset(this.toolboxPresets, preset.id);
       this.selectedToolboxPresetId = this.toolboxPresets[0].id;
       this.persistToolboxState();
-      return this.renderToolboxOverlay();
+      this.refreshSpinWheelView();
+      return;
     }
     if (action === "calculator-key") {
       this.calculatorDisplay = applyCalculatorInput(this.calculatorDisplay, target.dataset.key ?? "");
@@ -1084,7 +1158,7 @@ export class WalkBackHomeApp {
     const startedAt = performance.now();
     this.spinSpinning = true;
     this.spinResult = "Spinning…";
-    this.renderToolboxOverlay();
+    this.refreshSpinWheelView();
     const animate = (now: number): void => {
       if (!this.toolboxOpen || this.toolboxView.screen !== "tool" || this.toolboxView.selected !== "spin-wheel") {
         this.spinSpinning = false;
@@ -1101,7 +1175,7 @@ export class WalkBackHomeApp {
       this.spinRotation = targetRotation;
       this.spinSpinning = false;
       this.spinResult = choices[winner] ?? "";
-      this.renderToolboxOverlay();
+      this.refreshSpinWheelView();
     };
     this.spinAnimationFrame = requestAnimationFrame(animate);
   }
@@ -1120,7 +1194,7 @@ export class WalkBackHomeApp {
     const preset = this.toolboxPresets.find((item) => item.id === this.selectedToolboxPresetId);
     const choices = preset?.choices ?? [];
     const geometry = spinWheelGeometry(choices, this.spinRotation);
-    const palette = ["#d7ad70", "#8f7154", "#b7c7b0", "#a98968", "#d5c69a", "#6f887e"];
+    const palette = ["#e7e1d4", "#78858a", "#a2b19d", "#4f5c60", "#c8c1b3", "#65736d"];
     for (const segment of geometry.segments) {
       context.beginPath();
       context.moveTo(0, 0);
@@ -1279,7 +1353,14 @@ export class WalkBackHomeApp {
   private handleToolboxFieldChange(target: HTMLElement): void {
     const field = target.dataset.toolboxField;
     const value = target instanceof HTMLInputElement || target instanceof HTMLSelectElement ? target.value : "";
-    if (field === "spin-preset") this.selectedToolboxPresetId = value;
+    const effect = toolboxFieldChangeEffect(field);
+    if (effect === "draft-only") return;
+    if (field === "spin-preset") {
+      this.selectedToolboxPresetId = value;
+      this.persistToolboxState();
+      this.refreshSpinWheelView();
+      return;
+    }
     if (field === "converter-category") {
       this.converterCategory = value;
       const units = unitsForCategory(value);
