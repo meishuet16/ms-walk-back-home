@@ -20,17 +20,3 @@ export function drawSceneAsset(ctx: CanvasRenderingContext2D, image: CanvasImage
   if (transform.source) ctx.drawImage(image, transform.source.x, transform.source.y, transform.source.w, transform.source.h, transform.destination.x, transform.destination.y, transform.destination.w, transform.destination.h);
   else ctx.drawImage(image, transform.destination.x, transform.destination.y, transform.destination.w, transform.destination.h);
 }
-
-export function drawSceneMask(ctx: CanvasRenderingContext2D, mask: CanvasImageSource, orientation: SceneOrientation, sceneSize: SceneSize, canvasSize: SceneSize): void {
-  drawSceneAsset(ctx, mask, orientation, sceneSize, canvasSize);
-}
-
-export function grayscaleMaskToAlpha(data: Uint8ClampedArray): void {
-  for (let index = 0; index < data.length; index += 4) {
-    const luminance = Math.round(data[index] * 0.2126 + data[index + 1] * 0.7152 + data[index + 2] * 0.0722);
-    data[index] = 255;
-    data[index + 1] = 255;
-    data[index + 2] = 255;
-    data[index + 3] = Math.round((data[index + 3] * luminance) / 255);
-  }
-}

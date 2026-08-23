@@ -5298,7 +5298,7 @@ canvas {
   .toolbox-two-col { align-items: stretch; }
 }
 
-/* Living Window weather card; the canvas underneath remains the scene of record. */
+/* Living Window panel; the Muji Room scene remains the visual background. */
 .window-overlay { position: absolute; inset: 0; padding: clamp(14px, 3vw, 30px); pointer-events: auto; background: rgba(8, 14, 22, .34); backdrop-filter: blur(2px); }
 .living-window-panel { width: min(720px, 100%); max-height: min(88%, 720px); overflow: auto; padding: clamp(16px, 3vw, 24px); color: #e8e7d7; background: linear-gradient(145deg, #1c2a31, #11171d 72%); border-color: #70929a; }
 .window-panel-header, .window-panel-actions, .window-location-search, .window-panel-foot { display: flex; align-items: center; gap: 8px; }

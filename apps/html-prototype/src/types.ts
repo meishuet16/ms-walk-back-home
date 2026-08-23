@@ -179,7 +179,6 @@ export type RoomJourneyState = {
   lampOn?: boolean;
   musicOn?: boolean;
   residueIds?: string[];
-  windowFocus?: boolean;
   selectedVinylId?: string;
   vinylPlaying?: boolean;
   vinylCovers?: Record<string, string>;

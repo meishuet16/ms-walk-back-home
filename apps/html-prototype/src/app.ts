@@ -63,7 +63,6 @@ import {
   vinylRecords,
   vinylRecordsFromAudioFiles,
   withCustomVinylCover,
-  setRoomWindowFocus,
   normalizeRoomWindowState,
   type RoomInteraction,
   type VinylRecord
@@ -77,9 +76,9 @@ import { convertCurrency, currencyCacheStatus, currencyCodes, currencyPairKey, c
 import { completeTimerIfNeeded, createTimerState, pauseTimer, resetTimer, startTimer, timerRemaining, stopwatchElapsed, type TimerState } from "./systems/TimerTool.js";
 import { addDateDays, dateDifference, localDateString, relativeDateLabel } from "./systems/DateTool.js";
 import { renderToolbox, type ToolboxRenderState } from "./systems/ToolboxView.js";
-import { createLivingWindowViewModel, defaultWindowLocation, fetchOpenMeteoLocations, fetchOpenMeteoWeather, livingWindowStatusCopy, weatherCacheStatus, weatherVisualFor, type WeatherSnapshot, type WindowLocation } from "./systems/LivingWindow.js";
+import { createLivingWindowViewModel, defaultWindowLocation, fetchOpenMeteoLocations, fetchOpenMeteoWeather, livingWindowStatusCopy, weatherCacheStatus, type WeatherSnapshot, type WindowLocation } from "./systems/LivingWindow.js";
 import { calculateMoonPhase, type MoonPhase } from "./systems/MoonPhase.js";
-import { drawSceneAsset, drawSceneMask, grayscaleMaskToAlpha, sceneTransformFor } from "./systems/LivingWindowRenderer.js";
+import { drawSceneAsset } from "./systems/SceneAssetRenderer.js";
 import { deletePdfPages, imagesToPdf, mergePdfFiles, optimizePdf, parsePdfPageOperation, pdfOutputFilename, pdfToPngImages, reorderOrExtractPdf } from "./systems/PdfToolkit.js";
 import { mediaOutputFilename, processMediaFile } from "./systems/MediaToolkit.js";
 import type { MusicScene } from "./systems/SceneMusic.js";
@@ -124,11 +123,6 @@ const assets = {
   roomFallback: "assets/room-panel.jpg",
   map: "assets/map-panel.jpg",
   timeline: "assets/timeline-panel.jpg",
-  weatherClouds: "assets/muji-room/weather/muji-room-weather-runtime-assets/clouds.png",
-  weatherMoon: "assets/muji-room/weather/muji-room-weather-runtime-assets/moon-phases.png",
-  weatherRain: "assets/muji-room/weather/muji-room-weather-runtime-assets/rain-vfx.png",
-  weatherMaskLandscape: "assets/muji-room/weather/muji-room-weather-runtime-assets/window-mask-landscape.png",
-  weatherMaskPortrait: "assets/muji-room/weather/muji-room-weather-runtime-assets/window-mask-portrait.png"
 };
 
 function img(src: string): HTMLImageElement {
@@ -194,11 +188,6 @@ export class WalkBackHomeApp {
     muji: img(assets.muji),
     friend: img(assets.friend),
     room: img(assets.roomFallback),
-    weatherClouds: img(assets.weatherClouds),
-    weatherMoon: img(assets.weatherMoon),
-    weatherRain: img(assets.weatherRain),
-    weatherMaskLandscape: img(assets.weatherMaskLandscape),
-    weatherMaskPortrait: img(assets.weatherMaskPortrait)
   };
   private scene: SceneId = "title";
   private player: Point = { x: 880, y: 690 };
@@ -321,11 +310,6 @@ export class WalkBackHomeApp {
   private livingWindowStatus = "";
   private livingWindowLoading = false;
   private livingWindowSubview: "main" | "location" = "main";
-  private weatherCanvas = document.createElement("canvas");
-  private weatherCtx = this.weatherCanvas.getContext("2d")!;
-  private weatherMaskCanvas = document.createElement("canvas");
-  private weatherMaskCtx = this.weatherMaskCanvas.getContext("2d")!;
-  private weatherMaskKey = "";
   private pdfMode = "merge";
   private pdfFiles: File[] = [];
   private pdfRange = "";
@@ -2960,7 +2944,6 @@ export class WalkBackHomeApp {
     this.player = leavingDoor && forestLayout.orientation === "landscape"
       ? { x: leavingDoor.x, y: Math.min(760, leavingDoor.y + 120) }
       : { ...forestLayout.spawn };
-    this.room.windowFocus = false;
     this.showToast(leavingDoor ? "You can come back when you are ready." : leavingRoom ? "Returned to forest" : "Returned to forest");
     this.focusStage();
     if (keepPersonalMusic) this.updatePersonalMusicOverlay();
@@ -3635,21 +3618,15 @@ export class WalkBackHomeApp {
   private drawMujiRoomScene(time: number): void {
     const layout = this.currentSceneLayout("muji-room");
     const lamp = this.roomInteractionById(layout, "lamp");
-    const windowInteraction = this.roomInteractionById(layout, "window");
     const toolbox = this.roomInteractionById(layout, "toolbox");
     if (layout.orientation === "landscape") {
       const scale = this.canvas.width / 960;
       drawSceneAsset(this.ctx, this.images.room, layout.orientation, layout.size, { w: this.canvas.width, h: this.canvas.height });
       if (!this.images.room.complete || this.images.room.naturalWidth === 0) this.drawRoomFallback(scale);
       if (toolbox) this.drawRoomToolbox(toolbox, scale);
-      if (this.room.windowFocus && windowInteraction) this.drawLivingWindowWeather(time, windowInteraction, layout);
       if (this.room.lampOn && lamp) this.drawLampGlow(lamp, scale);
       this.drawMuji({ x: this.player.x * scale, y: this.player.y * scale }, time, scale);
-      if (this.room.windowFocus && windowInteraction) {
-        this.ctx.fillStyle = "rgba(8, 14, 24, .22)";
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        this.drawWindowFocus(windowInteraction, time, scale);
-      }
+
       for (const interaction of roomInteractions) {
         this.drawRoomInteractionHint(interaction, this.activeRoomInteraction?.id === interaction.id, time, scale);
       }
@@ -3661,14 +3638,9 @@ export class WalkBackHomeApp {
     drawSceneAsset(this.ctx, image, layout.orientation, layout.size, { w: this.canvas.width, h: this.canvas.height });
     if (!image.complete || image.naturalWidth === 0) this.drawRoomFallback(scale);
     if (toolbox) this.drawRoomToolbox(toolbox, scale);
-    if (this.room.windowFocus && windowInteraction) this.drawLivingWindowWeather(time, windowInteraction, layout);
     if (this.room.lampOn && lamp) this.drawLampGlow(lamp, scale);
     this.drawMuji({ x: this.player.x * scale, y: this.player.y * scale }, time, scale);
-    if (this.room.windowFocus && windowInteraction) {
-      this.ctx.fillStyle = "rgba(8, 14, 24, .22)";
-      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-      this.drawWindowFocus(windowInteraction, time, scale);
-    }
+
     for (const interaction of layout.interactions) {
       this.drawRoomInteractionHint(interaction, this.activeRoomInteraction?.id === interaction.id, time, scale);
     }
@@ -3722,77 +3694,6 @@ export class WalkBackHomeApp {
     this.ctx.fillRect(706 * scale, 314 * scale, 132 * scale, 112 * scale);
   }
 
-  private drawLivingWindowWeather(time: number, interaction: SceneInteraction | RoomInteraction, layout: SceneLayout): void {
-    const weather = this.livingWindowWeather;
-    const visual = weatherVisualFor({ code: weather?.current.condition.code ?? 0, precipitationMm: weather?.current.precipitationMm ?? 0 });
-    const canvasSize = { w: this.canvas.width, h: this.canvas.height };
-    this.weatherCanvas.width = canvasSize.w;
-    this.weatherCanvas.height = canvasSize.h;
-    const ctx = this.weatherCtx;
-    const viewport = this.sceneViewport(layout);
-    const sceneTransform = sceneTransformFor(layout.orientation, layout.size, canvasSize);
-    const scale = sceneTransform.destination.w / (sceneTransform.source?.w ?? viewport.w);
-    ctx.clearRect(0, 0, canvasSize.w, canvasSize.h);
-    ctx.fillStyle = visual.tint;
-    ctx.fillRect(0, 0, canvasSize.w, canvasSize.h);
-    const x = (interaction.x - 200) * scale;
-    const y = (interaction.y - 108) * scale;
-    const w = 292 * scale;
-    const h = 176 * scale;
-    ctx.save();
-    ctx.globalAlpha = visual.cloudOpacity;
-    if (this.images.weatherClouds.complete && this.images.weatherClouds.naturalWidth > 0) {
-      for (let index = 0; index < 4; index += 1) {
-        const frame = (index + Math.floor(time / 1200)) % 6;
-        ctx.drawImage(this.images.weatherClouds, (frame % 3) * 128, Math.floor(frame / 3) * 64, 128, 64, x - 26 * scale + ((index * 92 + time / (46 + index * 5)) % Math.max(1, w + 100 * scale)), y + (index % 2) * 32 * scale, 128 * scale, 64 * scale);
-      }
-    }
-    ctx.globalAlpha = 1;
-    if (visual.layer === "clear" || visual.layer === "cloud") {
-      const moon = this.livingWindowMoon.index;
-      if (this.images.weatherMoon.complete && this.images.weatherMoon.naturalWidth > 0) ctx.drawImage(this.images.weatherMoon, moon * 64, 0, 64, 64, x + w - 84 * scale, y + 22 * scale, 64 * scale, 64 * scale);
-    }
-    if (visual.rainOpacity > 0 && this.images.weatherRain.complete && this.images.weatherRain.naturalWidth > 0) {
-      ctx.globalAlpha = visual.rainOpacity;
-      const frame = Math.floor(time / 130) % 4;
-      for (let tileX = -1; tileX < 4; tileX += 1) for (let tileY = -1; tileY < 3; tileY += 1) ctx.drawImage(this.images.weatherRain, frame * 256, 0, 256, 256, x + tileX * 256 * scale, y + tileY * 256 * scale, 256 * scale, 256 * scale);
-    }
-    if (visual.fogOpacity > 0) { ctx.globalAlpha = visual.fogOpacity; ctx.fillStyle = "rgba(224, 231, 220, .68)"; ctx.fillRect(x, y, w, h); }
-    if (visual.lightning && Math.sin(time / 1700) > .97) { ctx.globalAlpha = .52; ctx.fillStyle = "#e9f1ff"; ctx.fillRect(x, y, w, h); }
-    ctx.restore();
-    const mask = layout.orientation === "portrait" ? this.images.weatherMaskPortrait : this.images.weatherMaskLandscape;
-    if (!mask.complete || mask.naturalWidth === 0) return;
-    const maskKey = [mask.src, layout.orientation, layout.size.w, layout.size.h, canvasSize.w, canvasSize.h].join("|");
-    if (this.weatherMaskKey !== maskKey) {
-      this.weatherMaskCanvas.width = canvasSize.w;
-      this.weatherMaskCanvas.height = canvasSize.h;
-      this.weatherMaskCtx.clearRect(0, 0, canvasSize.w, canvasSize.h);
-      drawSceneMask(this.weatherMaskCtx, mask, layout.orientation, layout.size, canvasSize);
-      const maskPixels = this.weatherMaskCtx.getImageData(0, 0, canvasSize.w, canvasSize.h);
-      grayscaleMaskToAlpha(maskPixels.data);
-      this.weatherMaskCtx.putImageData(maskPixels, 0, 0);
-      this.weatherMaskKey = maskKey;
-    }
-    ctx.save();
-    ctx.globalCompositeOperation = "destination-in";
-    ctx.drawImage(this.weatherMaskCanvas, 0, 0, canvasSize.w, canvasSize.h);
-    ctx.restore();
-    this.ctx.drawImage(this.weatherCanvas, 0, 0, canvasSize.w, canvasSize.h);
-  }
-  private drawWindowFocus(interaction: SceneInteraction | RoomInteraction, _time: number, scale: number): void {
-    const x = (interaction.x - 200) * scale;
-    const y = (interaction.y - 108) * scale;
-    const w = 292 * scale;
-    const h = 176 * scale;
-    const glow = this.ctx.createRadialGradient(x + w / 2, y + h / 2, 20 * scale, x + w / 2, y + h / 2, 210 * scale);
-    glow.addColorStop(0, "rgba(171, 214, 190, .16)");
-    glow.addColorStop(1, "rgba(171, 214, 190, 0)");
-    this.ctx.save();
-    this.ctx.globalCompositeOperation = "screen";
-    this.ctx.fillStyle = glow;
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    this.ctx.restore();
-  }
   private drawLampGlow(interaction: SceneInteraction | RoomInteraction, scale: number): void {
     const x = (interaction.x + 2) * scale;
     const y = (interaction.y - 44) * scale;
@@ -6362,7 +6263,6 @@ export class WalkBackHomeApp {
   }
   private closeLivingWindow(): void {
     this.livingWindowPanelOpen = false;
-    this.room = setRoomWindowFocus(this.room, false);
     this.overlay.classList.remove("window-overlay");
     this.overlay.innerHTML = "";
     this.drawSpinWheelCanvas();
@@ -6383,7 +6283,6 @@ export class WalkBackHomeApp {
   }
   private roomWindow(): void {
     this.room.visits += 1;
-    this.room = setRoomWindowFocus(this.room, true);
     this.livingWindowPanelOpen = true;
     this.room.reflections.push("Outside the window, the forest stays where it is.");
     this.livingWindowMoon = calculateMoonPhase();
