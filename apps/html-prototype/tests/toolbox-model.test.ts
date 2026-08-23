@@ -25,7 +25,7 @@ test("select does not enter and confirm enters the selected tool", () => {
   const selected = selectTool(createToolboxState(), "timer");
   assert.equal(selected.screen, "root");
   assert.equal(selected.selected, "timer");
-  assert.deepEqual(confirmTool(selected), { screen: "tool", selected: "timer" });
+  assert.deepEqual(confirmTool(selected), { screen: "tool", page: 0, selected: "timer" });
 });
 
 test("back returns to root and then closes", () => {

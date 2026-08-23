@@ -1,17 +1,37 @@
 export const currencyCodes = ["MYR", "SGD", "USD", "JPY", "CNY", "EUR", "GBP"] as const;
 export type CurrencyCode = typeof currencyCodes[number];
-export type CurrencyRatePayload = { base: CurrencyCode; rates: Partial<Record<CurrencyCode, number>>; date: string; fetchedAt: string };
+export type CurrencyRatePayload = {
+  base: CurrencyCode;
+  rates: Partial<Record<CurrencyCode, number>>;
+  date: string;
+  fetchedAt: string;
+  quote?: CurrencyCode;
+  rate?: number;
+};
 
-export function parseCurrencyRateResponse(value: unknown, base: CurrencyCode, fetchedAt: string): CurrencyRatePayload | null {
-  if (!value || typeof value !== "object") return null;
-  const source = value as { base?: unknown; date?: unknown; rates?: unknown };
-  if (source.base !== base || typeof source.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(source.date) || !source.rates || typeof source.rates !== "object") return null;
+type RateRow = { base?: unknown; quote?: unknown; rate?: unknown; date?: unknown };
+
+function isCurrencyCode(value: unknown): value is CurrencyCode {
+  return typeof value === "string" && (currencyCodes as readonly string[]).includes(value);
+}
+
+function isDate(value: unknown): value is string {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+export function parseCurrencyRateResponse(value: unknown, base: CurrencyCode, fetchedAt: string, quote?: CurrencyCode): CurrencyRatePayload | null {
+  const rows: RateRow[] = Array.isArray(value) ? value.filter((row): row is RateRow => !!row && typeof row === "object") : value && typeof value === "object" ? [value as RateRow] : [];
   const rates: Partial<Record<CurrencyCode, number>> = {};
-  for (const code of currencyCodes) {
-    const rate = (source.rates as Record<string, unknown>)[code];
-    if (typeof rate === "number" && Number.isFinite(rate) && rate > 0) rates[code] = rate;
+  let date = "";
+  for (const row of rows) {
+    if (row.base !== base || !isCurrencyCode(row.quote) || !isDate(row.date) || typeof row.rate !== "number" || !Number.isFinite(row.rate) || row.rate <= 0) continue;
+    if (quote && row.quote !== quote) continue;
+    rates[row.quote] = row.rate;
+    date = row.date;
   }
-  return { base, rates, date: source.date, fetchedAt };
+  if (!date || !Object.keys(rates).length) return null;
+  const selectedQuote = quote && rates[quote] !== undefined ? quote : undefined;
+  return { base, rates, date, fetchedAt, ...(selectedQuote ? { quote: selectedQuote, rate: rates[selectedQuote] } : {}) };
 }
 
 export function convertCurrency(amount: number, from: CurrencyCode, to: CurrencyCode, payload: CurrencyRatePayload): number | null {
@@ -33,6 +53,19 @@ export function convertCurrency(amount: number, from: CurrencyCode, to: Currency
 export function currencyCacheStatus(payload: CurrencyRatePayload, now: string, maxAgeMs = 30 * 60 * 1000): "fresh" | "stale" {
   const age = Date.parse(now) - Date.parse(payload.fetchedAt);
   return Number.isFinite(age) && age >= 0 && age <= maxAgeMs ? "fresh" : "stale";
+}
+
+export function currencyPairKey(base: CurrencyCode, quote: CurrencyCode): string {
+  return `${base}/${quote}`;
+}
+
+export async function fetchCurrencyRate(base: CurrencyCode, quote: CurrencyCode, fetcher: typeof fetch = fetch, now: () => string = () => new Date().toISOString()): Promise<CurrencyRatePayload> {
+  if (base === quote) return { base, quote, rate: 1, rates: { [quote]: 1 }, date: now().slice(0, 10), fetchedAt: now() };
+  const response = await fetcher(`https://api.frankfurter.dev/v2/rate/${base}/${quote}`, { signal: AbortSignal.timeout(8000) });
+  if (!response.ok) throw new Error(`Currency request failed: ${response.status}`);
+  const payload = parseCurrencyRateResponse(await response.json(), base, now(), quote);
+  if (!payload || payload.rate === undefined) throw new Error("Currency response was unavailable");
+  return payload;
 }
 
 export async function fetchCurrencyRates(base: CurrencyCode, fetcher: typeof fetch = fetch, now: () => string = () => new Date().toISOString()): Promise<CurrencyRatePayload> {

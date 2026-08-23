@@ -22,7 +22,7 @@ test("calculator supports everyday operations, decimals, percentage, clear, and 
   assert.equal(evaluateCalculator("12 + 3 * 2").value, 18);
   assert.equal(evaluateCalculator("10 / 0").value, null);
   assert.equal(evaluateCalculator("12.5 - 2.5").value, 10);
-  assert.equal(evaluateCalculator("200 + 10%").value, 200.1);
+  assert.equal(evaluateCalculator("200 + 10%").value, 220);
   assert.equal(applyCalculatorInput("123", "backspace"), "12");
   assert.equal(applyCalculatorInput("123", "clear"), "0");
 });

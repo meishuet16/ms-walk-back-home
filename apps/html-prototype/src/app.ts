@@ -67,17 +67,19 @@ import {
   type VinylRecord
 } from "./systems/MujiRoom.js";
 import { SaveManager } from "./systems/SaveManager.js";
-import { createToolboxState, confirmTool, backTool, moveToolSelection, selectTool, type ToolboxToolId, type ToolboxView as ToolboxScreen } from "./systems/ToolboxModel.js";
-import { addSpinChoice, createSpinPreset, deleteSpinPreset, removeSpinChoice, renameSpinPreset, spinChoice, type SpinPreset } from "./systems/SpinWheel.js";
-import { applyCalculatorInput } from "./systems/Calculator.js";
-import { convertUnit, unitsForCategory } from "./systems/UnitConverter.js";
-import { convertCurrency, fetchCurrencyRates, type CurrencyCode, type CurrencyRatePayload } from "./systems/CurrencyRates.js";
-import { createTimerState, pauseTimer, resetTimer, startTimer, timerRemaining, stopwatchElapsed, type TimerState } from "./systems/TimerTool.js";
-import { addDateDays, dateDifference } from "./systems/DateTool.js";
+import { createToolboxState, confirmTool, backTool, moveToolSelection, moveToolboxPage, selectToolboxPage, selectTool, type ToolboxToolId, type ToolboxView as ToolboxScreen } from "./systems/ToolboxModel.js";
+import { addSpinChoice, createSpinPreset, deleteSpinPreset, removeSpinChoice, renameSpinPreset, spinChoiceIndex, spinTargetRotation, spinWheelGeometry, type SpinPreset } from "./systems/SpinWheel.js";
+import { applyCalculatorInput, evaluateCalculator } from "./systems/Calculator.js";
+import { convertUnit, formatUnitValue, swapUnits, unitsForCategory } from "./systems/UnitConverter.js";
+import { convertCurrency, currencyCacheStatus, currencyCodes, currencyPairKey, fetchCurrencyRate, type CurrencyCode, type CurrencyRatePayload } from "./systems/CurrencyRates.js";
+import { completeTimerIfNeeded, createTimerState, pauseTimer, resetTimer, startTimer, timerRemaining, stopwatchElapsed, type TimerState } from "./systems/TimerTool.js";
+import { addDateDays, dateDifference, relativeDateLabel } from "./systems/DateTool.js";
 import { renderToolbox, type ToolboxRenderState } from "./systems/ToolboxView.js";
-import { defaultWindowLocation, fetchOpenMeteoLocations, fetchOpenMeteoWeather, weatherCacheStatus, weatherVisualFor, type WeatherSnapshot, type WindowLocation } from "./systems/LivingWindow.js";
+import { createLivingWindowViewModel, defaultWindowLocation, fetchOpenMeteoLocations, fetchOpenMeteoWeather, livingWindowStatusCopy, weatherCacheStatus, weatherVisualFor, type WeatherSnapshot, type WindowLocation } from "./systems/LivingWindow.js";
 import { calculateMoonPhase, type MoonPhase } from "./systems/MoonPhase.js";
-import { drawSceneAsset, drawSceneMask } from "./systems/LivingWindowRenderer.js";
+import { drawSceneAsset, drawSceneMask, sceneTransformFor } from "./systems/LivingWindowRenderer.js";
+import { deletePdfPages, imagesToPdf, mergePdfFiles, optimizePdf, parsePageRange, pdfOutputFilename, pdfToPngImages, reorderOrExtractPdf } from "./systems/PdfToolkit.js";
+import { mediaOutputFilename, processMediaFile } from "./systems/MediaToolkit.js";
 import type { MusicScene } from "./systems/SceneMusic.js";
 import { SupabaseSync } from "./systems/SupabaseSync.js";
 import { emptyTendencies } from "./systems/TendencySystem.js";
@@ -282,6 +284,10 @@ export class WalkBackHomeApp {
   private toolboxPresets: SpinPreset[] = [createSpinPreset("today", "今天吃什么", ["A", "B", "C"]), createSpinPreset("names", "Random names", ["Mochi", "Muji", "Mimi"])]
   private selectedToolboxPresetId = "today";
   private spinResult = "";
+  private spinRotation = 0;
+  private spinSpinning = false;
+  private spinAnimationFrame = 0;
+  private toolboxSwipeStartX: number | null = null;
   private calculatorDisplay = "0";
   private converterCategory = "length";
   private converterAmount = "1";
@@ -292,6 +298,8 @@ export class WalkBackHomeApp {
   private currencyFrom: CurrencyCode = "MYR";
   private currencyTo: CurrencyCode = "USD";
   private currencyPayload: CurrencyRatePayload | null = null;
+  private currencyCache = new Map<string, CurrencyRatePayload>();
+  private currencyRateText = "";
   private currencyResult = "";
   private currencyStatus = "";
   private timerMode: "timer" | "stopwatch" = "timer";
@@ -299,6 +307,7 @@ export class WalkBackHomeApp {
   private dateStart = new Date().toISOString().slice(0, 10);
   private dateEnd = new Date().toISOString().slice(0, 10);
   private dateDays = "1";
+  private dateMode: "difference" | "add-subtract" | "until-since" = "difference";
   private dateResult = "";
   private livingWindowLocation: WindowLocation = defaultWindowLocation;
   private livingWindowWeather: WeatherSnapshot | null = null;
@@ -308,8 +317,23 @@ export class WalkBackHomeApp {
   private livingWindowLocationResults: WindowLocation[] = [];
   private livingWindowStatus = "";
   private livingWindowLoading = false;
+  private livingWindowSubview: "main" | "location" = "main";
   private weatherCanvas = document.createElement("canvas");
   private weatherCtx = this.weatherCanvas.getContext("2d")!;
+  private pdfMode = "merge";
+  private pdfFiles: File[] = [];
+  private pdfRange = "";
+  private pdfStatus = "";
+  private mediaMode = "extract-audio";
+  private mediaFile: File | null = null;
+  private mediaFileName = "";
+  private mediaFormat: "mp3" | "wav" | "ogg" = "mp3";
+  private mediaStart = "0";
+  private mediaEnd = "10";
+  private mediaStatus = "";
+  private mediaDuration = 0;
+  private mediaProgress = 0;
+  private mediaAbortController: AbortController | null = null;
   private room: RoomJourneyState = createDefaultRoomState();
   private reflectionWall: ReflectionWallState = createReflectionWallState();
   private reflectionWallView: ReflectionWallView = "wall";
@@ -392,7 +416,8 @@ export class WalkBackHomeApp {
     root.addEventListener("input", (event) => this.handleInput(event));
     root.addEventListener("pointerdown", (event) => this.handlePointerDown(event));
     root.addEventListener("pointermove", (event) => this.handlePointerMove(event));
-    root.addEventListener("pointerup", () => {
+    root.addEventListener("pointerup", (event) => {
+      this.handleToolboxPointerUp(event);
       this.journalCropDrag = null;
       this.scrapbookDrag = null;
       if (this.lyricsDrag || this.lyricsResize) this.autosave();
@@ -405,7 +430,7 @@ export class WalkBackHomeApp {
       if (action && !this.resumeAfterRecordsClose(action)) return;
       void this.audio.ensurePlaying();
     }, { passive: true });
-    root.addEventListener("keydown", () => void this.audio.ensurePlaying());
+    root.addEventListener("keydown", (event) => { void this.audio.ensurePlaying(); this.handleToolboxInputKeydown(event); });
     window.addEventListener("keydown", (event) => this.handleToolboxKeydown(event));
     this.applyAccountSession(this.account.current());
     this.bootstrapDiaryLibrary();
@@ -620,11 +645,11 @@ export class WalkBackHomeApp {
     if (action === "scrapbook-layer") this.layerSelectedScrapbookElement(target.dataset.direction as "front" | "back");
     if (action === "scrapbook-delete") this.deleteSelectedScrapbookElement();
     if (action === "set-memory-kind") this.setDiaryMemoryKind(target.dataset.id ?? "", target.dataset.kind as MemoryKind);
-    if (["living-window-close", "living-window-refresh", "window-location-search", "window-location-select", "window-use-location"].includes(action)) {
+    if (["living-window-close", "living-window-refresh", "window-location-search", "window-location-select", "window-use-location", "window-settings", "window-location-back"].includes(action)) {
       void this.handleLivingWindowAction(action, target);
       return;
     }
-    if (["toolbox-close", "toolbox-select", "toolbox-confirm", "toolbox-back", "toolbox-spin-add", "toolbox-spin-remove", "toolbox-spin", "toolbox-preset-new", "toolbox-preset-rename", "toolbox-preset-delete", "calculator-key", "currency-swap", "currency-refresh", "timer-mode", "timer-start", "timer-pause", "timer-reset", "date-difference", "date-add", "date-subtract"].includes(action)) {
+    if (["toolbox-close", "toolbox-select", "toolbox-confirm", "toolbox-back", "toolbox-page", "toolbox-page-prev", "toolbox-page-next", "toolbox-spin-add", "toolbox-spin-remove", "toolbox-spin", "toolbox-preset-new", "toolbox-preset-rename", "toolbox-preset-delete", "calculator-key", "converter-swap", "currency-swap", "currency-refresh", "timer-mode", "timer-start", "timer-pause", "timer-reset", "date-difference", "date-add", "date-subtract", "date-until-since", "pdf-process", "media-process"].includes(action)) {
       void this.handleToolboxAction(action, target);
       return;
     }
@@ -734,6 +759,7 @@ export class WalkBackHomeApp {
       this.labisLessonChoiceIndex = -1;
       this.labisLessonLeadLines = [];
       this.updatePersonalMusicOverlay();
+      this.drawSpinWheelCanvas();
       this.syncGameplayChromeVisibility();
       this.showToast("Closed");
     }
@@ -762,6 +788,26 @@ export class WalkBackHomeApp {
     if (action === "choice") this.choose(target.dataset.choice ?? "");
   }
 
+  private handleToolboxInputKeydown(event: KeyboardEvent): void {
+    if (!this.toolboxOpen || this.toolboxView.screen !== "tool") return;
+    const target = event.target as HTMLElement | null;
+    if (target?.closest("input, textarea, select, [contenteditable=true]")) {
+      if (event.key === "Enter" && target.dataset.toolboxField === "spin-choice") {
+        event.preventDefault();
+        const add = this.overlay.querySelector<HTMLElement>("[data-action=toolbox-spin-add]");
+        if (add) void this.handleToolboxAction("toolbox-spin-add", add);
+      }
+      return;
+    }
+    if (this.toolboxView.selected !== "calculator") return;
+    const keyMap: Record<string, string> = { Enter: "equals", "=": "equals", "*": "×", "/": "÷", Backspace: "backspace", Escape: "clear" };
+    const key = keyMap[event.key] ?? (/^[0-9.+%-]$/.test(event.key) ? event.key : "");
+    if (!key) return;
+    event.preventDefault();
+    this.calculatorDisplay = applyCalculatorInput(this.calculatorDisplay, key);
+    this.renderToolboxOverlay();
+  }
+
   private handleToolboxKeydown(event: KeyboardEvent): void {
     if (this.livingWindowPanelOpen && event.key.toLowerCase() === "escape") {
       this.closeLivingWindow();
@@ -769,6 +815,8 @@ export class WalkBackHomeApp {
       return;
     }
     if (!this.toolboxOpen) return;
+    const focusedControl = (event.target as HTMLElement | null)?.closest("input, textarea, select, audio, video, [contenteditable=true], [role=slider]");
+    if (focusedControl && event.key !== "Escape") return;
     const key = event.key.toLowerCase();
     if (key === "escape") {
       const next = backTool(this.toolboxView);
@@ -809,6 +857,7 @@ export class WalkBackHomeApp {
     this.persistToolboxState();
     this.overlay.classList.remove("toolbox-overlay");
     this.overlay.innerHTML = "";
+    this.drawSpinWheelCanvas();
     this.syncGameplayChromeVisibility();
     this.focusStage();
   }
@@ -820,7 +869,7 @@ export class WalkBackHomeApp {
     if (!units.includes(this.converterFrom)) this.converterFrom = units[0] ?? "";
     if (!units.includes(this.converterTo)) this.converterTo = units[1] ?? units[0] ?? "";
     const converted = convertUnit(this.converterCategory, Number(this.converterAmount), this.converterFrom, this.converterTo);
-    this.converterResult = converted === null ? "" : String(Number(converted.toFixed(6)));
+    this.converterResult = formatUnitValue(converted);
     const currencyValue = this.currencyPayload ? convertCurrency(Number(this.currencyAmount), this.currencyFrom, this.currencyTo, this.currencyPayload) : null;
     this.currencyResult = currencyValue === null ? this.currencyResult : `${Number(currencyValue.toFixed(6))} ${this.currencyTo}`;
     const now = performance.now();
@@ -830,6 +879,8 @@ export class WalkBackHomeApp {
       selectedPresetId: this.selectedToolboxPresetId,
       spinChoices: preset.choices,
       spinResult: this.spinResult,
+      spinRotation: this.spinRotation,
+      spinSpinning: this.spinSpinning,
       calculatorDisplay: this.calculatorDisplay,
       converterCategory: this.converterCategory,
       converterAmount: this.converterAmount,
@@ -840,19 +891,35 @@ export class WalkBackHomeApp {
       currencyFrom: this.currencyFrom,
       currencyTo: this.currencyTo,
       currencyResult: this.currencyResult,
+      currencyRateText: this.currencyRateText,
       currencyStatus: this.currencyStatus,
       timerMode: this.timerMode,
       timerDurationSeconds: String(Math.round(this.timerState.durationMs / 1000)),
       timerRemaining: this.formatToolboxDuration(timerRemaining(this.timerState, now)),
       stopwatchElapsed: this.formatToolboxDuration(stopwatchElapsed(this.timerState, now)),
+      timerRunning: !this.timerState.paused,
+      timerFinished: this.timerState.finishedAt !== null,
+      dateMode: this.dateMode,
       dateStart: this.dateStart,
       dateEnd: this.dateEnd,
       dateDays: this.dateDays,
-      dateResult: this.dateResult
+      dateResult: this.dateResult,
+      pdfMode: this.pdfMode,
+      pdfFileSummary: this.pdfFiles.map((file) => file.name).join(", "),
+      pdfRange: this.pdfRange,
+      pdfStatus: this.pdfStatus,
+      mediaMode: this.mediaMode,
+      mediaFileName: this.mediaFileName,
+      mediaFormat: this.mediaFormat,
+      mediaStart: this.mediaStart,
+      mediaEnd: this.mediaEnd,
+      mediaStatus: this.mediaStatus,
+      mediaProgress: this.mediaProgress
     };
     this.overlay.classList.add("toolbox-overlay");
     this.overlay.classList.remove("dialogue-open", "lightweight-presentation");
     this.overlay.innerHTML = renderToolbox(state);
+    this.drawSpinWheelCanvas();
     this.syncGameplayChromeVisibility();
   }
 
@@ -861,6 +928,12 @@ export class WalkBackHomeApp {
     if (action === "toolbox-select") {
       const tool = target.dataset.tool as ToolboxToolId;
       if (tool) this.toolboxView = selectTool(this.toolboxView, tool);
+      this.persistToolboxState();
+      return this.renderToolboxOverlay();
+    }
+    if (action === "toolbox-page" || action === "toolbox-page-prev" || action === "toolbox-page-next") {
+      const rootState = this.toolboxView.screen === "root" ? this.toolboxView : { screen: "root" as const, page: this.toolboxView.page, selected: this.toolboxView.selected };
+      this.toolboxView = action === "toolbox-page" ? selectToolboxPage(rootState, Number(target.dataset.page ?? 0)) : moveToolboxPage(rootState, action === "toolbox-page-prev" ? -1 : 1);
       this.persistToolboxState();
       return this.renderToolboxOverlay();
     }
@@ -876,35 +949,38 @@ export class WalkBackHomeApp {
       return this.renderToolboxOverlay();
     }
     const preset = this.toolboxPresets.find((item) => item.id === this.selectedToolboxPresetId);
-    if (action === "toolbox-spin-add" && preset) {
+    if (action === "toolbox-spin-add" && preset && !this.spinSpinning) {
       const input = this.overlay.querySelector<HTMLInputElement>("#toolbox-spin-choice");
       preset.choices = addSpinChoice(preset.choices, input?.value ?? "");
+      if (input) input.value = "";
+      this.spinResult = "";
       this.persistToolboxState();
       return this.renderToolboxOverlay();
     }
-    if (action === "toolbox-spin-remove" && preset) {
+    if (action === "toolbox-spin-remove" && preset && !this.spinSpinning) {
       preset.choices = removeSpinChoice(preset.choices, Number(target.dataset.index));
+      this.spinResult = "";
       this.persistToolboxState();
       return this.renderToolboxOverlay();
     }
-    if (action === "toolbox-spin" && preset) {
-      this.spinResult = spinChoice(preset.choices) ?? "No choices yet";
-      return this.renderToolboxOverlay();
+    if (action === "toolbox-spin" && preset && !this.spinSpinning) {
+      void this.startSpinAnimation(preset.choices);
+      return;
     }
-    if (action === "toolbox-preset-new") {
-      const id = `preset-${Date.now()}`;
+    if (action === "toolbox-preset-new" && !this.spinSpinning) {
+      const id = "preset-" + Date.now();
       this.toolboxPresets.push(createSpinPreset(id, "New preset", []));
       this.selectedToolboxPresetId = id;
       this.persistToolboxState();
       return this.renderToolboxOverlay();
     }
-    if (action === "toolbox-preset-rename" && preset) {
+    if (action === "toolbox-preset-rename" && preset && !this.spinSpinning) {
       const next = window.prompt("Preset name", preset.name)?.trim();
       if (next) preset.name = renameSpinPreset(preset, next).name;
       this.persistToolboxState();
       return this.renderToolboxOverlay();
     }
-    if (action === "toolbox-preset-delete" && preset && this.toolboxPresets.length > 1) {
+    if (action === "toolbox-preset-delete" && preset && this.toolboxPresets.length > 1 && !this.spinSpinning) {
       this.toolboxPresets = deleteSpinPreset(this.toolboxPresets, preset.id);
       this.selectedToolboxPresetId = this.toolboxPresets[0].id;
       this.persistToolboxState();
@@ -914,8 +990,16 @@ export class WalkBackHomeApp {
       this.calculatorDisplay = applyCalculatorInput(this.calculatorDisplay, target.dataset.key ?? "");
       return this.renderToolboxOverlay();
     }
+    if (action === "converter-swap") {
+      const next = swapUnits(this.converterFrom, this.converterTo);
+      this.converterFrom = next.from;
+      this.converterTo = next.to;
+      this.persistToolboxState();
+      return this.renderToolboxOverlay();
+    }
     if (action === "currency-swap") {
       [this.currencyFrom, this.currencyTo] = [this.currencyTo, this.currencyFrom];
+      this.currencyPayload = this.currencyCache.get(currencyPairKey(this.currencyFrom, this.currencyTo)) ?? null;
       this.persistToolboxState();
       return this.renderToolboxOverlay();
     }
@@ -950,6 +1034,191 @@ export class WalkBackHomeApp {
       this.dateResult = addDateDays(this.dateStart, action === "date-subtract" ? -days : days) ?? "Choose a valid date";
       return this.renderToolboxOverlay();
     }
+    if (action === "date-until-since") {
+      this.dateResult = relativeDateLabel(this.dateEnd);
+      return this.renderToolboxOverlay();
+    }
+    if (action === "pdf-process") return this.processPdfLocally();
+    if (action === "media-process") return this.processMediaLocally();
+  }
+  private async startSpinAnimation(choices: string[]): Promise<void> {
+    if (this.spinSpinning || !choices.length) return;
+    const winner = spinChoiceIndex(choices);
+    if (winner === null) return;
+    const startRotation = this.spinRotation;
+    const targetRotation = spinTargetRotation(choices.length, winner, Math.random, this.settings.reducedMotion, startRotation);
+    const duration = this.settings.reducedMotion ? 260 : 2600;
+    const startedAt = performance.now();
+    this.spinSpinning = true;
+    this.spinResult = "Spinning…";
+    this.renderToolboxOverlay();
+    const animate = (now: number): void => {
+      if (!this.toolboxOpen || this.toolboxView.screen !== "tool" || this.toolboxView.selected !== "spin-wheel") {
+        this.spinSpinning = false;
+        return;
+      }
+      const progress = Math.min(1, (now - startedAt) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      this.spinRotation = startRotation + (targetRotation - startRotation) * eased;
+      this.drawSpinWheelCanvas();
+      if (progress < 1) {
+        this.spinAnimationFrame = requestAnimationFrame(animate);
+        return;
+      }
+      this.spinRotation = targetRotation;
+      this.spinSpinning = false;
+      this.spinResult = choices[winner] ?? "";
+      this.renderToolboxOverlay();
+    };
+    this.spinAnimationFrame = requestAnimationFrame(animate);
+  }
+
+  private drawSpinWheelCanvas(): void {
+    const canvas = this.overlay.querySelector<HTMLCanvasElement>("[data-spin-wheel-canvas]");
+    if (!canvas) return;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    const size = Math.min(canvas.width, canvas.height);
+    const radius = size / 2 - 8;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.save();
+    context.translate(canvas.width / 2, canvas.height / 2);
+    const preset = this.toolboxPresets.find((item) => item.id === this.selectedToolboxPresetId);
+    const choices = preset?.choices ?? [];
+    const geometry = spinWheelGeometry(choices, this.spinRotation);
+    const palette = ["#d7ad70", "#8f7154", "#b7c7b0", "#a98968", "#d5c69a", "#6f887e"];
+    for (const segment of geometry.segments) {
+      context.beginPath();
+      context.moveTo(0, 0);
+      context.arc(0, 0, radius, segment.startAngle, segment.endAngle);
+      context.closePath();
+      context.fillStyle = palette[segment.index % palette.length];
+      context.fill();
+      context.strokeStyle = "rgba(40, 27, 21, .82)";
+      context.lineWidth = 2;
+      context.stroke();
+      context.save();
+      context.rotate(segment.centerAngle);
+      context.translate(radius * .62, 0);
+      context.rotate(Math.PI / 2);
+      context.fillStyle = "#2a211b";
+      context.font = "600 14px system-ui";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      const label = segment.label.length > 12 ? segment.label.slice(0, 11) + "…" : segment.label;
+      context.fillText(label, 0, 0);
+      context.restore();
+    }
+    context.beginPath();
+    context.arc(0, 0, 20, 0, Math.PI * 2);
+    context.fillStyle = "#3a2921";
+    context.fill();
+    context.restore();
+  }
+
+  private async processPdfLocally(): Promise<void> {
+    if (!this.pdfFiles.length) {
+      this.pdfStatus = "Choose a local file first";
+      return this.renderToolboxOverlay();
+    }
+    this.pdfStatus = "Processing locally…";
+    this.renderToolboxOverlay();
+    try {
+      const first = this.pdfFiles[0];
+      if (this.pdfMode === "pdf-to-images") {
+        const images = await pdfToPngImages(first);
+        images.forEach((image, index) => this.downloadLocalBlob(image, pdfOutputFilename(first.name, "page-" + (index + 1)).replace(/\.pdf$/, ".png")));
+        this.pdfStatus = "Saved " + images.length + " local page image" + (images.length === 1 ? "" : "s");
+        return;
+      }
+      let bytes: Uint8Array;
+      let filename = pdfOutputFilename(first.name, this.pdfMode);
+      if (this.pdfMode === "merge") {
+        bytes = await mergePdfFiles(this.pdfFiles);
+        filename = pdfOutputFilename(first.name, "merged");
+      } else if (this.pdfMode === "images-to-pdf") {
+        bytes = await imagesToPdf(this.pdfFiles.filter((file) => file.type.startsWith("image/")));
+        filename = pdfOutputFilename(first.name, "document");
+      } else if (this.pdfMode === "compress") {
+        const result = await optimizePdf(first);
+        bytes = result.bytes;
+        this.pdfStatus = result.report.message + " · " + result.report.originalBytes + " → " + result.report.resultBytes + " bytes";
+      } else {
+        const pageCount = await this.pdfPageCount(first);
+        const rangeText = this.pdfRange.trim();
+        const pages = parsePageRange(rangeText, pageCount);
+        if (rangeText.toLowerCase().startsWith("delete:")) bytes = await deletePdfPages(first, pages);
+        else bytes = await reorderOrExtractPdf(first, pages);
+        filename = pdfOutputFilename(first.name, this.pdfMode === "extract" ? "pages" : "reordered");
+      }
+      this.downloadLocalBlob(new Blob([bytes.buffer as ArrayBuffer], { type: "application/pdf" }), filename);
+      if (!this.pdfStatus || this.pdfStatus === "Processing locally…") this.pdfStatus = "Saved locally as " + filename;
+    } catch (error) {
+      this.pdfStatus = error instanceof Error ? error.message : "PDF processing failed";
+    }
+    this.renderToolboxOverlay();
+  }
+
+  private async pdfPageCount(file: Blob): Promise<number> {
+    const { PDFDocument } = await import("pdf-lib");
+    const document = await PDFDocument.load(await file.arrayBuffer());
+    return document.getPageCount();
+  }
+
+  private async prepareMediaFile(file: File | null): Promise<void> {
+    this.mediaDuration = 0;
+    if (!file) return;
+    const element = document.createElement(file.type.startsWith("video/") ? "video" : "audio");
+    const url = URL.createObjectURL(file);
+    element.preload = "metadata";
+    element.src = url;
+    try {
+      this.mediaDuration = await new Promise<number>((resolve) => {
+        element.addEventListener("loadedmetadata", () => resolve(Number.isFinite(element.duration) ? element.duration : 0), { once: true });
+        element.addEventListener("error", () => resolve(0), { once: true });
+      });
+      if (this.mediaDuration > 0 && (Number(this.mediaEnd) <= 0 || Number(this.mediaEnd) > this.mediaDuration || this.mediaEnd === "10")) this.mediaEnd = String(Math.max(1, Math.floor(this.mediaDuration)));
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+    if (this.toolboxOpen) this.renderToolboxOverlay();
+  }
+  private async processMediaLocally(): Promise<void> {
+    if (!this.mediaFile) {
+      this.mediaStatus = "Choose a local media file first";
+      return this.renderToolboxOverlay();
+    }
+    this.mediaAbortController?.abort();
+    this.mediaAbortController = new AbortController();
+    this.mediaProgress = 0;
+    this.mediaStatus = "Loading local media engine…";
+    this.renderToolboxOverlay();
+    try {
+      const result = await processMediaFile(this.mediaFile, this.mediaMode as "extract-audio" | "convert-audio" | "trim-audio" | "trim-video", { start: Number(this.mediaStart), end: Number(this.mediaEnd), duration: this.mediaDuration || Number(this.mediaEnd), format: this.mediaMode === "trim-video" ? undefined : this.mediaFormat, signal: this.mediaAbortController.signal, onProgress: (progress) => { this.mediaProgress = progress; this.refreshToolboxMediaProgress(); } });
+      const filename = mediaOutputFilename(this.mediaFile.name, this.mediaMode === "extract-audio" ? "audio" : "trimmed", result.extension);
+      this.downloadLocalBlob(result.blob, filename);
+      this.mediaProgress = 1;
+      this.mediaStatus = "Saved locally as " + filename;
+    } catch (error) {
+      this.mediaStatus = error instanceof Error ? error.message : "Media processing failed";
+    } finally {
+      this.mediaAbortController = null;
+      this.renderToolboxOverlay();
+    }
+  }
+
+  private refreshToolboxMediaProgress(): void {
+    const progress = this.overlay.querySelector<HTMLProgressElement>("progress");
+    if (progress) progress.value = this.mediaProgress;
+  }
+
+  private downloadLocalBlob(blob: Blob, filename: string): void {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   private timerDurationFromPanel(): number {
@@ -968,6 +1237,9 @@ export class WalkBackHomeApp {
     if (field === "date-start") this.dateStart = value;
     if (field === "date-end") this.dateEnd = value;
     if (field === "date-days") this.dateDays = value;
+    if (field === "media-start") this.mediaStart = value;
+    if (field === "media-end") this.mediaEnd = value;
+    if (field === "pdf-range") this.pdfRange = value;
   }
 
   private handleToolboxFieldChange(target: HTMLElement): void {
@@ -984,36 +1256,68 @@ export class WalkBackHomeApp {
     if (field === "converter-to") this.converterTo = value;
     if (field === "currency-from") this.currencyFrom = value as CurrencyCode;
     if (field === "currency-to") this.currencyTo = value as CurrencyCode;
+    if (field === "date-mode") this.dateMode = value as typeof this.dateMode;
+    if (field === "pdf-mode") this.pdfMode = value;
+    if (field === "pdf-files" && target instanceof HTMLInputElement) this.pdfFiles = target.files ? Array.from(target.files) : [];
+    if (field === "media-mode") this.mediaMode = value;
+    if (field === "media-format") this.mediaFormat = value as typeof this.mediaFormat;
+    if (field === "media-file" && target instanceof HTMLInputElement) {
+      this.mediaFile = target.files?.[0] ?? null;
+      this.mediaFileName = this.mediaFile?.name ?? "";
+      void this.prepareMediaFile(this.mediaFile);
+    }
     this.persistToolboxState();
     this.renderToolboxOverlay();
   }
-
   private async refreshCurrencyRates(): Promise<void> {
-    this.currencyStatus = "Loading latest available rate…";
+    if (this.currencyFrom === this.currencyTo) {
+      const now = new Date().toISOString();
+      this.currencyPayload = { base: this.currencyFrom, quote: this.currencyTo, rate: 1, rates: { [this.currencyTo]: 1 }, date: now.slice(0, 10), fetchedAt: now };
+      this.currencyStatus = "Same currency";
+      return this.renderToolboxOverlay();
+    }
+    const key = currencyPairKey(this.currencyFrom, this.currencyTo);
+    this.currencyStatus = "Loading rate…";
     this.renderToolboxOverlay();
     try {
-      this.currencyPayload = await fetchCurrencyRates(this.currencyFrom);
-      this.currencyStatus = `Latest working day: ${this.currencyPayload.date}`;
+      this.currencyPayload = await fetchCurrencyRate(this.currencyFrom, this.currencyTo);
+      this.currencyCache.set(key, this.currencyPayload);
+      this.currencyRateText = "1 " + this.currencyFrom + " = " + String(this.currencyPayload.rate) + " " + this.currencyTo + " · " + this.currencyPayload.date;
+      this.currencyStatus = "Updated just now";
       this.persistToolboxState();
     } catch {
-      this.currencyStatus = "Rate unavailable. No fabricated value shown.";
+      const cached = this.currencyCache.get(key);
+      if (cached) {
+        this.currencyPayload = cached;
+        this.currencyRateText = "1 " + this.currencyFrom + " = " + String(cached.rate) + " " + this.currencyTo + " · " + cached.date;
+        this.currencyStatus = "Cached · updated " + new Date(cached.fetchedAt).toLocaleString();
+      } else {
+        this.currencyPayload = null;
+        this.currencyRateText = "";
+        this.currencyStatus = "Rate unavailable";
+      }
     }
     this.renderToolboxOverlay();
   }
-
   private persistToolboxState(): void {
+    const currencyCache: NonNullable<ToolboxPersistedState["currencyCache"]> = {};
+    for (const [key, payload] of this.currencyCache) {
+      if (payload.quote !== undefined && payload.rate !== undefined) currencyCache[key] = { base: payload.base, quote: payload.quote, rate: payload.rate, date: payload.date, fetchedAt: payload.fetchedAt };
+    }
     const state: ToolboxPersistedState = {
       version: 1,
       selected: this.toolboxView.selected,
+      page: this.toolboxView.page,
       selectedPresetId: this.selectedToolboxPresetId,
       converterUnits: { category: this.converterCategory, from: this.converterFrom, to: this.converterTo },
       currencyFrom: this.currencyFrom,
       currencyTo: this.currencyTo,
+      currencyCache,
+      dateMode: this.dateMode,
       presets: this.toolboxPresets
     };
     this.save.saveToolboxState(state);
   }
-
   private formatToolboxDuration(milliseconds: number): string {
     const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
     const minutes = Math.floor(totalSeconds / 60);
@@ -1248,7 +1552,11 @@ export class WalkBackHomeApp {
     if (this.scene === "330-corridor") this.updateMarch30Scene(frameInput.x, frameInput.y, dt);
     else if (this.isAuthoredRuntimeScene()) this.updateAuthoredScene(frameInput.x, frameInput.y, dt);
     this.draw(time);
-    if (this.toolboxOpen && this.toolboxView.screen === "tool" && this.toolboxView.selected === "timer") this.refreshToolboxTimerDisplay(time);
+    if (this.toolboxOpen && this.toolboxView.screen === "tool" && this.toolboxView.selected === "timer") {
+      const completed = completeTimerIfNeeded(this.timerState, time);
+      if (completed.completed) { this.timerState = completed.state; this.renderToolboxOverlay(); this.showToast("Timer finished"); }
+      this.refreshToolboxTimerDisplay(time);
+    }
     this.syncPersonalPlaybackState();
     if (this.recordsPanelOpen) this.refreshRecordsPlaybackUI();
     this.updatePersonalMusicOverlay();
@@ -1312,6 +1620,14 @@ export class WalkBackHomeApp {
       this.converterTo = savedToolbox.converterUnits.to || this.converterTo;
       this.currencyFrom = savedToolbox.currencyFrom as CurrencyCode;
       this.currencyTo = savedToolbox.currencyTo as CurrencyCode;
+      this.dateMode = savedToolbox.dateMode ?? this.dateMode;
+      for (const payload of Object.values(savedToolbox.currencyCache ?? {})) {
+        if (payload?.base && payload.quote && payload.rate > 0 && currencyCodes.includes(payload.base as CurrencyCode) && currencyCodes.includes(payload.quote as CurrencyCode)) {
+          const base = payload.base as CurrencyCode;
+          const quote = payload.quote as CurrencyCode;
+          this.currencyCache.set(currencyPairKey(base, quote), { base, quote, rate: payload.rate, rates: { [quote]: payload.rate }, date: payload.date, fetchedAt: payload.fetchedAt });
+        }
+      }
       if (savedToolbox.presets?.length) this.toolboxPresets = savedToolbox.presets.map((item) => createSpinPreset(item.id, item.name, item.choices));
     }
     this.musicLibrary = this.save.loadMusicLibrary() ?? this.musicLibrary;
@@ -3354,7 +3670,8 @@ export class WalkBackHomeApp {
     this.weatherCanvas.height = canvasSize.h;
     const ctx = this.weatherCtx;
     const viewport = this.sceneViewport(layout);
-    const scale = this.canvas.width / viewport.w;
+    const sceneTransform = sceneTransformFor(layout.orientation, layout.size, canvasSize);
+    const scale = sceneTransform.destination.w / (sceneTransform.source?.w ?? viewport.w);
     ctx.clearRect(0, 0, canvasSize.w, canvasSize.h);
     ctx.fillStyle = visual.tint;
     ctx.fillRect(0, 0, canvasSize.w, canvasSize.h);
@@ -3443,6 +3760,7 @@ export class WalkBackHomeApp {
     this.root.dataset.scene = this.scene;
     this.root.dataset.forceTouch = this.forceTouchControls ? "true" : "false";
     this.root.classList.toggle("overlay-open", Boolean(this.overlay.innerHTML.trim()));
+    this.drawSpinWheelCanvas();
     this.syncGameplayChromeVisibility();
     const labisPrompt = this.scene === "labis" && this.labisCutscene ? "Memory is playing" : this.scene === "labis" && this.activeObject === "exit" ? "Press E · 回到 Memory Forest" : this.scene === "labis" && this.activeObject ? `Press E · ${this.activeObject}` : "";
     const march30Prompt = this.scene === "330-corridor" && this.march30Cutscene ? "Memory is rebuilding" : this.scene === "330-corridor" && this.activeObject ? `Press E · ${this.activeObject}` : "";
@@ -3478,6 +3796,7 @@ export class WalkBackHomeApp {
         </div>
       </details>`;
     if (this.topNav.innerHTML !== html) this.topNav.innerHTML = html;
+    this.drawSpinWheelCanvas();
     this.syncGameplayChromeVisibility();
   }
 
@@ -5727,7 +6046,22 @@ export class WalkBackHomeApp {
     this.selectedScrapbookElementId = "";
   }
 
+  private handleToolboxPointerUp(event: PointerEvent): void {
+    if (this.toolboxSwipeStartX === null) return;
+    const start = this.toolboxSwipeStartX;
+    this.toolboxSwipeStartX = null;
+    if (!this.toolboxOpen || this.toolboxView.screen !== "root") return;
+    const target = event.target as HTMLElement | null;
+    if (target?.closest("input, textarea, select, [contenteditable=true], .toolbox-tool-body")) return;
+    const delta = event.clientX - start;
+    if (Math.abs(delta) < 48) return;
+    this.toolboxView = moveToolboxPage(this.toolboxView, delta < 0 ? 1 : -1);
+    this.persistToolboxState();
+    this.renderToolboxOverlay();
+  }
   private handlePointerDown(event: PointerEvent): void {
+    const toolbox = (event.target as HTMLElement | null)?.closest<HTMLElement>(".toolbox-panel");
+    if (toolbox && this.toolboxOpen && this.toolboxView.screen === "root" && !(event.target as HTMLElement).closest("input, textarea, select, [contenteditable=true]")) this.toolboxSwipeStartX = event.clientX;
     const cropTarget = (event.target as HTMLElement).closest<HTMLElement>("[data-action=\"journal-crop-drag\"]");
     const cropBox = cropTarget?.closest<HTMLElement>(".journal-crop-box");
     if (cropTarget && cropBox) {
@@ -5868,23 +6202,50 @@ export class WalkBackHomeApp {
   }
 
   private renderLivingWindowOverlay(): void {
-    const weather = this.livingWindowWeather;
-    const probability = weather?.current.precipitationProbabilityPercent === null || weather?.current.precipitationProbabilityPercent === undefined ? "Hourly precipitation probability unavailable" : `Next-hour precipitation probability: ${weather.current.precipitationProbabilityPercent}%`;
-    const current = weather ? `<div class="window-weather-reading"><strong>${this.escapeHtml(weather.current.condition.label)}</strong><span>${weather.current.temperatureC.toFixed(1)}°C · feels ${weather.current.apparentTemperatureC.toFixed(1)}°C</span><span>Current precipitation: ${weather.current.precipitationMm.toFixed(1)} mm</span><span>${this.escapeHtml(probability)}</span><span>Wind ${weather.current.windSpeedKmh.toFixed(1)} km/h · humidity ${weather.current.humidityPercent}%</span><span>Daily maximum precipitation probability: ${weather.daily.precipitationProbabilityMaxPercent === null ? "unavailable" : `${weather.daily.precipitationProbabilityMaxPercent}%`}</span></div>` : `<p class="window-weather-empty">No live weather yet. The window can still show the local Moon and cached state.</p>`;
-    const results = this.livingWindowLocationResults.map((location, index) => `<button data-action="window-location-select" data-index="${index}">${this.escapeHtml(location.name)}${location.country ? ` · ${this.escapeHtml(location.country)}` : ""}</button>`).join("");
+    const statusMode = this.livingWindowLoading ? "loading" : this.livingWindowWeather ? "ready" : "error";
+    const view = createLivingWindowViewModel(this.livingWindowWeather, this.livingWindowMoon, statusMode);
+    const results = this.livingWindowLocationResults.map((location, index) =>
+      "<button data-action='window-location-select' data-index='" + index + "'>" +
+      this.escapeHtml(location.name) + (location.country ? " · " + this.escapeHtml(location.country) : "") + "</button>"
+    ).join("");
+    const forecast = view.forecast.slice(0, 4).map((day, index) =>
+      "<div class='window-forecast-day'><span>" + (index === 0 ? "Today" : index === 1 ? "Tomorrow" : this.escapeHtml(new Date(day.date + "T12:00:00").toLocaleDateString([], { weekday: "short" }))) +
+      "</span><strong>" + this.escapeHtml(day.conditionLabel) + "</strong><span>" + this.escapeHtml(day.highLabel) + " / " + this.escapeHtml(day.lowLabel) + "</span><small>" + this.escapeHtml(day.probabilityLabel) + "</small></div>"
+    ).join("");
+    const current = this.livingWindowWeather
+      ? "<div class='window-current-reading'><div class='window-temperature'><strong>" + this.escapeHtml(view.temperatureLabel) + "</strong><span>" + this.escapeHtml(view.conditionLabel) + "</span></div><div class='window-current-subline'>" + this.escapeHtml(view.feelsLikeLabel) + " · " + this.escapeHtml(view.probabilityLabel) + "</div><div class='window-weather-stats'><span>" + this.escapeHtml(view.precipitationLabel) + "</span><span>" + this.escapeHtml(view.humidityLabel) + "</span><span>" + this.escapeHtml(view.windLabel) + "</span><span>" + this.escapeHtml(view.sunsetLabel) + "</span></div></div>"
+      : "<p class='window-weather-empty'>Weather will appear here when the window can reach the sky.</p>";
+    const locationSubview = this.livingWindowSubview === "location"
+      ? "<section class='window-location-view'><div class='window-subview-heading'><button data-action='window-location-back'>‹ Back</button><h3>Location</h3></div><div class='window-location-search'><input data-window-field='location-query' value='" + this.escapeHtml(this.livingWindowLocationQuery) + "' placeholder='Search a city' aria-label='Search a city'><button class='primary' data-action='window-location-search'>Search</button></div><div class='window-location-results'>" + results + "</div><button data-action='window-use-location'>Use my location</button><p class='window-status' aria-live='polite'>" + this.escapeHtml(this.livingWindowStatus) + "</p></section>"
+      : "<section class='window-main-view'><div class='window-panel-grid'><div><h3>Outside now</h3>" + current + "<p class='window-status' aria-live='polite'>" + this.escapeHtml(view.statusLabel) + "</p></div><div><h3>Local Moon</h3><div class='window-moon-reading'><span class='moon-glyph'>◐</span><div><strong>" + this.escapeHtml(view.moonLabel) + "</strong><span>" + this.escapeHtml(view.moonIlluminationLabel) + "</span></div></div><h3 class='window-forecast-heading'>Forecast</h3><div class='window-forecast'>" + (forecast || "<span class='window-weather-empty'>No forecast available.</span>") + "</div></div></div></section>";
     this.overlay.classList.add("window-overlay");
     this.overlay.classList.remove("dialogue-open", "lightweight-presentation", "toolbox-overlay");
-    this.overlay.innerHTML = `<div class="modal game-panel living-window-panel" role="dialog" aria-modal="true" aria-label="Living Window"><header class="window-panel-header"><div><span class="toolbox-kicker">LIVING WINDOW · OPEN-METEO</span><h2>${this.escapeHtml(this.livingWindowLocation.name)}</h2><p>${this.escapeHtml(this.livingWindowLocation.country ?? "")}</p></div><button data-action="living-window-close" aria-label="Close Living Window">×</button></header><div class="window-panel-grid"><section><h3>Outside now</h3>${current}<div class="window-panel-actions"><button class="primary" data-action="living-window-refresh">Refresh weather</button><button data-action="window-use-location">Use my location</button></div><p class="window-status" aria-live="polite">${this.escapeHtml(this.livingWindowStatus)}</p></section><section><h3>Local Moon</h3><div class="window-moon-reading"><span class="moon-glyph">◐</span><strong>${this.escapeHtml(this.livingWindowMoon.label)}</strong><span>${this.livingWindowMoon.illuminationPercent}% illuminated · day ${this.livingWindowMoon.ageDays.toFixed(1)}</span></div><h3>Location</h3><div class="window-location-search"><input data-window-field="location-query" value="${this.escapeHtml(this.livingWindowLocationQuery)}" placeholder="Search a city" aria-label="Search a city"><button data-action="window-location-search">Search</button></div><div class="window-location-results">${results}</div></section></div><footer class="window-panel-foot">Provider: Open-Meteo · offline cache is used when the network is unavailable.</footer></div>`;
+    this.overlay.innerHTML = "<div class='modal game-panel living-window-panel' role='dialog' aria-modal='true' aria-label='Living Window'><header class='window-panel-header'><div><span class='toolbox-kicker'>LIVING WINDOW</span><h2>" + this.escapeHtml(view.locationLabel) + "</h2></div><div class='window-panel-actions'><button data-action='window-settings' aria-label='Location settings'>⌖</button><button data-action='living-window-refresh' aria-label='Refresh weather'>↻</button><button data-action='living-window-close' aria-label='Close Living Window'>×</button></div></header>" + locationSubview + (this.livingWindowSubview === "main" ? "<footer class='window-panel-foot'>" + this.escapeHtml(view.statusLabel) + "</footer>" : "") + "</div>";
+    this.drawSpinWheelCanvas();
     this.syncGameplayChromeVisibility();
   }
-
   private async handleLivingWindowAction(action: string, target: HTMLElement): Promise<void> {
     if (action === "living-window-close") return this.closeLivingWindow();
     if (action === "living-window-refresh") return this.loadLivingWindowWeather();
+    if (action === "window-settings") {
+      this.livingWindowSubview = "location";
+      this.renderLivingWindowOverlay();
+      return;
+    }
+    if (action === "window-location-back") {
+      this.livingWindowSubview = "main";
+      this.renderLivingWindowOverlay();
+      return;
+    }
     if (action === "window-location-search") {
       this.livingWindowStatus = "Searching locations…";
       this.renderLivingWindowOverlay();
-      try { this.livingWindowLocationResults = await fetchOpenMeteoLocations(this.livingWindowLocationQuery); this.livingWindowStatus = this.livingWindowLocationResults.length ? "Choose a location to update the window." : "No matching locations found."; } catch { this.livingWindowStatus = "Location search unavailable offline."; }
+      try {
+        this.livingWindowLocationResults = await fetchOpenMeteoLocations(this.livingWindowLocationQuery);
+        this.livingWindowStatus = this.livingWindowLocationResults.length ? "Choose a location." : "No matching locations found.";
+      } catch {
+        this.livingWindowStatus = "Location search unavailable offline.";
+      }
       return this.renderLivingWindowOverlay();
     }
     if (action === "window-location-select") {
@@ -5892,31 +6253,55 @@ export class WalkBackHomeApp {
       if (!location) return;
       this.livingWindowLocation = location;
       this.livingWindowLocationResults = [];
+      this.livingWindowSubview = "main";
       this.persistLivingWindowState();
       return this.loadLivingWindowWeather();
     }
     if (action === "window-use-location") {
-      if (!navigator.geolocation) { this.livingWindowStatus = "Browser location is unavailable."; return this.renderLivingWindowOverlay(); }
-      this.livingWindowStatus = "Requesting browser location…";
+      if (!navigator.geolocation) {
+        this.livingWindowStatus = "Location permission unavailable";
+        return this.renderLivingWindowOverlay();
+      }
+      this.livingWindowStatus = "Requesting location…";
       this.renderLivingWindowOverlay();
-      await new Promise<void>((resolve) => navigator.geolocation.getCurrentPosition((position) => { this.livingWindowLocation = { name: "Current location", country: "Browser", latitude: position.coords.latitude, longitude: position.coords.longitude, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }; this.persistLivingWindowState(); resolve(); }, () => { this.livingWindowStatus = "Browser location was not granted."; resolve(); }, { enableHighAccuracy: false, maximumAge: 300000, timeout: 8000 }));
+      await new Promise<void>((resolve) => navigator.geolocation.getCurrentPosition(
+        (position) => {
+          this.livingWindowLocation = { name: "Current location", country: "Browser", latitude: position.coords.latitude, longitude: position.coords.longitude, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone };
+          this.livingWindowSubview = "main";
+          this.persistLivingWindowState();
+          resolve();
+        },
+        () => {
+          this.livingWindowStatus = "Location permission denied";
+          resolve();
+        },
+        { enableHighAccuracy: false, maximumAge: 300000, timeout: 8000 }
+      ));
       return this.loadLivingWindowWeather();
     }
   }
 
   private async loadLivingWindowWeather(): Promise<void> {
     this.livingWindowLoading = true;
-    this.livingWindowStatus = "Loading current weather…";
+    this.livingWindowStatus = livingWindowStatusCopy(this.livingWindowWeather, "loading");
     this.renderLivingWindowOverlay();
-    try { this.livingWindowWeather = await fetchOpenMeteoWeather(this.livingWindowLocation); this.livingWindowStatus = "Live weather loaded · current precipitation and probability are separate readings."; this.persistLivingWindowState(); } catch { const cache = weatherCacheStatus(this.livingWindowWeather); this.livingWindowStatus = cache === "fresh" || cache === "stale" ? `Offline · showing ${cache} cached weather.` : "Offline · no cached weather available."; }
-    finally { this.livingWindowLoading = false; if (this.livingWindowPanelOpen) this.renderLivingWindowOverlay(); }
+    try {
+      this.livingWindowWeather = await fetchOpenMeteoWeather(this.livingWindowLocation);
+      this.livingWindowStatus = livingWindowStatusCopy(this.livingWindowWeather, "ready");
+      this.persistLivingWindowState();
+    } catch {
+      this.livingWindowStatus = livingWindowStatusCopy(this.livingWindowWeather, "error");
+    } finally {
+      this.livingWindowLoading = false;
+      if (this.livingWindowPanelOpen) this.renderLivingWindowOverlay();
+    }
   }
-
   private closeLivingWindow(): void {
     this.livingWindowPanelOpen = false;
     this.room.windowFocus = false;
     this.overlay.classList.remove("window-overlay");
     this.overlay.innerHTML = "";
+    this.drawSpinWheelCanvas();
     this.syncGameplayChromeVisibility();
     this.persistLivingWindowState();
     this.autosave();
@@ -5940,7 +6325,7 @@ export class WalkBackHomeApp {
       this.livingWindowPanelOpen = true;
       this.livingWindowMoon = calculateMoonPhase();
       this.renderLivingWindowOverlay();
-      void this.loadLivingWindowWeather();
+      if (weatherCacheStatus(this.livingWindowWeather) !== "fresh") void this.loadLivingWindowWeather();
     } else {
       this.closeLivingWindow();
     }

@@ -8,5 +8,15 @@
     "build": "tsc -p tsconfig.json && node scripts/build.mjs",
     "test": "npm run build && node --test dist/tests/*.test.js",
     "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@ffmpeg/core": "^0.12.10",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.2.108"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
   }
 }

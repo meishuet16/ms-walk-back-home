@@ -5619,3 +5619,54 @@ canvas {
 .scene-debug-preview-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: 0.5rem; margin-top: 0.65rem; }
 .scene-debug-preview-select { white-space: nowrap; }
 @media (max-width: 720px) { .scene-debug-preview-card-head { grid-template-columns: auto 40px minmax(0, 1fr); } .scene-debug-preview-card-head > div:last-child { grid-column: 2 / -1; } }
+
+/* Completion pass: contained pagination, file tools, and compact weather subviews. */
+.toolbox-pagination { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 2px 0 10px; color: #cbb997; }
+.toolbox-pagination button { min-width: 30px; padding: 4px 7px; }
+.toolbox-pagination button:disabled { opacity: .35; cursor: default; }
+.toolbox-pagination-indicators { display: inline-flex; gap: 5px; }
+.toolbox-pagination-indicators button { width: 24px; min-width: 24px; padding: 3px; border: 0; background: transparent; color: #a8906e; }
+.toolbox-pagination-indicators button.selected { color: #f4ca79; }
+.toolbox-slot.empty { pointer-events: none; border-style: dashed; opacity: .32; background: transparent; }
+.spin-wheel-stage { position: relative; display: grid; place-items: center; min-height: 220px; overflow: hidden; border: 1px solid rgba(244, 202, 121, .26); background: radial-gradient(circle, rgba(213, 166, 87, .16), rgba(26, 20, 19, .2) 66%); }
+.spin-wheel-canvas { width: min(100%, 360px); height: auto; aspect-ratio: 1; }
+.spin-pointer { position: absolute; top: 8px; z-index: 1; color: #ffe3a0; font-size: 22px; }
+.converter-value-row, .currency-pair, .file-tool-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
+.currency-pair { grid-template-columns: repeat(2, minmax(0, 1fr)) auto; }
+.file-tool { display: grid; gap: 10px; }
+.file-tool input[type=file] { max-width: 100%; }
+.file-tool small { color: #b9c9b0; line-height: 1.35; }
+.file-tool-progress { height: 6px; overflow: hidden; border-radius: 4px; background: rgba(255, 255, 255, .12); }
+.file-tool-progress > span { display: block; height: 100%; background: #e4b96b; transition: width .2s ease; }
+.window-current-reading { display: grid; gap: 9px; padding: 14px; border: 1px solid rgba(180, 218, 210, .24); background: rgba(9, 15, 19, .38); }
+.window-temperature { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.window-temperature strong { color: #eff5df; font-size: clamp(30px, 7vw, 46px); font-weight: 500; }
+.window-temperature span { color: #d3e7d1; text-align: right; }
+.window-current-subline { color: #c3d6cc; font-size: 13px; }
+.window-weather-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; color: #abc5bd; font-size: 12px; }
+.window-forecast-heading { margin-top: 16px !important; }
+.window-forecast { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+.window-forecast-day { display: grid; gap: 4px; min-width: 0; padding: 8px 6px; border: 1px solid rgba(180, 218, 210, .18); background: rgba(9, 15, 19, .28); color: #abc5bd; font-size: 11px; }
+.window-forecast-day strong { color: #d3e7d1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.window-forecast-day small { color: #9eb8ad; font-size: 10px; }
+.window-subview-heading { display: flex; align-items: center; gap: 10px; }
+.window-subview-heading h3 { margin: 0; }
+.window-subview-heading button { padding: 4px 8px; }
+.window-location-view { display: grid; gap: 12px; margin-top: 16px; }
+.window-location-view .window-location-results { min-height: 30px; }
+@media (max-width: 700px) {
+  .spin-wheel-stage { min-height: 180px; }
+  .window-forecast { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .window-weather-stats { grid-template-columns: 1fr 1fr; }
+  .window-panel-header { align-items: flex-start; }
+  .window-panel-header h2 { max-width: 210px; font-size: 21px; }
+}
+@media (orientation: portrait) and (max-width: 700px) {
+  .toolbox-panel, .living-window-panel { max-height: min(84dvh, 720px); }
+  .toolbox-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .toolbox-footer { gap: 10px; }
+  .living-window-panel { width: min(100%, 560px); }
+}
+@media (orientation: landscape) and (min-width: 701px) {
+  .toolbox-panel, .living-window-panel { max-height: min(88dvh, 760px); }
+}

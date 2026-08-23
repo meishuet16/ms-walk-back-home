@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  createLivingWindowViewModel,
   defaultWindowLocation,
   fetchOpenMeteoLocations,
   parseOpenMeteoForecastResponse,
@@ -28,9 +29,11 @@ const forecastFixture = {
     precipitation_probability: [72, 85]
   },
   daily: {
-    time: ["2026-08-23"],
-    weather_code: [61],
-    precipitation_probability_max: [91],
+    time: ["2026-08-23", "2026-08-24", "2026-08-25"],
+    weather_code: [61, 3, 0],
+    temperature_2m_max: [32, 31, 33],
+    temperature_2m_min: [25, 24, 25],
+    precipitation_probability_max: [91, 70, 15],
     sunrise: ["2026-08-23T07:10"],
     sunset: ["2026-08-23T19:20"],
     uv_index_max: [8.4]
@@ -46,6 +49,12 @@ test("Open-Meteo parser keeps current precipitation distinct from hourly probabi
   assert.equal(snapshot.current.precipitationProbabilitySource, "hourly");
   assert.equal(snapshot.daily.precipitationProbabilityMaxPercent, 91);
   assert.notEqual(snapshot.current.precipitationProbabilityPercent, snapshot.current.precipitationMm);
+  assert.equal(snapshot.daily.forecast[0].highC, 32);
+  assert.equal(snapshot.daily.forecast[1].precipitationProbabilityMaxPercent, 70);
+  const view = createLivingWindowViewModel(snapshot, { label: "Waxing crescent", illuminationPercent: 28 }, "ready", new Date("2026-08-23T04:20:00.000Z"));
+  assert.equal(view.precipitationLabel, "Rain now 1.2 mm");
+  assert.equal(view.probabilityLabel, "Next hour 72%");
+  assert.equal(view.forecast[0].probabilityLabel, "91% rain chance");
 });
 
 test("weather mapping distinguishes dry, rain, storm, and fog visuals", () => {

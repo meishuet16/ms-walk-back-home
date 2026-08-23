@@ -1,6 +1,7 @@
 import type { ToolboxToolId, ToolboxView } from "./ToolboxModel.js";
+import { toolboxToolRegistry, toolboxToolsForPage, toolboxPages } from "./ToolboxModel.js";
 import type { SpinPreset } from "./SpinWheel.js";
-import { unitsForCategory } from "./UnitConverter.js";
+import { converterCategories, unitsForCategory } from "./UnitConverter.js";
 
 export type ToolboxRenderState = {
   view: ToolboxView;
@@ -8,6 +9,8 @@ export type ToolboxRenderState = {
   selectedPresetId: string;
   spinChoices: string[];
   spinResult: string;
+  spinRotation: number;
+  spinSpinning: boolean;
   calculatorDisplay: string;
   converterCategory: string;
   converterAmount: string;
@@ -18,34 +21,39 @@ export type ToolboxRenderState = {
   currencyFrom: string;
   currencyTo: string;
   currencyResult: string;
+  currencyRateText: string;
   currencyStatus: string;
   timerMode: "timer" | "stopwatch";
   timerDurationSeconds: string;
   timerRemaining: string;
   stopwatchElapsed: string;
+  timerRunning: boolean;
+  timerFinished: boolean;
+  dateMode: "difference" | "add-subtract" | "until-since";
   dateStart: string;
   dateEnd: string;
   dateDays: string;
   dateResult: string;
+  pdfMode: string;
+  pdfFileSummary: string;
+  pdfRange: string;
+  pdfStatus: string;
+  mediaMode: string;
+  mediaFileName: string;
+  mediaFormat: string;
+  mediaStart: string;
+  mediaEnd: string;
+  mediaStatus: string;
+  mediaProgress: number;
 };
 
-const toolInfo: Record<ToolboxToolId, { name: string; icon: string; description: string }> = {
-  "spin-wheel": { name: "Spin Wheel", icon: "◒", description: "不知道选什么？交给 Muji。" },
-  calculator: { name: "Calculator", icon: "＋", description: "算点东西。" },
-  converter: { name: "Converter", icon: "↔", description: "长度、重量、温度等等。" },
-  currency: { name: "Currency", icon: "¤", description: "看看现在值多少钱。" },
-  timer: { name: "Timer", icon: "◷", description: "计时，或者倒数。" },
-  date: { name: "Date", icon: "日", description: "算算已经过了多少天。" }
-};
-
-const categories = ["length", "weight", "temperature", "storage", "time"];
-
-export function toolboxToolInfo(tool: ToolboxToolId): { name: string; description: string } {
-  return toolInfo[tool];
+export function toolboxToolInfo(tool: ToolboxToolId): { name: string; icon: string; description: string } {
+  const definition = toolboxToolRegistry.find((item) => item.id === tool) ?? toolboxToolRegistry[0];
+  return { name: definition.label, icon: definition.icon, description: definition.description };
 }
 
 export function renderToolbox(state: ToolboxRenderState): string {
-  const heading = state.view.screen === "root" ? "MUJI TOOLBOX" : toolInfo[state.view.selected].name;
+  const heading = state.view.screen === "root" ? "MUJI TOOLBOX" : toolboxToolInfo(state.view.selected).name;
   return `<div class="modal game-panel toolbox-panel" role="dialog" aria-modal="true" aria-label="${escapeHtml(heading)}">
     <header class="toolbox-header"><div><span class="toolbox-kicker">MUJI TOOLBOX</span><h2>${escapeHtml(heading)}</h2></div><button class="toolbox-close" data-action="toolbox-close" aria-label="Close Toolbox">×</button></header>
     ${state.view.screen === "root" ? renderRoot(state) : renderTool(state)}
@@ -54,9 +62,16 @@ export function renderToolbox(state: ToolboxRenderState): string {
 
 function renderRoot(state: ToolboxRenderState): string {
   const selected = state.view.selected;
-  const slots = (Object.keys(toolInfo) as ToolboxToolId[]).map((tool) => `<button class="toolbox-slot${selected === tool ? " selected" : ""}" data-action="toolbox-select" data-tool="${tool}" aria-label="Select ${escapeHtml(toolInfo[tool].name)}" aria-pressed="${selected === tool}"><span class="toolbox-slot-icon" aria-hidden="true">${toolInfo[tool].icon}</span><strong>${escapeHtml(toolInfo[tool].name)}</strong></button>`).join("");
-  const info = toolInfo[selected];
-  return `<div class="toolbox-grid">${slots}</div><footer class="toolbox-footer"><div><strong>${escapeHtml(info.name)}</strong><span>${escapeHtml(info.description)}</span></div><button class="toolbox-confirm" data-action="toolbox-confirm">Enter</button></footer>`;
+  const tools = toolboxToolsForPage(state.view.page);
+  const pages = toolboxPages();
+  const slots = Array.from({ length: 6 }, (_, index) => {
+    const tool = tools[index];
+    if (!tool) return `<div class="toolbox-slot empty" aria-hidden="true"></div>`;
+    return `<button class="toolbox-slot${selected === tool.id ? " selected" : ""}" data-action="toolbox-select" data-tool="${tool.id}" aria-label="Select ${escapeHtml(tool.label)}" aria-pressed="${selected === tool.id}"><span class="toolbox-slot-icon" aria-hidden="true">${tool.icon}</span><strong>${escapeHtml(tool.label)}</strong></button>`;
+  }).join("");
+  const info = toolboxToolInfo(selected);
+  const pageControls = pages.length > 1 ? `<nav class="toolbox-pagination" aria-label="Toolbox pages"><button data-action="toolbox-page-prev" aria-label="Previous Toolbox page">‹</button><span>${pages.map((_, index) => `<button class="${index === state.view.page ? "selected" : ""}" data-action="toolbox-page" data-page="${index}" aria-label="Toolbox page ${index + 1}">${index === state.view.page ? "●" : "○"}</button>`).join("")}</span><button data-action="toolbox-page-next" aria-label="Next Toolbox page">›</button></nav>` : "";
+  return `<div class="toolbox-grid">${slots}</div>${pageControls}<footer class="toolbox-footer"><div><strong>${escapeHtml(info.name)}</strong><span>${escapeHtml(info.description)}</span></div><button class="toolbox-confirm" data-action="toolbox-confirm">Enter</button></footer>`;
 }
 
 function renderTool(state: ToolboxRenderState): string {
@@ -65,14 +80,16 @@ function renderTool(state: ToolboxRenderState): string {
       : state.view.selected === "converter" ? renderConverter(state)
         : state.view.selected === "currency" ? renderCurrency(state)
           : state.view.selected === "timer" ? renderTimer(state)
-            : renderDate(state);
+            : state.view.selected === "date" ? renderDate(state)
+              : state.view.selected === "pdf" ? renderPdf(state)
+                : renderMedia(state);
   return `<div class="toolbox-toolbar"><button data-action="toolbox-back">← Back</button><span>Enter to choose · Esc to back</span></div><div class="toolbox-tool-body">${body}</div>`;
 }
 
 function renderSpinWheel(state: ToolboxRenderState): string {
   const presetOptions = state.presets.map((preset) => `<option value="${escapeHtml(preset.id)}" ${preset.id === state.selectedPresetId ? "selected" : ""}>${escapeHtml(preset.name)}</option>`).join("");
   const choices = state.spinChoices.map((choice, index) => `<li><span>${escapeHtml(choice)}</span><button data-action="toolbox-spin-remove" data-index="${index}" aria-label="Remove ${escapeHtml(choice)}">×</button></li>`).join("");
-  return `<section class="toolbox-utility spin-wheel-tool"><div class="toolbox-field-row"><label>Preset<select data-toolbox-field="spin-preset">${presetOptions}</select></label><button data-action="toolbox-preset-new">New preset</button></div><div class="spin-wheel-disc" aria-live="polite"><span>✦</span><strong>${escapeHtml(state.spinResult || "Ready")}</strong></div><ul class="spin-choice-list">${choices || "<li class=\"empty\">Add a choice to begin.</li>"}</ul><div class="toolbox-field-row"><input id="toolbox-spin-choice" data-toolbox-field="spin-choice" placeholder="Add a choice" maxlength="80"><button data-action="toolbox-spin-add">Add</button><button class="primary" data-action="toolbox-spin">Spin</button></div><div class="toolbox-sub-actions"><button data-action="toolbox-preset-rename">Rename preset</button><button data-action="toolbox-preset-delete">Delete preset</button></div></section>`;
+  return `<section class="toolbox-utility spin-wheel-tool"><div class="toolbox-field-row"><label>Preset<select data-toolbox-field="spin-preset">${presetOptions}</select></label><button data-action="toolbox-preset-new">New preset</button></div><div class="spin-wheel-stage"><span class="spin-pointer" aria-hidden="true">▼</span><canvas class="spin-wheel-canvas" width="300" height="300" data-spin-wheel-canvas aria-label="Spin wheel"></canvas><strong class="spin-wheel-result" aria-live="polite">${escapeHtml(state.spinResult || (state.spinChoices.length ? "Ready" : "Add a choice to begin."))}</strong></div><ul class="spin-choice-list">${choices || "<li class=\"empty\">Add a choice to begin.</li>"}</ul><div class="toolbox-field-row"><input id="toolbox-spin-choice" data-toolbox-field="spin-choice" placeholder="Add a choice" maxlength="80"><button data-action="toolbox-spin-add">Add</button><button class="primary" data-action="toolbox-spin" ${state.spinSpinning || !state.spinChoices.length ? "disabled" : ""}>${state.spinSpinning ? "Spinning…" : "Spin"}</button></div><div class="toolbox-sub-actions"><button data-action="toolbox-preset-rename">Rename preset</button><button data-action="toolbox-preset-delete">Delete preset</button></div></section>`;
 }
 
 function renderCalculator(state: ToolboxRenderState): string {
@@ -81,23 +98,32 @@ function renderCalculator(state: ToolboxRenderState): string {
 }
 
 function renderConverter(state: ToolboxRenderState): string {
-  const options = categories.map((category) => `<option value="${category}" ${category === state.converterCategory ? "selected" : ""}>${category}</option>`).join("");
+  const options = converterCategories.map((category) => `<option value="${category}" ${category === state.converterCategory ? "selected" : ""}>${category}</option>`).join("");
   const unitOptions = (selected: string) => unitsForCategory(state.converterCategory).map((unit) => `<option value="${escapeHtml(unit)}" ${unit === selected ? "selected" : ""}>${escapeHtml(unit)}</option>`).join("");
-  return `<section class="toolbox-utility"><label>Category<select data-toolbox-field="converter-category">${options}</select></label><label>Amount<input inputmode="decimal" data-toolbox-field="converter-amount" value="${escapeHtml(state.converterAmount)}"></label><div class="toolbox-two-col"><label>From<select data-toolbox-field="converter-from">${unitOptions(state.converterFrom)}</select></label><label>To<select data-toolbox-field="converter-to">${unitOptions(state.converterTo)}</select></label></div><output class="toolbox-result">${escapeHtml(state.converterResult || "Enter an amount")}</output></section>`;
+  return `<section class="toolbox-utility"><label>Category<select data-toolbox-field="converter-category">${options}</select></label><label>Amount<input inputmode="decimal" data-toolbox-field="converter-amount" value="${escapeHtml(state.converterAmount)}"></label><div class="toolbox-two-col"><label>From<select data-toolbox-field="converter-from">${unitOptions(state.converterFrom)}</select></label><label>To<select data-toolbox-field="converter-to">${unitOptions(state.converterTo)}</select></label></div><button data-action="converter-swap">⇄ Swap</button><output class="toolbox-result">${escapeHtml(state.converterResult || "Enter an amount")}</output></section>`;
 }
 
 function renderCurrency(state: ToolboxRenderState): string {
   const currencies = ["MYR", "SGD", "USD", "JPY", "CNY", "EUR", "GBP"];
   const options = (selected: string) => currencies.map((code) => `<option value="${code}" ${selected === code ? "selected" : ""}>${code}</option>`).join("");
-  return `<section class="toolbox-utility"><label>Amount<input inputmode="decimal" data-toolbox-field="currency-amount" value="${escapeHtml(state.currencyAmount)}"></label><div class="toolbox-two-col"><label>From<select data-toolbox-field="currency-from">${options(state.currencyFrom)}</select></label><label>To<select data-toolbox-field="currency-to">${options(state.currencyTo)}</select></label></div><div class="settings-row"><button data-action="currency-swap">Swap</button><button class="primary" data-action="currency-refresh">Refresh rates</button></div><output class="toolbox-result">${escapeHtml(state.currencyResult || "No rate loaded")}</output><p class="toolbox-status">${escapeHtml(state.currencyStatus)}</p></section>`;
+  return `<section class="toolbox-utility currency-tool"><label>Amount<input inputmode="decimal" data-toolbox-field="currency-amount" value="${escapeHtml(state.currencyAmount)}"></label><div class="toolbox-two-col currency-pair"><select data-toolbox-field="currency-from" aria-label="From currency">${options(state.currencyFrom)}</select><button data-action="currency-swap">⇄</button><select data-toolbox-field="currency-to" aria-label="To currency">${options(state.currencyTo)}</select></div><output class="toolbox-result currency-result">${escapeHtml(state.currencyResult || "Enter an amount")}</output><p class="toolbox-status">${escapeHtml(state.currencyRateText)}</p><div class="toolbox-sub-actions"><button class="small" data-action="currency-refresh">Refresh</button></div><p class="toolbox-status" aria-live="polite">${escapeHtml(state.currencyStatus)}</p></section>`;
 }
 
 function renderTimer(state: ToolboxRenderState): string {
-  return `<section class="toolbox-utility"><div class="settings-row"><button class="${state.timerMode === "timer" ? "selected" : ""}" data-action="timer-mode" data-mode="timer">Timer</button><button class="${state.timerMode === "stopwatch" ? "selected" : ""}" data-action="timer-mode" data-mode="stopwatch">Stopwatch</button></div>${state.timerMode === "timer" ? `<label>Minutes<input inputmode="numeric" data-toolbox-field="timer-minutes" value="${escapeHtml(String(Math.floor(Number(state.timerDurationSeconds) / 60) || 0))}"></label><label>Seconds<input inputmode="numeric" data-toolbox-field="timer-seconds" value="${escapeHtml(String(Number(state.timerDurationSeconds) % 60 || 0))}"></label>` : ""}<output class="timer-display">${escapeHtml(state.timerMode === "timer" ? state.timerRemaining : state.stopwatchElapsed)}</output><div class="settings-row"><button class="primary" data-action="timer-start">Start</button><button data-action="timer-pause">Pause</button><button data-action="timer-reset">Reset</button></div></section>`;
+  return `<section class="toolbox-utility timer-tool"><div class="settings-row"><button class="${state.timerMode === "timer" ? "selected" : ""}" data-action="timer-mode" data-mode="timer">Timer</button><button class="${state.timerMode === "stopwatch" ? "selected" : ""}" data-action="timer-mode" data-mode="stopwatch">Stopwatch</button></div>${state.timerMode === "timer" ? `<div class="toolbox-field-row timer-duration-fields"><label>Minutes<input inputmode="numeric" data-toolbox-field="timer-minutes" value="${escapeHtml(String(Math.floor(Number(state.timerDurationSeconds) / 60) || 0))}" ${state.timerRunning ? "disabled" : ""}></label><label>Seconds<input inputmode="numeric" data-toolbox-field="timer-seconds" value="${escapeHtml(String(Number(state.timerDurationSeconds) % 60 || 0))}" ${state.timerRunning ? "disabled" : ""}></label></div>` : ""}<output class="timer-display">${escapeHtml(state.timerMode === "timer" ? state.timerRemaining : state.stopwatchElapsed)}</output><div class="settings-row"><button class="primary" data-action="timer-start">${state.timerRunning ? "Running…" : "Start"}</button><button data-action="timer-pause">Pause</button><button data-action="timer-reset">Reset</button></div><p class="toolbox-status">${state.timerFinished ? "Finished" : " "}</p></section>`;
 }
 
 function renderDate(state: ToolboxRenderState): string {
-  return `<section class="toolbox-utility"><div class="toolbox-two-col"><label>Start<input type="date" data-toolbox-field="date-start" value="${escapeHtml(state.dateStart)}"></label><label>End<input type="date" data-toolbox-field="date-end" value="${escapeHtml(state.dateEnd)}"></label></div><button class="primary" data-action="date-difference">Difference</button><div class="toolbox-field-row"><input inputmode="numeric" data-toolbox-field="date-days" value="${escapeHtml(state.dateDays)}" placeholder="Days"><button data-action="date-add">Add days</button><button data-action="date-subtract">Subtract</button></div><output class="toolbox-result">${escapeHtml(state.dateResult || "Choose dates")}</output></section>`;
+  const modeOptions = [["difference", "Difference"], ["add-subtract", "Add / Subtract"], ["until-since", "Until / Since"]] as const;
+  return `<section class="toolbox-utility date-tool"><label>Mode<select data-toolbox-field="date-mode">${modeOptions.map(([value, label]) => `<option value="${value}" ${state.dateMode === value ? "selected" : ""}>${label}</option>`).join("")}</select></label>${state.dateMode === "until-since" ? `<label>Target date<input type="date" data-toolbox-field="date-end" value="${escapeHtml(state.dateEnd)}"></label>` : state.dateMode === "difference" ? `<div class="toolbox-two-col"><label>Start<input type="date" data-toolbox-field="date-start" value="${escapeHtml(state.dateStart)}"></label><label>End<input type="date" data-toolbox-field="date-end" value="${escapeHtml(state.dateEnd)}"></label></div>` : `<label>Base date<input type="date" data-toolbox-field="date-start" value="${escapeHtml(state.dateStart)}"></label><label>Days<input inputmode="numeric" data-toolbox-field="date-days" value="${escapeHtml(state.dateDays)}"></label><div class="settings-row"><button class="primary" data-action="date-add">Add</button><button data-action="date-subtract">Subtract</button></div>`}<output class="toolbox-result">${escapeHtml(state.dateResult || "Choose dates")}</output>${state.dateMode === "difference" ? `<button class="primary" data-action="date-difference">Difference</button>` : state.dateMode === "until-since" ? `<button class="primary" data-action="date-until-since">Compare with today</button>` : ""}</section>`;
+}
+
+function renderPdf(state: ToolboxRenderState): string {
+  return `<section class="toolbox-utility file-tool"><label>Operation<select data-toolbox-field="pdf-mode"><option value="merge" ${state.pdfMode === "merge" ? "selected" : ""}>Merge PDFs</option><option value="extract" ${state.pdfMode === "extract" ? "selected" : ""}>Split / Extract</option><option value="reorder" ${state.pdfMode === "reorder" ? "selected" : ""}>Reorder / Delete</option><option value="images-to-pdf" ${state.pdfMode === "images-to-pdf" ? "selected" : ""}>Images → PDF</option><option value="pdf-to-images" ${state.pdfMode === "pdf-to-images" ? "selected" : ""}>PDF → Images</option><option value="compress" ${state.pdfMode === "compress" ? "selected" : ""}>Compress / Optimize</option></select></label><input type="file" data-toolbox-field="pdf-files" accept=".pdf,application/pdf,image/jpeg,image/png,image/webp" multiple><p class="file-summary">${escapeHtml(state.pdfFileSummary || "Choose local files")}</p>${state.pdfMode !== "merge" && state.pdfMode !== "images-to-pdf" && state.pdfMode !== "compress" ? `<label>Pages / order<input data-toolbox-field="pdf-range" value="${escapeHtml(state.pdfRange)}" placeholder="1, 3-5 or delete:2"></label>` : ""}<button class="primary" data-action="pdf-process">Process locally</button><p class="toolbox-status">${escapeHtml(state.pdfStatus)}</p><small>Processed on this device.</small></section>`;
+}
+
+function renderMedia(state: ToolboxRenderState): string {
+  return `<section class="toolbox-utility file-tool"><label>Operation<select data-toolbox-field="media-mode"><option value="extract-audio" ${state.mediaMode === "extract-audio" ? "selected" : ""}>Extract audio from video</option><option value="convert-audio" ${state.mediaMode === "convert-audio" ? "selected" : ""}>Convert audio</option><option value="trim-audio" ${state.mediaMode === "trim-audio" ? "selected" : ""}>Trim audio</option><option value="trim-video" ${state.mediaMode === "trim-video" ? "selected" : ""}>Trim video</option></select></label><input type="file" data-toolbox-field="media-file" accept="audio/*,video/*"><p class="file-summary">${escapeHtml(state.mediaFileName || "Choose a local media file")}</p><div class="toolbox-two-col"><label>Format<select data-toolbox-field="media-format"><option value="mp3" ${state.mediaFormat === "mp3" ? "selected" : ""}>MP3</option><option value="wav" ${state.mediaFormat === "wav" ? "selected" : ""}>WAV</option><option value="ogg" ${state.mediaFormat === "ogg" ? "selected" : ""}>OGG</option></select></label><label>Start<input inputmode="decimal" data-toolbox-field="media-start" value="${escapeHtml(state.mediaStart)}"></label><label>End<input inputmode="decimal" data-toolbox-field="media-end" value="${escapeHtml(state.mediaEnd)}"></label></div><button class="primary" data-action="media-process">Process locally</button><progress max="1" value="${state.mediaProgress}"></progress><p class="toolbox-status">${escapeHtml(state.mediaStatus)}</p><small>Processed on this device.</small></section>`;
 }
 
 function escapeHtml(value: string): string {

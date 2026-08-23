@@ -22,3 +22,14 @@ export function addDateDays(value: string, days: number): string | null {
   date.setDate(date.getDate() + Math.trunc(days));
   return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
 }
+
+export function localDateString(date = new Date()): string {
+  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
+}
+
+export function relativeDateLabel(target: string, today = localDateString()): string {
+  const difference = dateDifference(today, target);
+  if (difference === null) return "Choose a valid date";
+  if (difference === 0) return "Today";
+  return difference > 0 ? `${difference} day${difference === 1 ? "" : "s"} until` : `${Math.abs(difference)} day${Math.abs(difference) === 1 ? "" : "s"} since`;
+}

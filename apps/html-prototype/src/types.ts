@@ -158,13 +158,15 @@ export type ChapterProgressState = "unseen" | "visited" | "walkedThrough";
 export type ToolboxPersistedState = {
   version: 1;
   selected: string;
+  page?: number;
   selectedPresetId: string;
   converterUnits: Record<string, string>;
   currencyFrom: string;
   currencyTo: string;
+  currencyCache?: Record<string, { base: string; quote: string; rate: number; date: string; fetchedAt: string }>;
+  dateMode?: "difference" | "add-subtract" | "until-since";
   presets?: Array<{ id: string; name: string; choices: string[] }>;
 };
-
 export type LivingWindowPersistedState = {
   version: 1;
   location: { id?: number; name: string; country?: string; latitude: number; longitude: number; timezone?: string } | null;

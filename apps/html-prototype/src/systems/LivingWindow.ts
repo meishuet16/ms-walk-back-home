@@ -8,6 +8,13 @@ export type WindowLocation = {
 };
 
 export type WeatherCondition = { id: "clear" | "cloud" | "fog" | "rain" | "snow" | "storm"; label: string; code: number };
+export type WeatherForecastDay = {
+  date: string;
+  condition: WeatherCondition;
+  highC: number;
+  lowC: number;
+  precipitationProbabilityMaxPercent: number | null;
+};
 export type WeatherSnapshot = {
   provider: "open-meteo";
   fetchedAt: string;
@@ -35,6 +42,7 @@ export type WeatherSnapshot = {
     sunrise: string;
     sunset: string;
     uvIndexMax: number | null;
+    forecast: WeatherForecastDay[]
   };
 };
 
@@ -142,8 +150,18 @@ export function parseOpenMeteoForecastResponse(value: unknown, location: WindowL
   const dailyTimes = arrayValue(daily, "time");
   const date = typeof dailyTimes[0] === "string" ? dailyTimes[0] : currentTime.slice(0, 10);
   const dailyCodes = arrayValue(daily, "weather_code");
-  const dailyProbability = finitePercent(arrayValue(daily, "precipitation_probability_max")[0]);
+  const dailyProbabilityValues = arrayValue(daily, "precipitation_probability_max");
+  const dailyHighValues = arrayValue(daily, "temperature_2m_max");
+  const dailyLowValues = arrayValue(daily, "temperature_2m_min");
+  const dailyProbability = finitePercent(dailyProbabilityValues[0]);
   const code = finite(current.weather_code);
+  const forecast = dailyTimes.map((value, index) => ({
+    date: String(value),
+    condition: weatherCodeToCondition(finite(dailyCodes[index], code)),
+    highC: finite(dailyHighValues[index]),
+    lowC: finite(dailyLowValues[index]),
+    precipitationProbabilityMaxPercent: finitePercent(dailyProbabilityValues[index])
+  }));
   return {
     provider: "open-meteo",
     fetchedAt: fetchedAt.toISOString(),
@@ -170,7 +188,8 @@ export function parseOpenMeteoForecastResponse(value: unknown, location: WindowL
       precipitationProbabilityMaxPercent: dailyProbability,
       sunrise: String(arrayValue(daily, "sunrise")[0] ?? ""),
       sunset: String(arrayValue(daily, "sunset")[0] ?? ""),
-      uvIndexMax: finitePercent(arrayValue(daily, "uv_index_max")[0])
+      uvIndexMax: finitePercent(arrayValue(daily, "uv_index_max")[0]),
+      forecast
     }
   };
 }
@@ -184,8 +203,8 @@ export function weatherCacheStatus(snapshot: WeatherSnapshot | null, now: Date =
 export async function fetchOpenMeteoWeather(location: WindowLocation, fetcher: typeof fetch = fetch, now: () => Date = () => new Date()): Promise<WeatherSnapshot> {
   const current = "temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,rain,showers,snowfall,weather_code,cloud_cover,wind_speed_10m";
   const hourly = "precipitation_probability";
-  const daily = "weather_code,precipitation_probability_max,sunrise,sunset,uv_index_max";
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${location.latitude}&longitude=${location.longitude}&current=${current}&hourly=${hourly}&daily=${daily}&timezone=auto&forecast_days=2`;
+  const daily = "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,uv_index_max";
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${location.latitude}&longitude=${location.longitude}&current=${current}&hourly=${hourly}&daily=${daily}&timezone=auto&forecast_days=4`;
   const response = await fetcher(url, { signal: AbortSignal.timeout(8000) });
   if (!response.ok) throw new Error(`Weather request failed: ${response.status}`);
   return parseOpenMeteoForecastResponse(await response.json(), location, now());
@@ -204,4 +223,74 @@ export async function fetchOpenMeteoLocations(query: string, fetcher: typeof fet
     if (typeof item.name !== "string" || typeof item.latitude !== "number" || typeof item.longitude !== "number") return [];
     return [{ id: typeof item.id === "number" ? item.id : undefined, name: item.name, country: typeof item.country === "string" ? item.country : undefined, latitude: item.latitude, longitude: item.longitude, timezone: typeof item.timezone === "string" ? item.timezone : undefined }];
   });
+}
+
+export type LivingWindowViewModel = {
+  locationLabel: string;
+  conditionLabel: string;
+  temperatureLabel: string;
+  feelsLikeLabel: string;
+  precipitationLabel: string;
+  probabilityLabel: string;
+  humidityLabel: string;
+  windLabel: string;
+  sunsetLabel: string;
+  moonLabel: string;
+  moonIlluminationLabel: string;
+  forecast: Array<{
+    date: string;
+    conditionLabel: string;
+    highLabel: string;
+    lowLabel: string;
+    probabilityLabel: string;
+  }>;
+  statusLabel: string;
+};
+
+export function livingWindowStatusCopy(snapshot: WeatherSnapshot | null, status: "loading" | "ready" | "error", now: Date = new Date()): string {
+  if (status === "loading") return "Looking outside…";
+  if (status === "error") return snapshot ? "Cached · updated " + new Date(snapshot.fetchedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "Weather unavailable";
+  if (!snapshot) return "Weather unavailable";
+  return weatherCacheStatus(snapshot, now) === "fresh" ? "Updated just now" : "Cached · updated " + new Date(snapshot.fetchedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+export function createLivingWindowViewModel(snapshot: WeatherSnapshot | null, moon: { label: string; illuminationPercent: number }, status: "loading" | "ready" | "error", now: Date = new Date()): LivingWindowViewModel {
+  const locationLabel = snapshot ? [snapshot.location.name, snapshot.location.country].filter(Boolean).join(", ") : "Choose a location";
+  if (!snapshot) return {
+    locationLabel,
+    conditionLabel: "Weather unavailable",
+    temperatureLabel: "—",
+    feelsLikeLabel: "Feels like —",
+    precipitationLabel: "Rain now —",
+    probabilityLabel: "Next hour —",
+    humidityLabel: "Humidity —",
+    windLabel: "Wind —",
+    sunsetLabel: "Sunset —",
+    moonLabel: moon.label,
+    moonIlluminationLabel: moon.illuminationPercent + "% illuminated",
+    forecast: [],
+    statusLabel: livingWindowStatusCopy(null, status, now)
+  };
+  const formatTime = (value: string) => value ? new Date(value).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "—";
+  return {
+    locationLabel,
+    conditionLabel: snapshot.current.condition.label,
+    temperatureLabel: snapshot.current.temperatureC.toFixed(1) + "°C",
+    feelsLikeLabel: "Feels like " + snapshot.current.apparentTemperatureC.toFixed(1) + "°C",
+    precipitationLabel: "Rain now " + snapshot.current.precipitationMm.toFixed(1) + " mm",
+    probabilityLabel: snapshot.current.precipitationProbabilityPercent === null ? "Next hour probability unavailable" : "Next hour " + snapshot.current.precipitationProbabilityPercent + "%",
+    humidityLabel: "Humidity " + snapshot.current.humidityPercent + "%",
+    windLabel: "Wind " + snapshot.current.windSpeedKmh.toFixed(1) + " km/h",
+    sunsetLabel: "Sunset " + formatTime(snapshot.daily.sunset),
+    moonLabel: moon.label,
+    moonIlluminationLabel: moon.illuminationPercent + "% illuminated",
+    forecast: snapshot.daily.forecast.map((day) => ({
+      date: day.date,
+      conditionLabel: day.condition.label,
+      highLabel: day.highC.toFixed(0) + "°",
+      lowLabel: day.lowC.toFixed(0) + "°",
+      probabilityLabel: day.precipitationProbabilityMaxPercent === null ? "—" : day.precipitationProbabilityMaxPercent + "% rain chance"
+    })),
+    statusLabel: livingWindowStatusCopy(snapshot, status, now)
+  };
 }
