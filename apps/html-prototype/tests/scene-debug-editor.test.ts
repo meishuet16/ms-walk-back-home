@@ -146,7 +146,7 @@ test("Add Scene protects sceneId and orientation identity before writing", () =>
 });
 
 test("Scene Debug authoring workflow keeps metadata editor-only and panes independent", () => {
-  for (const label of ["Scene Authoring Manifest v1 JSON", "Validate Manifest", "Build Auto Author Plan", "PREVIEW ONLY", "Preview & Handoff", "Viewport", "Fit", "100%", "Center", "Fine Tune / Advanced Manual Tools"]) {
+  for (const label of ["Scene Authoring Manifest v1", "Check Manifest", "Preview Auto Setup", "Apply to Scene", "Browse Project Assets", "Approve Selected", "Approve All Visible", "PREVIEW ONLY", "Preview & Handoff", "Viewport", "Fit", "100%", "Center", "Fine Tune / Advanced Manual Tools"]) {
     assert.match(editorSource, new RegExp(label.replace(/[+]/g, "\\+"), "i"));
   }
   assert.match(editorSource, /buildAutoAuthorPlan/);
