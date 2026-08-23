@@ -4,6 +4,8 @@ import { makeDefaultLayout } from "../src/systems/SceneLayouts.js";
 import { applyAutoAuthorPlan, buildAutoAuthorPlan } from "../src/systems/SceneDebugAutoAuthor.js";
 import { parseSceneAuthoringManifest, normalizedPointToScene, validateSceneAuthoringManifest } from "../src/systems/SceneDebugAuthoringManifest.js";
 import { validateConstraints } from "../src/systems/SceneDebugConstraints.js";
+import { SceneDebugEditor } from "../src/systems/SceneDebugEditor.js";
+import { createPreviewState, type PreviewItem, type PreviewState } from "../src/systems/SceneDebugPreview.js";
 import { centerPan, fitZoom, sceneToViewport, viewportToScene } from "../src/systems/SceneDebugViewport.js";
 
 function rawManifest() {
@@ -76,6 +78,108 @@ test("Auto Author produces runtime fields plus editor-only review metadata", () 
   assert.equal(plan.previews[0].status, "missing-asset");
   assert.deepEqual(Object.keys(plan.candidate).sort(), ["anchors", "asset", "echoAnchors", "interactions", "label", "obstacles", "orientation", "placementSlots", "sceneId", "size", "spawn", "triggers"]);
   assert.equal(plan.groups[0].members[0], "anchor:left");
+});
+
+test("Auto Author plan preserves manifest preview transform fields", () => {
+  const raw = rawManifest() as any;
+  raw.orientations.landscape.previews[0] = {
+    ...raw.orientations.landscape.previews[0],
+    kind: "pair",
+    scale: 0.3,
+    flip: true,
+    offsetX: 12,
+    offsetY: -7,
+    opacity: 0.45,
+    z: 6
+  };
+  const validated = validateSceneAuthoringManifest(raw).manifest;
+  assert.ok(validated);
+
+  const plan = buildAutoAuthorPlan(validated, "landscape", makeDefaultLayout("disposable-scene", "Existing", "landscape"));
+
+  assert.deepEqual(plan.previews[0], {
+    id: "hero",
+    name: "Hero",
+    asset: "assets/hero.png",
+    status: "preview-only",
+    anchorId: "left",
+    kind: "pair",
+    scale: 0.3,
+    flip: true,
+    offsetX: 12,
+    offsetY: -7,
+    opacity: 0.45,
+    z: 6
+  });
+});
+
+test("applying an Auto Author preview plan creates transformed items and keeps omitted defaults", () => {
+  const raw = rawManifest() as any;
+  raw.orientations.landscape.previews = [
+    {
+      id: "transformed",
+      name: "Transformed",
+      asset: "assets/hero.png",
+      anchorId: "left",
+      scale: 0.3,
+      flip: true,
+      offsetX: 12,
+      offsetY: -7,
+      opacity: 0.45,
+      z: 6
+    },
+    { id: "defaults", name: "Defaults", asset: "assets/hero.png", anchorId: "right" }
+  ];
+  const validated = validateSceneAuthoringManifest(raw).manifest;
+  assert.ok(validated);
+  const plan = buildAutoAuthorPlan(validated, "landscape", makeDefaultLayout("disposable-scene", "Existing", "landscape"));
+  const editor = new SceneDebugEditor({} as HTMLElement) as unknown as {
+    autoAuthorPlan: typeof plan;
+    previewState: PreviewState;
+    importAutoAuthorPreviews(): void;
+  };
+  editor.autoAuthorPlan = plan;
+  editor.previewState = createPreviewState("disposable-scene", "landscape");
+
+  editor.importAutoAuthorPreviews();
+
+  assert.deepEqual(
+    editor.previewState.items.map(({ scale, flip, offsetX, offsetY, opacity, z }) => ({ scale, flip, offsetX, offsetY, opacity, z })),
+    [
+      { scale: 0.3, flip: true, offsetX: 12, offsetY: -7, opacity: 0.45, z: 6 },
+      { scale: 1, flip: false, offsetX: 0, offsetY: 0, opacity: 1, z: 0 }
+    ]
+  );
+});
+
+test("preview scale does not alter its resolved anchor position", () => {
+  const raw = rawManifest() as any;
+  raw.orientations.landscape.previews[0].scale = 0.3;
+  const validated = validateSceneAuthoringManifest(raw).manifest;
+  assert.ok(validated);
+  const existing = makeDefaultLayout("disposable-scene", "Existing", "landscape");
+  const plan = buildAutoAuthorPlan(validated, "landscape", existing);
+  const applied = applyAutoAuthorPlan(plan, "replace-existing", existing);
+  const editor = new SceneDebugEditor({} as HTMLElement) as unknown as {
+    autoAuthorPlan: typeof plan;
+    layout: typeof applied.layout;
+    previewState: PreviewState;
+    importAutoAuthorPreviews(): void;
+    previewAnchorPoint(item: PreviewItem): { x: number; y: number };
+  };
+  editor.autoAuthorPlan = plan;
+  editor.layout = applied.layout;
+  editor.previewState = createPreviewState("disposable-scene", "landscape");
+  editor.importAutoAuthorPreviews();
+  const preview = editor.previewState.items[0];
+
+  const atManifestScale = editor.previewAnchorPoint(preview);
+  const atDifferentScale = editor.previewAnchorPoint({ ...preview, scale: 4 });
+
+  assert.equal(preview.scale, 0.3);
+  assert.deepEqual(atManifestScale, { x: 200, y: 200 });
+  assert.deepEqual(atDifferentScale, atManifestScale);
+  assert.deepEqual(applied.layout.anchors.left, { x: 200, y: 200 });
 });
 
 test("Auto Author requires explicit replacement choice and can preserve existing layout", () => {

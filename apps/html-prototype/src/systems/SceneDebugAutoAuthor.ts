@@ -11,6 +11,12 @@ export type AutoAuthorPreviewImport = {
   status: "preview-only" | "missing-asset";
   anchorId?: string;
   kind?: "single" | "pair" | "multi" | "prop" | "vfx";
+  scale?: number;
+  flip?: boolean;
+  offsetX?: number;
+  offsetY?: number;
+  opacity?: number;
+  z?: number;
 };
 export type AutoAuthorSummary = {
   orientation: SceneOrientation;
@@ -70,7 +76,13 @@ export function buildAutoAuthorPlan(
     asset: item.asset,
     status: options.assetPaths && !options.assetPaths.has(item.asset) ? "missing-asset" as const : "preview-only" as const,
     anchorId: item.anchorId,
-    kind: item.kind
+    kind: item.kind,
+    scale: item.scale,
+    flip: item.flip,
+    offsetX: item.offsetX,
+    offsetY: item.offsetY,
+    opacity: item.opacity,
+    z: item.z
   }));
   const collisionReviews = (section.obstacles ?? []).map((rect, index) => ({
     id: rect.id ?? "collision-" + (index + 1),

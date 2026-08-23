@@ -229,7 +229,18 @@ export class SceneDebugEditor {
     if (!this.autoAuthorPlan) return;
     for (const item of this.autoAuthorPlan.previews.filter((candidate) => candidate.status === "preview-only")) {
       try {
-        this.previewState = addPreviewItem(this.previewState, createPreviewItem({ name: item.name, kind: item.kind, projectPath: item.asset, anchorId: item.anchorId }));
+        this.previewState = addPreviewItem(this.previewState, createPreviewItem({
+          name: item.name,
+          kind: item.kind,
+          projectPath: item.asset,
+          anchorId: item.anchorId,
+          scale: item.scale,
+          flip: item.flip,
+          offsetX: item.offsetX,
+          offsetY: item.offsetY,
+          opacity: item.opacity,
+          z: item.z
+        }));
       } catch {
         // Validation already rejected unsafe paths.
       }
