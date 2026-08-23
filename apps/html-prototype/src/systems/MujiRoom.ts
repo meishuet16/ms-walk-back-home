@@ -137,6 +137,14 @@ export function canReachRoomInteraction(id: RoomInteractionId): boolean {
   return samples.some((point) => point.x > 0 && point.y > 0 && point.x < roomSize.w && point.y < roomSize.h && !inAnyRect(point, roomObstacles));
 }
 
+export function setRoomWindowFocus(state: RoomJourneyState, focused: boolean): RoomJourneyState {
+  return { ...state, windowFocus: focused };
+}
+
+export function normalizeRoomWindowState(state: RoomJourneyState): RoomJourneyState {
+  return setRoomWindowFocus(state, false);
+}
+
 export function toggleRoomLamp(state: RoomJourneyState): RoomJourneyState {
   return { ...state, visits: state.visits + 1, lampOn: !state.lampOn };
 }

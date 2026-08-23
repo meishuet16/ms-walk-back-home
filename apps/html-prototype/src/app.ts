@@ -63,12 +63,14 @@ import {
   vinylRecords,
   vinylRecordsFromAudioFiles,
   withCustomVinylCover,
+  setRoomWindowFocus,
+  normalizeRoomWindowState,
   type RoomInteraction,
   type VinylRecord
 } from "./systems/MujiRoom.js";
 import { SaveManager } from "./systems/SaveManager.js";
 import { createToolboxState, confirmTool, backTool, moveToolSelection, moveToolboxPage, selectToolboxPage, selectTool, type ToolboxToolId, type ToolboxView as ToolboxScreen } from "./systems/ToolboxModel.js";
-import { addSpinChoice, createSpinPreset, deleteSpinPreset, normalizeSelectedPresetId, removeSpinChoice, renameSpinPreset, spinChoiceIndex, spinTargetRotation, spinWheelGeometry, type SpinPreset } from "./systems/SpinWheel.js";
+import { addSpinChoiceToPreset, createSpinPreset, deleteSpinPreset, normalizeSelectedPresetId, removeSpinChoice, renameSpinPreset, spinChoiceIndex, spinTargetRotation, spinWheelGeometry, type SpinPreset } from "./systems/SpinWheel.js";
 import { applyCalculatorInput, evaluateCalculator } from "./systems/Calculator.js";
 import { convertUnit, formatUnitValue, swapUnits, unitsForCategory } from "./systems/UnitConverter.js";
 import { convertCurrency, currencyCacheStatus, currencyCodes, currencyPairKey, currencyPayloadMatchesPair, currencyRequestIsCurrent, fetchCurrencyRate, type CurrencyCode, type CurrencyRatePayload } from "./systems/CurrencyRates.js";
@@ -77,7 +79,7 @@ import { addDateDays, dateDifference, localDateString, relativeDateLabel } from 
 import { renderToolbox, type ToolboxRenderState } from "./systems/ToolboxView.js";
 import { createLivingWindowViewModel, defaultWindowLocation, fetchOpenMeteoLocations, fetchOpenMeteoWeather, livingWindowStatusCopy, weatherCacheStatus, weatherVisualFor, type WeatherSnapshot, type WindowLocation } from "./systems/LivingWindow.js";
 import { calculateMoonPhase, type MoonPhase } from "./systems/MoonPhase.js";
-import { drawSceneAsset, drawSceneMask, sceneTransformFor } from "./systems/LivingWindowRenderer.js";
+import { drawSceneAsset, drawSceneMask, grayscaleMaskToAlpha, sceneTransformFor } from "./systems/LivingWindowRenderer.js";
 import { deletePdfPages, imagesToPdf, mergePdfFiles, optimizePdf, parsePdfPageOperation, pdfOutputFilename, pdfToPngImages, reorderOrExtractPdf } from "./systems/PdfToolkit.js";
 import { mediaOutputFilename, processMediaFile } from "./systems/MediaToolkit.js";
 import type { MusicScene } from "./systems/SceneMusic.js";
@@ -321,6 +323,8 @@ export class WalkBackHomeApp {
   private livingWindowSubview: "main" | "location" = "main";
   private weatherCanvas = document.createElement("canvas");
   private weatherCtx = this.weatherCanvas.getContext("2d")!;
+  private weatherMaskCanvas = document.createElement("canvas");
+  private weatherMaskCtx = this.weatherMaskCanvas.getContext("2d")!;
   private pdfMode = "merge";
   private pdfFiles: File[] = [];
   private pdfRange = "";
@@ -866,6 +870,7 @@ export class WalkBackHomeApp {
   }
 
   private renderToolboxOverlay(): void {
+    this.selectedToolboxPresetId = normalizeSelectedPresetId(this.toolboxPresets, this.selectedToolboxPresetId);
     const preset = this.toolboxPresets.find((item) => item.id === this.selectedToolboxPresetId) ?? this.toolboxPresets[0];
     if (!preset) return;
     const units = unitsForCategory(this.converterCategory);
@@ -955,7 +960,9 @@ export class WalkBackHomeApp {
     const preset = this.toolboxPresets.find((item) => item.id === this.selectedToolboxPresetId);
     if (action === "toolbox-spin-add" && preset && !this.spinSpinning) {
       const input = this.overlay.querySelector<HTMLInputElement>("#toolbox-spin-choice");
-      preset.choices = addSpinChoice(preset.choices, input?.value ?? "");
+      const added = addSpinChoiceToPreset(this.toolboxPresets, this.selectedToolboxPresetId, input?.value ?? "");
+      this.toolboxPresets = added.presets;
+      this.selectedToolboxPresetId = added.selectedPresetId;
       if (input) input.value = "";
       this.spinResult = "";
       this.persistToolboxState();
@@ -3744,13 +3751,20 @@ export class WalkBackHomeApp {
     ctx.restore();
     const mask = layout.orientation === "portrait" ? this.images.weatherMaskPortrait : this.images.weatherMaskLandscape;
     if (!mask.complete || mask.naturalWidth === 0) return;
+    this.weatherMaskCanvas.width = canvasSize.w;
+    this.weatherMaskCanvas.height = canvasSize.h;
+    this.weatherMaskCtx.clearRect(0, 0, canvasSize.w, canvasSize.h);
+    drawSceneMask(this.weatherMaskCtx, mask, layout.orientation, layout.size, canvasSize);
+    const maskPixels = this.weatherMaskCtx.getImageData(0, 0, canvasSize.w, canvasSize.h);
+    grayscaleMaskToAlpha(maskPixels.data);
+    this.weatherMaskCtx.putImageData(maskPixels, 0, 0);
     ctx.save();
     ctx.globalCompositeOperation = "destination-in";
-    drawSceneMask(ctx, mask, layout.orientation, layout.size, canvasSize);
+    ctx.drawImage(this.weatherMaskCanvas, 0, 0, canvasSize.w, canvasSize.h);
     ctx.restore();
     this.ctx.drawImage(this.weatherCanvas, 0, 0, canvasSize.w, canvasSize.h);
   }
-  private drawWindowFocus(interaction: SceneInteraction | RoomInteraction, time: number, scale: number): void {
+  private drawWindowFocus(interaction: SceneInteraction | RoomInteraction, _time: number, scale: number): void {
     const x = (interaction.x - 200) * scale;
     const y = (interaction.y - 108) * scale;
     const w = 292 * scale;
@@ -3758,19 +3772,12 @@ export class WalkBackHomeApp {
     const glow = this.ctx.createRadialGradient(x + w / 2, y + h / 2, 20 * scale, x + w / 2, y + h / 2, 210 * scale);
     glow.addColorStop(0, "rgba(171, 214, 190, .16)");
     glow.addColorStop(1, "rgba(171, 214, 190, 0)");
+    this.ctx.save();
+    this.ctx.globalCompositeOperation = "screen";
     this.ctx.fillStyle = glow;
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    this.ctx.strokeStyle = "rgba(246, 221, 156, .72)";
-    this.ctx.lineWidth = 2 * scale;
-    this.ctx.strokeRect(x, y, w, h);
-    this.ctx.fillStyle = "rgba(218, 239, 216, .55)";
-    for (let i = 0; i < 12; i += 1) {
-      const px = x + ((i * 37 + time / 90) % Math.max(1, w));
-      const py = y + ((i * 19 + Math.sin(time / 420 + i) * 8) % Math.max(1, h));
-      this.ctx.fillRect(px, py, 2 * scale, 6 * scale);
-    }
+    this.ctx.restore();
   }
-
   private drawLampGlow(interaction: SceneInteraction | RoomInteraction, scale: number): void {
     const x = (interaction.x + 2) * scale;
     const y = (interaction.y - 44) * scale;
@@ -6340,7 +6347,7 @@ export class WalkBackHomeApp {
   }
   private closeLivingWindow(): void {
     this.livingWindowPanelOpen = false;
-    this.room.windowFocus = false;
+    this.room = setRoomWindowFocus(this.room, false);
     this.overlay.classList.remove("window-overlay");
     this.overlay.innerHTML = "";
     this.drawSpinWheelCanvas();
@@ -6361,17 +6368,13 @@ export class WalkBackHomeApp {
   }
   private roomWindow(): void {
     this.room.visits += 1;
-    this.room.windowFocus = !this.room.windowFocus;
+    this.room = setRoomWindowFocus(this.room, true);
+    this.livingWindowPanelOpen = true;
     this.room.reflections.push("Outside the window, the forest stays where it is.");
-    if (this.room.windowFocus) {
-      this.livingWindowPanelOpen = true;
-      this.livingWindowMoon = calculateMoonPhase();
-      this.renderLivingWindowOverlay();
-      if (weatherCacheStatus(this.livingWindowWeather) !== "fresh") void this.loadLivingWindowWeather();
-    } else {
-      this.closeLivingWindow();
-    }
-    this.showToast(this.room.windowFocus ? "The living window opens" : "Window released");
+    this.livingWindowMoon = calculateMoonPhase();
+    this.renderLivingWindowOverlay();
+    if (weatherCacheStatus(this.livingWindowWeather) !== "fresh") void this.loadLivingWindowWeather();
+    this.showToast("The living window opens");
     this.autosave();
   }
 
@@ -7322,7 +7325,7 @@ export class WalkBackHomeApp {
       tendencies: this.tendencies,
       readMemories: [...this.readMemories],
       completedMemoryEvents: [...this.completedMemoryEvents],
-      room: this.room,
+      room: normalizeRoomWindowState(this.room),
       personalPlayer: this.personalPlayer,
       finalJourney: []
     };
@@ -7352,7 +7355,7 @@ export class WalkBackHomeApp {
     this.readMemories = new Set(state.readMemories);
     this.completedMemoryEvents = new Set(state.completedMemoryEvents ?? []);
     this.chapterMemoryRun = null;
-    this.room = { ...this.room, ...state.room };
+    this.room = normalizeRoomWindowState({ ...this.room, ...state.room });
     this.personalPlayer = { ...this.personalPlayer, ...(state.personalPlayer ?? this.save.loadPersonalPlayer() ?? {}) };
     this.normalizePersonalPlayerToggles();
     if (this.isAuthoredRuntimeScene()) {

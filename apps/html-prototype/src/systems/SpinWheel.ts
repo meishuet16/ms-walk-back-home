@@ -11,6 +11,15 @@ export function addSpinChoice(choices: string[], value: string): string[] {
   return next ? [...choices, next] : [...choices];
 }
 
+export function addSpinChoiceToPreset(presets: SpinPreset[], selectedPresetId: string, value: string): { presets: SpinPreset[]; selectedPresetId: string; added: boolean } {
+  const activeId = normalizeSelectedPresetId(presets, selectedPresetId);
+  const active = presets.find((preset) => preset.id === activeId);
+  if (!active) return { presets: [...presets], selectedPresetId: activeId, added: false };
+  const choices = addSpinChoice(active.choices, value);
+  if (choices.length === active.choices.length) return { presets: [...presets], selectedPresetId: activeId, added: false };
+  return { presets: presets.map((preset) => preset.id === activeId ? { ...preset, choices } : { ...preset, choices: [...preset.choices] }), selectedPresetId: activeId, added: true };
+}
+
 export function removeSpinChoice(choices: string[], index: number): string[] {
   return index >= 0 && index < choices.length ? choices.filter((_, itemIndex) => itemIndex !== index) : [...choices];
 }

@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
 import { toolboxPages, createToolboxState, moveToolSelection, selectTool, confirmTool, toolboxToolRegistry } from "../src/systems/ToolboxModel.js";
-import { normalizeSelectedPresetId, spinChoiceIndex, spinWheelGeometry, spinTargetRotation, winnerIndexAtPointer } from "../src/systems/SpinWheel.js";
+import { addSpinChoiceToPreset, createSpinPreset, normalizeSelectedPresetId, spinChoiceIndex, spinWheelGeometry, spinTargetRotation, winnerIndexAtPointer } from "../src/systems/SpinWheel.js";
 import { evaluateCalculator, formatCalculatorValue } from "../src/systems/Calculator.js";
 import { convertUnit, formatUnitValue, swapUnits } from "../src/systems/UnitConverter.js";
 import { completeTimerIfNeeded, createTimerState, startTimer, timerRemaining } from "../src/systems/TimerTool.js";
@@ -76,4 +76,28 @@ test("Toolbox keyboard guards protect handled events and focused buttons", () =>
   assert.ok((source.match(/if \(event\.defaultPrevented\) return;/g) ?? []).length >= 2);
   assert.match(source, /input, textarea, select, button, audio, video/);
   assert.doesNotMatch(source, /focusedControl && event\.key !== "Escape"/);
+});
+
+test("Spin Add integration uses the selected preset, clears the field, persists, and rerenders", () => {
+  const source = readFileSync(resolve(process.cwd(), "src/app.ts"), "utf8");
+  assert.match(source, /addSpinChoiceToPreset/);
+  assert.match(source, /renderToolboxOverlay[\s\S]*?normalizeSelectedPresetId/);
+  assert.match(source, /data-action=toolbox-spin-add/);
+  assert.match(source, /this\.persistToolboxState\(\)[\s\S]*?this\.renderToolboxOverlay\(\)/);
+});
+test("Spin Add integration accumulates Latin and Chinese choices into real wheel segments", () => {
+  let presets = [createSpinPreset("today", "Today", ["A"])];
+  let selectedPresetId = "today";
+  for (const choice of ["McD", "鸭饭", "面"]) {
+    const result = addSpinChoiceToPreset(presets, selectedPresetId, choice);
+    assert.equal(result.added, true);
+    presets = result.presets;
+    selectedPresetId = result.selectedPresetId;
+  }
+  const choices = presets[0].choices;
+  assert.deepEqual(choices, ["A", "McD", "鸭饭", "面"]);
+  const geometry = spinWheelGeometry(choices);
+  assert.equal(geometry.segments.length, 4);
+  const rotation = spinTargetRotation(choices.length, 3, () => .25, false);
+  assert.equal(winnerIndexAtPointer(rotation, choices.length), 3);
 });

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canReachRoomInteraction, createDefaultRoomState, moveRoomPlayer, nearestRoomInteraction, roomInteractions, roomObstacles, selectVinylRecord, toggleRoomLamp, vinylPlayerActions, vinylRecords, vinylRecordsFromAudioFiles, withCustomVinylCover } from "../src/systems/MujiRoom.js";
+import { canReachRoomInteraction, createDefaultRoomState, moveRoomPlayer, nearestRoomInteraction, normalizeRoomWindowState, roomInteractions, roomObstacles, selectVinylRecord, setRoomWindowFocus, toggleRoomLamp, vinylPlayerActions, vinylRecords, vinylRecordsFromAudioFiles, withCustomVinylCover } from "../src/systems/MujiRoom.js";
 
 test("muji room movement blocks walls and major furniture while leaving interactions reachable", () => {
   const start = { x: 126, y: 438 };
@@ -79,4 +79,10 @@ test("Muji Room table interaction is the toolbox at the existing position", () =
   const toolbox = roomInteractions.find((interaction) => interaction.id === "toolbox");
   assert.deepEqual(toolbox, { id: "toolbox", label: "Toolbox", x: 562, y: 316, radius: 62 });
   assert.equal(roomInteractions.map((interaction) => String(interaction.id)).includes("residue"), false);
+});
+
+test("room window focus is session-only and restored state starts closed", () => {
+  const focused = setRoomWindowFocus(createDefaultRoomState(), true);
+  assert.equal(focused.windowFocus, true);
+  assert.equal(normalizeRoomWindowState(focused).windowFocus, false);
 });
