@@ -8,6 +8,9 @@ export type ToolboxRenderState = {
   presets: SpinPreset[];
   selectedPresetId: string;
   spinChoices: string[];
+  spinChoiceDraft: string;
+  spinPresetNameDraft: string;
+  persistenceStatus: string;
   spinResult: string;
   spinRotation: number;
   spinSpinning: boolean;

@@ -41,7 +41,7 @@ createServer(async (req, res) => {
     return;
   }
   const body = await readFile(file);
-  res.writeHead(200, { "content-type": mime[extname(file)] ?? "application/octet-stream" });
+  res.writeHead(200, { "content-type": mime[extname(file)] ?? "application/octet-stream", "cache-control": "no-store" });
   res.end(body);
 }).listen(port, "0.0.0.0", () => {
   console.log(`Walk Back Home HTML prototype running at http://localhost:${port}`);

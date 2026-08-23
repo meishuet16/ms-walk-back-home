@@ -107,4 +107,7 @@ test("Spin Add tolerates stale preset state and New preset uses an inline naming
   assert.match(source, /toolbox-spin-add.*spinSpinning/);
   assert.match(source, /toolbox-preset-create/);
   assert.doesNotMatch(source, /window.prompt/);
+  assert.match(source, /syncSpinWheelForm[\s\S]*?button\.type = "button"/);
+  assert.match(source, /field === "spin-choice"[\s\S]*?this\.spinChoiceDraft/);
+  assert.match(source, /field === "spin-preset-name"[\s\S]*?this\.spinPresetNameDraft/);
 });

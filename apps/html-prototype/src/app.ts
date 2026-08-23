@@ -275,6 +275,9 @@ export class WalkBackHomeApp {
   private toolboxPresets: SpinPreset[] = [createSpinPreset("today", "今天吃什么", ["A", "B", "C"]), createSpinPreset("names", "Random names", ["Mochi", "Muji", "Mimi"])]
   private selectedToolboxPresetId = "today";
   private spinResult = "";
+  private spinChoiceDraft = "";
+  private spinPresetNameDraft = "";
+  private toolboxPersistenceStatus = "";
   private spinRotation = 0;
   private spinSpinning = false;
   private spinAnimationFrame = 0;
@@ -872,6 +875,9 @@ export class WalkBackHomeApp {
       presets: this.toolboxPresets,
       selectedPresetId: this.selectedToolboxPresetId,
       spinChoices: preset.choices,
+      spinChoiceDraft: this.spinChoiceDraft,
+      spinPresetNameDraft: this.spinPresetNameDraft,
+      persistenceStatus: this.toolboxPersistenceStatus,
       spinResult: this.spinResult,
       spinRotation: this.spinRotation,
       spinSpinning: this.spinSpinning,
@@ -913,8 +919,24 @@ export class WalkBackHomeApp {
     this.overlay.classList.add("toolbox-overlay");
     this.overlay.classList.remove("dialogue-open", "lightweight-presentation");
     this.overlay.innerHTML = renderToolbox(state);
+    this.syncSpinWheelForm();
     this.drawSpinWheelCanvas();
     this.syncGameplayChromeVisibility();
+  }
+
+  private syncSpinWheelForm(): void {
+    const choice = this.overlay.querySelector<HTMLInputElement>("#toolbox-spin-choice");
+    const presetName = this.overlay.querySelector<HTMLInputElement>("[data-toolbox-field=spin-preset-name]");
+    if (choice) choice.value = this.spinChoiceDraft;
+    if (presetName) presetName.value = this.spinPresetNameDraft;
+    for (const button of Array.from(this.overlay.querySelectorAll<HTMLButtonElement>("[data-action^=toolbox-]"))) button.type = "button";
+    if (this.toolboxPersistenceStatus) {
+      const status = document.createElement("p");
+      status.className = "toolbox-status";
+      status.setAttribute("aria-live", "polite");
+      status.textContent = this.toolboxPersistenceStatus;
+      this.overlay.querySelector(".spin-wheel-tool")?.append(status);
+    }
   }
 
   private async handleToolboxAction(action: string, target: HTMLElement): Promise<void> {
@@ -945,9 +967,10 @@ export class WalkBackHomeApp {
     const preset = this.toolboxPresets.find((item) => item.id === this.selectedToolboxPresetId);
     if (action === "toolbox-spin-add" && !this.spinSpinning) {
       const input = this.overlay.querySelector<HTMLInputElement>("#toolbox-spin-choice");
-      const added = addSpinChoiceToPreset(this.toolboxPresets, this.selectedToolboxPresetId, input?.value ?? "");
+      const added = addSpinChoiceToPreset(this.toolboxPresets, this.selectedToolboxPresetId, input?.value ?? this.spinChoiceDraft);
       this.toolboxPresets = added.presets;
       this.selectedToolboxPresetId = added.selectedPresetId;
+      this.spinChoiceDraft = "";
       if (input) input.value = "";
       this.spinResult = "";
       this.persistToolboxState();
@@ -965,11 +988,12 @@ export class WalkBackHomeApp {
     }
     if (action === "toolbox-preset-create" && !this.spinSpinning) {
       const input = this.overlay.querySelector<HTMLInputElement>("[data-toolbox-field=spin-preset-name]");
-      const name = input?.value.trim() ?? "";
+      const name = (input?.value ?? this.spinPresetNameDraft).trim();
       if (!name) { input?.focus(); return this.renderToolboxOverlay(); }
       const id = "preset-" + Date.now();
       this.toolboxPresets.push(createSpinPreset(id, name, []));
       this.selectedToolboxPresetId = id;
+      this.spinPresetNameDraft = "";
       if (input) input.value = "";
       this.persistToolboxState();
       return this.renderToolboxOverlay();
@@ -980,8 +1004,9 @@ export class WalkBackHomeApp {
     }
     if (action === "toolbox-preset-rename" && preset && !this.spinSpinning) {
       const input = this.overlay.querySelector<HTMLInputElement>("[data-toolbox-field=spin-preset-name]");
-      const next = input?.value.trim() ?? "";
+      const next = (input?.value ?? this.spinPresetNameDraft).trim();
       if (next) preset.name = renameSpinPreset(preset, next).name;
+      this.spinPresetNameDraft = "";
       if (input) input.value = "";
       this.persistToolboxState();
       return this.renderToolboxOverlay();
@@ -1082,6 +1107,7 @@ export class WalkBackHomeApp {
   }
 
   private drawSpinWheelCanvas(): void {
+    if (!this.toolboxOpen || this.toolboxView.screen !== "tool" || this.toolboxView.selected !== "spin-wheel") return;
     const canvas = this.overlay.querySelector<HTMLCanvasElement>("[data-spin-wheel-canvas]");
     if (!canvas) return;
     const context = canvas.getContext("2d");
@@ -1237,7 +1263,8 @@ export class WalkBackHomeApp {
   private handleToolboxFieldInput(target: HTMLElement): void {
     const field = target.dataset.toolboxField;
     const value = target instanceof HTMLInputElement || target instanceof HTMLSelectElement ? target.value : "";
-    if (field === "spin-choice") return;
+    if (field === "spin-choice") { this.spinChoiceDraft = value; return; }
+    if (field === "spin-preset-name") { this.spinPresetNameDraft = value; return; }
     if (field === "converter-amount") this.converterAmount = value;
     if (field === "currency-amount") this.currencyAmount = value;
     if (field === "timer-minutes" || field === "timer-seconds") this.timerState.durationMs = Math.max(0, this.timerDurationFromPanel() * 1000);
@@ -1359,7 +1386,12 @@ export class WalkBackHomeApp {
       dateMode: this.dateMode,
       presets: this.toolboxPresets
     };
-    this.save.saveToolboxState(state);
+    try {
+      this.save.saveToolboxState(state);
+      this.toolboxPersistenceStatus = "";
+    } catch {
+      this.toolboxPersistenceStatus = "Browser storage unavailable; this session is still usable.";
+    }
   }
   private formatToolboxDuration(milliseconds: number): string {
     const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
@@ -6268,7 +6300,7 @@ export class WalkBackHomeApp {
     this.drawSpinWheelCanvas();
     this.syncGameplayChromeVisibility();
     this.persistLivingWindowState();
-    this.autosave();
+    window.setTimeout(() => this.autosave(), 0);
   }
 
   private persistLivingWindowState(): void { this.save.saveLivingWindowState({ version: 1, location: this.livingWindowLocation, weather: this.livingWindowWeather, currency: null }); }
@@ -6289,7 +6321,6 @@ export class WalkBackHomeApp {
     this.renderLivingWindowOverlay();
     if (weatherCacheStatus(this.livingWindowWeather) !== "fresh") void this.loadLivingWindowWeather();
     this.showToast("The living window opens");
-    this.autosave();
   }
 
   private roomLamp(): void {

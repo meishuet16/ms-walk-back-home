@@ -17,6 +17,8 @@ test("panel renders before weather loading and stays open through network failur
   const source = readFileSync(resolve(process.cwd(), "src/app.ts"), "utf8");
   const roomWindow = source.slice(source.indexOf("private roomWindow"));
   assert.match(roomWindow, /this\.livingWindowPanelOpen = true[\s\S]*?this\.renderLivingWindowOverlay\(\)[\s\S]*?void this\.loadLivingWindowWeather\(\)/);
+  const roomWindowMethod = roomWindow.slice(0, roomWindow.indexOf("private roomLamp"));
+  assert.doesNotMatch(roomWindowMethod, /this\.autosave\(\)/);
   assert.match(source, /catch \{[\s\S]*?livingWindowStatus = livingWindowStatusCopy\(this\.livingWindowWeather, "error"\)/);
   assert.match(source, /if \(this\.livingWindowPanelOpen\) this\.renderLivingWindowOverlay\(\)/);
 });
@@ -28,4 +30,11 @@ test("legacy windowFocus is stripped while the panel remains closed after reload
   assert.match(source, /this\.livingWindowPanelOpen = false/);
   const legacy = { ...createDefaultRoomState(), windowFocus: true };
   assert.equal("windowFocus" in normalizeRoomWindowState(legacy), false);
+});
+
+test("Window frames do not query or draw the Spin canvas while the panel is open", () => {
+  const source = readFileSync(resolve(process.cwd(), "src/app.ts"), "utf8");
+  const draw = source.slice(source.indexOf("private drawSpinWheelCanvas"), source.indexOf("private async processPdfLocally"));
+  assert.match(draw, /if \(!this\.toolboxOpen/);
+  assert.match(draw, /this\.toolboxView\.selected !== "spin-wheel"/);
 });
