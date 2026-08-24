@@ -1,0 +1,101 @@
+[
+  {
+    "file": "et-portraits/01-questioning.png",
+    "size": [
+      384,
+      350
+    ],
+    "mode": "RGBA",
+    "transparent_png": true
+  },
+  {
+    "file": "et-portraits/02-speaking.png",
+    "size": [
+      384,
+      350
+    ],
+    "mode": "RGBA",
+    "transparent_png": true
+  },
+  {
+    "file": "et-portraits/03-guilt-quiet.png",
+    "size": [
+      384,
+      350
+    ],
+    "mode": "RGBA",
+    "transparent_png": true
+  },
+  {
+    "file": "et-portraits/04-carrot-milk-disgust.png",
+    "size": [
+      384,
+      350
+    ],
+    "mode": "RGBA",
+    "transparent_png": true
+  },
+  {
+    "file": "et-portraits/05-hand-stop.png",
+    "size": [
+      367,
+      350
+    ],
+    "mode": "RGBA",
+    "transparent_png": true
+  },
+  {
+    "file": "et-portraits/06-profile-look.png",
+    "size": [
+      384,
+      350
+    ],
+    "mode": "RGBA",
+    "transparent_png": true
+  },
+  {
+    "file": "et-portraits/07-hair-touch.png",
+    "size": [
+      384,
+      350
+    ],
+    "mode": "RGBA",
+    "transparent_png": true
+  },
+  {
+    "file": "et-portraits/08-soft-look.png",
+    "size": [
+      371,
+      350
+    ],
+    "mode": "RGBA",
+    "transparent_png": true
+  },
+  {
+    "file": "group-echoes/01-morning-angela-st.png",
+    "size": [
+      520,
+      334
+    ],
+    "mode": "RGBA",
+    "transparent_png": true
+  },
+  {
+    "file": "message-echo/01-later-night-message.png",
+    "size": [
+      550,
+      344
+    ],
+    "mode": "RGBA",
+    "transparent_png": true
+  },
+  {
+    "file": "group-echoes/02-haircut-home-invite.png",
+    "size": [
+      506,
+      344
+    ],
+    "mode": "RGBA",
+    "transparent_png": true
+  }
+]
