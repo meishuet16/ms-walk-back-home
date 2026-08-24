@@ -122,3 +122,24 @@ test("Media editor controls dispatch through the Toolbox action gate", () => {
   const gate = source.slice(gateStart, gateEnd);
   for (const action of ["media-zoom-in", "media-zoom-out", "media-zoom-reset", "media-play-selection"]) assert.match(gate, new RegExp('"' + action + '"'));
 });
+
+test("Local PDF and media jobs patch stable Toolbox regions and expose cancellation", () => {
+  const source = readFileSync(resolve(process.cwd(), "src/app.ts"), "utf8");
+  for (const method of ["processPdfLocally", "processMediaLocally"]) {
+    const start = source.indexOf(`private async ${method}`);
+    const end = source.indexOf("\n  private ", start + 1);
+    const body = source.slice(start, end < 0 ? undefined : end);
+    assert.match(body, /refreshToolbox(?:Pdf|Media)View/);
+    assert.doesNotMatch(body, /renderToolboxOverlay\(\)/);
+  }
+  assert.match(source, /pdf-cancel/);
+  assert.match(source, /media-cancel/);
+  assert.match(source, /this\.mediaAbortController\?\.abort\(\)/);
+});
+
+test("Waveform seeking synchronizes the media preview cursor", () => {
+  const source = readFileSync(resolve(process.cwd(), "src/app.ts"), "utf8");
+  const start = source.indexOf("private updateMediaWaveformPointer");
+  const end = source.indexOf("\n  private playMediaSelection", start);
+  assert.match(source.slice(start, end), /currentTime/);
+});

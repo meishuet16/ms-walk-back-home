@@ -76,7 +76,7 @@ import { convertUnit, formatUnitValue, swapUnits, unitsForCategory } from "./sys
 import { convertCurrency, currencyCacheStatus, currencyCodes, currencyPairKey, currencyPayloadMatchesPair, currencyRequestIsCurrent, fetchCurrencyRate, type CurrencyCode, type CurrencyRatePayload } from "./systems/CurrencyRates.js";
 import { completeTimerIfNeeded, createTimerState, pauseTimer, resetTimer, startTimer, timerRemaining, stopwatchElapsed, type TimerState } from "./systems/TimerTool.js";
 import { addDateDays, dateDifference, localDateString, relativeDateLabel } from "./systems/DateTool.js";
-import { renderToolbox, type ToolboxRenderState } from "./systems/ToolboxView.js";
+import { renderMediaEditor, renderMediaPreview, renderToolbox, type ToolboxRenderState } from "./systems/ToolboxView.js";
 import { createLivingWindowViewModel, defaultWindowLocation, fetchOpenMeteoLocations, fetchOpenMeteoWeather, livingWindowStatusCopy, weatherCacheStatus, type WeatherSnapshot, type WindowLocation } from "./systems/LivingWindow.js";
 import { calculateMoonPhase, type MoonPhase } from "./systems/MoonPhase.js";
 import { drawSceneAsset } from "./systems/SceneAssetRenderer.js";
@@ -683,7 +683,7 @@ export class WalkBackHomeApp {
       void this.handleLivingWindowAction(action, target);
       return;
     }
-    if (["toolbox-close", "toolbox-select", "toolbox-confirm", "toolbox-back", "toolbox-page", "toolbox-page-prev", "toolbox-page-next", "toolbox-spin-add", "toolbox-spin-remove", "toolbox-spin", "toolbox-preset-new", "toolbox-preset-create", "toolbox-preset-rename", "toolbox-preset-delete", "calculator-key", "converter-swap", "currency-swap", "currency-refresh", "timer-mode", "timer-start", "timer-pause", "timer-reset", "date-difference", "date-add", "date-subtract", "date-until-since", "media-zoom-in", "media-zoom-out", "media-zoom-reset", "media-play-selection", "pdf-process", "media-process"].includes(action)) {
+    if (["toolbox-close", "toolbox-select", "toolbox-confirm", "toolbox-back", "toolbox-page", "toolbox-page-prev", "toolbox-page-next", "toolbox-spin-add", "toolbox-spin-remove", "toolbox-spin", "toolbox-preset-new", "toolbox-preset-create", "toolbox-preset-rename", "toolbox-preset-delete", "calculator-key", "converter-swap", "currency-swap", "currency-refresh", "timer-mode", "timer-start", "timer-pause", "timer-reset", "date-difference", "date-add", "date-subtract", "date-until-since", "media-zoom-in", "media-zoom-out", "media-zoom-reset", "media-play-selection", "pdf-process", "pdf-cancel", "media-process", "media-cancel"].includes(action)) {
       void this.handleToolboxAction(action, target);
       return;
     }
@@ -896,6 +896,10 @@ export class WalkBackHomeApp {
 
   private closeToolbox(): void {
     if (!this.toolboxOpen) return;
+    this.pdfAbortController?.abort();
+    this.mediaAbortController?.abort();
+    this.mediaLoadAbortController?.abort();
+    cancelAnimationFrame(this.mediaPlaybackFrame);
     this.toolboxOpen = false;
     this.toolboxView = createToolboxState({ selected: this.toolboxView.selected });
     this.persistToolboxState();
@@ -957,6 +961,7 @@ export class WalkBackHomeApp {
       pdfFileSummary: this.pdfFiles.map((file) => file.name).join(", "),
       pdfRange: this.pdfRange,
       pdfStatus: this.pdfStatus,
+      pdfBusy: this.pdfAbortController !== null,
       mediaMode: this.mediaMode,
       mediaFileName: this.mediaFileName,
       mediaFormat: this.mediaFormat,
@@ -964,6 +969,8 @@ export class WalkBackHomeApp {
       mediaEnd: this.mediaEnd,
       mediaStatus: this.mediaStatus,
       mediaProgress: this.mediaProgress,
+      mediaLoading: this.mediaLoadAbortController !== null,
+      mediaBusy: this.mediaAbortController !== null,
       mediaDurationLabel: this.mediaDuration > 0 ? formatTimelineTime(this.mediaTimeline.durationMs) : "",
       mediaPreviewUrl: this.mediaPreviewUrl,
       mediaPreviewKind: this.mediaPreviewKind,
@@ -1049,6 +1056,48 @@ export class WalkBackHomeApp {
     if (list) list.scrollTop = listScroll;
     if (options.focusChoice) this.overlay.querySelector<HTMLInputElement>("[data-toolbox-field=spin-choice]")?.focus();
     if (options.focusPreset) this.overlay.querySelector<HTMLInputElement>("[data-toolbox-field=spin-preset-name]")?.focus();
+  }
+
+  private refreshToolboxPdfView(): void {
+    const tool = this.overlay.querySelector<HTMLElement>(".pdf-tool");
+    if (!tool) return;
+    const busy = this.pdfAbortController !== null;
+    const status = tool.querySelector<HTMLElement>(".toolbox-status");
+    const process = tool.querySelector<HTMLButtonElement>("[data-action=pdf-process]");
+    const cancel = tool.querySelector<HTMLButtonElement>("[data-action=pdf-cancel]");
+    if (status) status.textContent = this.pdfStatus;
+    if (process) process.disabled = busy;
+    if (cancel) { cancel.disabled = !busy; cancel.hidden = !busy; }
+  }
+
+  private refreshToolboxMediaView(): void {
+    const tool = this.overlay.querySelector<HTMLElement>(".media-tool");
+    if (!tool) return;
+    const state = {
+      mediaPreviewUrl: this.mediaPreviewUrl,
+      mediaPreviewKind: this.mediaPreviewKind,
+      mediaDurationLabel: this.mediaDuration > 0 ? formatTimelineTime(this.mediaTimeline.durationMs) : "",
+      mediaWaveformReady: this.mediaPeaks.length > 0,
+      mediaZoom: this.mediaTimeline.zoom,
+      mediaStart: this.mediaStart,
+      mediaEnd: this.mediaEnd
+    };
+    const summary = tool.querySelector<HTMLElement>(".file-summary");
+    const preview = tool.querySelector<HTMLElement>(".media-preview-slot");
+    const editor = tool.querySelector<HTMLElement>(".media-editor-slot");
+    const status = tool.querySelector<HTMLElement>(".toolbox-status");
+    const progress = tool.querySelector<HTMLProgressElement>("progress");
+    const exportButton = tool.querySelector<HTMLButtonElement>("[data-action=media-process]");
+    const cancel = tool.querySelector<HTMLButtonElement>("[data-action=media-cancel]");
+    const busy = this.mediaAbortController !== null;
+    if (summary) summary.textContent = this.mediaFileName || "Choose a local media file";
+    if (preview) preview.innerHTML = renderMediaPreview(state);
+    if (editor) editor.innerHTML = renderMediaEditor(state);
+    if (status) status.textContent = this.mediaStatus;
+    if (progress) progress.value = this.mediaProgress;
+    if (exportButton) exportButton.disabled = !this.mediaFileName || this.mediaLoadAbortController !== null || busy || this.mediaDuration <= 0;
+    if (cancel) { cancel.disabled = !busy; cancel.hidden = !busy; }
+    this.drawMediaWaveformCanvas();
   }
 
   private async handleToolboxAction(action: string, target: HTMLElement): Promise<void> {
@@ -1211,7 +1260,15 @@ export class WalkBackHomeApp {
       return;
     }
     if (action === "pdf-process") return this.processPdfLocally();
+    if (action === "pdf-cancel") {
+      this.pdfAbortController?.abort(new DOMException("Cancelled", "AbortError"));
+      return;
+    }
     if (action === "media-process") return this.processMediaLocally();
+    if (action === "media-cancel") {
+      this.mediaAbortController?.abort(new DOMException("Cancelled", "AbortError"));
+      return;
+    }
   }
   private async startSpinAnimation(choices: string[]): Promise<void> {
     if (this.spinSpinning || !choices.length) return;
@@ -1292,7 +1349,14 @@ export class WalkBackHomeApp {
   private async processPdfLocally(): Promise<void> {
     if (!this.pdfFiles.length) {
       this.pdfStatus = "Choose a local file first";
-      return this.renderToolboxOverlay();
+      this.refreshToolboxPdfView();
+      return;
+    }
+    const validation = this.validatePdfSelection(this.pdfMode, this.pdfFiles);
+    if (validation) {
+      this.pdfStatus = validation;
+      this.refreshToolboxPdfView();
+      return;
     }
     this.pdfAbortController?.abort();
     const controller = new AbortController();
@@ -1301,7 +1365,7 @@ export class WalkBackHomeApp {
     const mode = this.pdfMode;
     const rangeText = this.pdfRange;
     this.pdfStatus = "Processing locally...";
-    this.renderToolboxOverlay();
+    this.refreshToolboxPdfView();
     try {
       const result: { images?: Blob[]; bytes?: Uint8Array; filename?: string; detail?: string } = await runAbortableStage({
         label: "PDF processing",
@@ -1309,26 +1373,26 @@ export class WalkBackHomeApp {
         parentSignal: controller.signal,
         run: async () => {
           const first = files[0];
-          if (mode === "pdf-to-images") return { images: await pdfToPngImages(first) };
+          if (mode === "pdf-to-images") return { images: await pdfToPngImages(first, 1.5, controller.signal) };
           let bytes: Uint8Array;
           let filename = pdfOutputFilename(first.name, mode);
           let detail = "";
           if (mode === "merge") {
-            bytes = await mergePdfFiles(files);
+            bytes = await mergePdfFiles(files, controller.signal);
             filename = pdfOutputFilename(first.name, "merged");
           } else if (mode === "images-to-pdf") {
             const images = files.filter((file) => file.type.startsWith("image/"));
             if (!images.length) throw new Error("Choose at least one image");
-            bytes = await imagesToPdf(images);
+            bytes = await imagesToPdf(images, controller.signal);
             filename = pdfOutputFilename(first.name, "document");
           } else if (mode === "compress") {
-            const optimized = await optimizePdf(first);
+            const optimized = await optimizePdf(first, controller.signal);
             bytes = optimized.bytes;
             detail = optimized.report.message + " - " + optimized.report.originalBytes + " to " + optimized.report.resultBytes + " bytes";
           } else {
-            const pageCount = await this.pdfPageCount(first);
+            const pageCount = await this.pdfPageCount(first, controller.signal);
             const operation = parsePdfPageOperation(rangeText, pageCount);
-            bytes = operation.deleteMode ? await deletePdfPages(first, operation.pages) : await reorderOrExtractPdf(first, operation.pages);
+            bytes = operation.deleteMode ? await deletePdfPages(first, operation.pages, controller.signal) : await reorderOrExtractPdf(first, operation.pages, controller.signal);
             filename = pdfOutputFilename(first.name, mode === "extract" ? "pages" : "reordered");
           }
           return { bytes, filename, detail };
@@ -1350,14 +1414,24 @@ export class WalkBackHomeApp {
     } finally {
       if (this.pdfAbortController === controller) {
         this.pdfAbortController = null;
-        if (this.toolboxOpen) this.renderToolboxOverlay();
+        this.refreshToolboxPdfView();
       }
     }
   }
 
-  private async pdfPageCount(file: Blob): Promise<number> {
+  private validatePdfSelection(mode: string, files: File[]): string {
+    if (mode === "images-to-pdf") {
+      return files.every((file) => file.type.startsWith("image/")) ? "" : "Choose image files only for Images → PDF";
+    }
+    if (mode === "merge") return files.every((file) => isPdfFile(file)) ? "" : "Choose PDF files only for Merge PDFs";
+    if (mode === "pdf-to-images") return files.length === 1 && isPdfFile(files[0]) ? "" : "Choose exactly one PDF for PDF → Images";
+    return files.length === 1 && isPdfFile(files[0]) ? "" : "Choose exactly one PDF for this operation";
+  }
+
+  private async pdfPageCount(file: Blob, signal?: AbortSignal): Promise<number> {
     const { PDFDocument } = await import("pdf-lib");
     const document = await PDFDocument.load(await file.arrayBuffer());
+    if (signal?.aborted) throw signal.reason ?? new DOMException("Cancelled", "AbortError");
     return document.getPageCount();
   }
 
@@ -1458,6 +1532,8 @@ export class WalkBackHomeApp {
     if (this.mediaWaveformDrag === "start") this.mediaTimeline = setTrimBoundary(this.mediaTimeline, "start", Math.min(value, this.mediaTimeline.endMs - 1));
     else if (this.mediaWaveformDrag === "end") this.mediaTimeline = setTrimBoundary(this.mediaTimeline, "end", Math.max(value, this.mediaTimeline.startMs + 1));
     else this.mediaTimeline = setPlayhead(this.mediaTimeline, value);
+    const media = this.overlay.querySelector<HTMLMediaElement>(".media-preview");
+    if (media) media.currentTime = this.mediaTimeline.playheadMs / 1000;
     this.syncMediaTimelineControls();
     event.preventDefault();
   }
@@ -1498,6 +1574,7 @@ export class WalkBackHomeApp {
   }
 
   private async prepareMediaFile(file: File | null): Promise<void> {
+    this.mediaAbortController?.abort(new DOMException("Media file replaced", "AbortError"));
     this.mediaLoadAbortController?.abort();
     this.mediaLoadAbortController = null;
     this.mediaPeaks = [];
@@ -1506,7 +1583,7 @@ export class WalkBackHomeApp {
     this.mediaPreviewUrl = "";
     if (!file) {
       this.mediaStatus = "";
-      if (this.toolboxOpen) this.renderToolboxOverlay();
+      this.refreshToolboxMediaView();
       return;
     }
     const controller = new AbortController();
@@ -1514,7 +1591,7 @@ export class WalkBackHomeApp {
     this.mediaPreviewKind = file.type.startsWith("video/") ? "video" : "audio";
     this.mediaPreviewUrl = URL.createObjectURL(file);
     this.mediaStatus = "Reading waveform locally...";
-    if (this.toolboxOpen) this.renderToolboxOverlay();
+    this.refreshToolboxMediaView();
     let timeout = 0;
     try {
       const decoded = await Promise.race([
@@ -1545,13 +1622,14 @@ export class WalkBackHomeApp {
         this.mediaStart = formatTimelineTime(this.mediaTimeline.startMs);
         this.mediaEnd = formatTimelineTime(this.mediaTimeline.endMs);
       }
-      if (this.toolboxOpen) this.renderToolboxOverlay();
+      this.refreshToolboxMediaView();
     }
   }
   private async processMediaLocally(): Promise<void> {
     if (!this.mediaFile) {
       this.mediaStatus = "Choose a local media file first";
-      return this.renderToolboxOverlay();
+      this.refreshToolboxMediaView();
+      return;
     }
     this.mediaAbortController?.abort();
     const controller = new AbortController();
@@ -1560,7 +1638,7 @@ export class WalkBackHomeApp {
     const mode = this.mediaMode as "extract-audio" | "convert-audio" | "trim-audio" | "trim-video";
     this.mediaProgress = 0;
     this.mediaStatus = "Loading local media engine…";
-    this.renderToolboxOverlay();
+    this.refreshToolboxMediaView();
     try {
       const result = await processMediaFile(file, mode, {
         start: this.mediaTimeline.startMs / 1000,
@@ -1580,7 +1658,7 @@ export class WalkBackHomeApp {
     } finally {
       if (this.mediaAbortController === controller) {
         this.mediaAbortController = null;
-        this.renderToolboxOverlay();
+        this.refreshToolboxMediaView();
       }
     }
   }
@@ -8162,4 +8240,8 @@ export class WalkBackHomeApp {
     this.showToast(this.settings.compact ? "Compact view" : "Large view");
     this.autosave();
   }
+}
+
+function isPdfFile(file: File | undefined): boolean {
+  return Boolean(file && (file.type === "application/pdf" || /\.pdf$/i.test(file.name)));
 }

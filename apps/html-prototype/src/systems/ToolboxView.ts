@@ -41,6 +41,7 @@ export type ToolboxRenderState = {
   pdfFileSummary: string;
   pdfRange: string;
   pdfStatus: string;
+  pdfBusy: boolean;
   mediaMode: string;
   mediaFileName: string;
   mediaFormat: string;
@@ -48,6 +49,8 @@ export type ToolboxRenderState = {
   mediaEnd: string;
   mediaStatus: string;
   mediaProgress: number;
+  mediaLoading: boolean;
+  mediaBusy: boolean;
   mediaDurationLabel: string;
   mediaPreviewUrl: string;
   mediaPreviewKind: "audio" | "video";
@@ -127,22 +130,30 @@ function renderDate(state: ToolboxRenderState): string {
 }
 
 function renderPdf(state: ToolboxRenderState): string {
-  return `<section class="toolbox-utility file-tool"><label>Operation<select data-toolbox-field="pdf-mode"><option value="merge" ${state.pdfMode === "merge" ? "selected" : ""}>Merge PDFs</option><option value="extract" ${state.pdfMode === "extract" ? "selected" : ""}>Split / Extract</option><option value="reorder" ${state.pdfMode === "reorder" ? "selected" : ""}>Reorder / Delete</option><option value="images-to-pdf" ${state.pdfMode === "images-to-pdf" ? "selected" : ""}>Images → PDF</option><option value="pdf-to-images" ${state.pdfMode === "pdf-to-images" ? "selected" : ""}>PDF → Images</option><option value="compress" ${state.pdfMode === "compress" ? "selected" : ""}>Compress / Optimize</option></select></label><input type="file" data-toolbox-field="pdf-files" accept=".pdf,application/pdf,image/jpeg,image/png,image/webp" multiple><p class="file-summary">${escapeHtml(state.pdfFileSummary || "Choose local files")}</p>${state.pdfMode !== "merge" && state.pdfMode !== "images-to-pdf" && state.pdfMode !== "compress" ? `<label>Pages / order<input data-toolbox-field="pdf-range" value="${escapeHtml(state.pdfRange)}" placeholder="1, 3-5 or delete:2"></label>` : ""}<button class="primary" data-action="pdf-process">Process locally</button><p class="toolbox-status">${escapeHtml(state.pdfStatus)}</p><small>Processed on this device.</small></section>`;
+  return `<section class="toolbox-utility file-tool pdf-tool"><label>Operation<select data-toolbox-field="pdf-mode"><option value="merge" ${state.pdfMode === "merge" ? "selected" : ""}>Merge PDFs</option><option value="extract" ${state.pdfMode === "extract" ? "selected" : ""}>Split / Extract</option><option value="reorder" ${state.pdfMode === "reorder" ? "selected" : ""}>Reorder / Delete</option><option value="images-to-pdf" ${state.pdfMode === "images-to-pdf" ? "selected" : ""}>Images → PDF</option><option value="pdf-to-images" ${state.pdfMode === "pdf-to-images" ? "selected" : ""}>PDF → Images</option><option value="compress" ${state.pdfMode === "compress" ? "selected" : ""}>Compress / Optimize</option></select></label><input type="file" data-toolbox-field="pdf-files" accept=".pdf,application/pdf,image/jpeg,image/png,image/webp" multiple><p class="file-summary">${escapeHtml(state.pdfFileSummary || "Choose local files")}</p>${state.pdfMode !== "merge" && state.pdfMode !== "images-to-pdf" && state.pdfMode !== "compress" ? `<label>Pages / order<input data-toolbox-field="pdf-range" value="${escapeHtml(state.pdfRange)}" placeholder="1, 3-5 or delete:2"></label>` : ""}<button class="primary" data-action="pdf-process" ${state.pdfBusy ? "disabled" : ""}>Process locally</button><button data-action="pdf-cancel" ${state.pdfBusy ? "" : "disabled hidden"}>Cancel</button><p class="toolbox-status" aria-live="polite">${escapeHtml(state.pdfStatus)}</p><small>Processed on this device.</small></section>`;
 }
 
-function renderMedia(state: ToolboxRenderState): string {
-  const preview = state.mediaPreviewUrl ? `<${state.mediaPreviewKind} class="media-preview" controls preload="metadata" src="${escapeHtml(state.mediaPreviewUrl)}"></${state.mediaPreviewKind}>` : "";
-  const waveform = state.mediaDurationLabel ? `<div class="media-editor" data-waveform-ready="${state.mediaWaveformReady}">
+export function renderMediaPreview(state: Pick<ToolboxRenderState, "mediaPreviewUrl" | "mediaPreviewKind">): string {
+  return state.mediaPreviewUrl ? `<${state.mediaPreviewKind} class="media-preview" controls preload="metadata" src="${escapeHtml(state.mediaPreviewUrl)}"></${state.mediaPreviewKind}>` : "";
+}
+
+export function renderMediaEditor(state: Pick<ToolboxRenderState, "mediaDurationLabel" | "mediaWaveformReady" | "mediaZoom" | "mediaStart" | "mediaEnd">): string {
+  return state.mediaDurationLabel ? `<div class="media-editor" data-waveform-ready="${state.mediaWaveformReady}">
     <div class="media-editor-heading"><div><strong>Precision cutter</strong><span>${escapeHtml(state.mediaDurationLabel)}</span></div><div class="media-zoom-controls"><button data-action="media-zoom-out" aria-label="Zoom out">−</button><output>${state.mediaZoom.toFixed(1)}x</output><button data-action="media-zoom-in" aria-label="Zoom in">+</button><button data-action="media-zoom-reset">Fit</button></div></div>
     <div class="media-waveform-wrap"><canvas class="media-waveform" data-media-waveform width="1200" height="220" tabindex="0" role="slider" aria-label="Audio trim timeline"></canvas></div>
     <div class="media-time-grid"><label>Start<input data-toolbox-field="media-start" value="${escapeHtml(state.mediaStart)}" inputmode="decimal" aria-label="Trim start, minutes seconds milliseconds"></label><span>to</span><label>End<input data-toolbox-field="media-end" value="${escapeHtml(state.mediaEnd)}" inputmode="decimal" aria-label="Trim end, minutes seconds milliseconds"></label></div>
     <div class="media-editor-actions"><button data-action="media-play-selection">Play selection</button><span>Drag the start/end markers. Click the waveform to seek.</span></div>
   </div>` : "";
+}
+
+function renderMedia(state: ToolboxRenderState): string {
+  const preview = renderMediaPreview(state);
+  const waveform = renderMediaEditor(state);
   return `<section class="toolbox-utility file-tool media-tool"><label>Operation<select data-toolbox-field="media-mode"><option value="extract-audio" ${state.mediaMode === "extract-audio" ? "selected" : ""}>Extract audio from video</option><option value="convert-audio" ${state.mediaMode === "convert-audio" ? "selected" : ""}>Convert audio</option><option value="trim-audio" ${state.mediaMode === "trim-audio" ? "selected" : ""}>Trim audio</option><option value="trim-video" ${state.mediaMode === "trim-video" ? "selected" : ""}>Trim video</option></select></label>
     <label class="media-file-picker"><span>Choose media</span><input type="file" data-toolbox-field="media-file" accept="audio/*,video/*"></label>
-    <p class="file-summary">${escapeHtml(state.mediaFileName || "Choose a local media file")}</p>${preview}${waveform}
+    <p class="file-summary">${escapeHtml(state.mediaFileName || "Choose a local media file")}</p><div class="media-preview-slot">${preview}</div><div class="media-editor-slot">${waveform}</div>
     <label>Format<select data-toolbox-field="media-format"><option value="mp3" ${state.mediaFormat === "mp3" ? "selected" : ""}>MP3</option><option value="wav" ${state.mediaFormat === "wav" ? "selected" : ""}>WAV</option><option value="ogg" ${state.mediaFormat === "ogg" ? "selected" : ""}>OGG</option></select></label>
-    <button class="primary media-export" data-action="media-process" ${!state.mediaFileName ? "disabled" : ""}>Export selected range</button><progress max="1" value="${state.mediaProgress}"></progress><p class="toolbox-status" aria-live="polite">${escapeHtml(state.mediaStatus)}</p><small>Processed privately on this device.</small></section>`;
+    <button class="primary media-export" data-action="media-process" ${!state.mediaFileName || state.mediaLoading || state.mediaBusy || !state.mediaDurationLabel ? "disabled" : ""}>Export selected range</button><button data-action="media-cancel" ${state.mediaBusy ? "" : "disabled hidden"}>Cancel</button><progress max="1" value="${state.mediaProgress}"></progress><p class="toolbox-status" aria-live="polite">${escapeHtml(state.mediaStatus)}</p><small>Processed privately on this device.</small></section>`;
 }
 
 function escapeHtml(value: string): string {

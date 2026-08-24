@@ -42,50 +42,60 @@ export function compressionReport(originalBytes: number, resultBytes: number): C
   };
 }
 
-export async function mergePdfFiles(files: Blob[]): Promise<Uint8Array> {
+export async function mergePdfFiles(files: Blob[], signal?: AbortSignal): Promise<Uint8Array> {
   const { PDFDocument } = await import("pdf-lib");
   const output = await PDFDocument.create();
   for (const file of files) {
+    throwIfAborted(signal);
     const source = await PDFDocument.load(await file.arrayBuffer());
+    throwIfAborted(signal);
     const pages = await output.copyPages(source, source.getPageIndices());
     pages.forEach((page) => output.addPage(page));
   }
+  throwIfAborted(signal);
   return output.save();
 }
 
-export async function reorderOrExtractPdf(file: Blob, pageNumbers: number[]): Promise<Uint8Array> {
+export async function reorderOrExtractPdf(file: Blob, pageNumbers: number[], signal?: AbortSignal): Promise<Uint8Array> {
   const { PDFDocument } = await import("pdf-lib");
   const source = await PDFDocument.load(await file.arrayBuffer());
+  throwIfAborted(signal);
   const selected = pageNumbers.map((page) => page - 1);
   if (selected.some((page) => page < 0 || page >= source.getPageCount())) throw new Error("Page range is outside this PDF");
   const output = await PDFDocument.create();
   const pages = await output.copyPages(source, selected);
   pages.forEach((page) => output.addPage(page));
+  throwIfAborted(signal);
   return output.save();
 }
 
-export async function deletePdfPages(file: Blob, pageNumbersToDelete: number[]): Promise<Uint8Array> {
+export async function deletePdfPages(file: Blob, pageNumbersToDelete: number[], signal?: AbortSignal): Promise<Uint8Array> {
   const { PDFDocument } = await import("pdf-lib");
   const source = await PDFDocument.load(await file.arrayBuffer());
+  throwIfAborted(signal);
   const remove = new Set(pageNumbersToDelete.map((page) => page - 1));
   const keep = source.getPageIndices().filter((page) => !remove.has(page));
   if (!keep.length) throw new Error("A PDF must keep at least one page");
   const output = await PDFDocument.create();
   const pages = await output.copyPages(source, keep);
   pages.forEach((page) => output.addPage(page));
+  throwIfAborted(signal);
   return output.save();
 }
 
-export async function imagesToPdf(files: File[]): Promise<Uint8Array> {
+export async function imagesToPdf(files: File[], signal?: AbortSignal): Promise<Uint8Array> {
   const { PDFDocument } = await import("pdf-lib");
   const output = await PDFDocument.create();
   for (const file of files) {
+    throwIfAborted(signal);
     const image = await decodeImageForPdf(file);
+    throwIfAborted(signal);
     const embedded = file.type === "image/jpeg" ? await output.embedJpg(image.bytes) : await output.embedPng(image.bytes);
     const scale = Math.min(1, 595 / embedded.width, 842 / embedded.height);
     const page = output.addPage([embedded.width * scale, embedded.height * scale]);
     page.drawImage(embedded, { x: 0, y: 0, width: embedded.width * scale, height: embedded.height * scale });
   }
+  throwIfAborted(signal);
   return output.save();
 }
 
@@ -101,27 +111,47 @@ async function decodeImageForPdf(file: File): Promise<{ bytes: ArrayBuffer; type
   return { bytes: await blob.arrayBuffer(), type: "image/png" };
 }
 
-export async function pdfToPngImages(file: Blob, scale = 1.5): Promise<Blob[]> {
+export async function pdfToPngImages(file: Blob, scale = 1.5, signal?: AbortSignal): Promise<Blob[]> {
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   pdfjs.GlobalWorkerOptions.workerSrc = new URL("./pdf.worker.mjs", import.meta.url).href;
   const documentTask = pdfjs.getDocument({ data: await file.arrayBuffer() });
-  const pdfDocument = await documentTask.promise;
-  const images: Blob[] = [];
-  for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber += 1) {
-    const page = await pdfDocument.getPage(pageNumber);
-    const viewport = page.getViewport({ scale });
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.ceil(viewport.width);
-    canvas.height = Math.ceil(viewport.height);
-    await page.render({ canvas, canvasContext: canvas.getContext("2d")!, viewport }).promise;
-    images.push(await new Promise<Blob>((resolve) => canvas.toBlob((value) => resolve(value!), "image/png")));
+  try {
+    const pdfDocument = await documentTask.promise;
+    const images: Blob[] = [];
+    for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber += 1) {
+      throwIfAborted(signal);
+      const page = await pdfDocument.getPage(pageNumber);
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      const renderTask = page.render({ canvas, canvasContext: canvas.getContext("2d")!, viewport });
+      const cancelRender = (): void => renderTask.cancel();
+      signal?.addEventListener("abort", cancelRender, { once: true });
+      try {
+        await renderTask.promise;
+      } finally {
+        signal?.removeEventListener("abort", cancelRender);
+      }
+      throwIfAborted(signal);
+      images.push(await new Promise<Blob>((resolve) => canvas.toBlob((value) => resolve(value!), "image/png")));
+    }
+    throwIfAborted(signal);
+    return images;
+  } finally {
+    await documentTask.destroy();
   }
-  return images;
 }
 
-export async function optimizePdf(file: Blob): Promise<{ bytes: Uint8Array; report: CompressionReport }> {
+export async function optimizePdf(file: Blob, signal?: AbortSignal): Promise<{ bytes: Uint8Array; report: CompressionReport }> {
   const { PDFDocument } = await import("pdf-lib");
   const source = await PDFDocument.load(await file.arrayBuffer());
+  throwIfAborted(signal);
   const bytes = await source.save({ useObjectStreams: true, addDefaultPage: false });
+  throwIfAborted(signal);
   return { bytes, report: compressionReport(file.size, bytes.byteLength) };
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) throw signal.reason ?? new DOMException("Cancelled", "AbortError");
 }

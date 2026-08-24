@@ -51,3 +51,10 @@ test("PDF processing is cancellable, bounded, and protected from stale jobs", ()
   assert.match(source, /this\.pdfAbortController !== controller/);
   assert.match(source, /PDF processing cancelled/);
 });
+
+test("PDF page conversion owns and cancels its worker/render tasks", () => {
+  const source = readFileSync(resolve(process.cwd(), "src/systems/PdfToolkit.ts"), "utf8");
+  assert.match(source, /signal\?: AbortSignal/);
+  assert.match(source, /documentTask\.destroy/);
+  assert.match(source, /renderTask\.cancel/);
+});
