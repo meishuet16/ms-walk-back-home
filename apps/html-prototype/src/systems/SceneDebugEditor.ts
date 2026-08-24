@@ -8,17 +8,12 @@ import { buildAutoAuthorPlan, applyAutoAuthorPlan, type AutoAuthorPlan, type Col
 import { parseSceneAuthoringManifest, validateSceneAuthoringManifest, type ManifestValidationResult } from "./SceneDebugAuthoringManifest.js"
 import { validateConstraints, type ConstraintResult } from "./SceneDebugConstraints.js"
 import { clampZoom, centerPan, fitZoom } from "./SceneDebugViewport.js"
+import { clientPointToScene, moveRectToPoint, pickSceneGeometry, rectHandleAtPoint, resizeRect, type RectHandle, type SceneGeometrySelection, type SceneViewportBounds } from "./SceneDebugGeometry.js";
 import { addPreviewItem, approveCanonicalCandidate, approveCanonicalCandidates, clearCanonicalApprovals, copyAllApprovedMappings, copyImplementationHandoff, copyPreviewMapping, createPreviewItem, createPreviewState, previewApprovalEligibility, removePreviewItem, updatePreviewAsset, type PreviewKind, type PreviewState } from "./SceneDebugPreview.js";
 
 type Tool = "select" | "spawn" | "collision" | "interaction" | "trigger" | "placement-slot" | "anchor" | "echo-anchor" | "preview";
-type Selection =
-  | { kind: "spawn" }
-  | { kind: "collision"; index: number }
-  | { kind: "interaction"; index: number }
-  | { kind: "trigger"; index: number }
-  | { kind: "placement-slot"; index: number }
-  | { kind: "echo-anchor"; key: string }
-  | { kind: "anchor"; key: string };
+type Selection = SceneGeometrySelection;
+type ResizeDrag = { selection: Extract<Selection, { kind: "collision" | "trigger" }>; handle: RectHandle; original: Rect };
 
 type DraftDrag = { start: Point; current: Point } | null;
 type MoveDrag = { selection: Selection; offset: Point } | null;
@@ -31,6 +26,7 @@ export class SceneDebugEditor {
   private selected: Selection | null = null;
   private draftDrag: DraftDrag = null;
   private moveDrag: MoveDrag = null;
+  private resizeDrag: ResizeDrag | null = null;
   private previewPlayer: Point = { ...this.layout.spawn };
   private previewKeys = new Set<string>();
   private lastPreview = performance.now();
@@ -714,7 +710,13 @@ export class SceneDebugEditor {
       this.selected = this.pick(point);
       if (this.selected) {
         this.recordHistory();
-        this.moveDrag = { selection: this.selected, offset: this.selectionOffset(this.selected, point) };
+        const rect = this.selectionRect(this.selected);
+        const handle = rect && (this.selected.kind === "collision" || this.selected.kind === "trigger") ? rectHandleAtPoint(point, rect) : null;
+        if (rect && handle && (this.selected.kind === "collision" || this.selected.kind === "trigger")) {
+          this.resizeDrag = { selection: this.selected, handle, original: { ...rect } };
+        } else {
+          this.moveDrag = { selection: this.selected, offset: this.selectionOffset(this.selected, point) };
+        }
       }
       this.render();
     }
@@ -727,12 +729,16 @@ export class SceneDebugEditor {
       this.draw();
       return;
     }
+    if (this.resizeDrag) {
+      this.resizeSelection(this.resizeDrag, point);
+      this.draw();
+      return;
+    }
     if (this.moveDrag) {
       this.moveSelection(this.moveDrag.selection, { x: point.x - this.moveDrag.offset.x, y: point.y - this.moveDrag.offset.y });
       this.draw();
     }
   }
-
   private pointerUp(): void {
     if (this.draftDrag) {
       const rect = this.rectFromPoints(this.draftDrag.start, this.draftDrag.current);
@@ -753,9 +759,9 @@ export class SceneDebugEditor {
     }
     this.draftDrag = null;
     this.moveDrag = null;
+    this.resizeDrag = null;
     this.render();
   }
-
   private draw(): void {
     const canvas = this.canvas();
     const ctx = canvas.getContext("2d");
@@ -806,6 +812,8 @@ export class SceneDebugEditor {
       this.drawPoint(ctx, interaction, scale, "#f6cf6b", interaction.label);
     });
     this.drawPoint(ctx, this.layout.spawn, scale, "#71ffbd", "SPAWN");
+    const selectedRect = this.selected ? this.selectionRect(this.selected) : null;
+    if (selectedRect && this.selected && (this.selected.kind === "collision" || this.selected.kind === "trigger")) this.drawResizeHandles(ctx, selectedRect, scale);
     if (this.draftDrag) {
       const rect = this.rectFromPoints(this.draftDrag.start, this.draftDrag.current);
       ctx.strokeStyle = "#ffffff";
@@ -1241,19 +1249,7 @@ export class SceneDebugEditor {
   }
 
   private pick(point: Point): Selection | null {
-    if (Math.hypot(point.x - this.layout.spawn.x, point.y - this.layout.spawn.y) < 24) return { kind: "spawn" };
-    const interaction = this.layout.interactions.findIndex((item) => Math.hypot(point.x - item.x, point.y - item.y) <= Math.max(18, item.radius));
-    if (interaction >= 0) return { kind: "interaction", index: interaction };
-    const slot = this.layout.placementSlots.findIndex((item) => Math.hypot(point.x - item.x, point.y - item.y) <= Math.max(18, item.radius));
-    if (slot >= 0) return { kind: "placement-slot", index: slot };
-    const echoAnchor = Object.entries(this.layout.echoAnchors).find(([, item]) => Math.hypot(point.x - item.x, point.y - item.y) <= Math.max(18, item.radius));
-    if (echoAnchor) return { kind: "echo-anchor", key: echoAnchor[0] };
-    const collision = this.layout.obstacles.findIndex((rect) => this.pointInRect(point, rect));
-    if (collision >= 0) return { kind: "collision", index: collision };
-    const trigger = this.layout.triggers.findIndex((item) => this.pointInRect(point, item.rect));
-    if (trigger >= 0) return { kind: "trigger", index: trigger };
-    const anchor = Object.entries(this.layout.anchors).find(([, item]) => Math.hypot(point.x - item.x, point.y - item.y) < 24);
-    return anchor ? { kind: "anchor", key: anchor[0] } : null;
+    return pickSceneGeometry(this.layout, point);
   }
 
   private moveSelection(selection: Selection, point: Point): void {
@@ -1273,14 +1269,40 @@ export class SceneDebugEditor {
     if (selection.kind === "anchor") this.layout.anchors[selection.key] = point;
     if (selection.kind === "collision") {
       const rect = this.layout.obstacles[selection.index];
-      if (rect) Object.assign(rect, { x: point.x, y: point.y });
+      if (rect) Object.assign(rect, moveRectToPoint(rect, point));
     }
     if (selection.kind === "trigger") {
       const trigger = this.layout.triggers[selection.index];
-      if (trigger) Object.assign(trigger.rect, { x: point.x, y: point.y });
+      if (trigger) Object.assign(trigger.rect, moveRectToPoint(trigger.rect, point));
     }
   }
 
+  private selectionRect(selection: Selection): Rect | null {
+    if (selection.kind === "collision") return this.layout.obstacles[selection.index] ?? null;
+    if (selection.kind === "trigger") return this.layout.triggers[selection.index]?.rect ?? null;
+    return null;
+  }
+
+  private resizeSelection(drag: ResizeDrag, point: Point): void {
+    const next = resizeRect(drag.original, drag.handle, point);
+    if (drag.selection.kind === "collision") {
+      const rect = this.layout.obstacles[drag.selection.index];
+      if (rect) Object.assign(rect, next);
+    } else {
+      const rect = this.layout.triggers[drag.selection.index]?.rect;
+      if (rect) Object.assign(rect, next);
+    }
+  }
+
+  private drawResizeHandles(ctx: CanvasRenderingContext2D, rect: Rect, scale: Point): void {
+    const points = [
+      { x: rect.x, y: rect.y }, { x: rect.x + rect.w / 2, y: rect.y }, { x: rect.x + rect.w, y: rect.y },
+      { x: rect.x, y: rect.y + rect.h / 2 }, { x: rect.x + rect.w, y: rect.y + rect.h / 2 },
+      { x: rect.x, y: rect.y + rect.h }, { x: rect.x + rect.w / 2, y: rect.y + rect.h }, { x: rect.x + rect.w, y: rect.y + rect.h }
+    ];
+    ctx.fillStyle = "#ffffff";
+    for (const point of points) ctx.fillRect((point.x - 7) * scale.x, (point.y - 7) * scale.y, 14 * scale.x, 14 * scale.y);
+  }
   private selectionOffset(selection: Selection, point: Point): Point {
     const target = this.selectedTarget();
     const origin = "rect" in (target ?? {}) ? (target as { rect: Rect }).rect : target as Point | null;
@@ -1293,10 +1315,8 @@ export class SceneDebugEditor {
 
   private eventPoint(event: PointerEvent): Point {
     const rect = this.canvas().getBoundingClientRect();
-    return {
-      x: ((event.clientX - rect.left) / rect.width) * this.layout.size.w,
-      y: ((event.clientY - rect.top) / rect.height) * this.layout.size.h
-    };
+    const bounds: SceneViewportBounds = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+    return clientPointToScene({ clientX: event.clientX, clientY: event.clientY }, bounds, this.layout.size);
   }
 
   private syncCanvasSize(): void {

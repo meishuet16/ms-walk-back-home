@@ -165,3 +165,12 @@ test("Auto Author import does not serialize editor-only metadata", () => {
   assert.match(editorSource, /collisionReviews/);
   assert.match(editorSource, /constraintResults/);
 });
+
+test("Scene Debug editor routes authoring through shared canonical geometry helpers", () => {
+  assert.match(editorSource, /clientPointToScene/);
+  assert.match(editorSource, /pickSceneGeometry/);
+  assert.match(editorSource, /moveRectToPoint/);
+  assert.match(editorSource, /rectHandleAtPoint/);
+  assert.match(editorSource, /resizeRect/);
+  assert.match(editorSource, /resizeDrag/);
+});
