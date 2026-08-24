@@ -20,7 +20,3 @@ export function drawSceneAsset(ctx: CanvasRenderingContext2D, image: CanvasImage
   if (transform.source) ctx.drawImage(image, transform.source.x, transform.source.y, transform.source.w, transform.source.h, transform.destination.x, transform.destination.y, transform.destination.w, transform.destination.h);
   else ctx.drawImage(image, transform.destination.x, transform.destination.y, transform.destination.w, transform.destination.h);
 }
-
-export function drawSceneMask(ctx: CanvasRenderingContext2D, mask: CanvasImageSource, orientation: SceneOrientation, sceneSize: SceneSize, canvasSize: SceneSize): void {
-  drawSceneAsset(ctx, mask, orientation, sceneSize, canvasSize);
-}

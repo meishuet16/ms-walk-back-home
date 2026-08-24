@@ -103,7 +103,6 @@ export function createDefaultRoomState(): RoomJourneyState {
     lampOn: true,
     musicOn: false,
     residueIds: [],
-    windowFocus: false,
     selectedVinylId: vinylRecords[0].id,
     vinylPlaying: false,
     vinylCovers: {},
@@ -135,6 +134,11 @@ export function canReachRoomInteraction(id: RoomInteractionId): boolean {
     { x: interaction.x, y: interaction.y - interaction.radius * 0.7 }
   ];
   return samples.some((point) => point.x > 0 && point.y > 0 && point.x < roomSize.w && point.y < roomSize.h && !inAnyRect(point, roomObstacles));
+}
+
+export function normalizeRoomWindowState(state: RoomJourneyState & { windowFocus?: boolean }): RoomJourneyState {
+  const { windowFocus: _legacyWindowFocus, ...normalized } = state;
+  return normalized;
 }
 
 export function toggleRoomLamp(state: RoomJourneyState): RoomJourneyState {

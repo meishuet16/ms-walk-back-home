@@ -123,11 +123,24 @@ export function updatePreviewAsset(state: PreviewState, id: string, input: { pro
   };
 }
 
-export function approveCanonicalCandidate(state: PreviewState, id: string): PreviewState {
+export type PreviewApprovalSkip = { id: string; reason: string };
+export type BulkApprovalResult = { state: PreviewState; approved: string[]; skipped: PreviewApprovalSkip[] };
+
+export function previewApprovalEligibility(state: PreviewState, id: string, assetPaths?: ReadonlySet<string>): { eligible: true } | { eligible: false; reason: string } {
   const item = state.items.find((candidate) => candidate.id === id);
-  if (!item || item.source.kind !== "project" || !item.source.path) {
-    throw new Error("Only a stable project-relative asset can be approved as a canonical candidate.");
+  if (!item) return { eligible: false, reason: "Preview no longer exists." };
+  if (item.source.kind !== "project" || !item.source.path) return { eligible: false, reason: "Local preview is not a project-relative asset." };
+  try { validateProjectAssetPath(item.source.path); } catch (error) {
+    return { eligible: false, reason: error instanceof Error ? error.message : "Invalid project asset path." };
   }
+  if (assetPaths && !assetPaths.has(item.source.path)) return { eligible: false, reason: "Project asset is missing." };
+  return { eligible: true };
+}
+
+export function approveCanonicalCandidate(state: PreviewState, id: string, assetPaths?: ReadonlySet<string>): PreviewState {
+  const item = state.items.find((candidate) => candidate.id === id);
+  const eligibility = previewApprovalEligibility(state, id, assetPaths);
+  if (!eligibility.eligible) throw new Error(eligibility.reason);
   return {
     ...state,
     items: state.items.map((candidate) => candidate.id !== id ? candidate : {
@@ -135,6 +148,27 @@ export function approveCanonicalCandidate(state: PreviewState, id: string): Prev
       approval: { sceneId: state.sceneId, orientation: state.orientation, status: "canonical-candidate", approvedAt: new Date().toISOString() }
     })
   };
+}
+
+export function approveCanonicalCandidates(state: PreviewState, ids: readonly string[], assetPaths?: ReadonlySet<string>): BulkApprovalResult {
+  let next = state;
+  const approved: string[] = [];
+  const skipped: PreviewApprovalSkip[] = [];
+  for (const id of [...new Set(ids)]) {
+    const eligibility = previewApprovalEligibility(next, id, assetPaths);
+    if (!eligibility.eligible) {
+      skipped.push({ id, reason: eligibility.reason });
+      continue;
+    }
+    next = approveCanonicalCandidate(next, id, assetPaths);
+    approved.push(id);
+  }
+  return { state: next, approved, skipped };
+}
+
+export function clearCanonicalApprovals(state: PreviewState, ids: readonly string[]): PreviewState {
+  const selected = new Set(ids);
+  return { ...state, items: state.items.map((item) => selected.has(item.id) ? { ...item, approval: undefined } : item) };
 }
 
 export function clearCanonicalApproval(state: PreviewState, id: string): PreviewState {
@@ -183,6 +217,3 @@ export function copyImplementationHandoff(state: PreviewState): string {
     "Later implementation must perform semantic and technical validation and must not silently substitute explicitly approved assets."
   ].join("\n");
 }
-
-
-

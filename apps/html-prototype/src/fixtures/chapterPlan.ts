@@ -52,5 +52,6 @@ export const forestDoors: ForestDoor[] = [
   { id: "march30-too-fated", date: "03.30", title: "Too Fated", x: 0, y: 0, chapterId: "march30-too-fated" },
   { id: "april05-come-down", date: "04.05", title: "下来一下", x: 0, y: 0, chapterId: "april05-come-down" },
   { id: "april06-not-gone-yet", date: "04.06", title: "还没走啊？", x: 0, y: 0, chapterId: "april06-not-gone-yet" },
-  { id: "may23-i-arrived", date: "05.23", title: "我到了，你呢", x: 0, y: 0, chapterId: "may23-i-arrived" }
+  { id: "may23-i-arrived", date: "05.23", title: "我到了，你呢", x: 0, y: 0, chapterId: "may23-i-arrived" },
+  { id: "june24-only-came-for-you", date: "06.24", title: "只为你而来", x: 0, y: 0, chapterId: "june24-only-came-for-you" }
 ];

@@ -2,17 +2,18 @@ import { cloneSceneLayout, loadSceneLayoutOverrides, makeDefaultLayout, sceneLay
 import type { Point, Rect } from "./CollisionSystem.js";
 import { inAnyRect } from "./CollisionSystem.js";
 import { applyPointTextEdit, bulkAddPoints, createPointGroup, createDraftPoint, deleteGroup, deletePoints, filterPointEntries, moveGroup, movePoints, normalizeSceneId, parseAnchorManifest, pointEntries, portraitDraftFromLandscape, sceneIdentity, type EditorPointGroup, type EditorPointKey, type EditorPointKind, type PointFilter } from "./SceneDebugModel.js";
-import { addPreviewItem, approveCanonicalCandidate, copyAllApprovedMappings, copyImplementationHandoff, copyPreviewMapping, createPreviewItem, createPreviewState, removePreviewItem, updatePreviewAsset, type PreviewKind, type PreviewState } from "./SceneDebugPreview.js";
+import { filterAnchorPickerEntries, filterProjectAssets, projectAssetFolders, type ProjectAssetEntry } from "./SceneDebugAssetPicker.js"
+import { readSceneManifestFile } from "./SceneDebugManifestIO.js"
+import { buildAutoAuthorPlan, applyAutoAuthorPlan, type AutoAuthorPlan, type CollisionReviewEntry } from "./SceneDebugAutoAuthor.js"
+import { parseSceneAuthoringManifest, validateSceneAuthoringManifest, type ManifestValidationResult } from "./SceneDebugAuthoringManifest.js"
+import { validateConstraints, type ConstraintResult } from "./SceneDebugConstraints.js"
+import { clampZoom, centerPan, fitZoom } from "./SceneDebugViewport.js"
+import { clientPointToScene, moveRectToPoint, pickSceneGeometry, rectHandleAtPoint, resizeRect, type RectHandle, type SceneGeometrySelection, type SceneViewportBounds } from "./SceneDebugGeometry.js";
+import { addPreviewItem, approveCanonicalCandidate, approveCanonicalCandidates, clearCanonicalApprovals, copyAllApprovedMappings, copyImplementationHandoff, copyPreviewMapping, createPreviewItem, createPreviewState, previewApprovalEligibility, removePreviewItem, updatePreviewAsset, type PreviewKind, type PreviewState } from "./SceneDebugPreview.js";
 
 type Tool = "select" | "spawn" | "collision" | "interaction" | "trigger" | "placement-slot" | "anchor" | "echo-anchor" | "preview";
-type Selection =
-  | { kind: "spawn" }
-  | { kind: "collision"; index: number }
-  | { kind: "interaction"; index: number }
-  | { kind: "trigger"; index: number }
-  | { kind: "placement-slot"; index: number }
-  | { kind: "echo-anchor"; key: string }
-  | { kind: "anchor"; key: string };
+type Selection = SceneGeometrySelection;
+type ResizeDrag = { selection: Extract<Selection, { kind: "collision" | "trigger" }>; handle: RectHandle; original: Rect };
 
 type DraftDrag = { start: Point; current: Point } | null;
 type MoveDrag = { selection: Selection; offset: Point } | null;
@@ -25,6 +26,7 @@ export class SceneDebugEditor {
   private selected: Selection | null = null;
   private draftDrag: DraftDrag = null;
   private moveDrag: MoveDrag = null;
+  private resizeDrag: ResizeDrag | null = null;
   private previewPlayer: Point = { ...this.layout.spawn };
   private previewKeys = new Set<string>();
   private lastPreview = performance.now();
@@ -37,11 +39,30 @@ export class SceneDebugEditor {
   private historyPast: SceneLayout[] = [];
   private historyFuture: SceneLayout[] = [];
   private pendingPreviewFile: File | null = null;
+  private manifestText = "";
+  private manifestValidation: ManifestValidationResult | null = null;
+  private autoAuthorPlan: AutoAuthorPlan | null = null;
+  private collisionReviews: CollisionReviewEntry[] = [];
+  private constraintResults: ConstraintResult[] = [];
+  private assetPaths = new Set<string>();
+  private viewportZoom = 1;
+  private manifestFileName = "";
+  private manifestInputOpen = false;
+  private autoAuthorApplied = false;
+  private assetSearch = "";
+  private assetFolder = "";
+  private showAllAssets = false;
+  private selectedAssetPath = "";
+  private previewAnchorSearch = "";
+  private previewFilter: "all" | "preview-only" | "approved" | "missing-asset" = "all";
+  private previewSelectedIds = new Set<string>();
+  private copyFeedback = "";
 
   constructor(private root: HTMLElement) {}
 
   async mount(): Promise<void> {
     await loadSceneLayoutOverrides();
+    await this.discoverManifestAssets();
     this.layout = cloneSceneLayout(sceneLayoutManifest[this.sceneId].layouts[this.orientation]);
     this.render();
     this.bindKeys();
@@ -67,6 +88,7 @@ export class SceneDebugEditor {
           <label>Asset
             <input data-debug-field="asset" value="${this.escape(this.layout.asset)}">
           </label>
+          <div class="scene-debug-dirty" data-debug-dirty>${this.dirty ? "Unsaved changes" : "Saved"}</div>          ${this.autoAuthorSectionHtml()}
           <div class="scene-debug-tools">
             ${(["select", "spawn", "collision", "interaction", "trigger", ...(this.sceneId === "forest" ? ["placement-slot" as const] : []), "anchor", "echo-anchor", "preview"] as const).map((tool) => `<button data-debug-tool="${tool}" class="${this.tool === tool ? "active" : ""}">${this.label(tool)}</button>`).join("")}
           </div>
@@ -85,6 +107,8 @@ export class SceneDebugEditor {
             <label>Radius<input data-debug-field="new-radius" type="number" value="56"></label>
           </div>
           <section class="scene-debug-authoring">
+            <h2>Fine Tune / Advanced Manual Tools</h2>
+            <p class="scene-debug-help">Manual placement, collision, trigger, group, undo/redo, and point tools remain available as fallback.</p>
             <h2>Anchors & Echo Anchors</h2>
             <input data-debug-field="point-search" placeholder="Search by ID" value="${this.escape(this.pointSearch)}">
             <select data-debug-field="point-filter"><option value="all"${this.pointFilter === "all" ? " selected" : ""}>All</option><option value="anchors"${this.pointFilter === "anchors" ? " selected" : ""}>Anchors</option><option value="echo-anchors"${this.pointFilter === "echo-anchors" ? " selected" : ""}>Echo Anchors</option></select>
@@ -104,27 +128,23 @@ export class SceneDebugEditor {
           <button data-debug-action="delete-selected">Delete Selected</button>
           <button data-debug-action="save-layout" class="primary">Save Layout</button>
           <button data-debug-action="copy-json">Copy JSON</button>
-          <button data-debug-action="download-json">Download Backup JSON</button>
-          <section class="scene-debug-preview-controls">
-            <h2>Temporary Preview</h2>
-            <label>Preview kind<select data-debug-field="preview-kind"><option value="single">Single</option><option value="pair">Pair</option><option value="multi">Multi</option><option value="prop">Prop</option><option value="vfx">VFX</option></select></label><label>Project asset path<input data-debug-field="preview-path" placeholder="assets/405/example/frame.png"></label>
-            <label>Anchor binding<input data-debug-field="preview-anchor" placeholder="optional anchor ID"></label>
-            <label>Local PNG/WEBP<input data-debug-field="preview-file" type="file" accept="image/png,image/webp,image/jpeg"></label>
-            <div class="scene-debug-actions"><button data-debug-action="add-preview">Add Preview</button><button data-debug-action="clear-previews">Clear Previews</button></div>
-            <div class="scene-debug-preview-list">${this.previewManagerHtml()}</div>
-            <div class="scene-debug-actions"><button data-debug-action="copy-mapping">Copy Preview Mapping</button><button data-debug-action="copy-approved">Copy All Approved Mappings</button></div>
-            <button data-debug-action="copy-handoff" class="primary">Copy Implementation Handoff</button>
-            <label><input data-debug-field="show-anchor-points" type="checkbox" ${this.previewState.showAnchorPoints ? "checked" : ""}> Show Anchor Point</label>
-            <label><input data-debug-field="show-bounds" type="checkbox" ${this.previewState.showImageBounds ? "checked" : ""}> Show Image Bounds</label>
-            <label><input data-debug-field="show-feet" type="checkbox" ${this.previewState.showFeetBaseline ? "checked" : ""}> Show Feet Anchor / Baseline</label>
-          </section>
+          <button data-debug-action="download-json">Download Backup JSON</button>          ${this.previewSectionHtml()}
 
           <pre class="scene-debug-status" data-debug-status></pre>
         </aside>
         <main class="scene-debug-stage">
-          <div class="scene-debug-artboard">
+          <div class="scene-debug-viewport-toolbar">
+            <strong>Viewport</strong>
+            <button data-debug-action="viewport-fit">Fit</button><button data-debug-action="viewport-100">100%</button>
+            <button data-debug-action="viewport-minus">−</button><span data-debug-zoom>${Math.round(this.viewportZoom * 100)}%</span><button data-debug-action="viewport-plus">+</button>
+            <button data-debug-action="viewport-center">Center</button>
+          </div>
+          <div class="scene-debug-viewport-scroll">
+            <div class="scene-debug-artboard" style="transform:scale(${this.viewportZoom}); transform-origin:top left;">
             <img data-debug-image src="${this.escape(this.layout.asset)}" alt="">
             <canvas data-debug-canvas></canvas><div data-debug-preview-layer></div>
+            </div>
+          </div>
           </div>
         </main>
       </div>`;
@@ -133,6 +153,184 @@ export class SceneDebugEditor {
     this.draw();
   }
 
+
+  private autoAuthorSectionHtml(): string {
+    const hasManifest = Boolean(this.manifestText.trim());
+    const step = this.autoAuthorApplied ? 4 : this.autoAuthorPlan ? 3 : this.manifestValidation ? 2 : hasManifest ? 1 : 0;
+    const steps = ["1 Import", "2 Check", "3 Preview", "4 Apply"].map((label, index) => "<span class=\"" + (index < step ? "complete" : index === step ? "current" : "") + "\">" + label + "</span>").join("");
+    let body = "";
+    if (!hasManifest && !this.manifestInputOpen) {
+      body = "<div class=\"scene-debug-empty-state\"><strong>No manifest loaded yet.</strong><span>Generate your chapter assets first, then use the Round 2 AI workflow to create the Scene Authoring Manifest.</span><div class=\"scene-debug-actions\"><button data-debug-action=\"open-manifest\">Paste Manifest</button><label class=\"scene-debug-file-button\">Import JSON File<input data-debug-field=\"authoring-manifest-file\" type=\"file\" accept=\".json,application/json\"></label></div></div>";
+    } else if (this.autoAuthorApplied && !this.manifestInputOpen) {
+      body = "<div class=\"scene-debug-applied\"><strong>✓ Auto Setup Applied</strong><span>" + this.escape(this.manifestFileName || "Manifest loaded") + "</span><div class=\"scene-debug-actions\"><button data-debug-action=\"open-manifest\">View Manifest</button><button data-debug-action=\"recheck-manifest\">Re-check</button><button data-debug-action=\"clear-manifest\">Clear</button></div></div>";
+    } else {
+      body = "<label>Manifest JSON <span class=\"scene-debug-secondary\">Scene Authoring Manifest v1</span><textarea data-debug-field=\"authoring-manifest\" rows=\"8\" placeholder=\"Paste the generated Scene Authoring Manifest JSON here\">" + this.escape(this.manifestText) + "</textarea></label>" +
+        "<div class=\"scene-debug-file-row\"><label class=\"scene-debug-file-button\">Import JSON File<input data-debug-field=\"authoring-manifest-file\" type=\"file\" accept=\".json,application/json\"></label><span>" + this.escape(this.manifestFileName || "No file selected") + "</span></div>" +
+        "<div class=\"scene-debug-actions\"><button data-debug-action=\"check-manifest\">Check Manifest</button><button data-debug-action=\"preview-auto-author\" " + (this.manifestValidation?.valid ? "" : "disabled") + ">Preview Auto Setup</button>" + (this.autoAuthorPlan ? "<button data-debug-action=\"apply-auto-author\" class=\"primary\">Apply to Scene</button>" : "") + "</div>" +
+        this.manifestStatusHtml() + this.autoAuthorSummaryHtml();
+    }
+    return "<section class=\"scene-debug-workflow\"><h2>AUTO AUTHOR</h2><p class=\"scene-debug-help\">Paste or import the Scene Manifest generated after your chapter assets are ready. Scene Debug checks it first. Nothing changes until you review and apply the setup.</p><div class=\"scene-debug-stepper\">" + steps + "</div>" + body + "</section>";
+  }
+
+  private manifestStatusHtml(): string {
+    if (!this.manifestValidation) return "";
+    const lines = this.manifestValidation.valid ? ["VALID", ...this.manifestValidation.warnings.map((item) => "Warning: " + item.message)] : this.manifestValidation.errors.map((item) => item.path + ": " + item.message);
+    return "<pre class=\"scene-debug-manifest-status\">" + this.escape(lines.join("\n")) + "</pre>";
+  }
+
+  private autoAuthorSummaryHtml(): string {
+    if (!this.autoAuthorPlan) return "";
+    const summary = this.autoAuthorPlan.summary;
+    return "<div class=\"scene-debug-auto-summary\"><strong>Plan ready · " + summary.orientation + "</strong><span>" + summary.counts.anchors + " anchors · " + summary.counts.obstacles + " collision drafts · " + summary.counts.previews + " previews</span><span>" + (summary.existingLayoutDetected ? "Existing orientation protected; apply requires explicit replacement." : "New layout candidate.") + "</span><div class=\"scene-debug-actions\"><button data-debug-action=\"apply-auto-author\" class=\"primary\">Apply Plan to Current Orientation</button><button data-debug-action=\"preserve-auto-author\">Keep Existing Layout</button></div></div>";
+  }
+
+  private async discoverManifestAssets(): Promise<void> {
+    try {
+      const response = await fetch("/__debug/assets");
+      const payload = await response.json() as { assets?: string[] };
+      this.assetPaths = new Set(payload.assets ?? []);
+    } catch {
+      this.assetPaths = new Set();
+    }
+  }
+
+  private async validateManifest(): Promise<void> {
+    const parsed = parseSceneAuthoringManifest(this.manifestText);
+    if (parsed.errors.length) {
+      this.manifestValidation = { manifest: null, errors: parsed.errors, warnings: [], valid: false };
+      this.autoAuthorPlan = null;
+      this.render();
+      return this.status("Manifest JSON is invalid.");
+    }
+    await this.discoverManifestAssets();
+    this.manifestValidation = validateSceneAuthoringManifest(parsed.value, this.assetPaths);
+    this.autoAuthorPlan = null;
+    this.render();
+    this.status(this.manifestValidation.valid ? "Manifest v1 is valid. Build a transactional Auto Author plan to review changes." : "Manifest validation found errors.");
+  }
+
+  private async buildAutoAuthor(): Promise<void> {
+    if (!this.manifestValidation?.valid || !this.manifestValidation.manifest) await this.validateManifest();
+    if (!this.manifestValidation?.valid || !this.manifestValidation.manifest) return;
+    try {
+      this.autoAuthorPlan = buildAutoAuthorPlan(this.manifestValidation.manifest, this.orientation, this.layout, { existingLayoutDetected: true, assetPaths: this.assetPaths });
+      this.render();
+      this.status("Auto Author plan ready. Review the summary, then explicitly apply or keep the existing orientation.");
+    } catch (error) {
+      this.status(error instanceof Error ? error.message : "Could not build Auto Author plan.");
+    }
+  }
+
+  private importAutoAuthorPreviews(): void {
+    if (!this.autoAuthorPlan) return;
+    for (const item of this.autoAuthorPlan.previews.filter((candidate) => candidate.status === "preview-only")) {
+      try {
+        this.previewState = addPreviewItem(this.previewState, createPreviewItem({
+          name: item.name,
+          kind: item.kind,
+          projectPath: item.asset,
+          anchorId: item.anchorId,
+          scale: item.scale,
+          flip: item.flip,
+          offsetX: item.offsetX,
+          offsetY: item.offsetY,
+          opacity: item.opacity,
+          z: item.z
+        }));
+      } catch {
+        // Validation already rejected unsafe paths.
+      }
+    }
+  }
+
+  private applyAutoAuthor(): void {
+    if (!this.autoAuthorPlan) return this.status("Build an Auto Author plan first.");
+    if (!window.confirm("Replace the current authored " + this.orientation + " editor layout with this reviewed candidate?")) return this.status("Auto Author apply cancelled; current layout is unchanged.");
+    const applied = applyAutoAuthorPlan(this.autoAuthorPlan, "replace-existing", this.layout);
+    this.recordHistory();
+    this.layout = applied.layout;
+    this.groups = this.autoAuthorPlan.groups;
+    this.collisionReviews = this.autoAuthorPlan.collisionReviews;
+    this.constraintResults = validateConstraints(this.layout, this.autoAuthorPlan.constraints as any);
+    this.importAutoAuthorPreviews();
+    this.autoAuthorApplied = true;
+    this.manifestInputOpen = false;
+    this.markDirty();
+    this.render();
+    this.status("Auto Author applied in memory. Collision entries remain DRAFT / REVIEW REQUIRED; save is still explicit.");
+  }
+
+  private preserveAutoAuthor(): void {
+    this.autoAuthorPlan = null;
+    this.status("Existing orientation preserved. No SceneLayout coordinates changed.");
+    this.render();
+  }
+
+  private setViewportZoom(value: number): void {
+    this.viewportZoom = clampZoom(value);
+    this.render();
+  }
+
+  private setViewportFit(): void {
+    const stage = this.root.querySelector<HTMLElement>(".scene-debug-viewport-scroll");
+    this.viewportZoom = fitZoom(this.layout.size, { w: stage?.clientWidth || 900, h: stage?.clientHeight || 700 });
+    this.render();
+  }
+
+  private setViewportCenter(): void {
+    const stage = this.root.querySelector<HTMLElement>(".scene-debug-viewport-scroll");
+    const pan = centerPan(this.layout.size, { w: stage?.clientWidth || 900, h: stage?.clientHeight || 700 }, this.viewportZoom);
+    if (stage) { stage.scrollLeft = Math.max(0, -pan.x); stage.scrollTop = Math.max(0, -pan.y); }
+    this.status("Viewport centered; SceneLayout coordinates were not changed.");
+  }
+  private previewVisibleItems(): PreviewState["items"] {
+    return this.previewState.items.filter((item) => {
+      const missing = item.source.kind === "project" && Boolean(item.source.path) && this.assetPaths.size > 0 && !this.assetPaths.has(item.source.path ?? "");
+      if (this.previewFilter === "preview-only") return !item.approval;
+      if (this.previewFilter === "approved") return Boolean(item.approval);
+      if (this.previewFilter === "missing-asset") return missing;
+      return true;
+    });
+  }
+
+  private previewSummaryHtml(): string {
+    const missing = this.previewState.items.filter((item) => item.source.kind === "project" && Boolean(item.source.path) && this.assetPaths.size > 0 && !this.assetPaths.has(item.source.path ?? "")).length;
+    const approved = this.previewState.items.filter((item) => Boolean(item.approval)).length;
+    return "<div class=\"scene-debug-preview-summary\"><strong>Previews: " + this.previewState.items.length + "</strong><span>✓ Approved: " + approved + "</span><span>○ Preview Only: " + (this.previewState.items.length - approved) + "</span><span>⚠ Missing: " + missing + "</span></div>";
+  }
+
+  private assetPickerHtml(): string {
+    const allPaths = [...this.assetPaths];
+    const folders = projectAssetFolders(allPaths, this.sceneId);
+    const preferred = "assets/" + this.sceneId;
+    const defaultFolder = this.assetFolder || (folders.includes(preferred) ? preferred : "");
+    const entries = filterProjectAssets(allPaths, { sceneId: this.sceneId, query: this.assetSearch, folder: this.showAllAssets ? "" : defaultFolder, showAll: this.showAllAssets });
+    const folderOptions = ["<option value=\"\">All folders</option>", ...folders.map((folder) => "<option value=\"" + this.escape(folder) + "\"" + (folder === (this.assetFolder || defaultFolder) ? " selected" : "") + ">" + this.escape(folder) + "</option>")].join("");
+    const results = entries.length ? entries.map((entry) => "<button type=\"button\" class=\"scene-debug-asset-card" + (entry.path === this.selectedAssetPath ? " selected" : "") + "\" data-preview-asset=\"" + this.escape(entry.path) + "\"><img src=\"" + this.escape(entry.path) + "\" alt=\"\" loading=\"lazy\"><span><strong>" + this.escape(entry.name) + "</strong><small>" + this.escape(entry.folder) + "</small></span></button>").join("") : "<p class=\"scene-debug-muted\">No matching project assets.</p>";
+    return "<div class=\"scene-debug-asset-picker\"><div class=\"scene-debug-asset-search\"><input data-debug-field=\"preview-asset-search\" placeholder=\"Search assets...\" value=\"" + this.escape(this.assetSearch) + "\"><select data-debug-field=\"preview-asset-folder\">" + folderOptions + "</select><button data-debug-action=\"toggle-all-assets\" type=\"button\">" + (this.showAllAssets ? "Show Scene Assets" : "Show All Assets") + "</button></div><div class=\"scene-debug-asset-results\">" + results + "</div></div>";
+  }
+
+  private previewAnchorOptionsHtml(): string {
+    const entries = filterAnchorPickerEntries(this.layout, this.previewAnchorSearch);
+    return entries.map((entry) => "<option value=\"" + this.escape(entry.id) + "\"" + (entry.id === (this.value("preview-anchor") || "") ? " selected" : "") + ">" + this.escape(entry.id ? entry.id + " · " + entry.label : entry.label) + "</option>").join("");
+  }
+
+  private previewSectionHtml(): string {
+    const selectedPath = this.selectedAssetPath || this.value("preview-path");
+    const visible = this.previewVisibleItems();
+    const selectedVisible = visible.filter((item) => this.previewSelectedIds.has(item.id));
+    const eligibleVisible = visible.filter((item) => previewApprovalEligibility(this.previewState, item.id, this.assetPaths.size ? this.assetPaths : undefined).eligible);
+    return "<section class=\"scene-debug-preview-controls\"><h2>PREVIEW & HANDOFF</h2><p class=\"scene-debug-help\">Browse real project images, bind them to known positions, inspect the scene, then explicitly approve candidates for handoff.</p>" +
+      "<div class=\"scene-debug-preview-subsection\"><h3>Add Preview</h3><p class=\"scene-debug-secondary\">Browse Project Assets</p><label>Preview Type<select data-debug-field=\"preview-kind\"><option value=\"single\">Single</option><option value=\"pair\">Pair</option><option value=\"multi\">Multi</option><option value=\"prop\">Prop</option><option value=\"vfx\">VFX</option></select></label><label>Project Asset</label>" + this.assetPickerHtml() +
+      "<label>Selected Asset<input data-preview-selected-path readonly value=\"" + this.escape(selectedPath) + "\" placeholder=\"Choose an image above\"></label>" +
+      "<label>Position<select data-debug-field=\"preview-anchor\">" + this.previewAnchorOptionsHtml() + "</select></label><input data-debug-field=\"preview-anchor-search\" placeholder=\"Search anchors...\" value=\"" + this.escape(this.previewAnchorSearch) + "\">" +
+      "<div class=\"scene-debug-actions\"><button data-debug-action=\"add-preview\" class=\"primary\">Add Preview</button><label class=\"scene-debug-file-button\">Local Preview Only<input data-debug-field=\"preview-file\" type=\"file\" accept=\"image/png,image/webp,image/jpeg\"></label></div>" +
+      "<details class=\"scene-debug-advanced\"><summary>Advanced asset and binding controls</summary><label>Manual Project Asset Path<input data-debug-field=\"preview-path\" placeholder=\"assets/405/example/frame.png\"></label><label>Manual Anchor ID<input data-debug-field=\"preview-anchor-manual\" placeholder=\"optional anchor ID\"></label></details></div>" +
+      "<div class=\"scene-debug-preview-subsection\"><div class=\"scene-debug-subsection-heading\"><h3>Current Previews</h3>" + this.previewSummaryHtml() + "</div><div class=\"scene-debug-preview-toolbar\"><select data-debug-field=\"preview-filter\"><option value=\"all\"" + (this.previewFilter === "all" ? " selected" : "") + ">All</option><option value=\"preview-only\"" + (this.previewFilter === "preview-only" ? " selected" : "") + ">Preview Only</option><option value=\"approved\"" + (this.previewFilter === "approved" ? " selected" : "") + ">Approved</option><option value=\"missing-asset\"" + (this.previewFilter === "missing-asset" ? " selected" : "") + ">Missing Asset</option></select><button data-debug-action=\"select-all-visible\">Select All Visible</button><button data-debug-action=\"clear-preview-selection\">Clear Selection</button></div>" + this.previewManagerHtml() +
+      "<div class=\"scene-debug-actions\"><button data-debug-action=\"approve-selected\" " + (selectedVisible.length ? "" : "disabled") + ">Approve Selected</button><button data-debug-action=\"approve-all-visible\" " + (eligibleVisible.length ? "" : "disabled") + ">Approve All Visible</button><button data-debug-action=\"unapprove-selected\" " + (selectedVisible.length ? "" : "disabled") + ">Unapprove Selected</button><button data-debug-action=\"unapprove-all-visible\" " + (visible.some((item) => item.approval) ? "" : "disabled") + ">Unapprove All Visible</button></div></div>" +
+      "<div class=\"scene-debug-preview-subsection\"><h3>Implementation Handoff</h3><p class=\"scene-debug-help\">Only approved Canonical Candidates are included in implementation-ready mappings.</p><div class=\"scene-debug-actions\"><button data-debug-action=\"copy-mapping\">Copy Preview Mapping</button><button data-debug-action=\"copy-approved\">Copy All Approved Mappings</button><button data-debug-action=\"copy-handoff\" class=\"primary\">Copy Implementation Handoff</button></div></div>" +
+      "<fieldset class=\"scene-debug-view-helpers\"><legend>VIEW HELPERS</legend><label><input data-debug-field=\"show-anchor-points\" type=\"checkbox\" " + (this.previewState.showAnchorPoints ? "checked" : "") + "> Anchor Points</label><label><input data-debug-field=\"show-bounds\" type=\"checkbox\" " + (this.previewState.showImageBounds ? "checked" : "") + "> Image Bounds</label><label><input data-debug-field=\"show-feet\" type=\"checkbox\" " + (this.previewState.showFeetBaseline ? "checked" : "") + "> Feet / Baseline</label></fieldset></section>";
+  }
 
   private pointManagerHtml(): string {
     const entries = filterPointEntries(this.layout, this.pointSearch, this.pointFilter);
@@ -152,23 +350,13 @@ export class SceneDebugEditor {
     if (!this.previewState.items.length) return "<p>No temporary preview items.</p>";
     return this.previewState.items.slice().sort((a, b) => a.z - b.z).map((item) => {
       const source = item.source.kind === "project" ? item.source.path ?? "" : "local: " + (item.source.fileName ?? "image");
-      const approval = item.approval ? " · CANONICAL CANDIDATE" : "";
+      const missing = item.source.kind === "project" && Boolean(item.source.path) && this.assetPaths.size > 0 && !this.assetPaths.has(item.source.path ?? "");
+      const approval = item.approval ? "<span class=\"scene-debug-status-badge approved\">✓ CANONICAL CANDIDATE</span>" : missing ? "<span class=\"scene-debug-status-badge missing\">⚠ MISSING ASSET</span>" : "<span class=\"scene-debug-status-badge preview-only\">PREVIEW ONLY</span>";
+      const image = item.source.kind === "project" ? "<img src=\"" + this.escape(item.source.path ?? "") + "\" alt=\"\" loading=\"lazy\">" : "<span class=\"scene-debug-preview-placeholder\">LOCAL</span>";
       const field = (name: string, type: string, value: string, extra = "") => "<label>" + name + "<input data-preview-edit=\"" + this.escape(item.id + ":" + name) + "\" type=\"" + type + "\" value=\"" + this.escape(value) + "\" " + extra + "></label>";
-      return "<div class=\"scene-debug-preview-row\" data-preview-row=\"" + this.escape(item.id) + "\">" +
-        "<strong>" + this.escape(item.name) + "</strong><span>" + this.escape(source) + approval + "</span>" +
-        field("kind", "text", item.kind) +
-        field("anchorId", "text", item.anchorId ?? "", "placeholder=\"free-position\"") +
-        field("x", "number", String(item.x), "step=\"1\"") +
-        field("y", "number", String(item.y), "step=\"1\"") +
-        field("scale", "number", String(item.scale), "step=\"0.05\" min=\"0.05\"") +
-        field("opacity", "number", String(item.opacity), "step=\"0.05\" min=\"0\" max=\"1\"") +
-        field("z", "number", String(item.z), "step=\"1\"") +
-        "<label>flip<input data-preview-edit=\"" + this.escape(item.id + ":flip") + "\" type=\"checkbox\"" + (item.flip ? " checked" : "") + "></label>" +
-        "<button type=\"button\" data-preview-approve=\"" + this.escape(item.id) + "\">Approve</button>" +
-        "<button type=\"button\" data-preview-remove=\"" + this.escape(item.id) + "\">Remove</button></div>";
+      return "<article class=\"scene-debug-preview-row\" data-preview-row=\"" + this.escape(item.id) + "\"><div class=\"scene-debug-preview-card-head\"><label class=\"scene-debug-preview-select\"><input type=\"checkbox\" data-preview-select=\"" + this.escape(item.id) + "\"" + (this.previewSelectedIds.has(item.id) ? " checked" : "") + ">Select</label>" + image + "<div><strong>" + this.escape(item.name) + "</strong><small>" + this.escape(item.anchorId ? "Anchor: " + item.anchorId : "Free Position") + " · " + this.escape(source) + "</small></div><div>" + approval + "</div></div><div class=\"scene-debug-preview-card-actions\"><button type=\"button\" data-preview-approve=\"" + this.escape(item.id) + "\">" + (item.approval ? "Unapprove" : "Approve") + "</button><button type=\"button\" data-preview-remove=\"" + this.escape(item.id) + "\">Remove</button></div><details class=\"scene-debug-advanced\"><summary>Advanced Edit</summary><div class=\"scene-debug-preview-fields\">" + field("kind", "text", item.kind) + field("anchorId", "text", item.anchorId ?? "", "placeholder=\"free-position\"") + field("x", "number", String(item.x), "step=\"1\"") + field("y", "number", String(item.y), "step=\"1\"") + field("scale", "number", String(item.scale), "step=\"0.05\" min=\"0.05\"") + field("opacity", "number", String(item.opacity), "step=\"0.05\" min=\"0\" max=\"1\"") + field("z", "number", String(item.z), "step=\"1\"") + "<label>flip<input data-preview-edit=\"" + this.escape(item.id + ":flip") + "\" type=\"checkbox\"" + (item.flip ? " checked" : "") + "></label></div></details></article>";
     }).join("");
   }
-
   private markDirty(): void {
     this.dirty = true;
   }
@@ -229,6 +417,11 @@ export class SceneDebugEditor {
       ...this.previewState,
       items: this.previewState.items.map((item) => {
         if (item.id !== id) return item;
+        if (field === "kind") {
+          const kind = input.value as PreviewKind;
+          if (!["single", "pair", "multi", "prop", "vfx"].includes(kind)) return item;
+          return { ...item, kind, approval: undefined };
+        }
         if (field === "anchorId") {
           const anchorId = input.value.trim() || undefined;
           return { ...item, anchorId, freePosition: !anchorId, showAnchor: Boolean(anchorId), approval: undefined };
@@ -272,7 +465,38 @@ export class SceneDebugEditor {
       this.markDirty();
       this.render();
     });
-    for (const button of Array.from(this.root.querySelectorAll<HTMLButtonElement>("[data-debug-tool]"))) {
+    this.root.querySelector<HTMLTextAreaElement>('[data-debug-field="authoring-manifest"]')?.addEventListener("input", (event) => {
+      this.manifestText = (event.target as HTMLTextAreaElement).value;
+    });
+    this.root.querySelector<HTMLInputElement>('[data-debug-field="authoring-manifest-file"]')?.addEventListener("change", (event) => void this.importManifestFile((event.target as HTMLInputElement).files?.[0] ?? null));
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="open-manifest"]')?.addEventListener("click", () => { this.manifestInputOpen = true; this.render(); });
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="clear-manifest"]')?.addEventListener("click", () => this.clearManifest());
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="recheck-manifest"]')?.addEventListener("click", () => void this.validateManifest());
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="check-manifest"]')?.addEventListener("click", () => void this.validateManifest());
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="preview-auto-author"]')?.addEventListener("click", () => void this.buildAutoAuthor());
+    this.root.querySelector<HTMLInputElement>('[data-debug-field="preview-asset-search"]')?.addEventListener("input", (event) => { this.assetSearch = (event.target as HTMLInputElement).value; this.render(); });
+    this.root.querySelector<HTMLSelectElement>('[data-debug-field="preview-asset-folder"]')?.addEventListener("change", (event) => { this.assetFolder = (event.target as HTMLSelectElement).value; this.render(); });
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="toggle-all-assets"]')?.addEventListener("click", () => { this.showAllAssets = !this.showAllAssets; if (this.showAllAssets) this.assetFolder = ""; this.render(); });
+    for (const button of Array.from(this.root.querySelectorAll<HTMLButtonElement>("[data-preview-asset]"))) button.addEventListener("click", () => { this.selectedAssetPath = button.dataset.previewAsset ?? ""; this.render(); });
+    this.root.querySelector<HTMLInputElement>('[data-debug-field="preview-anchor-search"]')?.addEventListener("input", (event) => { this.previewAnchorSearch = (event.target as HTMLInputElement).value; this.render(); });
+    this.root.querySelector<HTMLSelectElement>('[data-debug-field="preview-filter"]')?.addEventListener("change", (event) => { this.previewFilter = (event.target as HTMLSelectElement).value as typeof this.previewFilter; this.render(); });
+    for (const input of Array.from(this.root.querySelectorAll<HTMLInputElement>("[data-preview-select]"))) input.addEventListener("change", () => { const id = input.dataset.previewSelect ?? ""; if (input.checked) this.previewSelectedIds.add(id); else this.previewSelectedIds.delete(id); this.render(); });
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="select-all-visible"]')?.addEventListener("click", () => { for (const item of this.previewVisibleItems()) this.previewSelectedIds.add(item.id); this.render(); });
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="clear-preview-selection"]')?.addEventListener("click", () => { this.previewSelectedIds.clear(); this.render(); });
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="approve-selected"]')?.addEventListener("click", () => this.approvePreviewSet([...this.previewSelectedIds].filter((id) => this.previewVisibleItems().some((item) => item.id === id))));
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="approve-all-visible"]')?.addEventListener("click", () => this.approvePreviewSet(this.previewVisibleItems().map((item) => item.id)));
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="unapprove-selected"]')?.addEventListener("click", () => this.unapprovePreviewSet([...this.previewSelectedIds].filter((id) => this.previewVisibleItems().some((item) => item.id === id))));
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="unapprove-all-visible"]')?.addEventListener("click", () => this.unapprovePreviewSet(this.previewVisibleItems().filter((item) => item.approval).map((item) => item.id)));
+    for (const button of Array.from(this.root.querySelectorAll<HTMLButtonElement>("[data-preview-unapprove]"))) button.addEventListener("click", () => this.unapprovePreviewSet([button.dataset.previewUnapprove ?? ""]));
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="validate-manifest"]')?.addEventListener("click", () => void this.validateManifest());
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="build-auto-author"]')?.addEventListener("click", () => void this.buildAutoAuthor());
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="apply-auto-author"]')?.addEventListener("click", () => this.applyAutoAuthor());
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="preserve-auto-author"]')?.addEventListener("click", () => this.preserveAutoAuthor());
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="viewport-fit"]')?.addEventListener("click", () => this.setViewportFit());
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="viewport-100"]')?.addEventListener("click", () => this.setViewportZoom(1));
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="viewport-minus"]')?.addEventListener("click", () => this.setViewportZoom(this.viewportZoom - 0.1));
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="viewport-plus"]')?.addEventListener("click", () => this.setViewportZoom(this.viewportZoom + 0.1));
+    this.root.querySelector<HTMLButtonElement>('[data-debug-action="viewport-center"]')?.addEventListener("click", () => this.setViewportCenter());    for (const button of Array.from(this.root.querySelectorAll<HTMLButtonElement>("[data-debug-tool]"))) {
       button.addEventListener("click", () => {
         this.tool = button.dataset.debugTool as Tool;
         this.selected = null;
@@ -346,7 +570,7 @@ export class SceneDebugEditor {
       });
     }
     for (const button of Array.from(this.root.querySelectorAll<HTMLButtonElement>("[data-preview-approve]"))) {
-      button.addEventListener("click", () => this.approvePreview(button.dataset.previewApprove ?? ""));
+      button.addEventListener("click", () => { const id = button.dataset.previewApprove ?? ""; const item = this.previewState.items.find((candidate) => candidate.id === id); if (item?.approval) this.unapprovePreviewSet([id]); else this.approvePreview(id); });
     }
     this.root.querySelector<HTMLButtonElement>('[data-debug-action="copy-mapping"]')?.addEventListener("click", () => void this.copyPreviewMapping());
     this.root.querySelector<HTMLButtonElement>('[data-debug-action="copy-approved"]')?.addEventListener("click", () => void this.copyApprovedMappings());
@@ -486,7 +710,13 @@ export class SceneDebugEditor {
       this.selected = this.pick(point);
       if (this.selected) {
         this.recordHistory();
-        this.moveDrag = { selection: this.selected, offset: this.selectionOffset(this.selected, point) };
+        const rect = this.selectionRect(this.selected);
+        const handle = rect && (this.selected.kind === "collision" || this.selected.kind === "trigger") ? rectHandleAtPoint(point, rect) : null;
+        if (rect && handle && (this.selected.kind === "collision" || this.selected.kind === "trigger")) {
+          this.resizeDrag = { selection: this.selected, handle, original: { ...rect } };
+        } else {
+          this.moveDrag = { selection: this.selected, offset: this.selectionOffset(this.selected, point) };
+        }
       }
       this.render();
     }
@@ -499,12 +729,16 @@ export class SceneDebugEditor {
       this.draw();
       return;
     }
+    if (this.resizeDrag) {
+      this.resizeSelection(this.resizeDrag, point);
+      this.draw();
+      return;
+    }
     if (this.moveDrag) {
       this.moveSelection(this.moveDrag.selection, { x: point.x - this.moveDrag.offset.x, y: point.y - this.moveDrag.offset.y });
       this.draw();
     }
   }
-
   private pointerUp(): void {
     if (this.draftDrag) {
       const rect = this.rectFromPoints(this.draftDrag.start, this.draftDrag.current);
@@ -525,9 +759,9 @@ export class SceneDebugEditor {
     }
     this.draftDrag = null;
     this.moveDrag = null;
+    this.resizeDrag = null;
     this.render();
   }
-
   private draw(): void {
     const canvas = this.canvas();
     const ctx = canvas.getContext("2d");
@@ -578,6 +812,8 @@ export class SceneDebugEditor {
       this.drawPoint(ctx, interaction, scale, "#f6cf6b", interaction.label);
     });
     this.drawPoint(ctx, this.layout.spawn, scale, "#71ffbd", "SPAWN");
+    const selectedRect = this.selected ? this.selectionRect(this.selected) : null;
+    if (selectedRect && this.selected && (this.selected.kind === "collision" || this.selected.kind === "trigger")) this.drawResizeHandles(ctx, selectedRect, scale);
     if (this.draftDrag) {
       const rect = this.rectFromPoints(this.draftDrag.start, this.draftDrag.current);
       ctx.strokeStyle = "#ffffff";
@@ -848,9 +1084,57 @@ export class SceneDebugEditor {
     this.status("Created a portrait draft. DRAFT / UNVERIFIED; no authored JSON was changed.");
   }
 
+  private async importManifestFile(file: File | null): Promise<void> {
+    if (!file) return;
+    try {
+      const result = await readSceneManifestFile(file);
+      this.manifestText = result.text;
+      this.manifestFileName = result.fileName;
+      this.manifestInputOpen = true;
+      this.autoAuthorApplied = false;
+      this.manifestValidation = null;
+      this.autoAuthorPlan = null;
+      this.render();
+      this.status("Loaded " + result.fileName + ". Check Manifest before applying anything.");
+    } catch (error) {
+      this.status(error instanceof Error ? error.message : "Manifest file could not be read.");
+    }
+  }
+
+  private clearManifest(): void {
+    this.manifestText = "";
+    this.manifestFileName = "";
+    this.manifestInputOpen = false;
+    this.autoAuthorApplied = false;
+    this.manifestValidation = null;
+    this.autoAuthorPlan = null;
+    this.render();
+    this.status("Manifest cleared. Current SceneLayout is unchanged.");
+  }
+
+  private approvePreviewSet(ids: string[]): void {
+    const uniqueIds = [...new Set(ids)];
+    if (!uniqueIds.length) return this.status("No visible eligible previews selected.");
+    const assetPaths = this.assetPaths.size ? this.assetPaths : undefined;
+    const eligible = uniqueIds.filter((id) => previewApprovalEligibility(this.previewState, id, assetPaths).eligible);
+    if (eligible.length > 1 && !window.confirm("Approve " + eligible.length + " visible previews as Canonical Candidates?")) return this.status("Bulk approval cancelled.");
+    const result = approveCanonicalCandidates(this.previewState, uniqueIds, assetPaths);
+    this.previewState = result.state;
+    this.render();
+    this.status(result.approved.length + " approved" + (result.skipped.length ? "; " + result.skipped.length + " skipped: " + result.skipped.map((item) => item.reason).join(", ") : "") + ".");
+  }
+
+  private unapprovePreviewSet(ids: string[]): void {
+    if (!ids.length) return this.status("No previews selected.");
+    this.previewState = clearCanonicalApprovals(this.previewState, ids);
+    this.render();
+    this.status("Approval cleared for " + ids.length + " preview" + (ids.length === 1 ? "" : "s") + ".");
+  }
+
   private async addPreview(): Promise<void> {
-    const projectPath = this.root.querySelector<HTMLInputElement>('[data-debug-field="preview-path"]')?.value.trim() ?? "";
-    const anchorId = this.root.querySelector<HTMLInputElement>('[data-debug-field="preview-anchor"]')?.value.trim() || undefined;
+    const manualPath = this.root.querySelector<HTMLInputElement>('[data-debug-field="preview-path"]')?.value.trim() ?? "";
+    const projectPath = this.selectedAssetPath || manualPath;
+    const anchorId = this.root.querySelector<HTMLSelectElement>('[data-debug-field="preview-anchor"]')?.value || this.root.querySelector<HTMLInputElement>('[data-debug-field="preview-anchor-manual"]')?.value.trim() || undefined;
     const file = this.pendingPreviewFile;
     if (!projectPath && !file) return this.status("Choose a project asset path or local image.");
     try {
@@ -862,6 +1146,7 @@ export class SceneDebugEditor {
         anchorId
       });
       this.previewState = addPreviewItem(this.previewState, item);
+      this.previewSelectedIds = new Set([item.id]);
       this.pendingPreviewFile = null;
       this.render();
       this.status("Added temporary preview. It is editor-only.");
@@ -872,7 +1157,7 @@ export class SceneDebugEditor {
 
   private approvePreview(id: string): void {
     try {
-      this.previewState = approveCanonicalCandidate(this.previewState, id);
+      this.previewState = approveCanonicalCandidate(this.previewState, id, this.assetPaths.size ? this.assetPaths : undefined);
       this.render();
       this.status("Approved as a canonical candidate. Copy the handoff to carry it forward.");
     } catch (error) {
@@ -882,7 +1167,9 @@ export class SceneDebugEditor {
 
   private async copyText(value: string, success: string): Promise<void> {
     await navigator.clipboard.writeText(value);
-    this.status(success);
+    this.copyFeedback = success + " ✓";
+    this.status(this.copyFeedback);
+    window.setTimeout(() => { this.copyFeedback = ""; }, 1800);
   }
 
   private async copyPreviewMapping(): Promise<void> {
@@ -935,8 +1222,7 @@ export class SceneDebugEditor {
   }
 
   private async copyJson(): Promise<void> {
-    await navigator.clipboard.writeText(JSON.stringify(this.layout, null, 2));
-    this.status("Copied JSON");
+    await this.copyText(JSON.stringify(this.layout, null, 2), "Copied JSON");
   }
 
   private downloadJson(): void {
@@ -963,19 +1249,7 @@ export class SceneDebugEditor {
   }
 
   private pick(point: Point): Selection | null {
-    if (Math.hypot(point.x - this.layout.spawn.x, point.y - this.layout.spawn.y) < 24) return { kind: "spawn" };
-    const interaction = this.layout.interactions.findIndex((item) => Math.hypot(point.x - item.x, point.y - item.y) <= Math.max(18, item.radius));
-    if (interaction >= 0) return { kind: "interaction", index: interaction };
-    const slot = this.layout.placementSlots.findIndex((item) => Math.hypot(point.x - item.x, point.y - item.y) <= Math.max(18, item.radius));
-    if (slot >= 0) return { kind: "placement-slot", index: slot };
-    const echoAnchor = Object.entries(this.layout.echoAnchors).find(([, item]) => Math.hypot(point.x - item.x, point.y - item.y) <= Math.max(18, item.radius));
-    if (echoAnchor) return { kind: "echo-anchor", key: echoAnchor[0] };
-    const collision = this.layout.obstacles.findIndex((rect) => this.pointInRect(point, rect));
-    if (collision >= 0) return { kind: "collision", index: collision };
-    const trigger = this.layout.triggers.findIndex((item) => this.pointInRect(point, item.rect));
-    if (trigger >= 0) return { kind: "trigger", index: trigger };
-    const anchor = Object.entries(this.layout.anchors).find(([, item]) => Math.hypot(point.x - item.x, point.y - item.y) < 24);
-    return anchor ? { kind: "anchor", key: anchor[0] } : null;
+    return pickSceneGeometry(this.layout, point);
   }
 
   private moveSelection(selection: Selection, point: Point): void {
@@ -995,14 +1269,40 @@ export class SceneDebugEditor {
     if (selection.kind === "anchor") this.layout.anchors[selection.key] = point;
     if (selection.kind === "collision") {
       const rect = this.layout.obstacles[selection.index];
-      if (rect) Object.assign(rect, { x: point.x, y: point.y });
+      if (rect) Object.assign(rect, moveRectToPoint(rect, point));
     }
     if (selection.kind === "trigger") {
       const trigger = this.layout.triggers[selection.index];
-      if (trigger) Object.assign(trigger.rect, { x: point.x, y: point.y });
+      if (trigger) Object.assign(trigger.rect, moveRectToPoint(trigger.rect, point));
     }
   }
 
+  private selectionRect(selection: Selection): Rect | null {
+    if (selection.kind === "collision") return this.layout.obstacles[selection.index] ?? null;
+    if (selection.kind === "trigger") return this.layout.triggers[selection.index]?.rect ?? null;
+    return null;
+  }
+
+  private resizeSelection(drag: ResizeDrag, point: Point): void {
+    const next = resizeRect(drag.original, drag.handle, point);
+    if (drag.selection.kind === "collision") {
+      const rect = this.layout.obstacles[drag.selection.index];
+      if (rect) Object.assign(rect, next);
+    } else {
+      const rect = this.layout.triggers[drag.selection.index]?.rect;
+      if (rect) Object.assign(rect, next);
+    }
+  }
+
+  private drawResizeHandles(ctx: CanvasRenderingContext2D, rect: Rect, scale: Point): void {
+    const points = [
+      { x: rect.x, y: rect.y }, { x: rect.x + rect.w / 2, y: rect.y }, { x: rect.x + rect.w, y: rect.y },
+      { x: rect.x, y: rect.y + rect.h / 2 }, { x: rect.x + rect.w, y: rect.y + rect.h / 2 },
+      { x: rect.x, y: rect.y + rect.h }, { x: rect.x + rect.w / 2, y: rect.y + rect.h }, { x: rect.x + rect.w, y: rect.y + rect.h }
+    ];
+    ctx.fillStyle = "#ffffff";
+    for (const point of points) ctx.fillRect((point.x - 7) * scale.x, (point.y - 7) * scale.y, 14 * scale.x, 14 * scale.y);
+  }
   private selectionOffset(selection: Selection, point: Point): Point {
     const target = this.selectedTarget();
     const origin = "rect" in (target ?? {}) ? (target as { rect: Rect }).rect : target as Point | null;
@@ -1015,10 +1315,8 @@ export class SceneDebugEditor {
 
   private eventPoint(event: PointerEvent): Point {
     const rect = this.canvas().getBoundingClientRect();
-    return {
-      x: ((event.clientX - rect.left) / rect.width) * this.layout.size.w,
-      y: ((event.clientY - rect.top) / rect.height) * this.layout.size.h
-    };
+    const bounds: SceneViewportBounds = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+    return clientPointToScene({ clientX: event.clientX, clientY: event.clientY }, bounds, this.layout.size);
   }
 
   private syncCanvasSize(): void {
@@ -1122,7 +1420,3 @@ export class SceneDebugEditor {
     return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
   }
 }
-
-
-
-

@@ -2,6 +2,19 @@ import type { DiaryEntry } from "../types.js";
 
 export const authoredChapterDiaryEntries: DiaryEntry[] = [
   {
+    id: "authored-diary-june24-only-came-for-you",
+    date: "2026-06-24",
+    title: "06.24 · 只为你而来",
+    body: "一张桌子、一杯胡萝卜奶和一只丑小八，留下了没有说完的下午。",
+    location: "the study table",
+    weather: "quiet afternoon",
+    memoryKind: "chapter",
+    mood: "quiet",
+    chapterId: "june24-only-came-for-you",
+    photos: [],
+    scrapbookLayout: { elements: [] }
+  },
+  {
     id: "authored-diary-labis-motor-day",
     date: "2026-07-19",
     title: "07.19 · 单凭这一点，没有白来",

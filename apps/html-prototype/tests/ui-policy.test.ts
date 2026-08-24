@@ -75,11 +75,10 @@ test("Muji Room landscape keeps the original dedicated runtime path", () => {
   assert.match(appSource, /for \(const interaction of roomInteractions\)/);
 });
 
-test("Muji Room portrait reuses existing room effect rendering for lamp and window", () => {
+test("Muji Room portrait keeps lamp rendering while Window remains a panel-only interaction", () => {
   assert.match(appSource, /this\.roomInteractionById\(layout, "lamp"\)/);
-  assert.match(appSource, /this\.roomInteractionById\(layout, "window"\)/);
   assert.match(appSource, /if \(this\.room\.lampOn && lamp\) this\.drawLampGlow\(lamp, scale\)/);
-  assert.match(appSource, /if \(this\.room\.windowFocus && windowInteraction\)[\s\S]*this\.drawWindowFocus\(windowInteraction, time, scale\)/);
+  assert.doesNotMatch(appSource, /windowFocus|drawLivingWindowWeather|drawWindowFocus/)
   assert.match(appSource, /activateRoomInteraction\(this\.activeRoomInteraction\)/);
   for (const id of ["door", "journal", "lamp", "window", "records", "toolbox", "reflection"]) {
     assert.match(appSource, new RegExp(`interaction\\.id === "${id}"`));

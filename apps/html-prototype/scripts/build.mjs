@@ -1,4 +1,5 @@
 import { cp, mkdir, copyFile, readdir, writeFile } from "node:fs/promises";
+import { build } from "esbuild";
 import { dirname, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
@@ -12,6 +13,11 @@ await writeFile(resolve(root, "dist/assets/audio-manifest.json"), JSON.stringify
 await writeFile(resolve(root, "dist/public/assets/audio-manifest.json"), JSON.stringify({ files: audioFiles }, null, 2));
 await copyFile(resolve(root, "src/index.html"), resolve(root, "dist/index.html"));
 await copyFile(resolve(root, "src/styles.css"), resolve(root, "dist/styles.css"));
+await mkdir(resolve(root, "dist/browser/ffmpeg"), { recursive: true });
+await copyFile(resolve(root, "../../node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.js"), resolve(root, "dist/browser/ffmpeg/ffmpeg-core.js"));
+await copyFile(resolve(root, "../../node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.wasm"), resolve(root, "dist/browser/ffmpeg/ffmpeg-core.wasm"));
+await copyFile(resolve(root, "../../node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"), resolve(root, "dist/browser/pdf.worker.mjs"));
+await build({ entryPoints: [resolve(root, "dist/src/main.js")], bundle: true, format: "esm", splitting: true, outdir: resolve(root, "dist/browser"), platform: "browser", target: "es2022" });
 await writeFile(resolve(root, "dist/config.js"), `window.WALK_BACK_HOME_CONFIG = ${JSON.stringify({
   authProvider: process.env.WALK_BACK_HOME_AUTH_PROVIDER ?? "local",
   supabaseUrl: process.env.SUPABASE_URL ?? "",
