@@ -1851,7 +1851,7 @@ export class WalkBackHomeApp {
     const mainInteractionId = runtime.mainInteractionId ?? "main-memory-replay";
     const optionalMemory = interaction?.id === "bus-stop-memory";
     const availableInteraction = interaction && (optionalMemory || mainComplete || ["exit", "diary", "diary memory", "diary-memory", mainInteractionId].includes(interaction.id)) ? interaction : null;
-    this.activeObject = echoActive ?? availableInteraction?.id ?? "";
+    this.activeObject = availableInteraction?.id ?? echoActive ?? "";
   }
 
   private startAuthoredCutscene(mode: "main" | "echo", replay: boolean, echoId = ""): void {
