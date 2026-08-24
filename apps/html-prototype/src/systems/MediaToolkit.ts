@@ -1,3 +1,4 @@
+import { runAbortableStage } from "./LocalJob.js";
 export type MediaProcessingState = { status: "idle" | "processing" | "cancelled" | "complete" | "error"; progress: number; message: string };
 
 export function normalizeTrimRange(start: number, end: number, duration: number): { start: number; end: number } {
@@ -29,7 +30,7 @@ export function revokeObjectUrl(url: string | null | undefined): void {
 
 export type MediaOperation = "extract-audio" | "convert-audio" | "trim-audio" | "trim-video";
 
-export async function processMediaFile(
+async function processMediaFileLegacy(
   file: File,
   operation: MediaOperation,
   options: { start?: number; end?: number; duration?: number; format?: "mp3" | "wav" | "ogg"; signal?: AbortSignal; onProgress?: (progress: number) => void } = {}
@@ -62,10 +63,128 @@ export async function processMediaFile(
     const bytes = typeof data === "string" ? new TextEncoder().encode(data) : data;
     return { blob: new Blob([bytes.buffer as ArrayBuffer], { type: mimeFor(extension) }), extension };
   } finally {
-    try { await ffmpeg.deleteFile(inputName); } catch {}
-    try { await ffmpeg.deleteFile(outputName); } catch {}
     ffmpeg.terminate();
   }
+}
+
+export function mediaCommandArgs(
+  inputName: string,
+  outputName: string,
+  operation: MediaOperation,
+  extension: string,
+  range?: { start: number; end: number }
+): string[] {
+  if ((operation === "trim-audio" || operation === "trim-video") && !range) throw new Error("Choose a valid trim range");
+  const seek = range
+    ? ["-ss", formatMediaSeconds(range.start), "-t", formatMediaSeconds(range.end - range.start)]
+    : [];
+  if (operation === "extract-audio") return [...seek, "-i", inputName, "-vn", "-acodec", codecFor(extension), outputName];
+  if (operation === "convert-audio") return [...seek, "-i", inputName, "-acodec", codecFor(extension), outputName];
+  if (operation === "trim-audio") {
+    return [...seek, "-i", inputName, "-vn", "-acodec", codecFor(extension), outputName];
+  }
+  return [...seek, "-i", inputName, "-c:v", "libvpx", "-c:a", "libvorbis", outputName];
+}
+
+function formatMediaSeconds(value: number): string {
+  return String(Math.round(value * 1000) / 1000);
+}
+
+export async function processMediaFile(
+  file: File,
+  operation: MediaOperation,
+  options: { start?: number; end?: number; duration?: number; format?: "mp3" | "wav" | "ogg"; signal?: AbortSignal; onProgress?: (progress: number) => void } = {}
+): Promise<{ blob: Blob; extension: string }> {
+  throwIfAborted(options.signal);
+  const [{ FFmpeg }, { toBlobURL }] = await runAbortableStage({
+    label: "Media engine modules",
+    timeoutMs: 15_000,
+    parentSignal: options.signal,
+    run: async () => Promise.all([import("@ffmpeg/ffmpeg"), import("@ffmpeg/util")])
+  });
+  const ffmpeg = new FFmpeg();
+  const terminate = (): void => ffmpeg.terminate();
+  options.signal?.addEventListener("abort", terminate, { once: true });
+  const token = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : String(Date.now());
+  const inputName = `input-${token}${extensionFor(file.name)}`;
+  const extension = options.format ?? (operation === "trim-video" ? "webm" : "mp3");
+  const outputName = `output-${token}.${extension}`;
+  const onProgress = (event: { progress: number }) => options.onProgress?.(Math.max(0, Math.min(1, event.progress)));
+  ffmpeg.on("progress", onProgress);
+  try {
+    const coreBase = new URL("./ffmpeg/", import.meta.url).href;
+    await runAbortableStage({
+      label: "Media engine",
+      timeoutMs: 45_000,
+      parentSignal: options.signal,
+      run: async (signal) => {
+        signal.addEventListener("abort", terminate, { once: true });
+        try {
+          const [coreURL, wasmURL] = await Promise.all([
+            toBlobURL(`${coreBase}ffmpeg-core.js`, "text/javascript"),
+            toBlobURL(`${coreBase}ffmpeg-core.wasm`, "application/wasm")
+          ]);
+          throwIfAborted(signal);
+          await ffmpeg.load({ coreURL, wasmURL });
+        } finally {
+          signal.removeEventListener("abort", terminate);
+        }
+      }
+    });
+    const inputBytes = await runAbortableStage({
+      label: "Reading media",
+      timeoutMs: 30_000,
+      parentSignal: options.signal,
+      run: async () => new Uint8Array(await file.arrayBuffer())
+    });
+    await runAbortableStage({
+      label: "Writing media",
+      timeoutMs: 30_000,
+      parentSignal: options.signal,
+      run: async (signal) => {
+        signal.addEventListener("abort", terminate, { once: true });
+        try {
+          await ffmpeg.writeFile(inputName, inputBytes);
+        } finally {
+          signal.removeEventListener("abort", terminate);
+        }
+      }
+    });
+    const range = options.start !== undefined && options.end !== undefined
+      ? normalizeTrimRange(options.start, options.end, options.duration ?? options.end)
+      : undefined;
+    const args = mediaCommandArgs(inputName, outputName, operation, extension, range);
+    const exitCode = await runAbortableStage({
+      label: "Media export",
+      timeoutMs: 300_000,
+      parentSignal: options.signal,
+      run: async (signal) => {
+        signal.addEventListener("abort", terminate, { once: true });
+        try {
+          return await ffmpeg.exec(args);
+        } finally {
+          signal.removeEventListener("abort", terminate);
+        }
+      }
+    });
+    if (exitCode !== 0) throw new Error("Media export failed with code " + exitCode);
+    const data = await runAbortableStage({
+      label: "Reading exported media",
+      timeoutMs: 30_000,
+      parentSignal: options.signal,
+      run: async () => ffmpeg.readFile(outputName)
+    });
+    const bytes = typeof data === "string" ? new TextEncoder().encode(data) : data;
+    return { blob: new Blob([bytes.buffer as ArrayBuffer], { type: mimeFor(extension) }), extension };
+  } finally {
+    options.signal?.removeEventListener("abort", terminate);
+    ffmpeg.off("progress", onProgress);
+    ffmpeg.terminate();
+  }
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) throw signal.reason ?? new DOMException("Cancelled", "AbortError");
 }
 
 function extensionFor(name: string): string {

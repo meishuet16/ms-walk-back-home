@@ -58,6 +58,14 @@ export async function runAbortableStage<T>(options: {
   run: (signal: AbortSignal) => Promise<T>;
 }): Promise<T> {
   const controller = new AbortController();
+  let rejectAbort: (reason: unknown) => void = () => undefined;
+  const aborted = new Promise<never>((_resolve, reject) => {
+    rejectAbort = reject;
+  });
+  const rejectOnAbort = (): void => rejectAbort(
+    controller.signal.reason ?? new DOMException("Cancelled", "AbortError")
+  );
+  controller.signal.addEventListener("abort", rejectOnAbort, { once: true });
   const relay = (): void => controller.abort(
     options.parentSignal?.reason ?? new DOMException("Cancelled", "AbortError")
   );
@@ -68,10 +76,11 @@ export async function runAbortableStage<T>(options: {
     options.timeoutMs
   );
   try {
-    return await options.run(controller.signal);
+    return await Promise.race([options.run(controller.signal), aborted]);
   } finally {
     clearTimeout(timer);
     options.parentSignal?.removeEventListener("abort", relay);
+    controller.signal.removeEventListener("abort", rejectOnAbort);
   }
 }
 

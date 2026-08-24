@@ -118,3 +118,13 @@ test("Spin Add tolerates stale preset state and New preset uses an inline naming
   assert.match(source, /field === "spin-choice"[\s\S]*?this\.spinChoiceDraft/);
   assert.match(source, /field === "spin-preset-name"[\s\S]*?this\.spinPresetNameDraft/);
 });
+
+test("Media editor controls dispatch through the Toolbox action gate", () => {
+  const source = readFileSync(resolve(process.cwd(), "src/app.ts"), "utf8");
+  const gateStart = source.indexOf('if (["media-zoom-in"');
+  const gateEnd = source.indexOf("].includes(action)", gateStart);
+  const gate = source.slice(gateStart, gateEnd);
+  for (const action of ["media-zoom-in", "media-zoom-out", "media-zoom-reset", "media-play-selection"]) {
+    assert.match(gate, new RegExp('"' + action + '"'));
+  }
+});

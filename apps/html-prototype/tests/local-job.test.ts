@@ -50,3 +50,14 @@ test("abortable stages relay parent cancellation", async () => {
   parent.abort(new DOMException("Cancelled", "AbortError"));
   await assert.rejects(pending, /Cancelled/);
 });
+test("abortable stages settle even when work ignores cancellation", async () => {
+  const guarded = Promise.race([
+    runAbortableStage({
+      label: "Uncooperative stage",
+      timeoutMs: 5,
+      run: async () => new Promise<void>(() => undefined)
+    }),
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error("stage did not settle")), 50))
+  ]);
+  await assert.rejects(guarded, /Uncooperative stage timed out/);
+});

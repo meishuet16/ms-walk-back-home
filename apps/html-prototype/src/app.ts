@@ -84,6 +84,7 @@ import { deletePdfPages, imagesToPdf, mergePdfFiles, optimizePdf, parsePdfPageOp
 import { mediaOutputFilename, processMediaFile } from "./systems/MediaToolkit.js";
 import { decodeMediaWaveform, waveformPeaksInView } from "./systems/MediaWaveform.js";
 import { createTrimTimeline, formatTimelineTime, parseTimelineTime, setPlayhead, setTrimBoundary, timeAtPixel, visibleDuration, zoomTimeline, type TrimTimelineState, type WaveformPeak } from "./systems/WaveformModel.js";
+import { runAbortableStage } from "./systems/LocalJob.js";
 import type { MusicScene } from "./systems/SceneMusic.js";
 import { SupabaseSync } from "./systems/SupabaseSync.js";
 import { emptyTendencies } from "./systems/TendencySystem.js";
@@ -320,6 +321,7 @@ export class WalkBackHomeApp {
   private pdfFiles: File[] = [];
   private pdfRange = "";
   private pdfStatus = "";
+  private pdfAbortController: AbortController | null = null;
   private mediaMode = "extract-audio";
   private mediaFile: File | null = null;
   private mediaFileName = "";
@@ -653,6 +655,10 @@ export class WalkBackHomeApp {
       void this.handleLivingWindowAction(action, target);
       return;
     }
+    if (["media-zoom-in", "media-zoom-out", "media-zoom-reset", "media-play-selection"].includes(action)) {
+      void this.handleToolboxAction(action, target);
+      return;
+    }
     if (["toolbox-close", "toolbox-select", "toolbox-confirm", "toolbox-back", "toolbox-page", "toolbox-page-prev", "toolbox-page-next", "toolbox-spin-add", "toolbox-spin-remove", "toolbox-spin", "toolbox-preset-new", "toolbox-preset-create", "toolbox-preset-rename", "toolbox-preset-delete", "calculator-key", "converter-swap", "currency-swap", "currency-refresh", "timer-mode", "timer-start", "timer-pause", "timer-reset", "date-difference", "date-add", "date-subtract", "date-until-since", "pdf-process", "media-process"].includes(action)) {
       void this.handleToolboxAction(action, target);
       return;
@@ -947,13 +953,11 @@ export class WalkBackHomeApp {
     if (choice) choice.value = this.spinChoiceDraft;
     if (presetName) presetName.value = this.spinPresetNameDraft;
     for (const button of Array.from(this.overlay.querySelectorAll<HTMLButtonElement>("[data-action^=toolbox-]"))) button.type = "button";
-    if (this.toolboxPersistenceStatus) {
       const status = document.createElement("p");
       status.className = "toolbox-status";
       status.setAttribute("aria-live", "polite");
       status.textContent = this.toolboxPersistenceStatus;
       this.overlay.querySelector(".spin-wheel-tool")?.append(status);
-    }
   }
   private refreshSpinWheelView(options: { focusChoice?: boolean; focusPreset?: boolean } = {}): void {
     if (!this.toolboxOpen || this.toolboxView.screen !== "tool" || this.toolboxView.selected !== "spin-wheel") return;
@@ -1250,7 +1254,7 @@ export class WalkBackHomeApp {
     context.restore();
   }
 
-  private async processPdfLocally(): Promise<void> {
+  private async processPdfLocallyLegacy(): Promise<void> {
     if (!this.pdfFiles.length) {
       this.pdfStatus = "Choose a local file first";
       return this.renderToolboxOverlay();
@@ -1290,6 +1294,78 @@ export class WalkBackHomeApp {
       this.pdfStatus = error instanceof Error ? error.message : "PDF processing failed";
     }
     this.renderToolboxOverlay();
+  }
+  private async processPdfLocally(): Promise<void> {
+    if (!this.pdfFiles.length) {
+      this.pdfStatus = "Choose a local file first";
+      this.renderToolboxOverlay();
+      return;
+    }
+    this.pdfAbortController?.abort();
+    const controller = new AbortController();
+    this.pdfAbortController = controller;
+    const files = [...this.pdfFiles];
+    const mode = this.pdfMode;
+    const rangeText = this.pdfRange;
+    this.pdfStatus = "Processing locally...";
+    this.renderToolboxOverlay();
+    try {
+      const result: { images?: Blob[]; bytes?: Uint8Array; filename?: string; detail?: string } = await runAbortableStage({
+        label: "PDF processing",
+        timeoutMs: 120_000,
+        parentSignal: controller.signal,
+        run: async () => {
+          const first = files[0];
+          if (mode === "pdf-to-images") return { images: await pdfToPngImages(first) };
+          let bytes: Uint8Array;
+          let filename = pdfOutputFilename(first.name, mode);
+          let detail = "";
+          if (mode === "merge") {
+            bytes = await mergePdfFiles(files);
+            filename = pdfOutputFilename(first.name, "merged");
+          } else if (mode === "images-to-pdf") {
+            const images = files.filter((file) => file.type.startsWith("image/"));
+            if (!images.length) throw new Error("Choose at least one image");
+            bytes = await imagesToPdf(images);
+            filename = pdfOutputFilename(first.name, "document");
+          } else if (mode === "compress") {
+            const optimized = await optimizePdf(first);
+            bytes = optimized.bytes;
+            detail = optimized.report.message + " - " + optimized.report.originalBytes + " to " + optimized.report.resultBytes + " bytes";
+          } else {
+            const pageCount = await this.pdfPageCount(first);
+            const operation = parsePdfPageOperation(rangeText, pageCount);
+            bytes = operation.deleteMode
+              ? await deletePdfPages(first, operation.pages)
+              : await reorderOrExtractPdf(first, operation.pages);
+            filename = pdfOutputFilename(first.name, mode === "extract" ? "pages" : "reordered");
+          }
+          return { bytes, filename, detail };
+        }
+      });
+      if (controller.signal.aborted) return;
+      if (result.images) {
+        result.images.forEach((image, index) => {
+          const filename = pdfOutputFilename(files[0].name, "page-" + (index + 1)).replace(/\.pdf$/, ".png");
+          this.downloadLocalBlob(image, filename);
+        });
+        this.pdfStatus = "Saved " + result.images.length + " local page image" + (result.images.length === 1 ? "" : "s");
+      } else if (result.bytes && result.filename) {
+        this.downloadLocalBlob(new Blob([result.bytes.buffer as ArrayBuffer], { type: "application/pdf" }), result.filename);
+        this.pdfStatus = result.detail || "Saved locally as " + result.filename;
+      } else {
+        throw new Error("PDF processing produced no output");
+      }
+    } catch (error) {
+      if (this.pdfAbortController !== controller) return;
+      if (controller.signal.aborted && error instanceof DOMException) this.pdfStatus = "PDF processing cancelled";
+      else this.pdfStatus = error instanceof Error ? error.message : "PDF processing failed";
+    } finally {
+      if (this.pdfAbortController === controller) {
+        this.pdfAbortController = null;
+        if (this.toolboxOpen) this.renderToolboxOverlay();
+      }
+    }
   }
 
   private async pdfPageCount(file: Blob): Promise<number> {
@@ -1503,27 +1579,46 @@ export class WalkBackHomeApp {
       return this.renderToolboxOverlay();
     }
     this.mediaAbortController?.abort();
-    this.mediaAbortController = new AbortController();
+    const controller = new AbortController();
+    this.mediaAbortController = controller;
+    const file = this.mediaFile;
+    const mode = this.mediaMode as "extract-audio" | "convert-audio" | "trim-audio" | "trim-video";
     this.mediaProgress = 0;
     this.mediaStatus = "Loading local media engine…";
     this.renderToolboxOverlay();
     try {
-      const result = await processMediaFile(this.mediaFile, this.mediaMode as "extract-audio" | "convert-audio" | "trim-audio" | "trim-video", { start: Number(this.mediaStart), end: Number(this.mediaEnd), duration: this.mediaDuration || Number(this.mediaEnd), format: this.mediaMode === "trim-video" ? undefined : this.mediaFormat, signal: this.mediaAbortController.signal, onProgress: (progress) => { this.mediaProgress = progress; this.refreshToolboxMediaProgress(); } });
-      const filename = mediaOutputFilename(this.mediaFile.name, this.mediaMode === "extract-audio" ? "audio" : "trimmed", result.extension);
+      const result = await processMediaFile(file, mode, {
+        start: this.mediaTimeline.startMs / 1000,
+        end: this.mediaTimeline.endMs / 1000,
+        duration: this.mediaTimeline.durationMs / 1000,
+        format: mode === "trim-video" ? undefined : this.mediaFormat,
+        signal: controller.signal,
+        onProgress: (progress) => {
+          this.mediaProgress = progress;
+          this.mediaStatus = progress > 0 ? "Exporting locally... " + Math.round(progress * 100) + "%" : this.mediaStatus;
+          this.refreshToolboxMediaProgress();
+        }
+      });
+      const filename = mediaOutputFilename(file.name, mode === "extract-audio" ? "audio" : "trimmed", result.extension);
       this.downloadLocalBlob(result.blob, filename);
       this.mediaProgress = 1;
       this.mediaStatus = "Saved locally as " + filename;
     } catch (error) {
-      this.mediaStatus = error instanceof Error ? error.message : "Media processing failed";
+      if (this.mediaAbortController !== controller) return;
+      this.mediaStatus = controller.signal.aborted ? "Media processing cancelled" : error instanceof Error ? error.message : "Media processing failed";
     } finally {
-      this.mediaAbortController = null;
-      this.renderToolboxOverlay();
+      if (this.mediaAbortController === controller) {
+        this.mediaAbortController = null;
+        if (this.toolboxOpen) this.renderToolboxOverlay();
+      }
     }
   }
 
   private refreshToolboxMediaProgress(): void {
     const progress = this.overlay.querySelector<HTMLProgressElement>("progress");
     if (progress) progress.value = this.mediaProgress;
+    const status = this.overlay.querySelector<HTMLElement>(".media-tool .toolbox-status");
+    if (status) status.textContent = this.mediaStatus;
   }
 
   private downloadLocalBlob(blob: Blob, filename: string): void {
