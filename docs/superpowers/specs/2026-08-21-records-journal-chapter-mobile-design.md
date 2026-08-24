@@ -115,7 +115,7 @@ Run the existing typecheck, full html-prototype test suite, build, and a mobile 
 
 ## Scope boundaries
 
-- Do not change the Godot implementation, Next.js shell, or shared import schemas.
+- Do not change authored chapter content, canonical runtime behavior outside this scope, or shared import schemas.
 - Do not alter authored music, chapter, scene-layout, diary, or image fixtures.
 - Do not add cloud synchronization or paid media services.
 - Do not push to a remote repository without a separate user confirmation.

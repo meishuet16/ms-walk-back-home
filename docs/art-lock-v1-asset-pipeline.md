@@ -1,5 +1,9 @@
 # Art Lock V1 Asset Pipeline
 
+> Historical record, superseded 2026-08-24. This document describes the retired Godot-specific art
+> pipeline and is retained for archival context only. No active build, runtime, or validation command
+> depends on the paths below; the canonical application is `apps/html-prototype`.
+
 Date: 2026-08-05
 
 Art Lock v1 is the canonical visual specification for Walk Back Home. Codex must not generate production art for this project. External art supplies the pixels; Codex integrates, validates, imports, and wires those assets without changing gameplay.

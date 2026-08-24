@@ -1,5 +1,9 @@
 # Screenshot-Driven Play Prototype Verification
 
+> Historical record, superseded 2026-08-24. This verification note describes the retired Next.js
+> `/play` prototype and is retained for archival context only. Current verification belongs to the
+> canonical application documented in `docs/html-prototype-verification.md`.
+
 Date: 2026-08-06
 
 Scope: Next.js HTML prototype at `/play`.

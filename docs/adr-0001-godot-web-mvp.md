@@ -1,5 +1,9 @@
 # ADR 0001: Retain Godot Web for Playable MVP
 
+> Historical record, superseded 2026-08-24. This ADR documents an earlier Godot/Next.js architecture
+> and is retained for archival context only. The active canonical application is `apps/html-prototype`;
+> no Godot or Next.js path below is part of the current build or deployment.
+
 Date: 2026-08-05
 
 ## Context

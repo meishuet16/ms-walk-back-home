@@ -1,6 +1,8 @@
 # Walk Back Home HTML Prototype
 
-This is an isolated HTML-first interactive prototype. It does not replace the existing Godot implementation under `apps/game`, the Godot Web export, the Next.js Godot embed, the diary import pipeline, Memory Graph schemas, privacy logic, or fixture mode.
+This is the canonical active Walk Back Home application. It contains the current HTML runtime,
+authored chapters and diary/library fixtures, presentation systems, authoring/debug tooling, and
+the deployment build.
 
 ## Run
 
@@ -39,7 +41,7 @@ Prototype assets live in `public/assets`.
 - `friend-a.png`: Friend A prototype NPC sprite
 - `room-panel.jpg`, `map-panel.jpg`, `scrapbook-panel.jpg`, `timeline-panel.jpg`: UI panel crops for the HTML prototype
 
-These are temporary prototype assets, not modular Godot production atlases.
+These are authored HTML runtime assets. Do not regenerate, reorganize, or replace them with placeholders.
 
 ## Audio
 

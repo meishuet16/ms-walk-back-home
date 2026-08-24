@@ -1,25 +1,24 @@
-# Isolated HTML Prototype Verification
+# Canonical HTML Application Verification
 
 Date: 2026-08-06
 
-Scope: `apps/html-prototype`
+Scope: `apps/html-prototype` and retained `packages/shared`
 
 ## Commands
 
-- `npm install`: passed, 0 vulnerabilities.
-- `npm run typecheck`: passed across `@walk/html-prototype`, `@walk/web`, `@walk/shared`, and `@walk/ui`.
+- `npm install`: passed for the retained workspaces.
+- `npm run typecheck`: passed for the canonical HTML app and retained shared package.
 - `npm test`: passed.
-  - `@walk/html-prototype`: 5 node:test tests passed.
+  - `@walk/html-prototype`: canonical HTML test suite passed.
   - `@walk/shared`: 13 test files / 28 tests passed.
 - `npm run build`: passed.
   - `@walk/html-prototype` built to `apps/html-prototype/dist`.
-  - `@walk/web` Next.js build passed and kept existing routes.
 
 ## Preservation Checks
 
-- No tracked changes were made under `apps/game`.
-- No tracked changes were made to the Godot Web export configuration.
-- No tracked changes were made to the current Next.js Godot embed.
+- Canonical HTML source, authored chapters, layouts, assets, and runtime systems remain tracked.
+- Scene 624 / June 24, March 30, May 23, and Labis / July 19 content remain registered and asset-backed.
+- Muji Room, Scene Debug, Reflection Wall, and other active HTML systems remain present.
 - No tracked changes were made to `packages/shared` schemas, privacy logic, or existing tests.
 - `.private-spec`, imports, uploads, generated graphs, embeddings, and database paths remain untracked by this milestone.
 

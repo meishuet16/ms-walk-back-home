@@ -4,7 +4,7 @@ Version: v1
 
 This document defines the visual direction for Walk Back Home. It is authoritative for all future production art integration.
 
-The concept image at `.private-spec/art/concepts/asset-direction-v1.png` is a private visual-language reference only. It is not production art, not a sprite sheet, not a tileset, and must never be imported into Godot or committed to source control.
+The concept image at `.private-spec/art/concepts/asset-direction-v1.png` is a private visual-language reference only. It is not production art, not a sprite sheet, not a tileset, and must never be imported into the runtime or committed to source control.
 
 ## Non-Negotiable Rules
 
@@ -13,8 +13,8 @@ The concept image at `.private-spec/art/concepts/asset-direction-v1.png` is a pr
 - Do not generate new placeholder or programmer-art replacements for production visuals.
 - Do not wire unapproved generated art into runtime scenes.
 - Production environments must be built from original modular tiles, sprites, props, and VFX supplied externally.
-- Godot remains the canonical runtime for playable Forest and Chapter experiences.
-- HTML canvas fallback remains temporary and must not receive new gameplay or visual systems.
+- `apps/html-prototype` is the canonical runtime for playable Forest and Chapter experiences.
+- The canonical HTML runtime must remain asset-backed and must not receive generated placeholder replacements.
 
 ## Visual Language
 
@@ -117,22 +117,9 @@ Avoid:
 
 ## Asset Pipeline
 
-External production assets must be dropped into the paths defined by:
-
-- `apps/game/art_pipeline/art_lock_v1_assets.json`
-- `docs/art-lock-v1-asset-pipeline.md`
-
-The integration pipeline may define:
-
-- TileMap layer structure
-- sprite import settings
-- nearest-neighbor filtering
-- AnimationPlayer frame mapping
-- CharacterBody2D integration
-- prop placement hooks
-- lighting nodes
-- shader hooks
-- validation scripts
+The canonical runtime reads authored production assets from `apps/html-prototype/public/assets` and
+scene/layout data from `apps/html-prototype/public/scene-layouts`. New assets must be original,
+reviewed against this Art Lock, and referenced by the active HTML runtime without changing gameplay.
 
 The integration pipeline must not create production art.
 
@@ -144,5 +131,5 @@ Before runtime visual replacement:
 - assets must pass validation
 - assets must be reviewed visually against this Art Lock
 - existing mechanics must remain functional
-- no private reference image may appear in source control, Godot imports, web exports, screenshots used as runtime assets, or generated production files
+- no private reference image may appear in source control, runtime assets, screenshots used as runtime assets, or generated production files
 
