@@ -216,6 +216,19 @@ export function weatherCacheStatus(snapshot: WeatherSnapshot | null, now: Date =
   return Number.isFinite(age) && age >= 0 && age <= maxAgeMs ? "fresh" : "stale";
 }
 
+export function formatLivingWindowTime(value: string | Date, timeZone?: string): string {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    ...(timeZone ? { timeZone } : {})
+  });
+  return formatter.formatToParts(value instanceof Date ? value : new Date(value))
+    .map((part) => part.type === "dayPeriod" ? part.value.toLowerCase() : part.value)
+    .join("")
+    .replace(/\s+/g, " ");
+}
+
 export async function fetchOpenMeteoWeather(location: WindowLocation, fetcher: typeof fetch = fetch, now: () => Date = () => new Date()): Promise<WeatherSnapshot> {
   const current = "temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,rain,showers,snowfall,weather_code,cloud_cover,wind_speed_10m";
   const hourly = "temperature_2m,weather_code,precipitation_probability";
@@ -271,9 +284,9 @@ export type LivingWindowViewModel = {
 
 export function livingWindowStatusCopy(snapshot: WeatherSnapshot | null, status: "loading" | "ready" | "error", now: Date = new Date()): string {
   if (status === "loading") return "Looking outside…";
-  if (status === "error") return snapshot ? "Cached · updated " + new Date(snapshot.fetchedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "Weather unavailable";
+  if (status === "error") return snapshot ? "Cached · updated " + formatLivingWindowTime(snapshot.fetchedAt) : "Weather unavailable";
   if (!snapshot) return "Weather unavailable";
-  return weatherCacheStatus(snapshot, now) === "fresh" ? "Updated just now" : "Cached · updated " + new Date(snapshot.fetchedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return weatherCacheStatus(snapshot, now) === "fresh" ? "Updated just now" : "Cached · updated " + formatLivingWindowTime(snapshot.fetchedAt);
 }
 
 export function createLivingWindowViewModel(snapshot: WeatherSnapshot | null, moon: { label: string; illuminationPercent: number }, status: "loading" | "ready" | "error", now: Date = new Date()): LivingWindowViewModel {
@@ -301,7 +314,7 @@ export function createLivingWindowViewModel(snapshot: WeatherSnapshot | null, mo
     statusLabel: livingWindowStatusCopy(null, status, now)
   };
   const timeZone = snapshot.timezone || snapshot.location.timezone || undefined;
-  const formatTime = (value: string) => value ? new Date(value).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZone }) : "—";
+  const formatTime = (value: string) => value ? formatLivingWindowTime(value, timeZone) : "—";
   const formatDate = (value: string) => value ? new Date(value).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric", timeZone }) : "—";
   const hourly = snapshot.hourly.filter((point) => Date.parse(point.time) >= Date.parse(snapshot.current.time)).slice(0, 5).map((point) => ({
     timeLabel: formatTime(point.time),
@@ -343,10 +356,10 @@ export function rainSummaryFor(hourly: WeatherHourlyPoint[], currentTime: string
   const rain = upcoming.filter((point) => (point.precipitationProbabilityPercent ?? 0) >= 50 || point.condition.id === "rain" || point.condition.id === "storm");
   if (!rain.length) return "No rain expected in the next few hours.";
   const first = rain[0];
-  const firstTime = new Date(first.time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const firstTime = formatLivingWindowTime(first.time);
   if (first.condition.id === "storm") return "Thunderstorms possible later.";
   if (rain.length === 1) return `Rain likely around ${firstTime}.`;
-  const lastTime = new Date(rain[rain.length - 1].time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const lastTime = formatLivingWindowTime(rain[rain.length - 1].time);
   return `Rain likely between ${firstTime}–${lastTime}.`;
 }
 
