@@ -115,6 +115,19 @@ test("Spin Add tolerates stale preset state and New preset uses an inline naming
   assert.match(source, /field === "spin-preset-name"[\s\S]*?this\.spinPresetNameDraft/);
 });
 
+test("Spinwheel mobile flow collapses management and provides a restrained winner reveal", () => {
+  const view = readFileSync(resolve(process.cwd(), "src/systems/ToolboxView.ts"), "utf8");
+  const styles = readFileSync(resolve(process.cwd(), "src/styles.css"), "utf8");
+  const app = readFileSync(resolve(process.cwd(), "src/app.ts"), "utf8");
+  assert.match(view, /spin-choice-summary/);
+  assert.match(view, /spin-choice-editor/);
+  assert.match(view, /spin-preset-menu/);
+  assert.match(view, /spin-winner-card/);
+  assert.match(app, /spinRevealDismissed/);
+  assert.match(styles, /\.spin-choice-editor \{ display: none; \}/);
+  assert.match(styles, /\.spin-primary-action \{ position: sticky/);
+});
+
 test("Media editor controls dispatch through the Toolbox action gate", () => {
   const source = readFileSync(resolve(process.cwd(), "src/app.ts"), "utf8");
   const gateStart = source.indexOf('if (["toolbox-close"');

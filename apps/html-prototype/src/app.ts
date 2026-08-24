@@ -305,6 +305,9 @@ export class WalkBackHomeApp {
   private toolboxPresets: SpinPreset[] = [createSpinPreset("today", "今天吃什么", ["A", "B", "C"]), createSpinPreset("names", "Random names", ["Mochi", "Muji", "Mimi"])]
   private selectedToolboxPresetId = "today";
   private spinResult = "";
+  private spinEditorOpen = false;
+  private spinPresetMenuOpen = false;
+  private spinRevealDismissed = false;
   private spinChoiceDraft = "";
   private spinPresetNameDraft = "";
   private toolboxPersistenceStatus = "";
@@ -686,7 +689,7 @@ export class WalkBackHomeApp {
       void this.handleLivingWindowAction(action, target);
       return;
     }
-    if (["toolbox-close", "toolbox-select", "toolbox-confirm", "toolbox-back", "toolbox-page", "toolbox-page-prev", "toolbox-page-next", "toolbox-spin-add", "toolbox-spin-remove", "toolbox-spin", "toolbox-preset-new", "toolbox-preset-create", "toolbox-preset-rename", "toolbox-preset-delete", "calculator-key", "converter-swap", "currency-swap", "currency-refresh", "timer-mode", "timer-start", "timer-pause", "timer-reset", "date-difference", "date-add", "date-subtract", "date-until-since", "media-zoom-in", "media-zoom-out", "media-zoom-reset", "media-play-selection", "pdf-process", "pdf-cancel", "pdf-page-up", "pdf-page-down", "pdf-page-delete", "media-process", "media-cancel"].includes(action)) {
+    if (["toolbox-close", "toolbox-select", "toolbox-confirm", "toolbox-back", "toolbox-page", "toolbox-page-prev", "toolbox-page-next", "toolbox-spin-add", "toolbox-spin-remove", "toolbox-spin", "toolbox-spin-edit", "toolbox-spin-keep", "toolbox-preset-menu", "toolbox-preset-new", "toolbox-preset-create", "toolbox-preset-rename", "toolbox-preset-delete", "calculator-key", "converter-swap", "currency-swap", "currency-refresh", "timer-mode", "timer-start", "timer-pause", "timer-reset", "date-difference", "date-add", "date-subtract", "date-until-since", "media-zoom-in", "media-zoom-out", "media-zoom-reset", "media-play-selection", "pdf-process", "pdf-cancel", "pdf-page-up", "pdf-page-down", "pdf-page-delete", "media-process", "media-cancel"].includes(action)) {
       void this.handleToolboxAction(action, target);
       return;
     }
@@ -935,6 +938,9 @@ export class WalkBackHomeApp {
       spinPresetNameDraft: this.spinPresetNameDraft,
       persistenceStatus: this.toolboxPersistenceStatus,
       spinResult: this.spinResult,
+      spinEditorOpen: this.spinEditorOpen,
+      spinPresetMenuOpen: this.spinPresetMenuOpen,
+      spinRevealDismissed: this.spinRevealDismissed,
       spinRotation: this.spinRotation,
       spinSpinning: this.spinSpinning,
       calculatorDisplay: this.calculatorDisplay,
@@ -1048,6 +1054,14 @@ export class WalkBackHomeApp {
       }
       list.replaceChildren(...rows);
     }
+    const summary = this.overlay.querySelector<HTMLElement>(".spin-choice-summary");
+    if (summary) {
+      const count = summary.querySelector("strong");
+      const preview = summary.querySelector("small");
+      if (count) count.textContent = `${preset.choices.length} choice${preset.choices.length === 1 ? "" : "s"}`;
+      if (preview) preview.textContent = preset.choices.slice(0, 3).join(" · ") || "Add a choice to begin.";
+    }
+    if (!this.spinResult) this.overlay.querySelector(".spin-winner-card")?.remove();
     const result = this.overlay.querySelector<HTMLElement>(".spin-wheel-result");
     if (result) result.textContent = this.spinResult || (preset.choices.length ? "Ready" : "Add a choice to begin.");
     const status = this.overlay.querySelector<HTMLElement>(".spin-wheel-tool .toolbox-status");
@@ -1142,6 +1156,21 @@ export class WalkBackHomeApp {
       return this.renderToolboxOverlay();
     }
     const preset = this.toolboxPresets.find((item) => item.id === this.selectedToolboxPresetId);
+    if (action === "toolbox-spin-edit") {
+      this.spinEditorOpen = !this.spinEditorOpen;
+      this.renderToolboxOverlay();
+      return;
+    }
+    if (action === "toolbox-preset-menu") {
+      this.spinPresetMenuOpen = !this.spinPresetMenuOpen;
+      this.renderToolboxOverlay();
+      return;
+    }
+    if (action === "toolbox-spin-keep") {
+      this.spinRevealDismissed = true;
+      this.renderToolboxOverlay();
+      return;
+    }
     if (action === "toolbox-spin-add" && !this.spinSpinning) {
       const input = this.overlay.querySelector<HTMLInputElement>("#toolbox-spin-choice");
       const added = addSpinChoiceToPreset(this.toolboxPresets, this.selectedToolboxPresetId, input?.value ?? this.spinChoiceDraft);
@@ -1156,6 +1185,7 @@ export class WalkBackHomeApp {
       this.toolboxPersistenceStatus = "";
       if (input) input.value = "";
       this.spinResult = "";
+      this.spinRevealDismissed = true;
       this.persistToolboxState();
       this.refreshSpinWheelView({ focusChoice: true });
       return;
@@ -1163,11 +1193,13 @@ export class WalkBackHomeApp {
     if (action === "toolbox-spin-remove" && preset && !this.spinSpinning) {
       preset.choices = removeSpinChoice(preset.choices, Number(target.dataset.index));
       this.spinResult = "";
+      this.spinRevealDismissed = true;
       this.persistToolboxState();
       this.refreshSpinWheelView();
       return;
     }
     if (action === "toolbox-spin" && preset && !this.spinSpinning) {
+      this.spinRevealDismissed = false;
       void this.startSpinAnimation(preset.choices);
       return;
     }
@@ -1184,6 +1216,7 @@ export class WalkBackHomeApp {
       this.toolboxPresets.push(createSpinPreset(id, name, []));
       this.selectedToolboxPresetId = id;
       this.spinPresetNameDraft = "";
+      this.spinPresetMenuOpen = false;
       this.toolboxPersistenceStatus = "";
       if (input) input.value = "";
       this.persistToolboxState();
@@ -1199,6 +1232,7 @@ export class WalkBackHomeApp {
       const next = (input?.value ?? this.spinPresetNameDraft).trim();
       if (next) preset.name = renameSpinPreset(preset, next).name;
       this.spinPresetNameDraft = "";
+      this.spinPresetMenuOpen = false;
       if (input) input.value = "";
       this.persistToolboxState();
       this.refreshSpinWheelView({ focusPreset: true });
@@ -1306,7 +1340,7 @@ export class WalkBackHomeApp {
     const startedAt = performance.now();
     this.spinSpinning = true;
     this.spinResult = "Spinning…";
-    this.refreshSpinWheelView();
+    this.renderToolboxOverlay();
     const animate = (now: number): void => {
       if (!this.toolboxOpen || this.toolboxView.screen !== "tool" || this.toolboxView.selected !== "spin-wheel") {
         this.spinSpinning = false;
@@ -1323,7 +1357,8 @@ export class WalkBackHomeApp {
       this.spinRotation = targetRotation;
       this.spinSpinning = false;
       this.spinResult = choices[winner] ?? "";
-      this.refreshSpinWheelView();
+      this.spinRevealDismissed = false;
+      this.renderToolboxOverlay();
     };
     this.spinAnimationFrame = requestAnimationFrame(animate);
   }

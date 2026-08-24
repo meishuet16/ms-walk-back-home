@@ -5688,6 +5688,26 @@ canvas {
 .spin-wheel-stage { position: relative; display: grid; place-items: center; min-height: 220px; overflow: hidden; border: 1px solid rgba(244, 202, 121, .26); background: radial-gradient(circle, rgba(213, 166, 87, .16), rgba(26, 20, 19, .2) 66%); }
 .spin-wheel-canvas { width: min(100%, 360px); height: auto; aspect-ratio: 1; }
 .spin-pointer { position: absolute; top: 8px; z-index: 1; color: #ffe3a0; font-size: 22px; }
+.spin-preset-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
+.spin-preset-menu { display: grid; gap: 8px; padding: 10px; border: 1px solid rgba(244, 202, 121, .28); background: rgba(20, 26, 24, .72); }
+.spin-preset-menu > div, .spin-choice-add { display: flex; gap: 8px; }
+.spin-preset-menu > div button { flex: 1; }
+.spin-choice-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 10px 12px; text-align: left; }
+.spin-choice-summary span { display: grid; gap: 3px; min-width: 0; }
+.spin-choice-summary small { overflow: hidden; color: #abc5bd; text-overflow: ellipsis; white-space: nowrap; }
+.spin-choice-summary b { color: #f4ca79; white-space: nowrap; }
+.spin-choice-editor { display: grid; gap: 8px; }
+.spin-choice-list { display: grid; gap: 6px; max-height: 190px; margin: 0; padding: 0; overflow: auto; list-style: none; }
+.spin-choice-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 38px; padding: 6px 8px; border-bottom: 1px solid rgba(180, 218, 210, .14); color: #e5ebda; }
+.spin-choice-list li button { min-width: 38px; min-height: 36px; padding: 5px 9px; }
+.spin-choice-add input { flex: 1; min-width: 0; }
+.spin-primary-action { width: 100%; }
+.spin-winner-card { position: absolute; inset: 22px; z-index: 2; display: grid; place-content: center; gap: 8px; padding: 20px; border: 1px solid rgba(244, 202, 121, .66); border-radius: 14px; background: rgba(31, 29, 25, .93); box-shadow: 0 12px 30px rgba(0, 0, 0, .34); color: #f4ead1; text-align: center; animation: spin-winner-reveal .36s ease-out both; }
+.spin-winner-card small { color: #d8bf86; letter-spacing: .08em; text-transform: uppercase; }
+.spin-winner-card strong { color: #ffe3a0; font-family: Georgia, serif; font-size: clamp(26px, 8vw, 42px); font-weight: 500; }
+.spin-winner-card span { color: #c3d6cc; font-size: 12px; }
+.spin-winner-card > div { display: flex; justify-content: center; gap: 8px; margin-top: 6px; }
+@keyframes spin-winner-reveal { from { opacity: 0; transform: scale(.94) translateY(5px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 .converter-value-row, .currency-pair, .file-tool-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
 .currency-pair { grid-template-columns: repeat(2, minmax(0, 1fr)) auto; }
 .file-tool { display: grid; gap: 10px; }
@@ -5720,7 +5740,11 @@ canvas {
 .window-location-view { display: grid; gap: 12px; margin-top: 16px; }
 .window-location-view .window-location-results { min-height: 30px; }
 @media (max-width: 700px) {
-  .spin-wheel-stage { min-height: 180px; }
+  .spin-wheel-stage { min-height: 300px; }
+  .spin-wheel-canvas { width: min(100%, 300px); }
+  .spin-choice-editor { display: none; }
+  .spin-choice-editor.open { display: grid; }
+  .spin-primary-action { position: sticky; bottom: 0; z-index: 3; min-height: 50px; box-shadow: 0 -8px 18px rgba(17, 21, 20, .22); }
   .window-forecast { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .window-weather-stats { grid-template-columns: 1fr 1fr; }
   .window-panel-header { align-items: flex-start; }
