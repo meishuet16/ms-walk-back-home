@@ -1,79 +1,438 @@
 # Walk Back Home
 
-Walk Back Home is a local-first memory reconstruction game built from fictional diary fixtures. The current canonical application is the TypeScript HTML runtime in `apps/html-prototype`.
+> **What if your diary was not something you read, but somewhere you could return to?**
 
-## Current architecture
+**Walk Back Home** is a personal memory RPG about walking through a life that
+has already happened.
 
-- `apps/html-prototype` is the only active application. It contains the runtime, authored chapters, scene layouts, assets, authoring/debug tools, tests, and static deployment build.
-- `packages/shared` is an active independent workspace for typed schemas, fixture adapters, import/privacy helpers, and its own tests. The HTML app does not import it directly, but root workspace verification includes it.
-- Supabase is optional. The app defaults to local/fixture mode and only enables cloud sync when explicit Supabase configuration is supplied.
+Every diary entry can become a place.
 
-The retired `apps/web`, `apps/game`, and `packages/ui` architectures are not part of the current repository.
+A university corridor in the morning.<br>
+A roadside stall.<br>
+A room you spent an ordinary afternoon in.<br>
+A bus ride. A meal. A stupid joke. A walk home.
 
-## Repository structure
+None of these moments had to know they would become memories.
+
+Most of them were just life while they were happening.
+
+> **那时候也没觉得有什么。后来不知道为什么，就是还记得。**<br>
+> *It didn't feel like anything special then. Somehow, you still remember it.*
+
+And here, remembering means being able to walk back in.
+
+---
+
+## 🐾 You don't play as yourself
+
+You play as **Muji** — a small companion carrying the memories you left behind.
+
+Muji walks through places created from past diary entries, finding traces of
+people, conversations, objects, weather, music, and moments that once existed
+there.
+
+Sometimes nothing happens at first.
+
+Then Muji reaches a bench.
+
+A doorway.
+
+An old object in the room.
+
+And for a little while, the past comes back.
+
+People appear where they once stood.<br>
+A conversation happens again.<br>
+Someone laughs. Someone walks away.<br>
+Something completely ordinary happens exactly as it did before.
+
+Then the memory becomes quiet again.
+
+Muji keeps walking.
+
+---
+
+## The past cannot be changed
+
+Walk Back Home is not a game about fixing your past.
+
+There is no choice where you stop someone from leaving.
+
+No dialogue option lets you say the perfect thing you did not say.
+
+No route turns an uncertain relationship into a different history.
+
+**What happened, happened.**
+
+The player's choices belong to the present:
+
+> What does Muji notice?<br>
+> What does Muji linger on?<br>
+> What does this memory mean now?
+
+Different choices may change the reflection that remains after a memory.
+
+They never rewrite the memory itself.
+
+> **Interpretation may change. Memory does not.**
+
+---
+
+## ☁️ Ordinary days are allowed to matter
+
+Walk Back Home is interested in small things.
+
+A half-finished meal.
+
+Rain on the road.
+
+A chair somebody used to sit on.
+
+A song that happened to be playing.
+
+A joke that was funny for approximately seven seconds.
+
+A room that looked completely normal until one day you realized you would
+never see it in quite the same way again.
+
+Not every memory needs to become a tragedy.
+
+Not every memory is secretly a romance.
+
+And please, not every Tuesday needs to become a life lesson.
+
+Some things mattered for absolutely unimpressive reasons.
+
+**You were there. Someone else was there. Something happened. You remember it.**
+
+Sometimes that is enough.
+
+---
+
+## 🌲 A life becomes a world
+
+Diary entries do not remain only as pages in a timeline.
+
+They gradually become an explorable memory world.
+
+Past days can become playable chapters.
+
+Places become environments.<br>
+Objects become memory triggers.<br>
+Conversations return.<br>
+Smaller details survive as echoes.
+
+Muji can walk through these spaces, approach meaningful objects, trigger
+reenactments, listen to conversations, discover smaller traces, and eventually
+leave with a reflection.
+
+The world is not trying to determine the one correct meaning of a memory.
+
+It remembers what happened.
+
+**You decide what you carry home.**
+
+---
+
+## 🌲 The Memory Forest
+
+Memories are not isolated save files.
+
+Together, they form a growing map of a life.
+
+Some days become full playable chapters.
+
+Some survive only as a small interaction, an object, a sentence, a song, or a
+place you can stand in for a while.
+
+New memories slowly extend the world.
+
+The result should feel less like opening an archive and more like wandering
+through somewhere strangely familiar.
+
+You know these places.
+
+You were there.
+
+Just not like this.
+
+---
+
+## 🏠 Between memories
+
+Walk Back Home is not only about entering the past.
+
+There is also somewhere to return to.
+
+### 📖 Journal
+
+The Journal keeps the original days behind the playable memories.
+
+Before a memory became a scene, it was simply something that happened and was
+written down.
+
+### 🎵 Records
+
+Some memories come with music whether you asked them to or not.
+
+Records keeps songs connected to the life around them instead of turning them
+into detached background audio.
+
+### 🏠 Muji Room
+
+Muji has somewhere to exist between journeys.
+
+A small present-tense room where the game is allowed to continue even when
+nobody is replaying the past.
+
+### 🪞 Reflection Wall
+
+Not everything needs to become a conclusion.
+
+Some thoughts can just remain there.
+
+The Reflection Wall keeps the things that followed Muji home from a memory.
+
+### 🌙 Living Window
+
+Even while the player is looking backward, the real world keeps moving outside.
+
+Time changes.
+
+Weather changes.
+
+It might rain later.
+
+The moon is doing moon things.
+
+The Living Window keeps Muji's room connected to that present.
+
+### 🧰 Muji Toolbox
+
+And sometimes a tool can just be a tool.
+
+PDFs. Media. A spin wheel. Small local utilities.
+
+**Not every part of life needs to become lore.**
+
+Thank god.
+
+---
+
+## Why Walk Back Home exists
+
+Most digital memories are stored as things to retrieve.
+
+Photos live in galleries.
+
+Messages live in chat histories.
+
+Songs live in playlists.
+
+Diary entries live in chronological lists.
+
+They preserve information very well.
+
+But remembering rarely feels like opening a file.
+
+You remember the weather.
+
+Where somebody was standing.
+
+What was on the table.
+
+A sentence you are no longer completely sure was said exactly that way.
+
+The distance between two people.
+
+Something tiny that should have disappeared with the rest of the day, but
+didn't.
+
+Walk Back Home is an experiment in giving those memories space again.
+
+Not to preserve life perfectly.
+
+Not to explain it.
+
+Not to use AI to confidently tell you what your own past meant. 🤡
+
+Just to make somewhere you can walk back to.
+
+---
+
+## Memory is allowed to be incomplete
+
+Walk Back Home does not treat memory as a puzzle with one correct answer.
+
+Some details remain sharp.
+
+Some become vague.
+
+Some disappear completely.
+
+People's intentions are not rewritten simply because the player wants an
+answer.
+
+If a memory never explained itself in real life, the game does not need to
+solve it either.
+
+The past can return without becoming clearer.
+
+Sometimes that is the point.
+
+> **The player does not rewrite the past.**<br>
+> **The player learns how they are carrying it now.**
+
+---
+
+## 🇲🇾 Built from ordinary Malaysian life
+
+Walk Back Home is grounded in the places the memories actually came from.
+
+University corridors.
+
+Roadside stalls.
+
+Family homes.
+
+Kopitiams.
+
+Tiled floors.
+
+Tropical afternoons.
+
+Old cars.
+
+Ceiling fans.
+
+Rain that appears out of nowhere five minutes after the sky looked completely
+fine.
+
+The emotional rhythm can be quiet and nostalgic.
+
+The world itself should still feel like home.
+
+Walk Back Home is not interested in sanding away where these memories came
+from just to make them look like somebody else's nostalgia.
+
+---
+
+## 🎮 What it actually is
+
+At its core, Walk Back Home turns diary material into **playable memory
+chapters**.
+
+A chapter may contain:
+
+- an explorable environment
+- characters from that particular memory
+- environmental memory triggers
+- dialogue and reenactments
+- smaller echoes
+- objects that mattered for reasons nobody else would understand
+- reflection choices
+- a return to the present
+
+The goal is not to turn every diary entry into a visual novel.
+
+The goal is to make the memory feel like a place.
+
+A place Muji can enter.
+
+A place that briefly remembers what happened there.
+
+And then a place Muji eventually has to leave.
+
+---
+
+# 🛠 Development
+
+If you came here for the feelings, you can stop before this part.
+
+If you came here because the feelings somehow need TypeScript, welcome. 😭
+
+Walk Back Home is currently developed as a browser-based TypeScript game.
+
+The canonical application lives in:
 
 ```text
-apps/html-prototype/          canonical application
-  src/fixtures/                authored chapter and diary data
-  src/systems/                 runtime, persistence, authoring, and UI systems
-  public/assets/               canonical production assets
-  public/scene-layouts/        authored scene geometry and layout manifests
-  scripts/                     build and local static-server scripts
-  supabase/migrations/         current HTML app private-data schema
-packages/shared/               active shared schemas and fixture/test package
-supabase/                      repository-level local Supabase CLI config/foundation migration
-docs/                          operational, historical, plan, and spec documentation
-.github/workflows/ci.yml       install, typecheck, test, and build workflow
+apps/html-prototype
 ```
 
-Chapter registration is in `apps/html-prototype/src/systems/ChapterRegistry.ts`; chapter fixtures live under `apps/html-prototype/src/fixtures`. Do not change authored chapter content, scene layouts, or approved assets as part of repository cleanup.
+The current application includes playable memory chapters, landscape and
+portrait scene layouts, Journal, Records, Muji Room, Reflection Wall, Living
+Window, Muji Toolbox, optional private Supabase sync, and internal
+scene-authoring/debug tools.
 
-## Local development
+---
 
-The supported Node version is pinned by `.nvmrc` to `22.13.0`.
+## Repository
 
-```powershell
+```text
+apps/html-prototype/   Canonical Walk Back Home application
+packages/shared/       Active shared schemas and tested contracts
+docs/                  Design and implementation history
+supabase/              Repository-level Supabase configuration
+```
+
+<details>
+<summary><strong>Run Walk Back Home locally</strong></summary>
+
+Use the Node version defined by `.nvmrc`.
+
+```bash
 npm install
 npm run dev
 ```
 
-The dev command builds the canonical app and starts its local static server at `http://localhost:4173`. The app runs in fixture/local mode by default and does not require a paid API or service.
+</details>
 
-Supported verification commands:
+<details>
+<summary><strong>Verification</strong></summary>
 
-```powershell
+```bash
 npm run typecheck
 npm test
 npm run build
 ```
 
-The root commands run the applicable workspace commands. To target only the canonical app:
+The production HTML build is expected to be generated into:
 
-```powershell
-npm run dev -w apps/html-prototype
-npm run typecheck -w apps/html-prototype
-npm test -w apps/html-prototype
-npm run build -w apps/html-prototype
+```text
+apps/html-prototype/dist
 ```
 
-The app build compiles TypeScript, copies `public/` content, bundles the browser entry with esbuild, and writes the deployable static site to `apps/html-prototype/dist`.
+</details>
 
-## Assets, scenes, and Supabase
+<details>
+<summary><strong>Deployment & private data</strong></summary>
 
-- Canonical authored assets: `apps/html-prototype/public/assets`
-- Scene layouts and manifests: `apps/html-prototype/public/scene-layouts`
-- Authored chapter data: `apps/html-prototype/src/fixtures`
-- Current HTML app Supabase schema: `apps/html-prototype/supabase/migrations/20260811_private_local_first_schema.sql`
-- Repository-level Supabase CLI/foundation files: `supabase/config.toml` and `supabase/migrations/202608050001_week1_foundation.sql`
+Vercel should use `apps/html-prototype` as the project root. The checked-in
+configuration uses `npm run build` and serves the static output from `dist`.
 
-The two Supabase locations are retained because they describe different migration layers, not duplicate files. For optional cloud sync, use `apps/html-prototype/.env.example`; the HTML runtime reads configuration generated from `WALK_BACK_HOME_AUTH_PROVIDER`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_PRIVATE_MEDIA_BUCKET`. It never requires Supabase for local fixture development.
+Local/fixture mode is the default, and no paid API or service is required for
+local development. Private specifications under `.private-spec/`, real diary
+entries, uploads, generated memory graphs, embeddings, scene caches, private
+media, and logs containing personal content are runtime data and must not be
+committed.
 
-## Vercel deployment
+Optional private sync uses Supabase only when the explicit auth provider and
+Supabase environment variables are configured. It syncs private JSON data;
+imported Records audio and covers remain on the local device. Never place
+service-role or admin secrets in the frontend.
 
-Vercel should use `apps/html-prototype` as the project root. Its `vercel.json` specifies a static deployment with build command `npm run build` and output directory `dist`. The generated `dist` directory is deployment output and is not committed.
+</details>
 
-## Contributor and Codex guidance
+---
 
-Read `AGENTS.md` before making changes and `ART_LOCK.md` before touching visual assets. Use fictional fixtures only; never commit private specifications, real diaries, uploads, generated memory graphs, embeddings, scene caches, secrets, or personal logs. Keep paid/AI integrations explicit and preserve deterministic local fallbacks. Historical architecture notes remain under `docs/` for context, but they are not current implementation instructions.
+## 🌱 Status
 
-Generated or local-only paths that must not be committed include `node_modules/`, `dist/`, `coverage/`, `.next/`, `.turbo/`, `.vercel/`, `.worktrees/`, `.godot/`, `.godot-user-data/`, `supabase/.temp/`, `.private-spec/`, `.codex-remote-attachments/`, runtime data directories, and `*.zip` archives.
+Walk Back Home is still growing.
+
+The systems are real.<br>
+The chapters are playable.<br>
+The world is unfinished.
+
+There are more days than there are chapters.
+
+**For now, Muji keeps walking.**
