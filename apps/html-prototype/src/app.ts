@@ -2,6 +2,7 @@ import { bakeryChapter } from "./fixtures/chapterPlan.js";
 import { april05Assets, april05Chapter, april05EchoActions, april05EchoAnchors, april05MainMemoryActions, april05ReflectionChoices, resolveApril05Actions, type April05EchoId } from "./fixtures/april05Chapter.js";
 import { april06Assets, april06Chapter, april06EchoActions, april06MainMemoryActions, april06ReflectionChoices, resolveApril06Actions } from "./fixtures/april06Chapter.js";
 import { may23Assets, may23Chapter, may23EchoAnchors, may23ReflectionChoices, resolveMay23Actions } from "./fixtures/may23Chapter.js";
+import { june24Assets, june24Chapter, june24EchoDialogues, june24ReflectionChoices, resolveJune24Actions } from "./fixtures/june24Chapter.js";
 import { march30Assets, march30EchoActions, march30EchoReflectionChoices, march30MainMemoryActions, march30ReflectionChoices, resolveMarch30Closing, resolveMarch30CutsceneActions } from "./fixtures/march30Memory.js";
 import { canStartLabisMotorMemory, labisDiaryMemorySpot, labisInteractionForPoint, labisMotorMemoryActions } from "./fixtures/labisMotorMemory.js";
 import { labisAssetManifest, labisAssetPath, labisProductionAssetPaths } from "./fixtures/labisAssetRegistry.js";
@@ -94,13 +95,14 @@ import {
   type DialoguePortrait,
   type DialoguePortraitRenderModel
 } from "./systems/PresentationRenderer.js";
+import { renderEchoPortrait, resolveEchoPortraitLayout } from "./systems/EchoPortraitPresentation.js";
 
 type ForestNode = (AuthoredForestEntry | DiaryForestMemory) & { radius?: number; placementSlotId?: string };
 type LabisDialogueLine = { speaker: string; text: string };
 type LabisDialogueAfter = "motor-choice" | "photo-choice" | "filter-choice" | "finish-echo" | "show-reflection" | "finish-chicken-cake" | null;
 type LabisOverlayMode = "dialogue" | "choice" | "vignette" | "reflection" | null;
 type March30OverlayMode = "dialogue" | "reflection" | "response" | "closing" | null;
-type AuthoredOverlayMode = "dialogue" | "choice" | "response" | null;
+type AuthoredOverlayMode = "dialogue" | "choice" | "response" | "echo-portrait" | null;
 type March30PortraitPropId = "gift" | "waterGun" | "ordinaryKeychain" | "phoneCharm";
 
 const propPortraitSheetDimensions: Record<March30PortraitPropId, { w: number; h: number }> = {
@@ -139,6 +141,9 @@ type AuthoredRuntimeDefinition = {
   echoAnchors: Record<string, string>;
   triggerId?: string;
   mainInteractionId?: string;
+  echoRequiresMainCompletion?: boolean;
+  echoPortraitIds?: Record<string, string>;
+  echoPortraitDialogues?: Record<string, Array<{ speaker: string; text: string }>>;
 };
 
 const authoredRuntimeByScene: Record<string, AuthoredRuntimeDefinition> = {
@@ -164,6 +169,26 @@ const authoredRuntimeByScene: Record<string, AuthoredRuntimeDefinition> = {
     echoAnchors: may23EchoAnchors,
     triggerId: "hostel-lobby-arrival",
     mainInteractionId: "hostel-lobby-memory"
+  },
+  "624": {
+    chapter: june24Chapter,
+    assets: june24Assets,
+    resolveActions: (layout, mode, echoId) => resolveJune24Actions(layout, mode, echoId),
+    reflectionChoices: june24ReflectionChoices,
+    echoAnchors: {
+      "carrot-milk-memory": "carrot-milk-residue",
+      "five-cent-memory": "five-cent-residue",
+      "xiaoba-memory": "xiaoba-residue"
+    },
+    echoRequiresMainCompletion: false,
+    echoPortraitIds: {
+      "carrot-milk-memory": "june24-angela-st-echo",
+      "five-cent-memory": "june24-room-study-echo",
+      "xiaoba-memory": "june24-haircut-echo"
+    },
+    echoPortraitDialogues: june24EchoDialogues,
+    triggerId: "june24-table-arrival",
+    mainInteractionId: "table-memory"
   }
 };
 export class WalkBackHomeApp {
@@ -364,6 +389,7 @@ export class WalkBackHomeApp {
   private authoredOverlayMode: AuthoredOverlayMode = null;
   private authoredCheckpointId = "";
   private authoredReflectionResponse = "";
+  private echoPortraitState: { interactionId: string; index: number } | null = null;
   private authoredImages = new Map<string, HTMLImageElement>();
   private sceneImages = new Map<string, HTMLImageElement>();
   private sceneOrientation: SceneOrientation = "landscape";
@@ -438,6 +464,7 @@ export class WalkBackHomeApp {
     this.preloadApril06Assets();
     this.preloadApril05Assets();
     this.preloadMay23Assets();
+    this.preloadJune24Assets();
     this.preloadSceneLayoutAssets();
     this.sceneLayoutLoadPromise = this.loadSavedSceneLayouts();
     this.audio.setVolume(this.settings.volume);
@@ -768,6 +795,7 @@ export class WalkBackHomeApp {
     if (action === "labis-reflection-close") this.closeLabisReflection();
     if (action === "march30-dialogue-next") this.advanceMarch30Dialogue();
     if (action === "authored-dialogue-next") this.advanceAuthoredDialogue();
+    if (action === "echo-portrait-next") this.advanceEchoPortrait();
     if (action === "authored-reflection-choice") this.chooseAuthoredChoice(target.dataset.choice ?? "");
     if (action === "authored-reflection-next") this.advanceAuthoredReflection();
     if (action === "march30-reflection-choice") this.chooseMarch30Reflection(target.dataset.choice ?? "");
@@ -1499,6 +1527,13 @@ export class WalkBackHomeApp {
     }
   }
 
+  private preloadJune24Assets(): void {
+    for (const asset of Object.values(june24Assets)) {
+      const image = img(asset.path);
+      image.addEventListener("error", () => this.authoredImages.delete(asset.path), { once: true });
+      this.authoredImages.set(asset.path, image);
+    }
+  }
   private preloadSceneLayoutAssets(): void {
     for (const sceneId of Object.keys(sceneLayoutManifest)) {
       this.sceneImage(getSceneLayout(sceneId, "landscape"));
@@ -1806,10 +1841,11 @@ export class WalkBackHomeApp {
     this.moveInLayout(x, y, dt, layout);
     const interaction = layout.interactions.find((item) => Math.hypot(this.player.x - item.x, this.player.y - item.y) < item.radius);
     const mainComplete = this.completedMemoryEvents.has(runtime.chapter.canonicalClosure.historicalEventId);
-    const echoActive = mainComplete
+    const echoesAvailable = runtime.echoRequiresMainCompletion === false || mainComplete;
+    const echoActive = echoesAvailable
       ? Object.keys(runtime.echoAnchors).find((id) => {
           const point = this.authoredEchoPoint(layout, id);
-          return point ? Math.hypot(this.player.x - point.x, this.player.y - point.y) < point.radius : false;
+          return point ? Math.hypot(this.player.x - point.x, point.y - this.player.y) < point.radius : false;
         })
       : undefined;
     const mainInteractionId = runtime.mainInteractionId ?? "main-memory-replay";
@@ -1854,6 +1890,59 @@ export class WalkBackHomeApp {
     this.authoredOverlayMode = null;
     this.overlay.classList.remove("dialogue-open", "lightweight-presentation");
     this.overlay.innerHTML = "";
+  }
+
+  private startEchoPortrait(interactionId: string): void {
+    const runtime = this.authoredRuntimeForScene();
+    if (!runtime?.echoPortraitIds?.[interactionId]) return;
+    const semanticId = runtime.echoPortraitIds[interactionId];
+    if (!(runtime.echoPortraitDialogues?.[semanticId]?.length)) return;
+    this.echoPortraitState = { interactionId, index: 0 };
+    this.authoredOverlayMode = "echo-portrait";
+    this.overlay.classList.add("dialogue-open", "lightweight-presentation");
+    this.showEchoPortrait();
+  }
+
+  private showEchoPortrait(): void {
+    const runtime = this.authoredRuntimeForScene();
+    const state = this.echoPortraitState;
+    if (!runtime || !state) return;
+    const semanticId = runtime.echoPortraitIds?.[state.interactionId];
+    const lines = semanticId ? runtime.echoPortraitDialogues?.[semanticId] : undefined;
+    const line = lines?.[state.index];
+    if (!semanticId || !line) return this.finishEchoPortrait(false);
+    const layout = resolveEchoPortraitLayout(semanticId, {
+      orientation: this.currentSceneLayout().orientation,
+      width: window.innerWidth,
+      height: window.innerHeight
+    });
+    this.overlay.innerHTML = renderEchoPortrait({
+      echoId: semanticId,
+      speaker: line.speaker,
+      text: line.text,
+      layout,
+      canAdvance: true,
+      action: "echo-portrait-next"
+    });
+    this.focusStage();
+  }
+
+  private advanceEchoPortrait(): void {
+    if (this.authoredOverlayMode !== "echo-portrait" || !this.echoPortraitState) return;
+    const runtime = this.authoredRuntimeForScene();
+    const semanticId = runtime?.echoPortraitIds?.[this.echoPortraitState.interactionId];
+    const lines = semanticId ? runtime.echoPortraitDialogues?.[semanticId] : undefined;
+    this.echoPortraitState.index += 1;
+    if (!lines || this.echoPortraitState.index >= lines.length) return this.finishEchoPortrait(true);
+    this.showEchoPortrait();
+  }
+
+  private finishEchoPortrait(showToast: boolean): void {
+    this.echoPortraitState = null;
+    if (this.authoredOverlayMode === "echo-portrait") this.authoredOverlayMode = null;
+    this.overlay.classList.remove("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = "";
+    if (showToast) this.showToast("The secondary memory fades without adding another event.");
   }
 
   private showAuthoredChoice(): void {
@@ -1941,6 +2030,7 @@ export class WalkBackHomeApp {
   }
 
   private resetAuthoredRuntime(): void {
+    this.echoPortraitState = null;
     this.authoredCutscene = null;
     this.authoredMode = null;
     this.authoredReplayMode = false;
@@ -2317,6 +2407,7 @@ export class WalkBackHomeApp {
       if (!runtime) return this.showToast("Walk through the authored scene");
       if (this.overlay.innerHTML.trim() && !this.authoredOverlayMode) return;
       if (this.authoredOverlayMode === "dialogue") return this.advanceAuthoredDialogue();
+      if (this.authoredOverlayMode === "echo-portrait") return this.advanceEchoPortrait();
       if (this.authoredOverlayMode === "response") return this.advanceAuthoredReflection();
       if (this.authoredOverlayMode === "choice" || this.authoredCutscene?.currentCheckpoint) return;
       if (this.authoredCutscene) return;
@@ -2324,6 +2415,7 @@ export class WalkBackHomeApp {
       if (this.activeObject === "diary" || this.activeObject === "diary memory" || this.activeObject === "diary-memory") return this.showChapterDiary(this.currentMemoryKey());
       if (this.activeObject === "bus-stop-memory") return this.startAuthoredCutscene("echo", false, "bus-stop-memory");
       if (this.activeObject === (runtime.mainInteractionId ?? "main-memory-replay") || this.activeObject === "main-memory-replay" || this.activeObject === "mcd-drop-memory") return this.startAuthoredCutscene("main", true);
+      if (runtime.echoPortraitIds?.[this.activeObject]) return this.startEchoPortrait(this.activeObject);
       if (runtime.echoAnchors[this.activeObject]) return this.startAuthoredCutscene("echo", false, this.activeObject);
       if (this.activeObject === "roadside-empty-car") return this.inspectAuthoredResidue(this.activeObject);
       if (this.activeObject === "bench") return this.showToast("The bench keeps the ordinary part of the night.");

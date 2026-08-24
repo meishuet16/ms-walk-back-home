@@ -760,6 +760,58 @@ canvas {
   box-shadow: none;
   color: #f8d79a;
 }
+.echo-portrait {
+  pointer-events: auto;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  align-self: stretch;
+  justify-self: stretch;
+  gap: 12px;
+  padding: clamp(16px, 4vw, 36px) clamp(16px, 5vw, 52px) max(calc(92px + env(safe-area-inset-bottom)), var(--lightweight-overlay-control-clearance, 110px));
+  color: #f7e7c4;
+  background: linear-gradient(180deg, rgba(2, 7, 14, .04), rgba(2, 7, 14, .68));
+}
+.echo-portrait-art {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+}
+.echo-portrait-art img {
+  display: block;
+  width: auto;
+  height: auto;
+  image-rendering: pixelated;
+}
+.echo-portrait-dialogue {
+  position: relative;
+  width: min(720px, 100%);
+  justify-self: center;
+  padding: 18px 46px 16px 24px;
+  border: 2px solid rgba(230, 187, 107, .82);
+  border-radius: 5px;
+  background: rgba(28, 24, 22, .9);
+  box-shadow: 0 10px 34px rgba(0,0,0,.42);
+}
+.echo-portrait-dialogue span {
+  display: block;
+  margin-bottom: 6px;
+  color: #ffe2a8;
+}
+.echo-portrait-dialogue p {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.45;
+}
+.echo-portrait-next {
+  position: absolute;
+  right: 14px;
+  bottom: 10px;
+  padding: 2px 7px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #f8d79a;
+}
 .reflection-choice-ui,
 .labis-choice-ui {
   pointer-events: auto;
