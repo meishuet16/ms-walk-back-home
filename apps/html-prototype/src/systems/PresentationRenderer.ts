@@ -131,7 +131,7 @@ export function renderReflection(options: ReflectionOptions): string {
   const kicker = options.kicker ? `<span class="ending-kicker">${escapeHtml(options.kicker)}</span>` : "";
   const title = options.title ? `<h2>${escapeHtml(options.title)}</h2>` : "";
   const lead = options.leadLines?.length ? `<p class="memory-line">${linesMarkup(options.leadLines)}</p>` : "";
-  const closure = options.closureLines?.length ? `<p>${linesMarkup(options.closureLines)}</p>` : "";
+  const closure = options.closureLines?.length && !sameLines(options.leadLines, options.closureLines) ? `<p>${linesMarkup(options.closureLines)}</p>` : "";
   const quoteLines = options.quoteLines ?? options.lines;
   const quote = `<blockquote>${linesMarkup(quoteLines)}</blockquote>`;
   const afterline = options.afterline ? `<p class="ending-afterline">${escapeHtml(options.afterline)}</p>` : "";
@@ -148,6 +148,10 @@ function portraitImageStyle(config: DialoguePortraitConfig): string {
 
 function linesMarkup(lines: string[]): string {
   return lines.map(escapeHtml).join("<br>");
+}
+
+function sameLines(left?: string[], right?: string[]): boolean {
+  return Boolean(left && right && left.length === right.length && left.every((line, index) => line === right[index]));
 }
 
 function positive(value: number | undefined): value is number {
