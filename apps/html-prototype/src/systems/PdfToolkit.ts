@@ -56,6 +56,37 @@ export async function mergePdfFiles(files: Blob[], signal?: AbortSignal): Promis
   return output.save();
 }
 
+export type PdfSplitMode = "extract" | "every-page" | "every-n" | "groups";
+
+export function splitPdfPageGroups(mode: PdfSplitMode, value: string, totalPages: number): number[][] {
+  if (!Number.isInteger(totalPages) || totalPages < 1) throw new Error("PDF has no pages");
+  if (mode === "extract") return [parsePageRange(value, totalPages)];
+  if (mode === "every-page") return Array.from({ length: totalPages }, (_, index) => [index + 1]);
+  if (mode === "every-n") {
+    const size = Number(value.trim());
+    if (!Number.isInteger(size) || size < 1) throw new Error("Enter a whole number of pages");
+    const groups: number[][] = [];
+    for (let start = 1; start <= totalPages; start += size) groups.push(Array.from({ length: Math.min(size, totalPages - start + 1) }, (_, index) => start + index));
+    return groups;
+  }
+  const groups = value.split("|").map((group) => group.trim()).filter(Boolean).map((group) => parsePageRange(group, totalPages));
+  if (!groups.length) throw new Error("Enter groups such as 1-3 | 4-8");
+  return groups;
+}
+
+export function movePdfPage(order: number[], index: number, direction: -1 | 1): number[] {
+  const nextIndex = index + direction;
+  if (index < 0 || index >= order.length || nextIndex < 0 || nextIndex >= order.length) return [...order];
+  const next = [...order];
+  [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+  return next;
+}
+
+export function removePdfPage(order: number[], index: number): number[] {
+  if (index < 0 || index >= order.length || order.length <= 1) return [...order];
+  return order.filter((_, itemIndex) => itemIndex !== index);
+}
+
 export async function reorderOrExtractPdf(file: Blob, pageNumbers: number[], signal?: AbortSignal): Promise<Uint8Array> {
   const { PDFDocument } = await import("pdf-lib");
   const source = await PDFDocument.load(await file.arrayBuffer());

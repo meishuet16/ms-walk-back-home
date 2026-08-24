@@ -5695,6 +5695,14 @@ canvas {
 .file-tool small { color: #b9c9b0; line-height: 1.35; }
 .file-tool-progress { height: 6px; overflow: hidden; border-radius: 4px; background: rgba(255, 255, 255, .12); }
 .file-tool-progress > span { display: block; height: 100%; background: #e4b96b; transition: width .2s ease; }
+.pdf-organizer { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; max-height: 280px; overflow: auto; padding: 2px; }
+.pdf-page-card { display: grid; gap: 5px; min-width: 0; padding: 10px; border: 1px solid rgba(228, 185, 107, .3); border-radius: 8px; background: rgba(20, 26, 24, .72); color: #d3e7d1; }
+.pdf-page-card strong { color: #f4ca79; font-size: 14px; }
+.pdf-page-card span, .pdf-organizer-status { color: #abc5bd; font-size: 11px; }
+.pdf-page-actions { display: flex; gap: 5px; flex-wrap: wrap; }
+.pdf-page-actions button { min-height: 36px; padding: 7px 9px; }
+.pdf-page-actions button:last-child { flex: 1; }
+.pdf-tool small { line-height: 1.35; }
 .window-current-reading { display: grid; gap: 9px; padding: 14px; border: 1px solid rgba(180, 218, 210, .24); background: rgba(9, 15, 19, .38); }
 .window-temperature { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .window-temperature strong { color: #eff5df; font-size: clamp(30px, 7vw, 46px); font-weight: 500; }
@@ -5717,6 +5725,8 @@ canvas {
   .window-weather-stats { grid-template-columns: 1fr 1fr; }
   .window-panel-header { align-items: flex-start; }
   .window-panel-header h2 { max-width: 210px; font-size: 21px; }
+  .pdf-organizer { grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: 250px; }
+  .pdf-page-actions button { flex: 1; }
 }
 @media (orientation: portrait) and (max-width: 700px) {
   .toolbox-panel, .living-window-panel { max-height: min(84dvh, 720px); }

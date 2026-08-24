@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
-import { deletePdfPages, parsePageRange, parsePdfPageOperation, pdfOutputFilename, compressionReport } from "../src/systems/PdfToolkit.js";
+import { deletePdfPages, movePdfPage, parsePageRange, parsePdfPageOperation, pdfOutputFilename, compressionReport, removePdfPage, splitPdfPageGroups } from "../src/systems/PdfToolkit.js";
 
 test("PDF page ranges preserve requested order and reject unsafe input", () => {
   assert.deepEqual(parsePageRange("3, 1-2", 4), [3, 1, 2]);
@@ -41,6 +41,22 @@ test("PDF.js worker is configured locally and emitted by the browser build", () 
   assert.match(source, /GlobalWorkerOptions\.workerSrc/);
   assert.match(source, /new URL\("\.\/pdf\.worker\.mjs", import\.meta\.url\)/);
   assert.ok(existsSync(resolve(process.cwd(), "dist/browser/pdf.worker.mjs")));
+});
+
+test("PDF split modes produce ordered, validated groups", () => {
+  assert.deepEqual(splitPdfPageGroups("extract", "3, 1-2", 4), [[3, 1, 2]]);
+  assert.deepEqual(splitPdfPageGroups("every-page", "", 3), [[1], [2], [3]]);
+  assert.deepEqual(splitPdfPageGroups("every-n", "2", 5), [[1, 2], [3, 4], [5]]);
+  assert.deepEqual(splitPdfPageGroups("groups", "1-3 | 4, 2", 4), [[1, 2, 3], [4, 2]]);
+  assert.throws(() => splitPdfPageGroups("every-n", "0", 3));
+  assert.throws(() => splitPdfPageGroups("groups", "1-9", 4));
+});
+
+test("PDF organizer move and delete operations preserve order and prevent an empty document", () => {
+  assert.deepEqual(movePdfPage([1, 2, 3, 4], 1, -1), [2, 1, 3, 4]);
+  assert.deepEqual(movePdfPage([1, 2, 3, 4], 2, 1), [1, 2, 4, 3]);
+  assert.deepEqual(removePdfPage([1, 2, 3], 1), [1, 3]);
+  assert.deepEqual(removePdfPage([1], 0), [1]);
 });
 
 test("PDF processing is cancellable, bounded, and protected from stale jobs", () => {

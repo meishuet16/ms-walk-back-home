@@ -80,7 +80,7 @@ import { renderMediaEditor, renderMediaPreview, renderToolbox, type ToolboxRende
 import { createLivingWindowViewModel, defaultWindowLocation, fetchOpenMeteoLocations, fetchOpenMeteoWeather, livingWindowStatusCopy, weatherCacheStatus, type WeatherSnapshot, type WindowLocation } from "./systems/LivingWindow.js";
 import { calculateMoonPhase, type MoonPhase } from "./systems/MoonPhase.js";
 import { drawSceneAsset } from "./systems/SceneAssetRenderer.js";
-import { deletePdfPages, imagesToPdf, mergePdfFiles, optimizePdf, parsePdfPageOperation, pdfOutputFilename, pdfToPngImages, reorderOrExtractPdf } from "./systems/PdfToolkit.js";
+import { imagesToPdf, mergePdfFiles, movePdfPage, optimizePdf, pdfOutputFilename, pdfToPngImages, removePdfPage, reorderOrExtractPdf, splitPdfPageGroups, type PdfSplitMode } from "./systems/PdfToolkit.js";
 import { mediaOutputFilename, processMediaFile } from "./systems/MediaToolkit.js";
 import { decodeMediaWaveform, waveformPeaksInView } from "./systems/MediaWaveform.js";
 import { createTrimTimeline, formatTimelineTime, parseTimelineTime, setPlayhead, setTrimBoundary, timeAtPixel, timelineKeyboardStep, visibleDuration, zoomTimeline, type TrimTimelineState, type WaveformPeak } from "./systems/WaveformModel.js";
@@ -344,8 +344,11 @@ export class WalkBackHomeApp {
   private livingWindowLoading = false;
   private livingWindowSubview: "main" | "location" = "main";
   private pdfMode = "merge";
+  private pdfSplitMode: PdfSplitMode = "extract";
   private pdfFiles: File[] = [];
   private pdfRange = "";
+  private pdfPageOrder: number[] = [];
+  private pdfPageLoading = false;
   private pdfStatus = "";
   private pdfAbortController: AbortController | null = null;
   private mediaMode = "extract-audio";
@@ -683,7 +686,7 @@ export class WalkBackHomeApp {
       void this.handleLivingWindowAction(action, target);
       return;
     }
-    if (["toolbox-close", "toolbox-select", "toolbox-confirm", "toolbox-back", "toolbox-page", "toolbox-page-prev", "toolbox-page-next", "toolbox-spin-add", "toolbox-spin-remove", "toolbox-spin", "toolbox-preset-new", "toolbox-preset-create", "toolbox-preset-rename", "toolbox-preset-delete", "calculator-key", "converter-swap", "currency-swap", "currency-refresh", "timer-mode", "timer-start", "timer-pause", "timer-reset", "date-difference", "date-add", "date-subtract", "date-until-since", "media-zoom-in", "media-zoom-out", "media-zoom-reset", "media-play-selection", "pdf-process", "pdf-cancel", "media-process", "media-cancel"].includes(action)) {
+    if (["toolbox-close", "toolbox-select", "toolbox-confirm", "toolbox-back", "toolbox-page", "toolbox-page-prev", "toolbox-page-next", "toolbox-spin-add", "toolbox-spin-remove", "toolbox-spin", "toolbox-preset-new", "toolbox-preset-create", "toolbox-preset-rename", "toolbox-preset-delete", "calculator-key", "converter-swap", "currency-swap", "currency-refresh", "timer-mode", "timer-start", "timer-pause", "timer-reset", "date-difference", "date-add", "date-subtract", "date-until-since", "media-zoom-in", "media-zoom-out", "media-zoom-reset", "media-play-selection", "pdf-process", "pdf-cancel", "pdf-page-up", "pdf-page-down", "pdf-page-delete", "media-process", "media-cancel"].includes(action)) {
       void this.handleToolboxAction(action, target);
       return;
     }
@@ -958,8 +961,11 @@ export class WalkBackHomeApp {
       dateDays: this.dateDays,
       dateResult: this.dateResult,
       pdfMode: this.pdfMode,
+      pdfSplitMode: this.pdfSplitMode,
       pdfFileSummary: this.pdfFiles.map((file) => file.name).join(", "),
       pdfRange: this.pdfRange,
+      pdfPageOrder: this.pdfPageOrder,
+      pdfPageLoading: this.pdfPageLoading,
       pdfStatus: this.pdfStatus,
       pdfBusy: this.pdfAbortController !== null,
       mediaMode: this.mediaMode,
@@ -1070,6 +1076,14 @@ export class WalkBackHomeApp {
     if (status) status.textContent = this.pdfStatus;
     if (process) process.disabled = busy;
     if (cancel) { cancel.disabled = !busy; cancel.hidden = !busy; }
+    const organizer = tool.querySelector<HTMLElement>(".pdf-organizer, .pdf-organizer-status");
+    if (this.pdfMode === "reorder" && organizer) organizer.outerHTML = this.renderPdfOrganizer();
+  }
+
+  private renderPdfOrganizer(): string {
+    if (this.pdfPageLoading) return `<p class="pdf-organizer-status">Reading page order…</p>`;
+    if (!this.pdfPageOrder.length) return `<p class="pdf-organizer-status">Choose one PDF to organize its pages visually.</p>`;
+    return `<div class="pdf-organizer" aria-label="PDF page organizer">${this.pdfPageOrder.map((page, index) => `<article class="pdf-page-card"><strong>Page ${page}</strong><span>Final position ${index + 1}</span><div class="pdf-page-actions"><button type="button" data-action="pdf-page-up" data-index="${index}" aria-label="Move page ${page} up" ${index === 0 ? "disabled" : ""}>↑</button><button type="button" data-action="pdf-page-down" data-index="${index}" aria-label="Move page ${page} down" ${index === this.pdfPageOrder.length - 1 ? "disabled" : ""}>↓</button><button type="button" data-action="pdf-page-delete" data-index="${index}" aria-label="Delete page ${page}" ${this.pdfPageOrder.length <= 1 ? "disabled" : ""}>Delete</button></div></article>`).join("")}</div><small>Use the arrows to set the final order. Delete removes a page from the saved PDF.</small>`;
   }
 
   private refreshToolboxMediaView(): void {
@@ -1251,6 +1265,16 @@ export class WalkBackHomeApp {
       this.dateResult = relativeDateLabel(this.dateEnd);
       return this.renderToolboxOverlay();
     }
+    if (action === "pdf-page-up" || action === "pdf-page-down") {
+      const index = Number(target.dataset.index ?? -1);
+      this.pdfPageOrder = movePdfPage(this.pdfPageOrder, index, action === "pdf-page-up" ? -1 : 1);
+      return this.refreshToolboxPdfView();
+    }
+    if (action === "pdf-page-delete") {
+      this.pdfPageOrder = removePdfPage(this.pdfPageOrder, Number(target.dataset.index ?? -1));
+      this.pdfStatus = this.pdfPageOrder.length > 1 ? "Page removed from the final order." : "A PDF must keep at least one page.";
+      return this.refreshToolboxPdfView();
+    }
     if (action === "media-zoom-in" || action === "media-zoom-out" || action === "media-zoom-reset") {
       const zoom = action === "media-zoom-reset" ? 1 : this.mediaTimeline.zoom * (action === "media-zoom-in" ? 2 : .5);
       this.mediaTimeline = zoomTimeline(this.mediaTimeline, zoom);
@@ -1369,14 +1393,14 @@ export class WalkBackHomeApp {
     this.pdfStatus = "Processing locally...";
     this.refreshToolboxPdfView();
     try {
-      const result: { images?: Blob[]; bytes?: Uint8Array; filename?: string; detail?: string } = await runAbortableStage({
+      const result: { images?: Blob[]; bytes?: Uint8Array; bytesList?: Uint8Array[]; filename?: string; filenames?: string[]; detail?: string } = await runAbortableStage({
         label: "PDF processing",
         timeoutMs: 120_000,
         parentSignal: controller.signal,
         run: async () => {
           const first = files[0];
           if (mode === "pdf-to-images") return { images: await pdfToPngImages(first, 1.5, controller.signal) };
-          let bytes: Uint8Array;
+          let bytes: Uint8Array | null = null;
           let filename = pdfOutputFilename(first.name, mode);
           let detail = "";
           if (mode === "merge") {
@@ -1391,12 +1415,22 @@ export class WalkBackHomeApp {
             const optimized = await optimizePdf(first, controller.signal);
             bytes = optimized.bytes;
             detail = optimized.report.message + " - " + optimized.report.originalBytes + " to " + optimized.report.resultBytes + " bytes";
-          } else {
+          } else if (mode === "extract") {
             const pageCount = await this.pdfPageCount(first, controller.signal);
-            const operation = parsePdfPageOperation(rangeText, pageCount);
-            bytes = operation.deleteMode ? await deletePdfPages(first, operation.pages, controller.signal) : await reorderOrExtractPdf(first, operation.pages, controller.signal);
-            filename = pdfOutputFilename(first.name, mode === "extract" ? "pages" : "reordered");
+            const groups = splitPdfPageGroups(this.pdfSplitMode, rangeText, pageCount);
+            const bytesList = [] as Uint8Array[];
+            for (const group of groups) {
+              this.throwIfPdfAborted(controller.signal);
+              bytesList.push(await reorderOrExtractPdf(first, group, controller.signal));
+            }
+            const filenames = groups.map((_, index) => pdfOutputFilename(first.name, groups.length === 1 ? "pages" : `part-${index + 1}`));
+            return { bytesList, filenames, detail: groups.length === 1 ? "" : `Prepared ${groups.length} PDFs` };
+          } else if (mode === "reorder") {
+            if (!this.pdfPageOrder.length) throw new Error("Choose a PDF with at least one page");
+            bytes = await reorderOrExtractPdf(first, this.pdfPageOrder, controller.signal);
+            filename = pdfOutputFilename(first.name, "reordered");
           }
+          if (!bytes) throw new Error("PDF processing produced no output");
           return { bytes, filename, detail };
         }
       });
@@ -1404,6 +1438,9 @@ export class WalkBackHomeApp {
       if (result.images) {
         result.images.forEach((image, index) => this.downloadLocalBlob(image, pdfOutputFilename(files[0].name, "page-" + (index + 1)).replace(/\.pdf$/, ".png")));
         this.pdfStatus = "Saved " + result.images.length + " local page image" + (result.images.length === 1 ? "" : "s");
+      } else if (result.bytesList && result.filenames) {
+        result.bytesList.forEach((output, index) => this.downloadLocalBlob(new Blob([output.buffer as ArrayBuffer], { type: "application/pdf" }), result.filenames![index]));
+        this.pdfStatus = result.detail || `Saved ${result.bytesList.length} local PDFs`;
       } else if (result.bytes && result.filename) {
         this.downloadLocalBlob(new Blob([result.bytes.buffer as ArrayBuffer], { type: "application/pdf" }), result.filename);
         this.pdfStatus = result.detail || "Saved locally as " + result.filename;
@@ -1435,6 +1472,26 @@ export class WalkBackHomeApp {
     const document = await PDFDocument.load(await file.arrayBuffer());
     if (signal?.aborted) throw signal.reason ?? new DOMException("Cancelled", "AbortError");
     return document.getPageCount();
+  }
+
+  private throwIfPdfAborted(signal: AbortSignal): void {
+    if (signal.aborted) throw signal.reason ?? new DOMException("Cancelled", "AbortError");
+  }
+
+  private async preparePdfOrganizer(file: File): Promise<void> {
+    this.pdfPageLoading = true;
+    this.pdfStatus = "";
+    this.refreshToolboxPdfView();
+    try {
+      const count = await this.pdfPageCount(file);
+      if (this.pdfMode !== "reorder" || this.pdfFiles[0] !== file) return;
+      this.pdfPageOrder = Array.from({ length: count }, (_, index) => index + 1);
+    } catch (error) {
+      this.pdfStatus = error instanceof Error ? error.message : "Could not read PDF pages";
+    } finally {
+      this.pdfPageLoading = false;
+      this.refreshToolboxPdfView();
+    }
   }
 
   private drawMediaWaveformCanvas(): void {
@@ -1700,7 +1757,7 @@ export class WalkBackHomeApp {
     if (field === "date-days") this.dateDays = value;
     if (field === "media-start") this.mediaStart = value;
     if (field === "media-end") this.mediaEnd = value;
-    if (field === "pdf-range") this.pdfRange = value;
+    if (field === "pdf-range" || field === "pdf-split-value") this.pdfRange = value;
   }
 
   private handleToolboxFieldChange(target: HTMLElement): void {
@@ -1737,9 +1794,19 @@ export class WalkBackHomeApp {
     if (field === "currency-from") this.currencyFrom = value as CurrencyCode;
     if (field === "currency-to") this.currencyTo = value as CurrencyCode;
     if (field === "date-mode") this.dateMode = value as typeof this.dateMode;
-    if (field === "pdf-mode") this.pdfMode = value;
+    if (field === "pdf-mode") {
+      this.pdfMode = value;
+      this.pdfPageOrder = [];
+      if (this.pdfMode === "reorder" && this.pdfFiles[0]) void this.preparePdfOrganizer(this.pdfFiles[0]);
+    }
+    if (field === "pdf-split-mode") {
+      this.pdfSplitMode = value as PdfSplitMode;
+      this.pdfRange = "";
+    }
     if (field === "pdf-files" && target instanceof HTMLInputElement) {
       this.pdfFiles = target.files ? Array.from(target.files) : [];
+      this.pdfPageOrder = [];
+      if (this.pdfMode === "reorder" && this.pdfFiles[0]) void this.preparePdfOrganizer(this.pdfFiles[0]);
       this.pdfStatus = "";
       this.refreshToolboxPdfView();
       return;
