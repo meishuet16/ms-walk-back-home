@@ -1,0 +1,54 @@
+export type LocalJobPhase = "idle" | "validating" | "loading-engine" | "processing" | "success" | "error" | "cancelled";
+
+export type LocalJobState = { id: number; phase: LocalJobPhase; progress: number; message: string };
+
+export function createLocalJobState(): LocalJobState {
+  return { id: 0, phase: "idle", progress: 0, message: "" };
+}
+
+export function beginLocalJob(previous: LocalJobState, phase: "validating" | "loading-engine", message: string): LocalJobState {
+  return { id: previous.id + 1, phase, progress: 0, message };
+}
+
+export function advanceLocalJob(state: LocalJobState, id: number, phase: "loading-engine" | "processing", message: string, progress = state.progress): LocalJobState {
+  if (id !== state.id) return state;
+  return { ...state, phase, message, progress: clampProgress(progress) };
+}
+
+export function settleLocalJob(state: LocalJobState, id: number, phase: "success" | "error" | "cancelled", message: string): LocalJobState {
+  if (id !== state.id) return state;
+  return { ...state, phase, message, progress: phase === "success" ? 1 : state.progress };
+}
+
+export function localJobIsCurrent(state: LocalJobState, id: number): boolean {
+  return state.id === id;
+}
+
+export async function runAbortableStage<T>(options: {
+  label: string;
+  timeoutMs: number;
+  parentSignal?: AbortSignal;
+  run: (signal: AbortSignal) => Promise<T>;
+}): Promise<T> {
+  const controller = new AbortController();
+  const timeoutReason = new Error(options.label + " timed out");
+  let rejectAbort: (reason: unknown) => void = () => undefined;
+  const aborted = new Promise<never>((_resolve, reject) => { rejectAbort = reject; });
+  const rejectOnAbort = (): void => rejectAbort(controller.signal.reason ?? new DOMException("Cancelled", "AbortError"));
+  const relay = (): void => controller.abort(options.parentSignal?.reason ?? new DOMException("Cancelled", "AbortError"));
+  const timer = setTimeout(() => controller.abort(timeoutReason), options.timeoutMs);
+  controller.signal.addEventListener("abort", rejectOnAbort, { once: true });
+  options.parentSignal?.addEventListener("abort", relay, { once: true });
+  if (options.parentSignal?.aborted) relay();
+  try {
+    return await Promise.race([options.run(controller.signal), aborted]);
+  } finally {
+    clearTimeout(timer);
+    options.parentSignal?.removeEventListener("abort", relay);
+    controller.signal.removeEventListener("abort", rejectOnAbort);
+  }
+}
+
+function clampProgress(value: number): number {
+  return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
+}

@@ -5727,3 +5727,23 @@ canvas {
 @media (orientation: landscape) and (min-width: 701px) {
   .toolbox-panel, .living-window-panel { max-height: min(88dvh, 760px); }
 }
+.media-tool { gap: 12px; }
+.media-preview { width: 100%; max-height: 150px; border-radius: 10px; background: #202522; accent-color: #738a77; }
+.media-file-picker { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px dashed rgba(54, 63, 58, .35); border-radius: 10px; background: #f6f3ea; }
+.media-file-picker span { color: #343b37; font-weight: 700; }
+.media-editor { display: grid; gap: 12px; padding: 14px; border: 1px solid rgba(54, 63, 58, .2); border-radius: 12px; background: linear-gradient(180deg, #f8f5ec, #ebe8df); box-shadow: 0 12px 28px rgba(39, 45, 42, .09); }
+.media-editor-heading, .media-editor-actions, .media-zoom-controls, .media-time-grid { display: flex; align-items: center; gap: 10px; }
+.media-editor-heading { justify-content: space-between; }
+.media-editor-heading > div:first-child { display: grid; gap: 2px; }
+.media-editor-heading span, .media-editor-actions span { color: #68706b; font-size: 12px; }
+.media-zoom-controls output { min-width: 44px; color: #434b47; font-variant-numeric: tabular-nums; text-align: center; }
+.media-zoom-controls button { min-width: 34px; padding: 7px 9px; }
+.media-waveform-wrap { overflow: hidden; border: 1px solid rgba(42, 50, 46, .22); border-radius: 9px; background: #f3f0e7; cursor: crosshair; touch-action: none; }
+.media-waveform { display: block; width: 100%; height: clamp(142px, 22vh, 220px); outline: none; }
+.media-waveform:focus-visible { box-shadow: inset 0 0 0 3px rgba(115, 138, 119, .65); }
+.media-time-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+.media-time-grid input { width: 100%; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-variant-numeric: tabular-nums; letter-spacing: .04em; }
+.media-editor-actions { justify-content: space-between; }
+.media-export { min-height: 44px; }
+.media-tool progress { width: 100%; accent-color: #738a77; }
+@media (max-width: 700px) { .media-editor-heading, .media-editor-actions { align-items: flex-start; flex-direction: column; } .media-zoom-controls { width: 100%; } .media-editor-actions span { line-height: 1.4; } }

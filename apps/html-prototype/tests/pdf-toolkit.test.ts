@@ -42,3 +42,12 @@ test("PDF.js worker is configured locally and emitted by the browser build", () 
   assert.match(source, /new URL\("\.\/pdf\.worker\.mjs", import\.meta\.url\)/);
   assert.ok(existsSync(resolve(process.cwd(), "dist/browser/pdf.worker.mjs")));
 });
+
+test("PDF processing is cancellable, bounded, and protected from stale jobs", () => {
+  const source = readFileSync(resolve(process.cwd(), "src/app.ts"), "utf8");
+  assert.match(source, /pdfAbortController\?\.abort/);
+  assert.match(source, /label: "PDF processing"/);
+  assert.match(source, /timeoutMs: 120_000/);
+  assert.match(source, /this\.pdfAbortController !== controller/);
+  assert.match(source, /PDF processing cancelled/);
+});

@@ -78,12 +78,15 @@ test("Toolbox keyboard guards protect handled events and focused buttons", () =>
   assert.doesNotMatch(source, /focusedControl && event\.key !== "Escape"/);
 });
 
-test("Spin Add integration uses the selected preset, clears the field, persists, and rerenders", () => {
+test("Spin actions patch stable regions without rebuilding the Toolbox root", () => {
   const source = readFileSync(resolve(process.cwd(), "src/app.ts"), "utf8");
   assert.match(source, /addSpinChoiceToPreset/);
-  assert.match(source, /renderToolboxOverlay[\s\S]*?normalizeSelectedPresetId/);
   assert.match(source, /data-action=toolbox-spin-add/);
-  assert.match(source, /this\.persistToolboxState\(\)[\s\S]*?this\.renderToolboxOverlay\(\)/);
+  assert.match(source, /refreshSpinWheelView/);
+  const addStart = source.indexOf('action === "toolbox-spin-add"');
+  const addEnd = source.indexOf('action === "toolbox-spin-remove"', addStart);
+  assert.doesNotMatch(source.slice(addStart, addEnd), /renderToolboxOverlay/);
+  assert.match(source.slice(addStart, addEnd), /refreshSpinWheelView/);
 });
 test("Spin Add integration accumulates Latin and Chinese choices into real wheel segments", () => {
   let presets = [createSpinPreset("today", "Today", ["A"])];
@@ -110,4 +113,12 @@ test("Spin Add tolerates stale preset state and New preset uses an inline naming
   assert.match(source, /syncSpinWheelForm[\s\S]*?button\.type = "button"/);
   assert.match(source, /field === "spin-choice"[\s\S]*?this\.spinChoiceDraft/);
   assert.match(source, /field === "spin-preset-name"[\s\S]*?this\.spinPresetNameDraft/);
+});
+
+test("Media editor controls dispatch through the Toolbox action gate", () => {
+  const source = readFileSync(resolve(process.cwd(), "src/app.ts"), "utf8");
+  const gateStart = source.indexOf('if (["toolbox-close"');
+  const gateEnd = source.indexOf("].includes(action)", gateStart);
+  const gate = source.slice(gateStart, gateEnd);
+  for (const action of ["media-zoom-in", "media-zoom-out", "media-zoom-reset", "media-play-selection"]) assert.match(gate, new RegExp('"' + action + '"'));
 });

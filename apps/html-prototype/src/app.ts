@@ -82,6 +82,10 @@ import { calculateMoonPhase, type MoonPhase } from "./systems/MoonPhase.js";
 import { drawSceneAsset } from "./systems/SceneAssetRenderer.js";
 import { deletePdfPages, imagesToPdf, mergePdfFiles, optimizePdf, parsePdfPageOperation, pdfOutputFilename, pdfToPngImages, reorderOrExtractPdf } from "./systems/PdfToolkit.js";
 import { mediaOutputFilename, processMediaFile } from "./systems/MediaToolkit.js";
+import { decodeMediaWaveform, waveformPeaksInView } from "./systems/MediaWaveform.js";
+import { createTrimTimeline, formatTimelineTime, parseTimelineTime, setPlayhead, setTrimBoundary, timeAtPixel, timelineKeyboardStep, visibleDuration, zoomTimeline, type TrimTimelineState, type WaveformPeak } from "./systems/WaveformModel.js";
+import { runAbortableStage } from "./systems/LocalJob.js";
+import { toolboxFieldChangeEffect } from "./systems/ToolboxInteraction.js";
 import type { MusicScene } from "./systems/SceneMusic.js";
 import { SupabaseSync } from "./systems/SupabaseSync.js";
 import { emptyTendencies } from "./systems/TendencySystem.js";
@@ -343,6 +347,7 @@ export class WalkBackHomeApp {
   private pdfFiles: File[] = [];
   private pdfRange = "";
   private pdfStatus = "";
+  private pdfAbortController: AbortController | null = null;
   private mediaMode = "extract-audio";
   private mediaFile: File | null = null;
   private mediaFileName = "";
@@ -353,6 +358,13 @@ export class WalkBackHomeApp {
   private mediaDuration = 0;
   private mediaProgress = 0;
   private mediaAbortController: AbortController | null = null;
+  private mediaTimeline: TrimTimelineState = createTrimTimeline(10_000);
+  private mediaPeaks: WaveformPeak[] = [];
+  private mediaPreviewUrl = "";
+  private mediaPreviewKind: "audio" | "video" = "audio";
+  private mediaLoadAbortController: AbortController | null = null;
+  private mediaWaveformDrag: "start" | "end" | "playhead" | null = null;
+  private mediaPlaybackFrame = 0;
   private room: RoomJourneyState = createDefaultRoomState();
   private reflectionWall: ReflectionWallState = createReflectionWallState();
   private reflectionWallView: ReflectionWallView = "wall";
@@ -438,6 +450,7 @@ export class WalkBackHomeApp {
     root.addEventListener("pointermove", (event) => this.handlePointerMove(event));
     root.addEventListener("pointerup", (event) => {
       this.handleToolboxPointerUp(event);
+      this.mediaWaveformDrag = null;
       this.journalCropDrag = null;
       this.scrapbookDrag = null;
       if (this.lyricsDrag || this.lyricsResize) this.autosave();
@@ -670,7 +683,7 @@ export class WalkBackHomeApp {
       void this.handleLivingWindowAction(action, target);
       return;
     }
-    if (["toolbox-close", "toolbox-select", "toolbox-confirm", "toolbox-back", "toolbox-page", "toolbox-page-prev", "toolbox-page-next", "toolbox-spin-add", "toolbox-spin-remove", "toolbox-spin", "toolbox-preset-new", "toolbox-preset-create", "toolbox-preset-rename", "toolbox-preset-delete", "calculator-key", "converter-swap", "currency-swap", "currency-refresh", "timer-mode", "timer-start", "timer-pause", "timer-reset", "date-difference", "date-add", "date-subtract", "date-until-since", "pdf-process", "media-process"].includes(action)) {
+    if (["toolbox-close", "toolbox-select", "toolbox-confirm", "toolbox-back", "toolbox-page", "toolbox-page-prev", "toolbox-page-next", "toolbox-spin-add", "toolbox-spin-remove", "toolbox-spin", "toolbox-preset-new", "toolbox-preset-create", "toolbox-preset-rename", "toolbox-preset-delete", "calculator-key", "converter-swap", "currency-swap", "currency-refresh", "timer-mode", "timer-start", "timer-pause", "timer-reset", "date-difference", "date-add", "date-subtract", "date-until-since", "media-zoom-in", "media-zoom-out", "media-zoom-reset", "media-play-selection", "pdf-process", "media-process"].includes(action)) {
       void this.handleToolboxAction(action, target);
       return;
     }
@@ -815,6 +828,13 @@ export class WalkBackHomeApp {
     if (!this.toolboxOpen || this.toolboxView.screen !== "tool") return;
     const target = event.target as HTMLElement | null;
     if (target?.closest("input, textarea, select, button, audio, video, [contenteditable=true], [role=slider]")) {
+      if (target.matches("[role=slider]") && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+        const step = timelineKeyboardStep(event);
+        const next = event.key === "Home" ? 0 : event.key === "End" ? this.mediaTimeline.durationMs : this.mediaTimeline.playheadMs + (event.key === "ArrowLeft" ? -step : step);
+        this.mediaTimeline = setPlayhead(this.mediaTimeline, next);
+        this.syncMediaTimelineControls();
+        event.preventDefault();
+      }
       if (event.key === "Enter" && target.dataset.toolboxField === "spin-choice") {
         event.preventDefault();
         const add = this.overlay.querySelector<HTMLElement>("[data-action=toolbox-spin-add]");
@@ -943,7 +963,12 @@ export class WalkBackHomeApp {
       mediaStart: this.mediaStart,
       mediaEnd: this.mediaEnd,
       mediaStatus: this.mediaStatus,
-      mediaProgress: this.mediaProgress
+      mediaProgress: this.mediaProgress,
+      mediaDurationLabel: this.mediaDuration > 0 ? formatTimelineTime(this.mediaTimeline.durationMs) : "",
+      mediaPreviewUrl: this.mediaPreviewUrl,
+      mediaPreviewKind: this.mediaPreviewKind,
+      mediaWaveformReady: this.mediaPeaks.length > 0,
+      mediaZoom: this.mediaTimeline.zoom
     };
     this.overlay.classList.add("toolbox-overlay");
     this.overlay.classList.remove("dialogue-open", "lightweight-presentation");
@@ -951,6 +976,7 @@ export class WalkBackHomeApp {
     this.syncSpinWheelForm();
     this.drawSpinWheelCanvas();
     this.syncGameplayChromeVisibility();
+    this.drawMediaWaveformCanvas();
   }
 
   private syncSpinWheelForm(): void {
@@ -966,6 +992,63 @@ export class WalkBackHomeApp {
       status.textContent = this.toolboxPersistenceStatus;
       this.overlay.querySelector(".spin-wheel-tool")?.append(status);
     }
+  }
+
+  private refreshSpinWheelView(options: { focusChoice?: boolean; focusPreset?: boolean } = {}): void {
+    if (!this.toolboxOpen || this.toolboxView.screen !== "tool" || this.toolboxView.selected !== "spin-wheel") return;
+    this.selectedToolboxPresetId = normalizeSelectedPresetId(this.toolboxPresets, this.selectedToolboxPresetId);
+    const preset = this.toolboxPresets.find((item) => item.id === this.selectedToolboxPresetId) ?? this.toolboxPresets[0];
+    if (!preset) return;
+    const panel = this.overlay.querySelector<HTMLElement>(".toolbox-panel");
+    const list = this.overlay.querySelector<HTMLElement>(".spin-choice-list");
+    const panelScroll = panel?.scrollTop ?? 0;
+    const listScroll = list?.scrollTop ?? 0;
+    const select = this.overlay.querySelector<HTMLSelectElement>("[data-toolbox-field=spin-preset]");
+    if (select) {
+      select.replaceChildren(...this.toolboxPresets.map((item) => {
+        const option = document.createElement("option");
+        option.value = item.id;
+        option.textContent = item.name;
+        option.selected = item.id === this.selectedToolboxPresetId;
+        return option;
+      }));
+    }
+    if (list) {
+      const rows = preset.choices.map((choice, index) => {
+        const row = document.createElement("li");
+        const label = document.createElement("span");
+        label.textContent = choice;
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.dataset.action = "toolbox-spin-remove";
+        remove.dataset.index = String(index);
+        remove.setAttribute("aria-label", "Remove " + choice);
+        remove.textContent = "×";
+        row.append(label, remove);
+        return row;
+      });
+      if (!rows.length) {
+        const empty = document.createElement("li");
+        empty.className = "empty";
+        empty.textContent = "Add a choice to begin.";
+        rows.push(empty);
+      }
+      list.replaceChildren(...rows);
+    }
+    const result = this.overlay.querySelector<HTMLElement>(".spin-wheel-result");
+    if (result) result.textContent = this.spinResult || (preset.choices.length ? "Ready" : "Add a choice to begin.");
+    const status = this.overlay.querySelector<HTMLElement>(".spin-wheel-tool .toolbox-status");
+    if (status) status.textContent = this.toolboxPersistenceStatus;
+    const spin = this.overlay.querySelector<HTMLButtonElement>("[data-action=toolbox-spin]");
+    if (spin) {
+      spin.disabled = this.spinSpinning || !preset.choices.length;
+      spin.textContent = this.spinSpinning ? "Spinning…" : "Spin";
+    }
+    this.drawSpinWheelCanvas();
+    if (panel) panel.scrollTop = panelScroll;
+    if (list) list.scrollTop = listScroll;
+    if (options.focusChoice) this.overlay.querySelector<HTMLInputElement>("[data-toolbox-field=spin-choice]")?.focus();
+    if (options.focusPreset) this.overlay.querySelector<HTMLInputElement>("[data-toolbox-field=spin-preset-name]")?.focus();
   }
 
   private async handleToolboxAction(action: string, target: HTMLElement): Promise<void> {
@@ -997,19 +1080,27 @@ export class WalkBackHomeApp {
     if (action === "toolbox-spin-add" && !this.spinSpinning) {
       const input = this.overlay.querySelector<HTMLInputElement>("#toolbox-spin-choice");
       const added = addSpinChoiceToPreset(this.toolboxPresets, this.selectedToolboxPresetId, input?.value ?? this.spinChoiceDraft);
+      if (!added.added) {
+        this.toolboxPersistenceStatus = "Enter a unique choice";
+        this.refreshSpinWheelView({ focusChoice: true });
+        return;
+      }
       this.toolboxPresets = added.presets;
       this.selectedToolboxPresetId = added.selectedPresetId;
       this.spinChoiceDraft = "";
+      this.toolboxPersistenceStatus = "";
       if (input) input.value = "";
       this.spinResult = "";
       this.persistToolboxState();
-      return this.renderToolboxOverlay();
+      this.refreshSpinWheelView({ focusChoice: true });
+      return;
     }
     if (action === "toolbox-spin-remove" && preset && !this.spinSpinning) {
       preset.choices = removeSpinChoice(preset.choices, Number(target.dataset.index));
       this.spinResult = "";
       this.persistToolboxState();
-      return this.renderToolboxOverlay();
+      this.refreshSpinWheelView();
+      return;
     }
     if (action === "toolbox-spin" && preset && !this.spinSpinning) {
       void this.startSpinAnimation(preset.choices);
@@ -1018,14 +1109,21 @@ export class WalkBackHomeApp {
     if (action === "toolbox-preset-create" && !this.spinSpinning) {
       const input = this.overlay.querySelector<HTMLInputElement>("[data-toolbox-field=spin-preset-name]");
       const name = (input?.value ?? this.spinPresetNameDraft).trim();
-      if (!name) { input?.focus(); return this.renderToolboxOverlay(); }
+      const duplicate = this.toolboxPresets.some((item) => item.name.toLocaleLowerCase() === name.toLocaleLowerCase());
+      if (!name || duplicate) {
+        this.toolboxPersistenceStatus = name ? "Preset name already exists" : "Enter a preset name";
+        this.refreshSpinWheelView({ focusPreset: true });
+        return;
+      }
       const id = "preset-" + Date.now();
       this.toolboxPresets.push(createSpinPreset(id, name, []));
       this.selectedToolboxPresetId = id;
       this.spinPresetNameDraft = "";
+      this.toolboxPersistenceStatus = "";
       if (input) input.value = "";
       this.persistToolboxState();
-      return this.renderToolboxOverlay();
+      this.refreshSpinWheelView({ focusPreset: true });
+      return;
     }
     if (action === "toolbox-preset-new" && !this.spinSpinning) {
       this.overlay.querySelector<HTMLInputElement>("[data-toolbox-field=spin-preset-name]")?.focus();
@@ -1038,13 +1136,15 @@ export class WalkBackHomeApp {
       this.spinPresetNameDraft = "";
       if (input) input.value = "";
       this.persistToolboxState();
-      return this.renderToolboxOverlay();
+      this.refreshSpinWheelView({ focusPreset: true });
+      return;
     }
     if (action === "toolbox-preset-delete" && preset && this.toolboxPresets.length > 1 && !this.spinSpinning) {
       this.toolboxPresets = deleteSpinPreset(this.toolboxPresets, preset.id);
       this.selectedToolboxPresetId = this.toolboxPresets[0].id;
       this.persistToolboxState();
-      return this.renderToolboxOverlay();
+      this.refreshSpinWheelView();
+      return;
     }
     if (action === "calculator-key") {
       this.calculatorDisplay = applyCalculatorInput(this.calculatorDisplay, target.dataset.key ?? "");
@@ -1100,6 +1200,16 @@ export class WalkBackHomeApp {
       this.dateResult = relativeDateLabel(this.dateEnd);
       return this.renderToolboxOverlay();
     }
+    if (action === "media-zoom-in" || action === "media-zoom-out" || action === "media-zoom-reset") {
+      const zoom = action === "media-zoom-reset" ? 1 : this.mediaTimeline.zoom * (action === "media-zoom-in" ? 2 : .5);
+      this.mediaTimeline = zoomTimeline(this.mediaTimeline, zoom);
+      this.syncMediaTimelineControls();
+      return;
+    }
+    if (action === "media-play-selection") {
+      this.playMediaSelection();
+      return;
+    }
     if (action === "pdf-process") return this.processPdfLocally();
     if (action === "media-process") return this.processMediaLocally();
   }
@@ -1113,7 +1223,7 @@ export class WalkBackHomeApp {
     const startedAt = performance.now();
     this.spinSpinning = true;
     this.spinResult = "Spinning…";
-    this.renderToolboxOverlay();
+    this.refreshSpinWheelView();
     const animate = (now: number): void => {
       if (!this.toolboxOpen || this.toolboxView.screen !== "tool" || this.toolboxView.selected !== "spin-wheel") {
         this.spinSpinning = false;
@@ -1130,7 +1240,7 @@ export class WalkBackHomeApp {
       this.spinRotation = targetRotation;
       this.spinSpinning = false;
       this.spinResult = choices[winner] ?? "";
-      this.renderToolboxOverlay();
+      this.refreshSpinWheelView();
     };
     this.spinAnimationFrame = requestAnimationFrame(animate);
   }
@@ -1184,41 +1294,65 @@ export class WalkBackHomeApp {
       this.pdfStatus = "Choose a local file first";
       return this.renderToolboxOverlay();
     }
-    this.pdfStatus = "Processing locally…";
+    this.pdfAbortController?.abort();
+    const controller = new AbortController();
+    this.pdfAbortController = controller;
+    const files = [...this.pdfFiles];
+    const mode = this.pdfMode;
+    const rangeText = this.pdfRange;
+    this.pdfStatus = "Processing locally...";
     this.renderToolboxOverlay();
     try {
-      const first = this.pdfFiles[0];
-      if (this.pdfMode === "pdf-to-images") {
-        const images = await pdfToPngImages(first);
-        images.forEach((image, index) => this.downloadLocalBlob(image, pdfOutputFilename(first.name, "page-" + (index + 1)).replace(/\.pdf$/, ".png")));
-        this.pdfStatus = "Saved " + images.length + " local page image" + (images.length === 1 ? "" : "s");
-        return;
-      }
-      let bytes: Uint8Array;
-      let filename = pdfOutputFilename(first.name, this.pdfMode);
-      if (this.pdfMode === "merge") {
-        bytes = await mergePdfFiles(this.pdfFiles);
-        filename = pdfOutputFilename(first.name, "merged");
-      } else if (this.pdfMode === "images-to-pdf") {
-        bytes = await imagesToPdf(this.pdfFiles.filter((file) => file.type.startsWith("image/")));
-        filename = pdfOutputFilename(first.name, "document");
-      } else if (this.pdfMode === "compress") {
-        const result = await optimizePdf(first);
-        bytes = result.bytes;
-        this.pdfStatus = result.report.message + " · " + result.report.originalBytes + " → " + result.report.resultBytes + " bytes";
+      const result: { images?: Blob[]; bytes?: Uint8Array; filename?: string; detail?: string } = await runAbortableStage({
+        label: "PDF processing",
+        timeoutMs: 120_000,
+        parentSignal: controller.signal,
+        run: async () => {
+          const first = files[0];
+          if (mode === "pdf-to-images") return { images: await pdfToPngImages(first) };
+          let bytes: Uint8Array;
+          let filename = pdfOutputFilename(first.name, mode);
+          let detail = "";
+          if (mode === "merge") {
+            bytes = await mergePdfFiles(files);
+            filename = pdfOutputFilename(first.name, "merged");
+          } else if (mode === "images-to-pdf") {
+            const images = files.filter((file) => file.type.startsWith("image/"));
+            if (!images.length) throw new Error("Choose at least one image");
+            bytes = await imagesToPdf(images);
+            filename = pdfOutputFilename(first.name, "document");
+          } else if (mode === "compress") {
+            const optimized = await optimizePdf(first);
+            bytes = optimized.bytes;
+            detail = optimized.report.message + " - " + optimized.report.originalBytes + " to " + optimized.report.resultBytes + " bytes";
+          } else {
+            const pageCount = await this.pdfPageCount(first);
+            const operation = parsePdfPageOperation(rangeText, pageCount);
+            bytes = operation.deleteMode ? await deletePdfPages(first, operation.pages) : await reorderOrExtractPdf(first, operation.pages);
+            filename = pdfOutputFilename(first.name, mode === "extract" ? "pages" : "reordered");
+          }
+          return { bytes, filename, detail };
+        }
+      });
+      if (controller.signal.aborted) return;
+      if (result.images) {
+        result.images.forEach((image, index) => this.downloadLocalBlob(image, pdfOutputFilename(files[0].name, "page-" + (index + 1)).replace(/\.pdf$/, ".png")));
+        this.pdfStatus = "Saved " + result.images.length + " local page image" + (result.images.length === 1 ? "" : "s");
+      } else if (result.bytes && result.filename) {
+        this.downloadLocalBlob(new Blob([result.bytes.buffer as ArrayBuffer], { type: "application/pdf" }), result.filename);
+        this.pdfStatus = result.detail || "Saved locally as " + result.filename;
       } else {
-        const pageCount = await this.pdfPageCount(first);
-        const operation = parsePdfPageOperation(this.pdfRange, pageCount);
-        if (operation.deleteMode) bytes = await deletePdfPages(first, operation.pages);
-        else bytes = await reorderOrExtractPdf(first, operation.pages);
-        filename = pdfOutputFilename(first.name, this.pdfMode === "extract" ? "pages" : "reordered");
+        throw new Error("PDF processing produced no output");
       }
-      this.downloadLocalBlob(new Blob([bytes.buffer as ArrayBuffer], { type: "application/pdf" }), filename);
-      if (!this.pdfStatus || this.pdfStatus === "Processing locally…") this.pdfStatus = "Saved locally as " + filename;
     } catch (error) {
-      this.pdfStatus = error instanceof Error ? error.message : "PDF processing failed";
+      if (this.pdfAbortController !== controller) return;
+      this.pdfStatus = controller.signal.aborted ? "PDF processing cancelled" : error instanceof Error ? error.message : "PDF processing failed";
+    } finally {
+      if (this.pdfAbortController === controller) {
+        this.pdfAbortController = null;
+        if (this.toolboxOpen) this.renderToolboxOverlay();
+      }
     }
-    this.renderToolboxOverlay();
   }
 
   private async pdfPageCount(file: Blob): Promise<number> {
@@ -1227,23 +1361,192 @@ export class WalkBackHomeApp {
     return document.getPageCount();
   }
 
-  private async prepareMediaFile(file: File | null): Promise<void> {
-    this.mediaDuration = 0;
-    if (!file) return;
+  private drawMediaWaveformCanvas(): void {
+    const canvas = this.overlay.querySelector<HTMLCanvasElement>("[data-media-waveform]");
+    if (!canvas || this.mediaDuration <= 0) return;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    const width = canvas.width;
+    const height = canvas.height;
+    const middle = height / 2;
+    const visibleMs = visibleDuration(this.mediaTimeline);
+    const toX = (timeMs: number) => ((timeMs - this.mediaTimeline.viewportStartMs) / visibleMs) * width;
+    context.clearRect(0, 0, width, height);
+    context.fillStyle = "#f3f0e7";
+    context.fillRect(0, 0, width, height);
+    context.strokeStyle = "rgba(61, 67, 64, .12)";
+    for (let index = 0; index <= 8; index += 1) {
+      const x = index * width / 8;
+      context.beginPath();
+      context.moveTo(x, 0);
+      context.lineTo(x, height);
+      context.stroke();
+    }
+    const peaks = waveformPeaksInView(this.mediaPeaks, this.mediaTimeline);
+    if (peaks.length) {
+      const barWidth = width / peaks.length;
+      context.fillStyle = "#56635d";
+      peaks.forEach((peak, index) => {
+        const top = middle + peak.min * middle * .82;
+        const bottom = middle + peak.max * middle * .82;
+        context.fillRect(index * barWidth, top, Math.max(1, barWidth - 1), Math.max(1, bottom - top));
+      });
+    } else {
+      context.fillStyle = "#6f7772";
+      context.font = "28px system-ui";
+      context.textAlign = "center";
+      context.fillText("Waveform preview unavailable", width / 2, middle);
+    }
+    const startX = toX(this.mediaTimeline.startMs);
+    const endX = toX(this.mediaTimeline.endMs);
+    context.fillStyle = "rgba(33, 38, 36, .22)";
+    context.fillRect(0, 0, Math.max(0, startX), height);
+    context.fillRect(Math.min(width, endX), 0, Math.max(0, width - endX), height);
+    context.fillStyle = "rgba(124, 143, 126, .13)";
+    context.fillRect(Math.max(0, startX), 0, Math.max(0, Math.min(width, endX) - Math.max(0, startX)), height);
+    const drawMarker = (x: number, color: string, label: string) => {
+      if (x < -2 || x > width + 2) return;
+      context.strokeStyle = color;
+      context.lineWidth = 4;
+      context.beginPath();
+      context.moveTo(x, 0);
+      context.lineTo(x, height);
+      context.stroke();
+      context.fillStyle = color;
+      context.fillRect(Math.max(0, x - 9), 0, 18, 22);
+      context.font = "20px system-ui";
+      context.textAlign = x > width - 130 ? "right" : "left";
+      context.fillText(label, x > width - 130 ? x - 12 : x + 12, height - 14);
+    };
+    drawMarker(startX, "#738a77", formatTimelineTime(this.mediaTimeline.startMs));
+    drawMarker(endX, "#2f3934", formatTimelineTime(this.mediaTimeline.endMs));
+    const playheadX = toX(this.mediaTimeline.playheadMs);
+    if (playheadX >= 0 && playheadX <= width) {
+      context.strokeStyle = "#bb7656";
+      context.lineWidth = 2;
+      context.beginPath();
+      context.moveTo(playheadX, 0);
+      context.lineTo(playheadX, height);
+      context.stroke();
+    }
+  }
+
+  private syncMediaTimelineControls(): void {
+    this.mediaStart = formatTimelineTime(this.mediaTimeline.startMs);
+    this.mediaEnd = formatTimelineTime(this.mediaTimeline.endMs);
+    const start = this.overlay.querySelector<HTMLInputElement>("[data-toolbox-field=media-start]");
+    const end = this.overlay.querySelector<HTMLInputElement>("[data-toolbox-field=media-end]");
+    const zoom = this.overlay.querySelector<HTMLOutputElement>(".media-zoom-controls output");
+    if (start && document.activeElement !== start) start.value = this.mediaStart;
+    if (end && document.activeElement !== end) end.value = this.mediaEnd;
+    if (zoom) zoom.value = this.mediaTimeline.zoom.toFixed(1) + "x";
+    this.drawMediaWaveformCanvas();
+  }
+
+  private updateMediaWaveformPointer(event: PointerEvent, canvas: HTMLCanvasElement, begin: boolean): void {
+    const rect = canvas.getBoundingClientRect();
+    const pixel = (event.clientX - rect.left) * canvas.width / Math.max(1, rect.width);
+    const value = timeAtPixel(this.mediaTimeline, pixel, canvas.width);
+    if (begin) {
+      const visibleMs = visibleDuration(this.mediaTimeline);
+      const startX = (this.mediaTimeline.startMs - this.mediaTimeline.viewportStartMs) / visibleMs * canvas.width;
+      const endX = (this.mediaTimeline.endMs - this.mediaTimeline.viewportStartMs) / visibleMs * canvas.width;
+      const threshold = 18 * canvas.width / Math.max(1, rect.width);
+      this.mediaWaveformDrag = Math.abs(pixel - startX) <= threshold ? "start" : Math.abs(pixel - endX) <= threshold ? "end" : "playhead";
+      canvas.setPointerCapture(event.pointerId);
+    }
+    if (this.mediaWaveformDrag === "start") this.mediaTimeline = setTrimBoundary(this.mediaTimeline, "start", Math.min(value, this.mediaTimeline.endMs - 1));
+    else if (this.mediaWaveformDrag === "end") this.mediaTimeline = setTrimBoundary(this.mediaTimeline, "end", Math.max(value, this.mediaTimeline.startMs + 1));
+    else this.mediaTimeline = setPlayhead(this.mediaTimeline, value);
+    this.syncMediaTimelineControls();
+    event.preventDefault();
+  }
+
+  private playMediaSelection(): void {
+    const media = this.overlay.querySelector<HTMLMediaElement>(".media-preview");
+    if (!media) return;
+    cancelAnimationFrame(this.mediaPlaybackFrame);
+    media.currentTime = this.mediaTimeline.startMs / 1000;
+    void media.play().then(() => {
+      const tick = () => {
+        this.mediaTimeline = setPlayhead(this.mediaTimeline, Math.round(media.currentTime * 1000));
+        this.drawMediaWaveformCanvas();
+        if (!media.paused && media.currentTime * 1000 < this.mediaTimeline.endMs) this.mediaPlaybackFrame = requestAnimationFrame(tick);
+        else if (media.currentTime * 1000 >= this.mediaTimeline.endMs) media.pause();
+      };
+      this.mediaPlaybackFrame = requestAnimationFrame(tick);
+    }).catch(() => {
+      this.mediaStatus = "Playback could not start. Use the media controls above.";
+      this.refreshToolboxMediaProgress();
+    });
+  }
+
+  private async readMediaDuration(file: File, timeoutMs = 5000): Promise<number> {
     const element = document.createElement(file.type.startsWith("video/") ? "video" : "audio");
     const url = URL.createObjectURL(file);
     element.preload = "metadata";
     element.src = url;
     try {
-      this.mediaDuration = await new Promise<number>((resolve) => {
-        element.addEventListener("loadedmetadata", () => resolve(Number.isFinite(element.duration) ? element.duration : 0), { once: true });
-        element.addEventListener("error", () => resolve(0), { once: true });
+      return await new Promise<number>((resolve, reject) => {
+        const timer = window.setTimeout(() => reject(new Error("Media metadata timed out")), timeoutMs);
+        element.addEventListener("loadedmetadata", () => { window.clearTimeout(timer); resolve(Number.isFinite(element.duration) ? Math.round(element.duration * 1000) : 0); }, { once: true });
+        element.addEventListener("error", () => { window.clearTimeout(timer); reject(new Error("This media format could not be read")); }, { once: true });
       });
-      if (this.mediaDuration > 0 && (Number(this.mediaEnd) <= 0 || Number(this.mediaEnd) > this.mediaDuration || this.mediaEnd === "10")) this.mediaEnd = String(Math.max(1, Math.floor(this.mediaDuration)));
     } finally {
       URL.revokeObjectURL(url);
     }
+  }
+
+  private async prepareMediaFile(file: File | null): Promise<void> {
+    this.mediaLoadAbortController?.abort();
+    this.mediaLoadAbortController = null;
+    this.mediaPeaks = [];
+    this.mediaDuration = 0;
+    if (this.mediaPreviewUrl) URL.revokeObjectURL(this.mediaPreviewUrl);
+    this.mediaPreviewUrl = "";
+    if (!file) {
+      this.mediaStatus = "";
+      if (this.toolboxOpen) this.renderToolboxOverlay();
+      return;
+    }
+    const controller = new AbortController();
+    this.mediaLoadAbortController = controller;
+    this.mediaPreviewKind = file.type.startsWith("video/") ? "video" : "audio";
+    this.mediaPreviewUrl = URL.createObjectURL(file);
+    this.mediaStatus = "Reading waveform locally...";
     if (this.toolboxOpen) this.renderToolboxOverlay();
+    let timeout = 0;
+    try {
+      const decoded = await Promise.race([
+        decodeMediaWaveform(file, 1600, controller.signal),
+        new Promise<never>((_, reject) => { timeout = window.setTimeout(() => { controller.abort(); reject(new Error("Waveform decoding timed out")); }, 12000); })
+      ]);
+      if (this.mediaLoadAbortController !== controller) return;
+      this.mediaPeaks = decoded.peaks;
+      this.mediaDuration = decoded.durationMs / 1000;
+      this.mediaTimeline = createTrimTimeline(decoded.durationMs);
+      this.mediaStatus = "Waveform ready. Drag the markers or enter mm:ss.mmm.";
+    } catch (error) {
+      if (this.mediaLoadAbortController !== controller) return;
+      try {
+        const durationMs = await this.readMediaDuration(file);
+        if (this.mediaLoadAbortController !== controller) return;
+        if (durationMs <= 0) throw new Error("Media duration is unavailable");
+        this.mediaDuration = durationMs / 1000;
+        this.mediaTimeline = createTrimTimeline(durationMs);
+        this.mediaStatus = "Waveform unavailable for this format. Exact time trimming is still available.";
+      } catch (metadataError) {
+        this.mediaStatus = metadataError instanceof Error ? metadataError.message : error instanceof Error ? error.message : "Media could not be opened";
+      }
+    } finally {
+      window.clearTimeout(timeout);
+      if (this.mediaLoadAbortController === controller) this.mediaLoadAbortController = null;
+      if (this.mediaDuration > 0) {
+        this.mediaStart = formatTimelineTime(this.mediaTimeline.startMs);
+        this.mediaEnd = formatTimelineTime(this.mediaTimeline.endMs);
+      }
+      if (this.toolboxOpen) this.renderToolboxOverlay();
+    }
   }
   private async processMediaLocally(): Promise<void> {
     if (!this.mediaFile) {
@@ -1251,27 +1554,42 @@ export class WalkBackHomeApp {
       return this.renderToolboxOverlay();
     }
     this.mediaAbortController?.abort();
-    this.mediaAbortController = new AbortController();
+    const controller = new AbortController();
+    this.mediaAbortController = controller;
+    const file = this.mediaFile;
+    const mode = this.mediaMode as "extract-audio" | "convert-audio" | "trim-audio" | "trim-video";
     this.mediaProgress = 0;
     this.mediaStatus = "Loading local media engine…";
     this.renderToolboxOverlay();
     try {
-      const result = await processMediaFile(this.mediaFile, this.mediaMode as "extract-audio" | "convert-audio" | "trim-audio" | "trim-video", { start: Number(this.mediaStart), end: Number(this.mediaEnd), duration: this.mediaDuration || Number(this.mediaEnd), format: this.mediaMode === "trim-video" ? undefined : this.mediaFormat, signal: this.mediaAbortController.signal, onProgress: (progress) => { this.mediaProgress = progress; this.refreshToolboxMediaProgress(); } });
-      const filename = mediaOutputFilename(this.mediaFile.name, this.mediaMode === "extract-audio" ? "audio" : "trimmed", result.extension);
+      const result = await processMediaFile(file, mode, {
+        start: this.mediaTimeline.startMs / 1000,
+        end: this.mediaTimeline.endMs / 1000,
+        duration: this.mediaTimeline.durationMs / 1000,
+        format: mode === "trim-video" ? undefined : this.mediaFormat,
+        signal: controller.signal,
+        onProgress: (progress) => { this.mediaProgress = progress; this.mediaStatus = progress > 0 ? "Exporting locally... " + Math.round(progress * 100) + "%" : this.mediaStatus; this.refreshToolboxMediaProgress(); }
+      });
+      const filename = mediaOutputFilename(file.name, mode === "extract-audio" ? "audio" : "trimmed", result.extension);
       this.downloadLocalBlob(result.blob, filename);
       this.mediaProgress = 1;
       this.mediaStatus = "Saved locally as " + filename;
     } catch (error) {
-      this.mediaStatus = error instanceof Error ? error.message : "Media processing failed";
+      if (this.mediaAbortController !== controller) return;
+      this.mediaStatus = controller.signal.aborted ? "Media processing cancelled" : error instanceof Error ? error.message : "Media processing failed";
     } finally {
-      this.mediaAbortController = null;
-      this.renderToolboxOverlay();
+      if (this.mediaAbortController === controller) {
+        this.mediaAbortController = null;
+        this.renderToolboxOverlay();
+      }
     }
   }
 
   private refreshToolboxMediaProgress(): void {
     const progress = this.overlay.querySelector<HTMLProgressElement>("progress");
     if (progress) progress.value = this.mediaProgress;
+    const status = this.overlay.querySelector<HTMLElement>(".media-tool .toolbox-status");
+    if (status) status.textContent = this.mediaStatus;
   }
 
   private downloadLocalBlob(blob: Blob, filename: string): void {
@@ -1308,7 +1626,25 @@ export class WalkBackHomeApp {
   private handleToolboxFieldChange(target: HTMLElement): void {
     const field = target.dataset.toolboxField;
     const value = target instanceof HTMLInputElement || target instanceof HTMLSelectElement ? target.value : "";
-    if (field === "spin-preset") this.selectedToolboxPresetId = value;
+    const effect = toolboxFieldChangeEffect(field);
+    if (effect === "draft-only") return;
+    if (field === "media-start" || field === "media-end") {
+      try {
+        this.mediaTimeline = setTrimBoundary(this.mediaTimeline, field === "media-start" ? "start" : "end", parseTimelineTime(value));
+        this.mediaStatus = "Selection updated.";
+        this.syncMediaTimelineControls();
+      } catch (error) {
+        this.mediaStatus = error instanceof Error ? error.message : "Enter time as mm:ss.mmm";
+        this.refreshToolboxMediaProgress();
+      }
+      return;
+    }
+    if (field === "spin-preset") {
+      this.selectedToolboxPresetId = value;
+      this.persistToolboxState();
+      this.refreshSpinWheelView();
+      return;
+    }
     if (field === "converter-category") {
       this.converterCategory = value;
       const units = unitsForCategory(value);
@@ -1329,6 +1665,7 @@ export class WalkBackHomeApp {
       this.mediaFile = target.files?.[0] ?? null;
       this.mediaFileName = this.mediaFile?.name ?? "";
       void this.prepareMediaFile(this.mediaFile);
+      return;
     }
     if (currencyPairChanged) {
       this.invalidateCurrencyState();
@@ -6160,6 +6497,11 @@ export class WalkBackHomeApp {
     this.renderToolboxOverlay();
   }
   private handlePointerDown(event: PointerEvent): void {
+    const waveform = (event.target as HTMLElement | null)?.closest<HTMLCanvasElement>("[data-media-waveform]");
+    if (waveform) {
+      this.updateMediaWaveformPointer(event, waveform, true);
+      return;
+    }
     const toolbox = (event.target as HTMLElement | null)?.closest<HTMLElement>(".toolbox-panel");
     if (toolbox && this.toolboxOpen && this.toolboxView.screen === "root" && !(event.target as HTMLElement).closest("input, textarea, select, [contenteditable=true]")) this.toolboxSwipeStartX = event.clientX;
     const cropTarget = (event.target as HTMLElement).closest<HTMLElement>("[data-action=\"journal-crop-drag\"]");
@@ -6213,6 +6555,11 @@ export class WalkBackHomeApp {
   }
 
   private handlePointerMove(event: PointerEvent): void {
+    if (this.mediaWaveformDrag) {
+      const waveform = this.overlay.querySelector<HTMLCanvasElement>("[data-media-waveform]");
+      if (waveform) this.updateMediaWaveformPointer(event, waveform, false);
+      return;
+    }
     if (this.journalCropDrag) {
       const stage = this.overlay.querySelector<HTMLElement>(".journal-crop-image-frame");
       const box = this.overlay.querySelector<HTMLElement>(".journal-crop-box");

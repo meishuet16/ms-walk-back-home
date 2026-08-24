@@ -48,6 +48,11 @@ export type ToolboxRenderState = {
   mediaEnd: string;
   mediaStatus: string;
   mediaProgress: number;
+  mediaDurationLabel: string;
+  mediaPreviewUrl: string;
+  mediaPreviewKind: "audio" | "video";
+  mediaWaveformReady: boolean;
+  mediaZoom: number;
 };
 
 export function toolboxToolInfo(tool: ToolboxToolId): { name: string; icon: string; description: string } {
@@ -126,7 +131,18 @@ function renderPdf(state: ToolboxRenderState): string {
 }
 
 function renderMedia(state: ToolboxRenderState): string {
-  return `<section class="toolbox-utility file-tool"><label>Operation<select data-toolbox-field="media-mode"><option value="extract-audio" ${state.mediaMode === "extract-audio" ? "selected" : ""}>Extract audio from video</option><option value="convert-audio" ${state.mediaMode === "convert-audio" ? "selected" : ""}>Convert audio</option><option value="trim-audio" ${state.mediaMode === "trim-audio" ? "selected" : ""}>Trim audio</option><option value="trim-video" ${state.mediaMode === "trim-video" ? "selected" : ""}>Trim video</option></select></label><input type="file" data-toolbox-field="media-file" accept="audio/*,video/*"><p class="file-summary">${escapeHtml(state.mediaFileName || "Choose a local media file")}</p><div class="toolbox-two-col"><label>Format<select data-toolbox-field="media-format"><option value="mp3" ${state.mediaFormat === "mp3" ? "selected" : ""}>MP3</option><option value="wav" ${state.mediaFormat === "wav" ? "selected" : ""}>WAV</option><option value="ogg" ${state.mediaFormat === "ogg" ? "selected" : ""}>OGG</option></select></label><label>Start<input inputmode="decimal" data-toolbox-field="media-start" value="${escapeHtml(state.mediaStart)}"></label><label>End<input inputmode="decimal" data-toolbox-field="media-end" value="${escapeHtml(state.mediaEnd)}"></label></div><button class="primary" data-action="media-process">Process locally</button><progress max="1" value="${state.mediaProgress}"></progress><p class="toolbox-status">${escapeHtml(state.mediaStatus)}</p><small>Processed on this device.</small></section>`;
+  const preview = state.mediaPreviewUrl ? `<${state.mediaPreviewKind} class="media-preview" controls preload="metadata" src="${escapeHtml(state.mediaPreviewUrl)}"></${state.mediaPreviewKind}>` : "";
+  const waveform = state.mediaDurationLabel ? `<div class="media-editor" data-waveform-ready="${state.mediaWaveformReady}">
+    <div class="media-editor-heading"><div><strong>Precision cutter</strong><span>${escapeHtml(state.mediaDurationLabel)}</span></div><div class="media-zoom-controls"><button data-action="media-zoom-out" aria-label="Zoom out">−</button><output>${state.mediaZoom.toFixed(1)}x</output><button data-action="media-zoom-in" aria-label="Zoom in">+</button><button data-action="media-zoom-reset">Fit</button></div></div>
+    <div class="media-waveform-wrap"><canvas class="media-waveform" data-media-waveform width="1200" height="220" tabindex="0" role="slider" aria-label="Audio trim timeline"></canvas></div>
+    <div class="media-time-grid"><label>Start<input data-toolbox-field="media-start" value="${escapeHtml(state.mediaStart)}" inputmode="decimal" aria-label="Trim start, minutes seconds milliseconds"></label><span>to</span><label>End<input data-toolbox-field="media-end" value="${escapeHtml(state.mediaEnd)}" inputmode="decimal" aria-label="Trim end, minutes seconds milliseconds"></label></div>
+    <div class="media-editor-actions"><button data-action="media-play-selection">Play selection</button><span>Drag the start/end markers. Click the waveform to seek.</span></div>
+  </div>` : "";
+  return `<section class="toolbox-utility file-tool media-tool"><label>Operation<select data-toolbox-field="media-mode"><option value="extract-audio" ${state.mediaMode === "extract-audio" ? "selected" : ""}>Extract audio from video</option><option value="convert-audio" ${state.mediaMode === "convert-audio" ? "selected" : ""}>Convert audio</option><option value="trim-audio" ${state.mediaMode === "trim-audio" ? "selected" : ""}>Trim audio</option><option value="trim-video" ${state.mediaMode === "trim-video" ? "selected" : ""}>Trim video</option></select></label>
+    <label class="media-file-picker"><span>Choose media</span><input type="file" data-toolbox-field="media-file" accept="audio/*,video/*"></label>
+    <p class="file-summary">${escapeHtml(state.mediaFileName || "Choose a local media file")}</p>${preview}${waveform}
+    <label>Format<select data-toolbox-field="media-format"><option value="mp3" ${state.mediaFormat === "mp3" ? "selected" : ""}>MP3</option><option value="wav" ${state.mediaFormat === "wav" ? "selected" : ""}>WAV</option><option value="ogg" ${state.mediaFormat === "ogg" ? "selected" : ""}>OGG</option></select></label>
+    <button class="primary media-export" data-action="media-process" ${!state.mediaFileName ? "disabled" : ""}>Export selected range</button><progress max="1" value="${state.mediaProgress}"></progress><p class="toolbox-status" aria-live="polite">${escapeHtml(state.mediaStatus)}</p><small>Processed privately on this device.</small></section>`;
 }
 
 function escapeHtml(value: string): string {
