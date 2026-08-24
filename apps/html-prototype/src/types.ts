@@ -46,6 +46,7 @@ export type HtmlChapterScene = {
 
 export type DiaryEntry = {
   id: string;
+  source?: DiarySource;
   date: string;
   title: string;
   body: string;
@@ -59,6 +60,7 @@ export type DiaryEntry = {
   scrapbookLayout?: ScrapbookLayout;
 };
 
+export type DiarySource = "authored" | "personal";
 export type MemoryKind = "diary" | "fragment" | "chapter";
 export type DiaryMood = string;
 

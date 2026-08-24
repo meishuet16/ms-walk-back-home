@@ -3,6 +3,7 @@ import type { DiaryEntry } from "../types.js";
 export const authoredChapterDiaryEntries: DiaryEntry[] = [
   {
     id: "authored-diary-june24-only-came-for-you",
+    source: "authored",
     date: "2026-06-24",
     title: "06.24 · 只为你而来",
 body: [
@@ -60,6 +61,7 @@ body: [
   },
   {
     id: "authored-diary-labis-motor-day",
+    source: "authored",
     date: "2026-07-19",
     title: "07.19 · 单凭这一点，没有白来",
 body: [
@@ -92,6 +94,7 @@ body: [
   },
   {
     id: "authored-diary-bakery-day",
+    source: "authored",
     date: "2026-07-28",
     title:  "07.28 · Yumido Bread",
     body: [
@@ -110,6 +113,7 @@ body: [
   },
   {
     id: "authored-diary-march30-too-fated",
+    source: "authored",
     date: "2026-03-30",
     title: "03.30 · Too Fated",
 body: [
@@ -134,6 +138,7 @@ body: [
   },
   {
     id: "authored-diary-april06-not-gone-yet",
+    source: "authored",
     date: "2026-04-06",
     title: "04.06 · This Soon?",
 body: [
@@ -163,6 +168,7 @@ body: [
   },
   {
     id: "authored-diary-april05-come-down",
+    source: "authored",
     date: "2026-04-05",
     title: "04.05 · 下来一下",
 body: [
@@ -186,6 +192,7 @@ body: [
   },
   {
     id: "authored-diary-may23-i-arrived",
+    source: "authored",
     date: "2026-05-23",
     title:  "05.23 · The Long Way Back",
 body: [

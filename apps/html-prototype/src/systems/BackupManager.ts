@@ -1,5 +1,6 @@
 import type { DiaryLibraryState, JourneyState, PersonalMusicLibraryState, PersonalPlayerState, ReflectionWallState } from "../types.js";
 import { normalizeReflectionWallState } from "./ReflectionWall.js";
+import { filterPersistableDiaryEntries } from "./DiaryOwnership.js";
 
 export type BackupBlobEntry = {
   key: string;
@@ -37,7 +38,7 @@ export function createBackupBundle(input: Omit<WalkBackupBundle, "app" | "versio
       mode: "manual-file",
       label: "Local backup file"
     },
-      diaryLibrary: input.diaryLibrary,
+      diaryLibrary: input.diaryLibrary ? { ...input.diaryLibrary, entries: filterPersistableDiaryEntries(input.diaryLibrary.entries) } : null,
       journey: input.journey,
       reflectionWall: input.reflectionWall,
       musicLibrary: input.musicLibrary,

@@ -1,5 +1,7 @@
 import type { AppConfig } from "./AppConfig.js";
 import type { DiaryEntry, DiaryLibraryState, DiaryMedia, JourneyState, ReflectionWallState, RoomJourneyState } from "../types.js";
+import { mergeCanonicalAndPersonalDiaries } from "./DiaryLibrary.js";
+import { filterPersistableDiaryEntries } from "./DiaryOwnership.js";
 
 export type CloudSyncBundle = {
   diaryLibrary: DiaryLibraryState;
@@ -95,7 +97,7 @@ export class SupabaseSync {
     const client = await this.requireClient();
     const now = new Date().toISOString();
     await this.throwOnError(client.from("diary_entries").upsert(
-      bundle.diaryLibrary.entries.map((entry) => ({ user_id: userId, id: entry.id, entry: sanitizeDiaryEntryForCloud(entry), updated_at: now, deleted_at: null })),
+      filterPersistableDiaryEntries(bundle.diaryLibrary.entries).map((entry) => ({ user_id: userId, id: entry.id, entry: sanitizeDiaryEntryForCloud(entry), updated_at: now, deleted_at: null })),
       { onConflict: "user_id,id" }
     ));
     const { personalPlayer: _localPersonalPlayer, ...cloudJourney } = bundle.journey;
@@ -123,7 +125,7 @@ export class SupabaseSync {
       : undefined;
     if (journey && roomRow?.state) journey.room = roomRow.state as RoomJourneyState;
     return {
-      diaryLibrary: (diaryRows ?? []).length ? { version: 1, savedAt, entries: (diaryRows ?? []).map((row) => row.entry) as DiaryLibraryState["entries"], legacyArtifacts: [] } : undefined,
+      diaryLibrary: (diaryRows ?? []).length ? { version: 1, savedAt, entries: mergeCanonicalAndPersonalDiaries((diaryRows ?? []).map((row) => row.entry) as DiaryLibraryState["entries"]), legacyArtifacts: [] } : undefined,
       journey,
       reflectionWall: (reflectionRows ?? []).length ? { version: 1, savedAt, defaultStyleId: "paper-mix", migratedLegacyKeys: [], notes: (reflectionRows ?? []).map((row) => row.note) as ReflectionWallState["notes"] } : undefined
     };

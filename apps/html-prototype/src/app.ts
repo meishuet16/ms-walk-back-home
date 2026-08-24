@@ -18,6 +18,7 @@ import { inAnyRect, type Point } from "./systems/CollisionSystem.js";
 import { CutsceneSystem, type CutsceneAction } from "./systems/CutsceneSystem.js";
 import { createNewDiaryPage, deleteDiaryEntriesByIds, deleteDiaryEntryById, findChapterDiaryEntry, forestNodesForMonth, formatDiaryWeekday, getDiaryTimeline, openDiaryPageForDate, seedAuthoredChapterDiaryEntries, sharedChapterDiaryBookAssetPath, upsertDiaryEntry, upsertDiaryPageDraft } from "./systems/DiaryLibrary.js";
 import { makeDiaryEntry, parseDiaryImport, updateDiaryMemoryKind, type DiaryForestMemory, type DiaryTimelineSort } from "./systems/DiaryImport.js";
+import { canMutateDiary, getCanonicalAuthoredDiaryEntry, isCanonicalAuthoredDiary } from "./systems/DiaryOwnership.js";
 import { DialogueSystem } from "./systems/DialogueSystem.js";
 import { resolveChapterReflection, type Ending } from "./systems/EndingResolver.js";
 import { InputManager } from "./systems/InputManager.js";
@@ -3190,12 +3191,12 @@ export class WalkBackHomeApp {
       <div class="modal diary-memory chapter-diary-memory" role="dialog" aria-modal="true" aria-label="Chapter diary">
         <div class="diary-memory-scroll">
           <h2>${this.escapeHtml(entry.date)} · ${this.escapeHtml(entry.title)}</h2>
+          <p class="journal-reading-meta">Authored Memory</p>
           ${meta ? `<p class="journal-reading-meta">${meta}</p>` : ""}
           ${paragraphs}
         </div>
         <div class="memory-actions">
           <button data-action="close">Close</button>
-          <button data-action="edit-chapter-diary" data-id="${this.escapeHtml(entry.id)}" data-chapter="${this.escapeHtml(entry.chapterId ?? "")}">Edit in Journal</button>
         </div>
       </div>`;
     this.focusStage();
@@ -4555,6 +4556,8 @@ export class WalkBackHomeApp {
 
   private async startJournalAudioRecording(): Promise<void> {
     if (!this.isJournalEditorActive()) return;
+    const entry = this.diaryEntries.find((item) => item.id === this.journalEditorEntryId);
+    if (!entry || !canMutateDiary(entry)) return;
     if (this.journalAudioRecorder?.isActive()) return;
     try {
       this.journalAudioRecorder = new JournalAudioRecorder();
@@ -4575,6 +4578,12 @@ export class WalkBackHomeApp {
     const recorder = this.journalAudioRecorder;
     const entryId = this.journalEditorEntryId;
     if (!recorder?.isActive() || !entryId) return;
+    const entry = this.diaryEntries.find((item) => item.id === entryId);
+    if (!entry || !canMutateDiary(entry)) {
+      recorder.cancel();
+      this.journalAudioRecorder = null;
+      return;
+    }
     try {
       const result = await recorder.stop();
       const mediaId = `audio-${Date.now()}`;
@@ -4760,15 +4769,21 @@ export class WalkBackHomeApp {
     const visibleEntries = visibleTimelineEntries(month, this.timelineVisibleCount);
     const rows = visibleEntries.map((entry) => {
       const checked = this.selectedTimelineEntryIds.has(entry.id) ? "checked" : "";
+      const authored = isCanonicalAuthoredDiary(entry);
+      const kind = authored
+        ? `<span class="timeline-kind authored-diary-label">Authored Memory</span>`
+        : `<label class="timeline-kind"><span>${entry.scrapbookLayout?.elements.length ? "scrapbook" : "memory"}</span><select data-timeline-kind="${this.escapeHtml(entry.id)}"><option value="diary" ${entry.memoryKind === "diary" ? "selected" : ""}>Diary only</option><option value="fragment" ${entry.memoryKind === "fragment" ? "selected" : ""}>Memory Fragment</option><option value="chapter" ${entry.memoryKind === "chapter" ? "selected" : ""}>Memory Chapter</option></select></label>`;
+      const actions = authored
+        ? `<span class="timeline-authored-marker">Authored Memory</span>`
+        : `<button data-action="edit-diary-entry" data-id="${this.escapeHtml(entry.id)}">Edit</button><button data-action="timeline-request-delete-entry" data-id="${this.escapeHtml(entry.id)}">Delete</button>`;
       return `
       <article class="timeline-entry ${checked ? "selected" : ""}">
         <label class="timeline-check"><input type="checkbox" data-timeline-select="${this.escapeHtml(entry.id)}" ${checked} aria-label="Select diary"></label>
         <div class="timeline-card">
           <button class="diary-page-preview" data-action="open-diary-page" data-id="${this.escapeHtml(entry.id)}">${this.renderDiaryPreview(entry)}</button>
           <div class="timeline-card-actions">
-            <label class="timeline-kind"><span>${entry.scrapbookLayout?.elements.length ? "scrapbook" : "memory"}</span><select data-timeline-kind="${this.escapeHtml(entry.id)}"><option value="diary" ${entry.memoryKind === "diary" ? "selected" : ""}>Diary only</option><option value="fragment" ${entry.memoryKind === "fragment" ? "selected" : ""}>Memory Fragment</option><option value="chapter" ${entry.memoryKind === "chapter" ? "selected" : ""}>Memory Chapter</option></select></label>
-            <button data-action="edit-diary-entry" data-id="${this.escapeHtml(entry.id)}">Edit</button>
-            <button data-action="timeline-request-delete-entry" data-id="${this.escapeHtml(entry.id)}">Delete</button>
+            ${kind}
+            ${actions}
           </div>
         </div>
       </article>`;
@@ -5449,8 +5464,9 @@ export class WalkBackHomeApp {
   }
 
   private showDiaryReader(entryId = ""): void {
-    const entry = this.diaryEntries.find((item) => item.id === entryId) ?? this.diaryEntries[0];
+    const entry = this.diaryEntries.find((item) => item.id === entryId) ?? getCanonicalAuthoredDiaryEntry(entryId) ?? this.diaryEntries[0];
     if (!entry) return this.showTimeline();
+    const authored = isCanonicalAuthoredDiary(entry);
     const date = new Date(`${entry.date}T00:00:00`);
     const day = Number.isNaN(date.getTime()) ? entry.date.slice(-2) : String(date.getDate()).padStart(2, "0");
     const month = Number.isNaN(date.getTime()) ? entry.date : date.toLocaleDateString("en-US", { month: "long", year: "numeric" }).toUpperCase();
@@ -5465,8 +5481,8 @@ export class WalkBackHomeApp {
     const moodMeta = entry.mood ? `心情：${entry.mood}` : "";
     this.overlay.innerHTML = `
       <div class="modal game-panel journal-reading-page mood-${entry.mood ?? "calm"}">
-        <header class="journal-reading-header"><button data-action="journal-reader-back" aria-label="Back to journal">‹</button><button data-action="journal-more-menu" data-id="${this.escapeHtml(entry.id)}" aria-label="Journal more menu">⋮</button></header>
-        <div class="journal-reader-more ${this.journalMoreMenuOpen ? "open" : ""}"><button data-action="journal-edit-current" data-id="${this.escapeHtml(entry.id)}">Edit Journal</button><button data-action="timeline-request-delete-entry" data-id="${this.escapeHtml(entry.id)}">Delete Journal</button><button data-action="journal-books">Books</button></div>
+        <header class="journal-reading-header"><button data-action="journal-reader-back" aria-label="Back to journal">‹</button>${authored ? "<span class=\"journal-authored-marker\">Authored Memory</span>" : `<button data-action="journal-more-menu" data-id="${this.escapeHtml(entry.id)}" aria-label="Journal more menu">⋮</button>`}</header>
+        ${authored ? "" : `<div class="journal-reader-more ${this.journalMoreMenuOpen ? "open" : ""}"><button data-action="journal-edit-current" data-id="${this.escapeHtml(entry.id)}">Edit Journal</button><button data-action="timeline-request-delete-entry" data-id="${this.escapeHtml(entry.id)}">Delete Journal</button><button data-action="journal-books">Books</button></div>`}
         <article class="journal-reading-sheet">
           <aside class="journal-reading-date"><strong>${this.escapeHtml(day)}</strong><span>${this.escapeHtml(month)}</span><small>${this.escapeHtml(weekday)}</small></aside>
           <h2>${this.escapeHtml(entry.title)}</h2>
@@ -5482,6 +5498,15 @@ export class WalkBackHomeApp {
 
   private showDiaryEditor(editId = ""): void {
     if (!editId) return this.showTimeline();
+    if (isCanonicalAuthoredDiary(editId)) {
+      this.showDiaryReader(editId);
+      return;
+    }
+    const requested = this.diaryEntries.find((entry) => entry.id === editId);
+    if (requested && isCanonicalAuthoredDiary(requested)) {
+      this.showDiaryReader(editId);
+      return;
+    }
     if (this.journalEditorEntryId !== editId || !this.journalEditorSnapshot) this.beginJournalEditor(editId);
     const moreOpen = this.journalMoreMenuOpen;
     const editingBase = this.diaryEntries.find((entry) => entry.id === editId) ?? this.diaryEntries[0];
@@ -5556,6 +5581,11 @@ export class WalkBackHomeApp {
     window.clearTimeout(this.diaryAutosaveTimer);
     if (this.journalAudioRecorder?.isActive()) {
       this.showToast("Stop the voice note before saving");
+      return;
+    }
+    const existing = this.diaryEntries.find((entry) => entry.id === id);
+    if (existing && !canMutateDiary(existing)) {
+      this.showDiaryReader(id);
       return;
     }
     const entry = this.readDiaryDraftFromOverlay(id);
@@ -5736,10 +5766,12 @@ export class WalkBackHomeApp {
     }
     if (!target.closest(".diary-page-editor")) return;
     if (target instanceof HTMLInputElement && target.type === "file") return;
-    if (target instanceof HTMLInputElement && target.id === "diary-date") this.updateVisibleDiaryWeekday(target.value);
-    this.journalEditorDirty = true;
     const editor = target.closest<HTMLElement>(".diary-page-editor");
     const entryId = editor?.dataset.entry ?? "";
+    const entry = this.diaryEntries.find((item) => item.id === entryId);
+    if (entry && !canMutateDiary(entry)) return;
+    if (target instanceof HTMLInputElement && target.id === "diary-date") this.updateVisibleDiaryWeekday(target.value);
+    this.journalEditorDirty = true;
     window.clearTimeout(this.diaryAutosaveTimer);
     const state = this.overlay.querySelector<HTMLElement>("#diary-save-state");
     if (state) state.textContent = "Saving...";
@@ -5800,6 +5832,7 @@ export class WalkBackHomeApp {
 
   private deleteDiaryEntry(id: string): void {
     const entry = this.diaryEntries.find((item) => item.id === id);
+    if (entry && !canMutateDiary(entry)) return;
     this.applyDiaryLibrary(deleteDiaryEntryById(this.makeDiaryLibrary(), id));
     if (entry) {
       this.visitedMemories.delete(entry.id);
@@ -5816,6 +5849,7 @@ export class WalkBackHomeApp {
   private setDiaryMemoryKind(id: string, memoryKind: MemoryKind): void {
     const index = this.diaryEntries.findIndex((entry) => entry.id === id);
     if (index < 0) return;
+    if (!canMutateDiary(this.diaryEntries[index])) return;
     this.diaryEntries[index] = updateDiaryMemoryKind(this.diaryEntries[index], memoryKind);
     if (this.journalEditorEntryId === id) this.journalEditorDirty = true;
     this.showDiaryEditor(id);
@@ -5825,6 +5859,7 @@ export class WalkBackHomeApp {
   private setTimelineMemoryKind(id: string, memoryKind: MemoryKind): void {
     const index = this.diaryEntries.findIndex((entry) => entry.id === id);
     if (index < 0) return;
+    if (!canMutateDiary(this.diaryEntries[index])) return;
     this.diaryEntries[index] = updateDiaryMemoryKind(this.diaryEntries[index], memoryKind);
     this.showTimeline();
     this.showToast("Memory classification updated");
@@ -5920,8 +5955,12 @@ export class WalkBackHomeApp {
       return;
     }
     const selected = new Set(this.selectedTimelineEntryIds);
+    const deletedIds = new Set([...selected].filter((id) => {
+      const entry = this.diaryEntries.find((item) => item.id === id);
+      return Boolean(entry && canMutateDiary(entry));
+    }));
     this.applyDiaryLibrary(deleteDiaryEntriesByIds(this.makeDiaryLibrary(), selected));
-    for (const id of selected) {
+    for (const id of deletedIds) {
       this.visitedMemories.delete(id);
       this.walkedThroughMemories.delete(id);
       this.readMemories.delete(id);
@@ -5930,7 +5969,7 @@ export class WalkBackHomeApp {
     this.selectedTimelineEntryIds.clear();
     this.timelineDeleteConfirmOpen = false;
     this.showTimeline();
-    this.showToast(`Deleted ${selected.size} diary entries`);
+    this.showToast(`Deleted ${deletedIds.size} diary entr${deletedIds.size === 1 ? "y" : "ies"}`);
     this.autosave();
   }
 
@@ -5945,6 +5984,7 @@ export class WalkBackHomeApp {
     const entryId = editor?.dataset.entry ?? "";
     const entry = this.diaryEntries.find((item) => item.id === entryId);
     if (!entry || !mediaId) return;
+    if (!canMutateDiary(entry)) return;
     const editing = this.pendingAudioEntry(entry);
     const selected = diaryMediaItems(editing).find((media) => media.id === mediaId);
     if (selected?.type === "audio") {
@@ -5969,6 +6009,7 @@ export class WalkBackHomeApp {
     const mediaId = this.pendingJournalMediaDeleteId;
     const entry = this.diaryEntries.find((item) => item.id === entryId);
     if (!entry || !mediaId) return;
+    if (!canMutateDiary(entry)) return;
     const pending = this.pendingJournalAudio.get(entry.id) ?? [];
     const pendingItem = pending.find((item) => item.mediaId === mediaId);
     this.pendingJournalMediaDeleteId = "";
@@ -6004,6 +6045,7 @@ export class WalkBackHomeApp {
     const entryId = editor?.dataset.entry ?? "";
     const entry = this.diaryEntries.find((item) => item.id === entryId);
     if (!entry || !mediaId) return;
+    if (!canMutateDiary(entry)) return;
     const draft = this.readDiaryDraftFromOverlay(entry.id) ?? entry;
     const current = diaryMediaItems(draft).find((media) => media.id === mediaId);
     if (current?.type !== "image") {
@@ -6022,6 +6064,7 @@ export class WalkBackHomeApp {
     const entryId = editor?.dataset.entry ?? "";
     const entry = this.diaryEntries.find((item) => item.id === entryId);
     if (!entry || !mediaId) return;
+    if (!canMutateDiary(entry)) return;
     const draft = this.readDiaryDraftFromOverlay(entry.id) ?? entry;
     const crop = this.readJournalCropInputs();
     const next = this.updateJournalMediaCrop(draft, mediaId, crop);
@@ -6044,6 +6087,7 @@ export class WalkBackHomeApp {
     const entryId = editor?.dataset.entry ?? "";
     const entry = this.diaryEntries.find((item) => item.id === entryId);
     if (!entry) return;
+    if (!canMutateDiary(entry)) return;
     const draft = this.readDiaryDraftFromOverlay(entry.id) ?? entry;
     const next = this.updateJournalMediaCrop(draft, mediaId, { x: 0, y: 0, width: 100, height: 100 });
     this.journalCropMediaId = mediaId;
@@ -6152,6 +6196,10 @@ export class WalkBackHomeApp {
   private showScrapbookComposer(id: string): void {
     const entry = this.diaryEntries.find((item) => item.id === id);
     if (!entry) return this.showDiaryEditor();
+    if (!canMutateDiary(entry)) {
+      this.showDiaryReader(id);
+      return;
+    }
     this.activeScrapbookEntryId = entry.id;
     const photos = entry.photos?.map((photo) => `
       <div class="photo-chip">
@@ -6199,13 +6247,15 @@ export class WalkBackHomeApp {
   }
 
   private updateDiaryEntry(entry: DiaryEntry): void {
+    if (!canMutateDiary(entry)) return;
     this.applyDiaryLibrary(upsertDiaryEntry(this.makeDiaryLibrary(), entry));
     if (this.journalEditorEntryId === entry.id) this.journalEditorDirty = true;
     this.autosave();
   }
 
   private activeScrapbookEntry(): DiaryEntry | null {
-    return this.diaryEntries.find((entry) => entry.id === this.activeScrapbookEntryId) ?? null;
+    const entry = this.diaryEntries.find((item) => item.id === this.activeScrapbookEntryId);
+    return entry && canMutateDiary(entry) ? entry : null;
   }
 
   private async handleChange(event: Event): Promise<void> {

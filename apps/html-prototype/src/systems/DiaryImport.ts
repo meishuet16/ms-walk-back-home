@@ -1,8 +1,10 @@
 import type { DiaryEntry, MemoryKind } from "../types.js";
 import { normalizeDiaryMood } from "./DiaryMood.js";
+import { getCanonicalAuthoredDiaryEntry } from "./DiaryOwnership.js";
 
 export type DiaryTimelineItem = {
   id: string;
+  source?: DiaryEntry["source"];
   date: string;
   title: string;
   body: string;
@@ -55,6 +57,7 @@ const datePositionPool = [
 export function diaryEntryToTimelineItem(entry: DiaryEntry): DiaryTimelineItem {
   return {
     id: entry.id,
+    source: entry.source,
     date: entry.date,
     title: entry.title,
     body: entry.body,
@@ -120,6 +123,8 @@ export function diaryEntriesToForestMemories(entries: DiaryEntry[]): DiaryForest
 }
 
 export function updateDiaryMemoryKind(entry: DiaryEntry, memoryKind: MemoryKind, chapterId = entry.chapterId): DiaryEntry {
+  const canonical = getCanonicalAuthoredDiaryEntry(entry);
+  if (canonical) return canonical;
   return {
     ...entry,
     memoryKind,
@@ -134,6 +139,7 @@ function normalizeMemoryKind(value: unknown): MemoryKind {
 export function normalizeDiaryEntry(entry: Partial<DiaryEntry> & Pick<DiaryEntry, "date" | "title" | "body">): DiaryEntry {
   return {
     id: entry.id || makeDiaryId(entry.date, entry.title),
+    source: entry.source,
     date: entry.date.trim(),
     title: entry.title.trim() || "Untitled Memory",
     body: entry.body.trim(),
@@ -157,6 +163,7 @@ export function makeDiaryEntry(
 ): DiaryEntry {
   return normalizeDiaryEntry({
     id,
+    source: "personal",
     date,
     title,
     body,

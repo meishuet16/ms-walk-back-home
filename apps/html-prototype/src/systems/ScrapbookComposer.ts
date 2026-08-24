@@ -1,4 +1,5 @@
 import type { DiaryEntry, DiaryMedia, DiaryPhoto, ScrapbookElement, ScrapbookLayout } from "../types.js";
+import { canMutateDiary } from "./DiaryOwnership.js";
 
 const defaultLayout = (): ScrapbookLayout => ({ elements: [] });
 
@@ -30,6 +31,7 @@ function clampPercent(value: number): number {
 }
 
 export function addPhotoAttachment(entry: DiaryEntry, photo: DiaryPhoto): DiaryEntry {
+  if (!canMutateDiary(entry)) return entry;
   const base = withLayout(entry);
   const photos = base.photos!.some((item) => item.id === photo.id)
     ? base.photos!.map((item) => item.id === photo.id ? photo : item)
@@ -38,6 +40,7 @@ export function addPhotoAttachment(entry: DiaryEntry, photo: DiaryPhoto): DiaryE
 }
 
 export function removePhotoAttachment(entry: DiaryEntry, photoId: string): DiaryEntry {
+  if (!canMutateDiary(entry)) return entry;
   const base = withLayout(entry);
   return {
     ...base,
@@ -51,6 +54,7 @@ export function removePhotoAttachment(entry: DiaryEntry, photoId: string): Diary
 }
 
 export function addPhotoElement(entry: DiaryEntry, photoId: string, elementId: string): DiaryEntry {
+  if (!canMutateDiary(entry)) return entry;
   const base = withLayout(entry);
   const maxZ = Math.max(0, ...base.scrapbookLayout!.elements.map((element) => element.zIndex));
   return {
@@ -74,6 +78,7 @@ export function addPhotoElement(entry: DiaryEntry, photoId: string, elementId: s
 }
 
 export function addJournalMedia(entry: DiaryEntry, media: DiaryMedia): DiaryEntry {
+  if (!canMutateDiary(entry)) return entry;
   const base = withLayout(entry);
   const nextMedia = base.media!.some((item) => item.id === media.id)
     ? base.media!.map((item) => item.id === media.id ? media : item)
@@ -82,6 +87,7 @@ export function addJournalMedia(entry: DiaryEntry, media: DiaryMedia): DiaryEntr
 }
 
 export function removeJournalMedia(entry: DiaryEntry, mediaId: string): DiaryEntry {
+  if (!canMutateDiary(entry)) return entry;
   const base = withLayout(entry);
   return { ...base, media: base.media!.filter((media) => media.id !== mediaId) };
 }
@@ -103,6 +109,7 @@ export function attachPhotoAndPlaceOnPage(entry: DiaryEntry, photo: DiaryPhoto, 
 }
 
 export function createCutoutElement(entry: DiaryEntry, sourcePhotoId: string, elementId: string, shape: "rectangle" | "circle" = "rectangle"): DiaryEntry {
+  if (!canMutateDiary(entry)) return entry;
   const base = withLayout(entry);
   const maxZ = Math.max(0, ...base.scrapbookLayout!.elements.map((element) => element.zIndex));
   return {
@@ -127,18 +134,22 @@ export function createCutoutElement(entry: DiaryEntry, sourcePhotoId: string, el
 }
 
 export function moveScrapbookElement(entry: DiaryEntry, elementId: string, x: number, y: number): DiaryEntry {
+  if (!canMutateDiary(entry)) return entry;
   return updateElement(entry, elementId, (element) => ({ ...element, x: clampPercent(x), y: clampPercent(y) }));
 }
 
 export function resizeScrapbookElement(entry: DiaryEntry, elementId: string, scale: number): DiaryEntry {
+  if (!canMutateDiary(entry)) return entry;
   return updateElement(entry, elementId, (element) => ({ ...element, scale: Math.max(0.2, Math.min(3, scale)) }));
 }
 
 export function rotateScrapbookElement(entry: DiaryEntry, elementId: string, rotation: number): DiaryEntry {
+  if (!canMutateDiary(entry)) return entry;
   return updateElement(entry, elementId, (element) => ({ ...element, rotation }));
 }
 
 export function layerScrapbookElement(entry: DiaryEntry, elementId: string, direction: "front" | "back"): DiaryEntry {
+  if (!canMutateDiary(entry)) return entry;
   const base = withLayout(entry);
   const zValues = base.scrapbookLayout!.elements.map((element) => element.zIndex);
   const targetZ = direction === "front" ? Math.max(0, ...zValues) + 1 : Math.min(0, ...zValues) - 1;
@@ -146,6 +157,7 @@ export function layerScrapbookElement(entry: DiaryEntry, elementId: string, dire
 }
 
 export function deleteScrapbookElement(entry: DiaryEntry, elementId: string): DiaryEntry {
+  if (!canMutateDiary(entry)) return entry;
   const base = withLayout(entry);
   return {
     ...base,

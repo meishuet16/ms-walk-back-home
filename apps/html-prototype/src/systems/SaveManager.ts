@@ -1,5 +1,6 @@
 import type { DiaryLibraryState, JourneyState, LivingWindowPersistedState, PersonalMusicLibraryState, PersonalPlayerState, ReflectionWallState, SaveState, ToolboxPersistedState } from "../types.js";
 import { normalizeDiaryEntry } from "./DiaryImport.js";
+import { filterPersistableDiaryEntries } from "./DiaryOwnership.js";
 import { normalizePlaybackMode } from "./PersonalMusic.js";
 import { createReflectionWallState, migrateLegacyReflectionWall, normalizeReflectionWallState } from "./ReflectionWall.js";
 
@@ -17,11 +18,12 @@ export class SaveManager {
   constructor(private ownerId = "") {}
 
   saveDiaryLibrary(state: DiaryLibraryState): void {
-    localStorage.setItem(this.ownerKey(diaryLibraryKey), JSON.stringify({ ...state, savedAt: new Date().toISOString() }));
+    localStorage.setItem(this.ownerKey(diaryLibraryKey), JSON.stringify({ ...state, entries: filterPersistableDiaryEntries(state.entries), savedAt: new Date().toISOString() }));
   }
 
   loadDiaryLibrary(): DiaryLibraryState | null {
-    return this.parseVersioned<DiaryLibraryState>(localStorage.getItem(this.ownerKey(diaryLibraryKey)));
+    const state = this.parseVersioned<DiaryLibraryState>(localStorage.getItem(this.ownerKey(diaryLibraryKey)));
+    return state ? { ...state, entries: filterPersistableDiaryEntries(state.entries) } : null;
   }
 
   saveJourney(state: JourneyState): void {

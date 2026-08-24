@@ -3,6 +3,7 @@ import { authoredChapterDiaryEntries } from "../fixtures/authoredDiaryEntries.js
 import type { AuthoredForestEntry } from "./ChapterRegistry.js";
 import { diaryEntriesToForestMemories, diaryEntriesToTimeline, updateDiaryMemoryKind, type DiaryForestMemory, type DiaryTimelineItem, type DiaryTimelineSort } from "./DiaryImport.js";
 import { makeDiaryEntry, normalizeDiaryEntry } from "./DiaryImport.js";
+import { canMutateDiary, getCanonicalAuthoredDiaryEntry, isCanonicalAuthoredDiary } from "./DiaryOwnership.js";
 
 export const sharedChapterDiaryBookAssetPath = "assets/labis/book-with-ms-photos.png";
 
@@ -17,6 +18,7 @@ export function createDiaryLibrary(entries: DiaryEntry[] = [], legacyArtifacts: 
 }
 
 export function upsertDiaryEntry(library: DiaryLibraryState, entry: DiaryEntry): DiaryLibraryState {
+  if (isCanonicalAuthoredDiary(entry)) return { ...library, entries: mergeCanonicalAndPersonalDiaries(library.entries), savedAt: new Date().toISOString() };
   const index = library.entries.findIndex((item) => item.id === entry.id);
   const entries = [...library.entries];
   if (index >= 0) entries[index] = entry;
@@ -29,17 +31,27 @@ export function upsertDiaryPageDraft(library: DiaryLibraryState, entry: DiaryEnt
 }
 
 export function seedAuthoredChapterDiaryEntries(library: DiaryLibraryState): DiaryLibraryState {
-  return authoredChapterDiaryEntries.reduce((next, entry) => {
-    const exists = next.entries.some((item) => item.id === entry.id || item.chapterId === entry.chapterId);
-    return exists ? next : upsertDiaryEntry(next, entry);
-  }, library);
+  return { ...library, entries: mergeCanonicalAndPersonalDiaries(library.entries), savedAt: new Date().toISOString() };
+}
+
+export function mergeCanonicalAndPersonalDiaries(entries: DiaryEntry[], canonicalEntries: DiaryEntry[] = authoredChapterDiaryEntries): DiaryEntry[] {
+  const canonicalById = new Map(canonicalEntries.map((entry) => [entry.id, entry]));
+  const canonicalByChapterId = new Map(canonicalEntries.filter((entry) => entry.chapterId).map((entry) => [entry.chapterId, entry]));
+  const isCanonical = (entry: DiaryEntry) => canonicalById.has(entry.id) || (entry.chapterId ? canonicalByChapterId.has(entry.chapterId) : false);
+  const personalEntries = entries.filter((entry) => !isCanonical(entry) && canMutateDiary(entry)).map((entry) => normalizeDiaryEntry(entry));
+  const currentCanonicalEntries = canonicalEntries.map((entry) => ({ ...entry, source: "authored" as const }));
+  return [...personalEntries, ...currentCanonicalEntries];
 }
 
 export function findChapterDiaryEntry(entries: DiaryEntry[], chapterId: string, diaryEntryId?: string): DiaryEntry | null {
   if (diaryEntryId) {
+    const canonical = getCanonicalAuthoredDiaryEntry(diaryEntryId);
+    if (canonical) return canonical;
     const stable = entries.find((entry) => entry.id === diaryEntryId);
     if (stable) return stable;
   }
+  const canonical = getCanonicalAuthoredDiaryEntry(chapterId);
+  if (canonical) return canonical;
   return entries.find((entry) => entry.chapterId === chapterId) ?? null;
 }
 
@@ -66,7 +78,7 @@ export function setDiaryEntryKind(library: DiaryLibraryState, id: string, memory
   return {
     ...library,
     savedAt: new Date().toISOString(),
-    entries: library.entries.map((entry) => entry.id === id ? updateDiaryMemoryKind(entry, memoryKind, chapterId) : entry)
+    entries: library.entries.map((entry) => entry.id === id && canMutateDiary(entry) ? updateDiaryMemoryKind(entry, memoryKind, chapterId) : entry)
   };
 }
 
@@ -74,7 +86,7 @@ export function deleteDiaryEntryById(library: DiaryLibraryState, id: string): Di
   return {
     ...library,
     savedAt: new Date().toISOString(),
-    entries: library.entries.filter((entry) => entry.id !== id)
+    entries: library.entries.filter((entry) => entry.id !== id || !canMutateDiary(entry))
   };
 }
 
@@ -82,7 +94,7 @@ export function deleteDiaryEntriesByIds(library: DiaryLibraryState, ids: Set<str
   return {
     ...library,
     savedAt: new Date().toISOString(),
-    entries: library.entries.filter((entry) => !ids.has(entry.id))
+    entries: library.entries.filter((entry) => !ids.has(entry.id) || !canMutateDiary(entry))
   };
 }
 

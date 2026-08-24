@@ -32,19 +32,20 @@ test("deleting diary removes its derived forest memory", () => {
   assert.equal(getDiaryForestMemories(library).length, 0);
 });
 
-test("authored memory chapters seed editable diary entries into the timeline", () => {
+test("authored memory chapters seed canonical diary entries into the timeline", () => {
   const library = seedAuthoredChapterDiaryEntries(createDiaryLibrary());
   const timeline = getDiaryTimeline(library);
   const labis = timeline.find((entry) => entry.chapterId === "labis-motor-day");
 
   assert.ok(labis);
   assert.equal(labis.memoryKind, "chapter");
+  assert.equal(labis.source, "authored");
   assert.equal(labis.date, "2026-07-19");
   assert.ok(labis.body.includes("有些幸福安静得像普通的一天"));
   assert.equal(getDiaryForestMemories(library).some((entry) => entry.kind === "chapter" && entry.chapterId === "labis-motor-day"), true);
 });
 
-test("March 30 seeds its 330 corridor diary as an editable chapter entry", () => {
+test("March 30 seeds its 330 corridor diary as a canonical chapter entry", () => {
   const library = seedAuthoredChapterDiaryEntries(createDiaryLibrary());
   const march30 = library.entries.find((entry) => entry.chapterId === "march30-too-fated");
 
@@ -54,14 +55,14 @@ test("March 30 seeds its 330 corridor diary as an editable chapter entry", () =>
   assert.match(march30.body, /水枪里的水落在脸上/);
 });
 
-test("playable chapters resolve one canonical diary entry by stable id and live edits", () => {
+test("playable chapters resolve one canonical diary entry by stable id and ignore live edits", () => {
   const seeded = seedAuthoredChapterDiaryEntries(createDiaryLibrary());
   const original = findChapterDiaryEntry(seeded.entries, "april06-not-gone-yet", "authored-diary-april06-not-gone-yet");
   assert.ok(original);
   assert.equal(original?.id, "authored-diary-april06-not-gone-yet");
 
   const edited = upsertDiaryEntry(seeded, { ...original!, body: "A current fictional April 6 note." });
-  assert.equal(findChapterDiaryEntry(edited.entries, "april06-not-gone-yet", original?.id)?.body, "A current fictional April 6 note.");
+  assert.equal(findChapterDiaryEntry(edited.entries, "april06-not-gone-yet", original?.id)?.body, original?.body);
   assert.equal(edited.entries.filter((entry) => entry.chapterId === "april06-not-gone-yet").length, 1);
 });
 
@@ -75,21 +76,22 @@ test("every playable chapter points to one seeded canonical diary entry and the 
   assert.equal(seeded.entries.filter((entry) => entry.id === "authored-diary-april06-not-gone-yet").length, 1);
 });
 
-test("authored March 30 has one Forest node while its Journal entry remains editable", () => {
+test("authored March 30 has one Forest node while its Journal entry remains canonical", () => {
   const library = seedAuthoredChapterDiaryEntries(createDiaryLibrary());
   const nodes = forestNodesForMonth(forestDoors, library, "2026-03");
   assert.equal(nodes.filter((node) => "chapterId" in node && node.chapterId === "march30-too-fated").length, 1);
   assert.equal(nodes.some((node) => "userEntryId" in node && node.userEntryId === "authored-diary-march30-too-fated"), false);
 });
 
-test("Chapter diary opens its centered memory frame while keeping Journal editing available", () => {
+test("Chapter diary opens its centered memory frame without an edit action", () => {
   const chapterDiaryMethodStart = appSource.indexOf("private showChapterDiary(chapterId: string)");
   const chapterDiaryMethodEnd = appSource.indexOf("private inspectPastry", chapterDiaryMethodStart);
   const chapterDiaryMethod = appSource.slice(chapterDiaryMethodStart, chapterDiaryMethodEnd);
 
   assert.match(chapterDiaryMethod, /this\.showChapterDiaryFrame\(entry\)/);
   assert.doesNotMatch(chapterDiaryMethod, /this\.showDiaryReader\(entry\.id\)/);
-  assert.match(appSource, /data-action="edit-chapter-diary"/);
+  assert.doesNotMatch(chapterDiaryMethod, /edit-chapter-diary/);
+  assert.match(appSource, /isCanonicalAuthoredDiary/);
   assert.match(appSource, /upsertDiaryPageDraft\(this\.makeDiaryLibrary\(\), savedEntry\)/);
 });
 

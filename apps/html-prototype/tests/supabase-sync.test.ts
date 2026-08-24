@@ -6,6 +6,7 @@ import { createDefaultPersonalPlayerState } from "../src/systems/PersonalMusic.j
 import { SupabaseSync } from "../src/systems/SupabaseSync.js";
 import { makeDiaryEntry } from "../src/systems/DiaryImport.js";
 import { makeJournalAudioMedia } from "../src/systems/JournalMedia.js";
+import { authoredChapterDiaryEntries } from "../src/fixtures/authoredDiaryEntries.js";
 import type { DiaryEntry } from "../src/types.js";
 
 type CloudCall = {
@@ -201,6 +202,49 @@ test("cloud push strips audio binary while preserving audio metadata and legacy 
     assert.equal("src" in ((cloudEntry?.media ?? [])[0] ?? {}), false);
     assert.equal((cloudEntry?.media ?? [])[0]?.storageKey, "journal-media/e/audio-1");
     assert.equal((cloudEntry?.media ?? [])[1]?.src, "data:video/mp4;base64,legacy");
+  } finally {
+    removeRecordingSupabase();
+  }
+});
+
+test("cloud push persists personal diaries but never uploads canonical authored diaries", async () => {
+  const calls: CloudCall[] = [];
+  installRecordingSupabase(calls);
+  try {
+    const sync = new SupabaseSync({
+      authProvider: "supabase",
+      supabaseUrl: "https://example.supabase.co",
+      supabaseAnonKey: "anon",
+      privateMediaBucket: "walk-private-media"
+    });
+    const bundle = emptyCloudBundle();
+    bundle.diaryLibrary.entries = [authoredChapterDiaryEntries[0], makeDiaryEntry("2026-08-22", "Personal", "Player note.")];
+
+    await sync.push("user-1", bundle);
+
+    const diaryCall = calls.find((call) => call.operation === "upsert" && call.table === "diary_entries");
+    const uploaded = (diaryCall?.value as Array<{ id: string }> | undefined) ?? [];
+    assert.deepEqual(uploaded.map((row) => row.id), ["diary-2026-08-22-personal"]);
+  } finally {
+    removeRecordingSupabase();
+  }
+});
+
+test("cloud pull rehydrates current authored fixture content over stale cloud copies", async () => {
+  const calls: CloudCall[] = [];
+  const fixture = authoredChapterDiaryEntries[0];
+  installRecordingSupabase(calls, null, [{ id: fixture.id, entry: { ...fixture, source: "personal", body: "OLD CLOUD COPY" } }]);
+  try {
+    const sync = new SupabaseSync({
+      authProvider: "supabase",
+      supabaseUrl: "https://example.supabase.co",
+      supabaseAnonKey: "anon",
+      privateMediaBucket: "walk-private-media"
+    });
+    const bundle = await sync.pull();
+
+    assert.equal(bundle.diaryLibrary?.entries.find((entry) => entry.id === fixture.id)?.body, fixture.body);
+    assert.equal(bundle.diaryLibrary?.entries.filter((entry) => entry.id === fixture.id).length, 1);
   } finally {
     removeRecordingSupabase();
   }

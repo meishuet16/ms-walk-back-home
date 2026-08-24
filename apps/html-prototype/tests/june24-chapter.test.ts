@@ -20,6 +20,7 @@ test("June 24 is registered with its authored diary entry", () => {
   assert.equal(chapterRegistry[june24Chapter.id], june24Chapter);
   assert.deepEqual(authoredChapterDiaryEntries.find((entry) => entry.id === june24Chapter.diaryEntryId), {
     id: "authored-diary-june24-only-came-for-you",
+    source: "authored",
     chapterId: "june24-only-came-for-you",
     date: "2026-06-24",
     title: "06.24 · 只为你而来",
