@@ -15,6 +15,12 @@ export type WeatherForecastDay = {
   lowC: number;
   precipitationProbabilityMaxPercent: number | null;
 };
+export type WeatherHourlyPoint = {
+  time: string;
+  condition: WeatherCondition;
+  temperatureC: number;
+  precipitationProbabilityPercent: number | null;
+};
 export type WeatherSnapshot = {
   provider: "open-meteo";
   fetchedAt: string;
@@ -35,6 +41,7 @@ export type WeatherSnapshot = {
     precipitationProbabilityPercent: number | null;
     precipitationProbabilitySource: "hourly" | "unavailable";
   };
+  hourly: WeatherHourlyPoint[];
   daily: {
     date: string;
     condition: WeatherCondition;
@@ -145,6 +152,8 @@ export function parseOpenMeteoForecastResponse(value: unknown, location: WindowL
   const currentTime = typeof current.time === "string" ? current.time : "";
   const hourlyTimes = arrayValue(hourly, "time");
   const probabilityValues = arrayValue(hourly, "precipitation_probability");
+  const hourlyTemperatureValues = arrayValue(hourly, "temperature_2m");
+  const hourlyCodeValues = arrayValue(hourly, "weather_code");
   const hourlyIndex = nearestIndex(hourlyTimes, currentTime);
   const probability = finitePercent(probabilityValues[hourlyIndex]);
   const dailyTimes = arrayValue(daily, "time");
@@ -161,6 +170,12 @@ export function parseOpenMeteoForecastResponse(value: unknown, location: WindowL
     highC: finite(dailyHighValues[index]),
     lowC: finite(dailyLowValues[index]),
     precipitationProbabilityMaxPercent: finitePercent(dailyProbabilityValues[index])
+  }));
+  const hourlyForecast = hourlyTimes.map((value, index) => ({
+    time: String(value),
+    condition: weatherCodeToCondition(finite(hourlyCodeValues[index], code)),
+    temperatureC: finite(hourlyTemperatureValues[index], finite(current.temperature_2m)),
+    precipitationProbabilityPercent: finitePercent(probabilityValues[index])
   }));
   return {
     provider: "open-meteo",
@@ -182,6 +197,7 @@ export function parseOpenMeteoForecastResponse(value: unknown, location: WindowL
       precipitationProbabilityPercent: probability,
       precipitationProbabilitySource: probability === null ? "unavailable" : "hourly"
     },
+    hourly: hourlyForecast,
     daily: {
       date,
       condition: weatherCodeToCondition(finite(dailyCodes[0], code)),
@@ -202,7 +218,7 @@ export function weatherCacheStatus(snapshot: WeatherSnapshot | null, now: Date =
 
 export async function fetchOpenMeteoWeather(location: WindowLocation, fetcher: typeof fetch = fetch, now: () => Date = () => new Date()): Promise<WeatherSnapshot> {
   const current = "temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,rain,showers,snowfall,weather_code,cloud_cover,wind_speed_10m";
-  const hourly = "precipitation_probability";
+  const hourly = "temperature_2m,weather_code,precipitation_probability";
   const daily = "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,uv_index_max";
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${location.latitude}&longitude=${location.longitude}&current=${current}&hourly=${hourly}&daily=${daily}&timezone=auto&forecast_days=4`;
   const response = await fetcher(url, { signal: AbortSignal.timeout(8000) });
@@ -227,16 +243,22 @@ export async function fetchOpenMeteoLocations(query: string, fetcher: typeof fet
 
 export type LivingWindowViewModel = {
   locationLabel: string;
+  localDateLabel: string;
+  localTimeLabel: string;
+  updatedLabel: string;
   conditionLabel: string;
   temperatureLabel: string;
   feelsLikeLabel: string;
   precipitationLabel: string;
   probabilityLabel: string;
+  rainSummary: string;
+  hourly: Array<{ timeLabel: string; conditionLabel: string; probabilityLabel: string; temperatureLabel: string }>;
   humidityLabel: string;
   windLabel: string;
   sunsetLabel: string;
   moonLabel: string;
   moonIlluminationLabel: string;
+  moonDescription: string;
   forecast: Array<{
     date: string;
     conditionLabel: string;
@@ -256,34 +278,55 @@ export function livingWindowStatusCopy(snapshot: WeatherSnapshot | null, status:
 
 export function createLivingWindowViewModel(snapshot: WeatherSnapshot | null, moon: { label: string; illuminationPercent: number }, status: "loading" | "ready" | "error", now: Date = new Date()): LivingWindowViewModel {
   const locationLabel = snapshot ? [snapshot.location.name, snapshot.location.country].filter(Boolean).join(", ") : "Choose a location";
+  const moonDescription = moonPhaseDescription(moon.label);
   if (!snapshot) return {
     locationLabel,
+    localDateLabel: "Local date —",
+    localTimeLabel: "Local time —",
+    updatedLabel: "Updated —",
     conditionLabel: "Weather unavailable",
     temperatureLabel: "—",
     feelsLikeLabel: "Feels like —",
     precipitationLabel: "Rain now —",
     probabilityLabel: "Next hour —",
+    rainSummary: "Rain outlook unavailable.",
+    hourly: [],
     humidityLabel: "Humidity —",
     windLabel: "Wind —",
     sunsetLabel: "Sunset —",
     moonLabel: moon.label,
     moonIlluminationLabel: moon.illuminationPercent + "% illuminated",
+    moonDescription,
     forecast: [],
     statusLabel: livingWindowStatusCopy(null, status, now)
   };
-  const formatTime = (value: string) => value ? new Date(value).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "—";
+  const timeZone = snapshot.timezone || snapshot.location.timezone || undefined;
+  const formatTime = (value: string) => value ? new Date(value).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZone }) : "—";
+  const formatDate = (value: string) => value ? new Date(value).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric", timeZone }) : "—";
+  const hourly = snapshot.hourly.filter((point) => Date.parse(point.time) >= Date.parse(snapshot.current.time)).slice(0, 5).map((point) => ({
+    timeLabel: formatTime(point.time),
+    conditionLabel: point.condition.label,
+    probabilityLabel: point.precipitationProbabilityPercent === null ? "—" : point.precipitationProbabilityPercent + "%",
+    temperatureLabel: point.temperatureC.toFixed(0) + "°"
+  }));
   return {
     locationLabel,
+    localDateLabel: formatDate(snapshot.current.time),
+    localTimeLabel: formatTime(snapshot.current.time),
+    updatedLabel: "Updated " + formatTime(snapshot.fetchedAt),
     conditionLabel: snapshot.current.condition.label,
     temperatureLabel: snapshot.current.temperatureC.toFixed(1) + "°C",
     feelsLikeLabel: "Feels like " + snapshot.current.apparentTemperatureC.toFixed(1) + "°C",
     precipitationLabel: "Rain now " + snapshot.current.precipitationMm.toFixed(1) + " mm",
     probabilityLabel: snapshot.current.precipitationProbabilityPercent === null ? "Next hour probability unavailable" : "Next hour " + snapshot.current.precipitationProbabilityPercent + "%",
+    rainSummary: rainSummaryFor(snapshot.hourly, snapshot.current.time),
+    hourly,
     humidityLabel: "Humidity " + snapshot.current.humidityPercent + "%",
     windLabel: "Wind " + snapshot.current.windSpeedKmh.toFixed(1) + " km/h",
     sunsetLabel: "Sunset " + formatTime(snapshot.daily.sunset),
     moonLabel: moon.label,
     moonIlluminationLabel: moon.illuminationPercent + "% illuminated",
+    moonDescription,
     forecast: snapshot.daily.forecast.map((day) => ({
       date: day.date,
       conditionLabel: day.condition.label,
@@ -293,4 +336,30 @@ export function createLivingWindowViewModel(snapshot: WeatherSnapshot | null, mo
     })),
     statusLabel: livingWindowStatusCopy(snapshot, status, now)
   };
+}
+
+export function rainSummaryFor(hourly: WeatherHourlyPoint[], currentTime: string): string {
+  const upcoming = hourly.filter((point) => Date.parse(point.time) >= Date.parse(currentTime)).slice(0, 6);
+  const rain = upcoming.filter((point) => (point.precipitationProbabilityPercent ?? 0) >= 50 || point.condition.id === "rain" || point.condition.id === "storm");
+  if (!rain.length) return "No rain expected in the next few hours.";
+  const first = rain[0];
+  const firstTime = new Date(first.time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  if (first.condition.id === "storm") return "Thunderstorms possible later.";
+  if (rain.length === 1) return `Rain likely around ${firstTime}.`;
+  const lastTime = new Date(rain[rain.length - 1].time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return `Rain likely between ${firstTime}–${lastTime}.`;
+}
+
+export function moonPhaseDescription(label: string): string {
+  const descriptions: Record<string, string> = {
+    "New moon": "Mostly hidden tonight",
+    "Waxing crescent": "A little brighter each night",
+    "First quarter": "Half lit and still growing",
+    "Waxing gibbous": "Almost full",
+    "Full moon": "Full tonight",
+    "Waning gibbous": "Shrinking after the full moon",
+    "Last quarter": "Half lit and fading",
+    "Waning crescent": "A thin moon before the new moon"
+  };
+  return descriptions[label] ?? "The moon changes a little each night";
 }

@@ -38,3 +38,14 @@ test("Window frames do not query or draw the Spin canvas while the panel is open
   assert.match(draw, /if \(!this\.toolboxOpen/);
   assert.match(draw, /this\.toolboxView\.selected !== "spin-wheel"/);
 });
+
+test("Living Window prioritizes rain outlook, hourly strip, local time, and a readable moon card", () => {
+  const source = readFileSync(resolve(process.cwd(), "src/app.ts"), "utf8");
+  const styles = readFileSync(resolve(process.cwd(), "src/styles.css"), "utf8");
+  assert.match(source, /window-rain-summary/);
+  assert.match(source, /window-hourly-strip/);
+  assert.match(source, /window-local-time/);
+  assert.match(source, /moon-visual moon-phase-/);
+  assert.match(styles, /\.window-hourly-strip/);
+  assert.match(styles, /\.moon-visual/);
+});

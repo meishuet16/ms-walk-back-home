@@ -5,6 +5,8 @@ import {
   defaultWindowLocation,
   fetchOpenMeteoLocations,
   parseOpenMeteoForecastResponse,
+  moonPhaseDescription,
+  rainSummaryFor,
   weatherCacheStatus,
   weatherCodeToCondition,
   weatherVisualFor
@@ -26,6 +28,8 @@ const forecastFixture = {
   },
   hourly: {
     time: ["2026-08-23T12:00", "2026-08-23T13:00"],
+    temperature_2m: [28, 27],
+    weather_code: [61, 61],
     precipitation_probability: [72, 85]
   },
   daily: {
@@ -47,6 +51,7 @@ test("Open-Meteo parser keeps current precipitation distinct from hourly probabi
   assert.equal(snapshot.current.precipitationMm, 1.2);
   assert.equal(snapshot.current.precipitationProbabilityPercent, 72);
   assert.equal(snapshot.current.precipitationProbabilitySource, "hourly");
+  assert.equal(snapshot.hourly[1].temperatureC, 27);
   assert.equal(snapshot.daily.precipitationProbabilityMaxPercent, 91);
   assert.notEqual(snapshot.current.precipitationProbabilityPercent, snapshot.current.precipitationMm);
   assert.equal(snapshot.daily.forecast[0].highC, 32);
@@ -55,6 +60,19 @@ test("Open-Meteo parser keeps current precipitation distinct from hourly probabi
   assert.equal(view.precipitationLabel, "Rain now 1.2 mm");
   assert.equal(view.probabilityLabel, "Next hour 72%");
   assert.equal(view.forecast[0].probabilityLabel, "91% rain chance");
+  assert.equal(view.rainSummary, "Rain likely between 12:00 pm–1:00 pm.");
+  assert.equal(view.hourly.length, 2);
+});
+
+test("rain summaries stay deterministic and honest when hourly probability is absent", () => {
+  const clear = [{ time: "2026-08-23T12:00", condition: weatherCodeToCondition(0), temperatureC: 30, precipitationProbabilityPercent: null }];
+  assert.equal(rainSummaryFor(clear, "2026-08-23T12:00"), "No rain expected in the next few hours.");
+  assert.equal(rainSummaryFor([{ ...clear[0], precipitationProbabilityPercent: 62 }], "2026-08-23T12:00"), "Rain likely around 12:00 pm.");
+});
+
+test("moon phase copy stays human-readable", () => {
+  assert.equal(moonPhaseDescription("Waxing gibbous"), "Almost full");
+  assert.equal(moonPhaseDescription("Waning crescent"), "A thin moon before the new moon");
 });
 
 test("weather mapping distinguishes dry, rain, storm, and fog visuals", () => {

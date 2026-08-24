@@ -5728,6 +5728,34 @@ canvas {
 .window-temperature strong { color: #eff5df; font-size: clamp(30px, 7vw, 46px); font-weight: 500; }
 .window-temperature span { color: #d3e7d1; text-align: right; }
 .window-current-subline { color: #c3d6cc; font-size: 13px; }
+.window-local-time { display: grid; gap: 3px; color: #c3d6cc; font-size: 12px; }
+.window-local-time strong { color: #eff5df; font-size: 17px; font-weight: 500; }
+.window-local-time small { color: #9eb8ad; }
+.window-rain-summary { padding: 9px 10px; border-left: 3px solid #e4b96b; background: rgba(228, 185, 107, .1); color: #f4ca79; font-size: 13px; }
+.window-weather-primary { display: grid; gap: 12px; }
+.window-hourly-card { min-width: 0; }
+.window-hourly-strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(62px, 1fr); gap: 5px; overflow-x: auto; padding-bottom: 4px; }
+.window-hourly-point { display: grid; gap: 4px; min-width: 62px; padding: 8px 5px; border: 1px solid rgba(180, 218, 210, .18); background: rgba(9, 15, 19, .28); color: #abc5bd; text-align: center; font-size: 11px; }
+.window-hourly-point strong { color: #d3e7d1; font-size: 11px; }
+.window-hourly-icon { font-size: 17px; line-height: 1; }
+.window-moon-card { display: grid; gap: 8px; margin-top: 14px; padding: 14px; border: 1px solid rgba(180, 218, 210, .24); background: rgba(9, 15, 19, .38); }
+.window-card-kicker { color: #d8bf86; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+.window-moon-layout { display: flex; align-items: center; gap: 16px; margin-top: 8px; }
+.window-moon-layout > div { display: grid; gap: 4px; }
+.window-moon-layout strong { color: #eff5df; font-family: Georgia, serif; font-size: 21px; font-weight: 500; }
+.window-moon-layout span:not(.moon-visual) { color: #d3e7d1; }
+.window-moon-layout small { color: #abc5bd; }
+.moon-visual { position: relative; display: block; width: 74px; height: 74px; flex: 0 0 74px; overflow: hidden; border-radius: 50%; background: #f3e4bd; box-shadow: 0 0 0 1px rgba(244, 202, 121, .35), 0 0 22px rgba(244, 202, 121, .16); }
+.moon-visual::after { position: absolute; inset: -5px; border-radius: 50%; background: #142221; content: ""; }
+.moon-phase-0::after { transform: translateX(0); }
+.moon-phase-1::after { transform: translateX(23px); }
+.moon-phase-2::after { transform: translateX(37px); }
+.moon-phase-3::after { transform: translateX(55px); }
+.moon-phase-4 { background: #f3e4bd; }
+.moon-phase-4::after { display: none; }
+.moon-phase-5::after { transform: translateX(-55px); }
+.moon-phase-6::after { transform: translateX(-37px); }
+.moon-phase-7::after { transform: translateX(-23px); }
 .window-weather-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; color: #abc5bd; font-size: 12px; }
 .window-forecast-heading { margin-top: 16px !important; }
 .window-forecast { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
@@ -5747,6 +5775,8 @@ canvas {
   .spin-primary-action { position: sticky; bottom: 0; z-index: 3; min-height: 50px; box-shadow: 0 -8px 18px rgba(17, 21, 20, .22); }
   .window-forecast { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .window-weather-stats { grid-template-columns: 1fr 1fr; }
+  .window-hourly-strip { grid-auto-columns: 64px; }
+  .moon-visual { width: 68px; height: 68px; flex-basis: 68px; }
   .window-panel-header { align-items: flex-start; }
   .window-panel-header h2 { max-width: 210px; font-size: 21px; }
   .pdf-organizer { grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: 250px; }
