@@ -1059,6 +1059,11 @@ canvas {
 .ending-quote p {
   color: #c7d5dc;
 }
+.reflection .memory-line {
+  border-left-color: #f0d49a;
+  color: #f0d49a;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, .78);
+}
 .ending-quote blockquote {
   border-left: 0;
   border-top: 1px solid rgba(246, 203, 119, .36);
