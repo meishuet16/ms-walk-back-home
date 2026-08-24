@@ -1,7 +1,19 @@
-import { normalizeLocalAssetPath } from "./PresentationRenderer.js";
+import {
+  renderMemoryPortrait,
+  resolveMemoryPortraitLayout,
+  type MemoryPortraitLayout,
+  type MemoryPortraitViewport,
+} from "./MemoryPortraitPresentation.js";
+import type { DialoguePortrait } from "./PresentationRenderer.js";
 
-export type EchoPortraitId = "june24-angela-st-echo" | "june24-room-study-echo" | "june24-haircut-echo" | (string & {});
-export type EchoPortraitViewport = { orientation: "portrait" | "landscape"; width: number; height: number };
+export type EchoPortraitId =
+  | "june24-angela-st-echo"
+  | "june24-room-study-echo"
+  | "june24-haircut-echo"
+  | (string & {});
+
+export type EchoPortraitViewport = MemoryPortraitViewport;
+
 export type EchoPortraitLayout = {
   asset: string;
   width: number;
@@ -13,21 +25,22 @@ export type EchoPortraitLayout = {
 const echoPortraitAssets: Record<string, string> = {
   "june24-angela-st-echo": "assets/624/echo-portraits/group-echoes/01-morning-angela-st.png",
   "june24-room-study-echo": "assets/624/echo-portraits/et-portraits/03-guilt-quiet.png",
-  "june24-haircut-echo": "assets/624/echo-portraits/group-echoes/02-haircut-home-invite.png"
+  "june24-haircut-echo": "assets/624/echo-portraits/group-echoes/02-haircut-home-invite.png",
 };
 
-export function resolveEchoPortraitLayout(echoId: EchoPortraitId, viewport: EchoPortraitViewport): EchoPortraitLayout {
+export function resolveEchoPortraitLayout(
+  echoId: EchoPortraitId,
+  viewport: EchoPortraitViewport,
+): EchoPortraitLayout {
   const asset = echoPortraitAssets[echoId];
-  if (!asset) throw new Error(`Missing Echo Portrait asset: ${echoId}`);
-  const safeWidth = Number.isFinite(viewport.width) && viewport.width > 0 ? viewport.width : 390;
-  const safeHeight = Number.isFinite(viewport.height) && viewport.height > 0 ? viewport.height : 844;
-  const portrait = viewport.orientation === "portrait";
+  if (!asset) throw new Error("Missing Echo Portrait asset: " + echoId);
+  const layout: MemoryPortraitLayout = resolveMemoryPortraitLayout(asset, viewport);
   return {
     asset,
-    width: portrait ? Math.min(safeWidth * 0.82, 420) : Math.min(safeWidth * 0.42, 620),
-    height: portrait ? Math.min(safeHeight * 0.48, 520) : Math.min(safeHeight * 0.72, 420),
-    fit: "contain",
-    position: portrait ? "center-top" : "center"
+    width: layout.width,
+    height: layout.height,
+    fit: layout.fit,
+    position: layout.position,
   };
 }
 
@@ -41,12 +54,24 @@ export type EchoPortraitRenderOptions = {
 };
 
 export function renderEchoPortrait(options: EchoPortraitRenderOptions): string {
-  const asset = normalizeLocalAssetPath(options.layout.asset);
-  if (!asset) return "";
-  const action = options.action ?? "echo-portrait-next";
-  const button = options.canAdvance ? `<button class="echo-portrait-next" data-action="${escapeHtml(action)}" aria-label="Continue">▼</button>` : "";
-  return `<div class="echo-portrait" data-presentation="echo-portrait"><div class="echo-portrait-art"><img src="${escapeHtml(asset)}" alt="" style="max-width:${px(options.layout.width)};max-height:${px(options.layout.height)};object-fit:${options.layout.fit};object-position:center"></div><div class="echo-portrait-dialogue"><span>${escapeHtml(options.speaker)}</span><p>${escapeHtml(options.text)}</p>${button}</div></div>`;
+  const portrait: DialoguePortrait = { src: options.layout.asset };
+  return renderMemoryPortrait({
+    portrait,
+    speaker: options.speaker,
+    text: options.text,
+    layout: {
+      portrait,
+      width: options.layout.width,
+      height: options.layout.height,
+      fit: options.layout.fit,
+      position: options.layout.position,
+    },
+    canAdvance: options.canAdvance,
+    action: options.action,
+    presentationClassName: "memory-portrait echo-portrait",
+    presentationId: "echo-portrait",
+    presentationData: "echo-portrait",
+    nextButtonClassName: "echo-portrait-next",
+    nextButtonAriaLabel: "Continue",
+  });
 }
-
-function px(value: number): string { return `${Math.max(1, value)}px`; }
-function escapeHtml(value: string): string { return value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[character] ?? character); }

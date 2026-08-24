@@ -760,7 +760,7 @@ canvas {
   box-shadow: none;
   color: #f8d79a;
 }
-.echo-portrait {
+.memory-portrait, .echo-portrait {
   pointer-events: auto;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
@@ -771,18 +771,18 @@ canvas {
   color: #f7e7c4;
   background: linear-gradient(180deg, rgba(2, 7, 14, .04), rgba(2, 7, 14, .68));
 }
-.echo-portrait-art {
+.memory-portrait-art, .echo-portrait-art {
   display: grid;
   place-items: center;
   min-height: 0;
 }
-.echo-portrait-art img {
+.memory-portrait-art img, .echo-portrait-art img {
   display: block;
   width: auto;
   height: auto;
   image-rendering: pixelated;
 }
-.echo-portrait-dialogue {
+.memory-portrait-dialogue, .echo-portrait-dialogue {
   position: relative;
   width: min(720px, 100%);
   justify-self: center;
@@ -792,17 +792,17 @@ canvas {
   background: rgba(28, 24, 22, .9);
   box-shadow: 0 10px 34px rgba(0,0,0,.42);
 }
-.echo-portrait-dialogue span {
+.memory-portrait-dialogue span, .echo-portrait-dialogue span {
   display: block;
   margin-bottom: 6px;
   color: #ffe2a8;
 }
-.echo-portrait-dialogue p {
+.memory-portrait-dialogue p, .echo-portrait-dialogue p {
   margin: 0;
   font-size: 18px;
   line-height: 1.45;
 }
-.echo-portrait-next {
+.memory-portrait-next, .echo-portrait-next {
   position: absolute;
   right: 14px;
   bottom: 10px;

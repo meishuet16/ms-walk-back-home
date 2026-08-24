@@ -96,6 +96,7 @@ import {
   type DialoguePortraitRenderModel
 } from "./systems/PresentationRenderer.js";
 import { renderEchoPortrait, resolveEchoPortraitLayout } from "./systems/EchoPortraitPresentation.js";
+import { renderMemoryDialogue } from "./systems/MemoryPortraitPresentation.js";
 
 type ForestNode = (AuthoredForestEntry | DiaryForestMemory) & { radius?: number; placementSlotId?: string };
 type LabisDialogueLine = { speaker: string; text: string };
@@ -1880,7 +1881,17 @@ export class WalkBackHomeApp {
     if (!dialogue || this.authoredOverlayMode === "dialogue") return;
     this.authoredOverlayMode = "dialogue";
     this.overlay.classList.add("dialogue-open", "lightweight-presentation");
-    this.overlay.innerHTML = renderRpgDialogue({ speaker: dialogue.speaker, text: dialogue.text, action: "authored-dialogue-next" });
+    this.overlay.innerHTML = renderMemoryDialogue({
+      speaker: dialogue.speaker,
+      text: dialogue.text,
+      portrait: dialogue.portrait,
+      viewport: {
+        orientation: this.currentSceneLayout().orientation,
+        width: window.innerWidth,
+        height: window.innerHeight
+      },
+      action: "authored-dialogue-next"
+    });
     this.focusStage();
   }
 
