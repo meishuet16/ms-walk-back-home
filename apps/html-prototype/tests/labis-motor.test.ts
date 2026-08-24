@@ -38,7 +38,7 @@ function installStorage(): void {
 test("labis motor day is registered as a labis runtime chapter", () => {
   const door = forestEntries.find((entry) => entry.chapterId === "labis-motor-day");
   assert.ok(door);
-  assert.equal(door.title.includes("单凭这一点"), true);
+  assert.equal(door.title, "719");
   assert.equal(chapterRegistry["labis-motor-day"].runtimeScene, "labis");
   assert.equal(chapterRegistry["labis-motor-day"].location, "Labis, Johor");
   assert.equal(routeForestEntry(door).kind, "implemented-chapter");

@@ -62,10 +62,12 @@ test("forest doors expose distinct memory instances for long-term progression", 
   assert.equal(chapterIds.size, forestDoors.length);
 });
 
-test("friend dialogue keeps Friend A portrait throughout the conversation", () => {
+test("friend dialogue keeps the authored speaker and Friend A portrait throughout the conversation", () => {
   assert.ok(bakeryChapter.dialogue.length >= 3);
-  assert.ok(bakeryChapter.dialogue.every((node) => node.speaker === "Friend A"));
-  assert.ok(bakeryChapter.dialogue.every((node) => node.portrait === "friend"));
+  for (const node of bakeryChapter.dialogue) {
+    assert.equal(node.speaker, "她");
+    assert.deepEqual(node.portrait, { src: "assets/friend-a.png", height: 180 });
+  }
 });
 
 test("scene music loops local mp3 files without creating a YouTube player", () => {

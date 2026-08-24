@@ -77,25 +77,25 @@ test("March 30 canonical dialogue and echo copy are data, not reflection branche
   assert.ok(text.some((line) => line.startsWith("我去！")));
   const echoText = march30EchoActions.filter((action) => action.type === "dialogue").map((action) => action.text);
   assert.ok(echoText.includes("额嘿嘿好巧哈哈 又见面了 太有缘了"));
-  assert.ok(echoText.includes("哎哟我们还是那么顺路 太有缘分了"));
+  assert.ok(echoText.includes("哎哟又遇到了 我们还是那么顺路 太有缘分了"));
 });
 
-test("March 30 uses the requested keychain portrait for the keychain dialogue beat", () => {
+test("March 30 uses the authored direct portraits for the keychain dialogue beats", () => {
   const waterQuestion = march30MainMemoryActions.find((action) => action.type === "dialogue" && action.text === "这是什么");
-  const keychainChoice = march30MainMemoryActions.find((action) => action.type === "dialogue" && action.text === "两个同款图案的挂饰里面你选一个");
+  const keychainChoice = march30MainMemoryActions.find((action) => action.type === "dialogue" && action.text === "这边两个同款图案的挂饰里面你选一个吧");
   assert.equal(waterQuestion?.type, "dialogue");
-  assert.equal(waterQuestion?.portrait, "gift");
+  assert.deepEqual(waterQuestion?.portrait, { src: "assets/330/330-1.png", height: 200, offsetY: 8 });
   assert.equal(keychainChoice?.type, "dialogue");
-  assert.equal(keychainChoice?.portrait, "keychains");
+  assert.deepEqual(keychainChoice?.portrait, { src: "assets/330/330-7.png", height: 200, offsetY: 8 });
 });
 
-test("March 30 uses the gift portrait for ET's question and the water-gun portrait for MS's answer", () => {
+test("March 30 uses the authored direct portraits for ET's question and MS's answer", () => {
   const giftQuestion = march30MainMemoryActions.find((action) => action.type === "dialogue" && action.text === "这是什么");
   const waterGunAnswer = march30MainMemoryActions.find((action) => action.type === "dialogue" && action.text === "水枪");
   assert.equal(giftQuestion?.type, "dialogue");
-  assert.equal(giftQuestion?.portrait, "gift");
+  assert.deepEqual(giftQuestion?.portrait, { src: "assets/330/330-1.png", height: 200, offsetY: 8 });
   assert.equal(waterGunAnswer?.type, "dialogue");
-  assert.equal(waterGunAnswer?.portrait, "waterGun");
+  assert.deepEqual(waterGunAnswer?.portrait, { src: "assets/330/330-2.png", height: 200, offsetY: 8 });
 });
 
 test("March 30 dialogue actions accept the shared generic portrait config", () => {

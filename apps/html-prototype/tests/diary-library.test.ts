@@ -40,7 +40,7 @@ test("authored memory chapters seed editable diary entries into the timeline", (
   assert.ok(labis);
   assert.equal(labis.memoryKind, "chapter");
   assert.equal(labis.date, "2026-07-19");
-  assert.ok(labis.body.includes("单凭这一点"));
+  assert.ok(labis.body.includes("有些幸福安静得像普通的一天"));
   assert.equal(getDiaryForestMemories(library).some((entry) => entry.kind === "chapter" && entry.chapterId === "labis-motor-day"), true);
 });
 
@@ -51,7 +51,7 @@ test("March 30 seeds its 330 corridor diary as an editable chapter entry", () =>
   assert.ok(march30);
   assert.equal(march30.date, "2026-03-30");
   assert.equal(march30.memoryKind, "chapter");
-  assert.match(march30.body, /three sprays of water/);
+  assert.match(march30.body, /水枪里的水落在脸上/);
 });
 
 test("playable chapters resolve one canonical diary entry by stable id and live edits", () => {

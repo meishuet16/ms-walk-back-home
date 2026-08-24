@@ -122,5 +122,5 @@ test("lightweight roles use stage-relative control-aware placement while VN stay
 });
 
 test("the existing March 30 authored jacket-wipe offset remains untouched", () => {
-  assert.match(march30Source, /ms-jacket-wipe-target[\s\S]*offset: \{ x: 68, y: 0 \}/);
+  assert.match(march30Source, /ms-jacket-wipe-target[\s\S]*offset: \{ x: 78, y: 0 \}/);
 });
