@@ -6,9 +6,12 @@ node_modules/
 dist/
 coverage/
 .turbo/
+.vercel/
 .worktrees/
 *.tsbuildinfo
 .dev-server*.log
+.codex-remote-attachments/
+*.zip
 .godot/
 .godot-user-data/
 *.gd.uid

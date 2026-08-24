@@ -1,40 +1,34 @@
 # Canonical HTML Application Verification
 
-Date: 2026-08-06
+This is the current operational verification guide for `apps/html-prototype` and the active `packages/shared` workspace. Retired web, Godot, and UI package paths are not part of this verification.
 
-Scope: `apps/html-prototype` and retained `packages/shared`
+## Required commands
 
-## Commands
+Run from the repository root with Node `22.13.0` from `.nvmrc`:
 
-- `npm install`: passed for the retained workspaces.
-- `npm run typecheck`: passed for the canonical HTML app and retained shared package.
-- `npm test`: passed.
-  - `@walk/html-prototype`: canonical HTML test suite passed.
-  - `@walk/shared`: 13 test files / 28 tests passed.
-- `npm run build`: passed.
-  - `@walk/html-prototype` built to `apps/html-prototype/dist`.
+```powershell
+npm install
+npm run typecheck
+npm test
+npm run build
+git diff --check
+```
 
-## Preservation Checks
+The root workspace scripts cover:
 
-- Canonical HTML source, authored chapters, layouts, assets, and runtime systems remain tracked.
-- Scene 624 / June 24, March 30, May 23, and Labis / July 19 content remain registered and asset-backed.
-- Muji Room, Scene Debug, Reflection Wall, and other active HTML systems remain present.
-- No tracked changes were made to `packages/shared` schemas, privacy logic, or existing tests.
-- `.private-spec`, imports, uploads, generated graphs, embeddings, and database paths remain untracked by this milestone.
+- `@walk/html-prototype`: TypeScript compilation, browser build, and Node test suite.
+- `@walk/shared`: TypeScript compilation and Vitest suite for schemas, import/privacy helpers, and fixture adapters.
 
-## Manual Notes
+The canonical build writes static output to `apps/html-prototype/dist`; that directory is generated and ignored. Vercel uses `apps/html-prototype` as its project root, runs `npm run build`, and serves `dist`.
 
-The isolated dev server starts with:
+## Local smoke run
 
 ```powershell
 npm run dev -w apps/html-prototype
 ```
 
-It serves the prototype at:
+Open `http://localhost:4173`. The default fixture/local mode does not require Supabase or paid services. Optional Supabase behavior is covered by the app’s deterministic sync tests and is enabled only with explicit environment configuration.
 
-```text
-http://localhost:4173
-```
+## Preservation checks
 
-In this shell environment, foreground server commands are terminated by command timeout, so persistent browser screenshot capture was not completed here. The build output and static assets are present in `apps/html-prototype/dist`.
-
+Verification must leave authored chapter fixtures, chapter registration, scene layouts, canonical assets, Muji Room behavior, Toolbox behavior, and gameplay runtime unchanged unless a task explicitly targets them. Private/runtime data and generated build output must remain untracked.
