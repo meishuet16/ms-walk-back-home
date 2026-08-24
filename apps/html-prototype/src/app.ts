@@ -1062,9 +1062,11 @@ export class WalkBackHomeApp {
     const tool = this.overlay.querySelector<HTMLElement>(".pdf-tool");
     if (!tool) return;
     const busy = this.pdfAbortController !== null;
+    const summary = tool.querySelector<HTMLElement>(".file-summary");
     const status = tool.querySelector<HTMLElement>(".toolbox-status");
     const process = tool.querySelector<HTMLButtonElement>("[data-action=pdf-process]");
     const cancel = tool.querySelector<HTMLButtonElement>("[data-action=pdf-cancel]");
+    if (summary) summary.textContent = this.pdfFiles.map((file) => file.name).join(", ") || "Choose local files";
     if (status) status.textContent = this.pdfStatus;
     if (process) process.disabled = busy;
     if (cancel) { cancel.disabled = !busy; cancel.hidden = !busy; }
@@ -1736,7 +1738,12 @@ export class WalkBackHomeApp {
     if (field === "currency-to") this.currencyTo = value as CurrencyCode;
     if (field === "date-mode") this.dateMode = value as typeof this.dateMode;
     if (field === "pdf-mode") this.pdfMode = value;
-    if (field === "pdf-files" && target instanceof HTMLInputElement) this.pdfFiles = target.files ? Array.from(target.files) : [];
+    if (field === "pdf-files" && target instanceof HTMLInputElement) {
+      this.pdfFiles = target.files ? Array.from(target.files) : [];
+      this.pdfStatus = "";
+      this.refreshToolboxPdfView();
+      return;
+    }
     if (field === "media-mode") this.mediaMode = value;
     if (field === "media-format") this.mediaFormat = value as typeof this.mediaFormat;
     if (field === "media-file" && target instanceof HTMLInputElement) {

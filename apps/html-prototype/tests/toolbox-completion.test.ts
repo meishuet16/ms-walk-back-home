@@ -143,3 +143,12 @@ test("Waveform seeking synchronizes the media preview cursor", () => {
   const end = source.indexOf("\n  private playMediaSelection", start);
   assert.match(source.slice(start, end), /currentTime/);
 });
+
+test("Selecting PDF files patches the summary without remounting the file control", () => {
+  const source = readFileSync(resolve(process.cwd(), "src/app.ts"), "utf8");
+  const start = source.indexOf('if (field === "pdf-files"');
+  const end = source.indexOf('if (field === "media-mode"', start);
+  const body = source.slice(start, end);
+  assert.match(body, /refreshToolboxPdfView/);
+  assert.doesNotMatch(body, /renderToolboxOverlay/);
+});

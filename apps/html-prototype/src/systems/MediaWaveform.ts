@@ -6,6 +6,9 @@ export async function decodeMediaWaveform(file: File, sampleCount = 1200, signal
   const AudioContextConstructor = window.AudioContext;
   if (!AudioContextConstructor) throw new Error("Waveform preview is not supported by this browser");
   const context = new AudioContextConstructor();
+  let closePromise: Promise<void> | null = null;
+  const closeContext = (): void => { closePromise ??= context.close().catch(() => undefined); };
+  signal?.addEventListener("abort", closeContext, { once: true });
   try {
     throwIfAborted(signal);
     const bytes = await file.arrayBuffer();
@@ -18,7 +21,9 @@ export async function decodeMediaWaveform(file: File, sampleCount = 1200, signal
     if (signal?.aborted) throw new DOMException("Waveform loading cancelled", "AbortError");
     throw error;
   } finally {
-    await context.close().catch(() => undefined);
+    signal?.removeEventListener("abort", closeContext);
+    closeContext();
+    await closePromise;
   }
 }
 
