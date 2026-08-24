@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { chapterRegistry } from "../src/systems/ChapterRegistry.js";
+import { chapterRegistry, forestEntries, routeForestEntry } from "../src/systems/ChapterRegistry.js";
+import { createDiaryLibrary, forestNodesForMonth } from "../src/systems/DiaryLibrary.js";
 import { authoredChapterDiaryEntries } from "../src/fixtures/authoredDiaryEntries.js";
 import { june24Assets, june24Chapter, june24FrameRegistries, june24ReflectionChoices, resolveJune24Actions } from "../src/fixtures/june24Chapter.js";
 import type { SceneLayout } from "../src/systems/SceneLayouts.js";
@@ -110,4 +111,17 @@ test("June 24 automatic trigger resets on re-entry and Echo Portraits are indepe
   assert.match(appSource, /"624"[\s\S]*echoRequiresMainCompletion: false/);
   assert.match(appSource, /private startEchoPortrait/);
   assert.match(appSource, /echo-portrait-next/);
+});
+
+test("June 24 has a Forest entrance that routes into Scene 624", () => {
+  const entry = forestEntries.find((item) => item.chapterId === june24Chapter.id);
+  assert.ok(entry, "June 24 must be registered as a Forest door");
+  assert.equal(entry?.date, "06.24");
+  assert.equal(forestNodesForMonth(forestEntries, createDiaryLibrary(), "2026-06").some((item) => item.id === entry?.id), true);
+  const route = routeForestEntry(entry!);
+  assert.equal(route.kind, "implemented-chapter");
+  if (route.kind === "implemented-chapter") {
+    assert.equal(route.chapter.id, june24Chapter.id);
+    assert.equal(route.chapter.runtimeScene, "624");
+  }
 });
