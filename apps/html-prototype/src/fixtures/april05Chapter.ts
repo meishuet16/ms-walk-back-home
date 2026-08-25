@@ -4,6 +4,7 @@ import type { CutsceneAction } from "../systems/CutsceneSystem.js";
 import type { SceneSpriteAsset } from "../systems/SceneActorRenderer.js";
 import { resolveSceneEchoAnchor, type SceneLayout } from "../systems/SceneLayouts.js";
 import { march30Assets, type March30AssetId } from "./march30Memory.js";
+import type { DialoguePortrait } from "../systems/PresentationRenderer.js";
 
 export type April05AnchorKey =
   | "ms-wait-position" | "angela-wait-position" | "st-wait-position"
@@ -162,7 +163,7 @@ export type April05Action =
   | { type: "sprite"; actor: string; asset: string }
   | { type: "spriteGroup"; states: Array<{ actor: string; asset: string }> }
   | { type: "face"; actor: string; facing: "left" | "right" }
-  | { type: "dialogue"; speaker: string; text: string }
+  | { type: "dialogue"; speaker: string; text: string; portrait?: DialoguePortrait; }
   | { type: "checkpoint"; id: string }
   | { type: "prop"; id: string; asset: string; owner?: string; position?: April05Position; visible: boolean }
   | { type: "effect"; id: string; kind: "water-vfx" | "dissolve"; actor?: string; target?: string; frame?: number; position?: April05Position; duration: number }
@@ -170,7 +171,7 @@ export type April05Action =
   | { type: "despawn"; actor: string };
 
 const at = (anchor: April05AnchorKey, offset?: Point): April05Position => ({ anchor, offset });
-const dialogue = (speaker: string, text: string): April05Action => ({ type: "dialogue", speaker, text });
+const dialogue = (speaker: string, text: string, portrait?: DialoguePortrait): April05Action => ({ type: "dialogue", speaker, text, portrait });
 const sprite = (actor: string, asset: string): April05Action => ({ type: "sprite", actor, asset });
 const spriteGroup = (...states: Array<[string, string]>): April05Action => ({
   type: "spriteGroup",
@@ -246,9 +247,9 @@ export const april05MainMemoryActions: April05Action[] = [
   { type: "spawn", actor: "ms", position: at("ms-wait-position"), asset: "ms-wait", facing: "right" },
   { type: "spawn", actor: "angela", position: at("angela-wait-position"), asset: "angela-01", facing: "left" },
   { type: "spawn", actor: "st", position: at("st-wait-position"), asset: "st-01", facing: "left" },
-  dialogue("MS", "ei你在宿舍吗"),
-  dialogue("ET", "在啊怎么 你来了啊 不要跟我讲你又晚上骑脚车"),
-  dialogue("MS", "是诶我在你门口 你下来一下"),
+  dialogue("MS", "ei你在宿舍吗","assets/523/memory-portrait/02.png"),
+  dialogue("ET", "在啊怎么 你来了啊 不要跟我讲你又晚上骑脚车","assets/624/echo-portraits/et-portraits/01-questioning.png"),
+  dialogue("MS", "是诶我在你门口 你下来一下","assets/523/memory-portrait/02.png"),
   { type: "prop", id: "water-gun", asset: "water-gun", owner: "ms", visible: true },
   { type: "spawn", actor: "et", position: at("et-entrance-spawn"), asset: "et-walk", facing: "left" },
   { type: "move", actor: "et", position: at("et-arrival-position"), duration: 0.85, asset: "et-walk", facing: "left" },
@@ -285,7 +286,7 @@ sprite("et", "et-water-sprayed-01"),
   sprite("et", "et-water-sprayed-07"),
   { type: "wait", duration: 0.08 },
   sprite("et", "et-water-sprayed-08"),
-  dialogue("ET", "！！？？wtf"),
+  dialogue("ET", "！！？？wtf","assets/624/echo-portraits/et-portraits/05-hand-stop.png"),
   { type: "move", actor: "et", position: at("et-ruffle-start"), duration: 0.35, asset: "et-hair-ruffle-01", facing: "right" },
   { type: "move", actor: "ms", position: at("ms-ruffle-target"), duration: 0.25, asset: "ms-hair-ruffled-01", facing: "left" },
   spriteGroup(["et", "et-hair-ruffle-01"], ["ms", "ms-hair-ruffled-01"]),
@@ -296,7 +297,7 @@ sprite("et", "et-water-sprayed-01"),
   { type: "wait", duration: 0.22 },
   { type: "move", actor: "et", position: at("et-ruffle-contact"), duration: 0.2, asset: "et-hair-ruffle-07", facing: "right" },
   spriteGroup(["et", "et-hair-ruffle-08"], ["ms", "ms-hair-ruffled-08"]),
-  dialogue("ET", "琢磨你们的朋友这样坏的。。。"),
+  dialogue("ET", "琢磨你们的朋友这样坏的。。。","assets/624/echo-portraits/et-portraits/01-questioning.png"),
   { type: "move", actor: "et", position: at("et-trash-start"), duration: 0.4, asset: "et-walk", facing: "right" },
   { type: "move", actor: "et", position: at("et-trash-position"), duration: 0.65, asset: "et-walk", facing: "right" },
   { type: "move", actor: "et", position: at("et-trash-return"), duration: 0.65, asset: "et-walk", facing: "left" },
@@ -304,7 +305,7 @@ sprite("et", "et-water-sprayed-01"),
   { type: "move", actor: "angela", position: at("angela-sprayed-position"), duration: 0.35, asset: "angela-03", facing: "left" },
   { type: "move", actor: "st", position: at("st-sprayed-position"), duration: 0.35, asset: "st-03", facing: "right" },
   { type: "wait", duration: 0.22 },
-  dialogue("ST", "你看ms无差别攻击"),
+  dialogue("ST", "你看ms无差别攻击","assets/624/echo-portraits/group-echoes/01-morning-angela-st.png"),
   { type: "moveGroup", duration: 0.45, moves: [
     { actor: "et", position: at("et-lock-position"), asset: "et-lock-01", facing: "right" },
     { actor: "ms", position: at("ms-locked-target"), asset: "ms-locked-01", facing: "left" }
@@ -316,31 +317,31 @@ sprite("et", "et-water-sprayed-01"),
   spriteGroup(["et", "et-lock-06"], ["ms", "ms-locked-06"]),
   { type: "wait", duration: 0.22 },
   spriteGroup(["et", "et-lock-08"], ["ms", "ms-locked-08"]),
-  dialogue("ET", "我真的想象不到怎么会有那么抽象random的人"),
-  dialogue("MS", "啊你讲谁"),
-  dialogue("ET", "啧"),
+  dialogue("ET", "我真的想象不到怎么会有那么抽象random的人","assets/624/echo-portraits/et-portraits/08-soft-look.png"),
+  dialogue("MS", "啊你讲谁","assets/523/memory-portrait/01.png"),
+  dialogue("ET", "啧 顽皮","assets/624/echo-portraits/et-portraits/01-questioning.png"),
   { type: "moveGroup", duration: 0.35, moves: [
     { actor: "et", position: at("et-final-talk-position"), asset: "et-wait", facing: "right" },
     { actor: "ms", position: at("ms-final-talk-position"), asset: "ms-wait", facing: "left" }
   ] },
-  dialogue("ET", "你知道今天是四月五号吗"),
-  dialogue("ET", "清明节刚过，而且今年复活节也快到了。"),
-  dialogue("MS", "你哭过啊"),
-  dialogue("ET", "是啦 想起来一些伤心事"),
+  dialogue("ET", "你知道今天是四月五号吗","assets/624/echo-portraits/et-portraits/01-questioning.png"),
+  dialogue("ET", "清明节刚过，而且今年复活节也快到了。","assets/624/echo-portraits/et-portraits/01-questioning.png"),
+  dialogue("MS", "你哭过啊","assets/523/memory-portrait/02.png"),
+  dialogue("ET", "是啦 想起来一些伤心事","assets/624/echo-portraits/et-portraits/03-guilt-quiet.png"),
   { type: "checkpoint", id: "april-five-sad-thing" },
-  dialogue("MS", "开心吗"),
-  dialogue("ET", "开心啊 因为可以见到你~"),
-  dialogue("ET", "你们看她不回我"),
-  dialogue("MS", "啊 我要回什么 恭喜你？"),
+  dialogue("MS", "那你现在开心吗","assets/523/memory-portrait/01.png"),
+  dialogue("ET", "开心啊 因为可以见到你~","assets/624/echo-portraits/et-portraits/08-soft-look.png"),
+  dialogue("ET", "你们看她不回我","assets/624/echo-portraits/et-portraits/01-questioning.png"),
+  dialogue("MS", "啊 我要回什么 恭喜你？","assets/523/memory-portrait/01.png"),
   { type: "checkpoint", id: "april-five-happy-because-see-you" },
-  dialogue("ET", "跑步可以 要我背着重重的书包跑不可以"),
-  dialogue("MS", "那我帮你拿去给 faculty，书包不用背着跑。"),
-  dialogue("ET", "噢真的吗 这样就可以~"),
-  dialogue("ET", "明天早上还有 timetable 和 quiz，还是要回去。"),
+  dialogue("ET", "明天约跑步可以 要我背着重重的书包一起跑就不可以","assets/624/echo-portraits/et-portraits/01-questioning.png"),
+  dialogue("MS", "那我帮你拿去给 faculty，书包不用背着跑。","assets/523/memory-portrait/02.png"),
+  dialogue("ET", "噢真的吗 这样就可以~","assets/624/echo-portraits/et-portraits/01-questioning.png"),
+  dialogue("ET", "欸我明天早上还有 presentation 和 quiz，我还没读完。","assets/624/echo-portraits/et-portraits/01-questioning.png"),
   { type: "checkpoint", id: "april-five-quiz" },
   { type: "move", actor: "et", position: at("et-goodbye-position"), duration: 0.45, asset: "et-wait", facing: "right" },
   { type: "move", actor: "ms", position: at("ms-final-talk-position"), duration: 0.3, asset: "ms-wait", facing: "left" },
-  dialogue("ET", "我不行了ms 我要去冲凉了"),
+  dialogue("ET", "我不行了ms 我要去冲凉了","assets/624/echo-portraits/et-portraits/03-guilt-quiet.png"),
   { type: "move", actor: "et", position: at("et-exit-position"), duration: 0.75, asset: "et-walk", facing: "right" },
   { type: "fade", actors: ["ms", "et", "st", "angela"], duration: 0.5 },
   { type: "despawn", actor: "ms" },
@@ -357,20 +358,20 @@ export const april05EchoAnchors: Record<April05EchoId, April05EchoAnchorKey> = {
 
 export const april05EchoActions: Record<April05EchoId, April05Action[]> = {
   "cat-echo": [
-    dialogue("ET", "我可以接受我主动靠近它 但是它不能主动靠近我"),
-    dialogue("ET", "你知道主动靠近和被靠近是不一样的吗"),
-    dialogue("MUJI", "昨天她讲过这句话。今天她自己下了楼。")
+    dialogue("ET", "我可以接受我主动靠近它 但是它不能主动靠近我","assets/624/echo-portraits/et-portraits/03-guilt-quiet.png"),
+    dialogue("ET", "你知道主动靠近和被靠近是不一样的吗","assets/624/echo-portraits/et-portraits/01-questioning.png"),
+    dialogue("MUJI", "昨天她讲过这句话。今天她自己下了楼。","assets/523/memory-portrait/01.png")
   ],
   bicycle: [
     dialogue("ST", "你们两个是好朋友吗"),
     dialogue("ST", "好朋友会摸头吗"),
-    dialogue("MUJI", "这是 ST 的看法，不是一个客观结论。")
+    dialogue("MUJI", "不知道，好像也不需要知道了")
   ],
   "phone-after-return": [
-    dialogue("ET", "真的过了很久啦 只是今天想起来发现还是会痛"),
-    dialogue("MS", "4月5号痛完了 还有6号7号要过"),
-    dialogue("MS", "等你长大了就懂了"),
-    dialogue("ET", "我明明比你大")
+    dialogue("ET", "真的过了很久啦 只是今天想起来发现还是会痛","assets/624/echo-portraits/et-portraits/03-guilt-quiet.png"),
+    dialogue("MS", "4月5号痛完了 还有6号7号要过","assets/523/memory-portrait/01.png"),
+    dialogue("MS", "等你长大了就懂了","assets/523/memory-portrait/01.png"),
+    dialogue("ET", "我明明比你大","assets/624/echo-portraits/et-portraits/01-questioning.png")
   ]
 };
 
