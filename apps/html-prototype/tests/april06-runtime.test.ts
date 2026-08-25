@@ -283,10 +283,10 @@ test("April 6 morning aftermath uses the canonical offscreen dialogue after the 
   const fadeIndex = april06EchoActions.findIndex((action) => action.type === "fade");
   const aftermath = april06EchoActions.slice(fadeIndex + 1).filter((action): action is Extract<typeof april06EchoActions[number], { type: "dialogue" }> => action.type === "dialogue");
   assert.deepEqual(aftermath, [
-    { type: "dialogue", speaker: "Ziqi", text: "今天不 monday blue 了咯" },
-    { type: "dialogue", speaker: "MS", text: "hehe 本来就不blue 你不懂昨天晚上发生了啥" },
-    { type: "dialogue", speaker: "Ziqi", text: "啥 快告诉我！" },
-    { type: "dialogue", speaker: "MS", text: "hehe" }
+    { type: "dialogue", speaker: "Ziqi", text: "今天不 monday blue 了咯", portrait: "assets/624/echo-portraits/group-echoes/01-morning-angela-st.png" },
+    { type: "dialogue", speaker: "MS", text: "hehe 本来就不blue 你不懂昨天晚上发生了啥", portrait: "assets/523/memory-portrait/02.png" },
+    { type: "dialogue", speaker: "Ziqi", text: "啥 快告诉我！", portrait: "assets/624/echo-portraits/group-echoes/01-morning-angela-st.png" },
+    { type: "dialogue", speaker: "MS", text: "hehe", portrait: "assets/523/memory-portrait/02.png" }
   ]);
 });
 

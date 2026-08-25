@@ -159,17 +159,17 @@ test("May23 optional memory keeps authored points and uses the shared Labis diar
   assert.equal(sharedChapterDiaryBookAssetPath, "assets/labis/book-with-ms-photos.png");
   const optionalLines = may23EchoDialogues["bus-stop-memory"];
   assert.deepEqual(optionalLines, [
-    { speaker: "MS", text: "明天你要去flying fox吗" },
-    { speaker: "ET", text: "我明天回家啦 又放你飞机了哈哈哈" },
-    { speaker: "MS", text: "靠背哦" },
-    { speaker: "MS", text: "去完再回" },
-    { speaker: "ET", text: "靠背哦" },
-    { speaker: "ET", text: "早八 巴士" },
-    { speaker: "MS", text: "靠北哦 sad" },
-    { speaker: "MEMORY", text: "后来朋友问我：\n“你没有提早跟她讲是吗？”" },
-    { speaker: "MEMORY", text: "我那时候想问，\n是我没提早讲吗。" },
-    { speaker: "MEMORY", text: "我原本就是因为她会去，\n才跟朋友约了这个活动。" },
-    { speaker: "MEMORY", text: "后来她不去了。\n我们也取消了。" }
+    { speaker: "MS", text: "明天你要去flying fox吗", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
+    { speaker: "ET", text: "我明天回家啦 又放你飞机了哈哈哈", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
+    { speaker: "MS", text: "靠背哦", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
+    { speaker: "MS", text: "去完再回", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
+    { speaker: "ET", text: "靠背哦", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
+    { speaker: "ET", text: "早八 巴士", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
+    { speaker: "MS", text: "靠北哦 sad", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
+    { speaker: "MEMORY", text: "后来朋友问我：\n“你没有提早跟她讲是吗？”", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
+    { speaker: "MEMORY", text: "我那时候想问，\n是我没提早讲吗。", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
+    { speaker: "MEMORY", text: "我原本就是因为她会去，\n才跟朋友约了这个活动。", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
+    { speaker: "MEMORY", text: "后来她不去了。\n我们也取消了。", portrait: "assets/523/memory-portrait/bus-stop-memory.png" }
   ]);
   const optionalActions = resolveMay23Actions(portrait, "echo", "bus-stop-memory");
   assert.equal(optionalActions.every((action) => action.type === "dialogue"), true);
