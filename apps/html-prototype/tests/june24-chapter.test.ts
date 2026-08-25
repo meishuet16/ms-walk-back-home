@@ -3,6 +3,7 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { chapterRegistry, forestEntries, routeForestEntry } from "../src/systems/ChapterRegistry.js";
+import { authoredRuntimeByScene } from "../src/systems/AuthoredChapterRegistry.js";
 import { createDiaryLibrary, forestNodesForMonth } from "../src/systems/DiaryLibrary.js";
 import { authoredChapterDiaryEntries } from "../src/fixtures/authoredDiaryEntries.js";
 import { june24Assets, june24Chapter, june24EchoDialogues, june24FrameRegistries, june24ReflectionChoices, resolveJune24Actions } from "../src/fixtures/june24Chapter.js";
@@ -132,9 +133,11 @@ test("June 24 table states retarget both actors to their authored anchors", () =
 
 test("June 24 authored interactions win over overlapping residue fallbacks", () => {
   assert.match(appSource, /this\.activeObject = availableInteraction\?\.id \?\? echoActive \?\? ""/);
-  assert.match(appSource, /"carrot-milk-memory": "june24-angela-st-echo"/);
-  assert.match(appSource, /"five-cent-memory": "june24-room-study-echo"/);
-  assert.match(appSource, /"xiaoba-memory": "june24-haircut-echo"/);
+  assert.deepEqual(authoredRuntimeByScene["624"]?.echoPortraitIds, {
+    "carrot-milk-memory": "june24-angela-st-echo",
+    "five-cent-memory": "june24-room-study-echo",
+    "xiaoba-memory": "june24-haircut-echo"
+  });
 });
 test("June 24 shares full replay progression while protecting first-completion contribution", () => {
   const first = startChapterMemoryExperience({
@@ -165,7 +168,7 @@ test("June 24 automatic trigger resets on re-entry and Echo Portraits are indepe
   assert.equal(first.allowed, true);
   session = resetChapterTriggerSession(first.session);
   assert.equal(consumeAutomaticChapterTrigger(session).allowed, true);
-  assert.match(appSource, /"624"[\s\S]*echoRequiresMainCompletion: false/);
+  assert.equal(authoredRuntimeByScene["624"]?.echoRequiresMainCompletion, false);
   assert.match(appSource, /private startEchoPortrait/);
   assert.match(appSource, /echo-portrait-next/);
 });
