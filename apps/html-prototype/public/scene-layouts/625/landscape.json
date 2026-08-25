@@ -1,0 +1,236 @@
+{
+  "sceneId": "625",
+  "label": "June 25 — So I Came",
+  "orientation": "landscape",
+  "asset": "assets/625/625-landscape.png",
+  "size": {
+    "w": 1672,
+    "h": 941
+  },
+  "spawn": {
+    "x": 1446.28,
+    "y": 701.045
+  },
+  "obstacles": [
+    {
+      "x": 0,
+      "y": 0,
+      "w": 1672,
+      "h": 23.525000000000002
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "w": 30.095999999999997,
+      "h": 941
+    },
+    {
+      "x": 1641.904,
+      "y": 0,
+      "w": 30.095999999999997,
+      "h": 941
+    },
+    {
+      "x": 0,
+      "y": 917.475,
+      "w": 1672,
+      "h": 23.525000000000002
+    },
+    {
+      "x": 0.8365074310395073,
+      "y": 36.58541738707419,
+      "w": 342.76,
+      "h": 381.105
+    },
+    {
+      "x": -104.45760658186781,
+      "y": -32.888937529770686,
+      "w": 409.64,
+      "h": 432.86
+    },
+    {
+      "x": -57.50262708714369,
+      "y": -58.78893947563118,
+      "w": 426.36,
+      "h": 263.48
+    },
+    {
+      "x": 53.51170599379296,
+      "y": 290.3914307952692,
+      "w": 217.36,
+      "h": 207.02
+    },
+    {
+      "x": 36.31935643683184,
+      "y": 301.3417388189032,
+      "w": 217.36,
+      "h": 188.20000000000002
+    },
+    {
+      "x": 1546.6000000000001,
+      "y": 451.68,
+      "w": 108.68,
+      "h": 263.48
+    },
+    {
+      "x": -33.90853333374693,
+      "y": 426.48530697976094,
+      "w": 133.76,
+      "h": 225.84
+    }
+  ],
+  "interactions": [
+    {
+      "id": "milk-residue",
+      "label": "milk-residue",
+      "x": 1414.512,
+      "y": 315.235,
+      "radius": 58
+    },
+    {
+      "id": "door-arrival",
+      "label": "door-arrival",
+      "x": 1297.472,
+      "y": 366.99,
+      "radius": 66
+    },
+    {
+      "id": "desk-memory",
+      "label": "desk-memory",
+      "x": 944.68,
+      "y": 334.055,
+      "radius": 58
+    },
+    {
+      "id": "cards-memory",
+      "label": "cards-memory",
+      "x": 916.2560000000001,
+      "y": 418.745,
+      "radius": 46
+    },
+    {
+      "id": "wardrobe-memory",
+      "label": "wardrobe-memory",
+      "x": 317.68,
+      "y": 663.405,
+      "radius": 68
+    },
+    {
+      "id": "hairdryer-memory",
+      "label": "hairdryer-memory",
+      "x": 1148.664,
+      "y": 512.845,
+      "radius": 48
+    },
+    {
+      "id": "bed-main-memory",
+      "label": "bed-main-memory",
+      "x": 593.56,
+      "y": 319.94,
+      "radius": 48
+    },
+    {
+      "id": "bed-night-memory",
+      "label": "bed-night-memory",
+      "x": 610.28,
+      "y": 442.27,
+      "radius": 44
+    },
+    {
+      "id": "bed-foot-morning-memory",
+      "label": "bed-foot-morning-memory",
+      "x": 627,
+      "y": 550.485,
+      "radius": 42
+    },
+    {
+      "id": "laundry-left-memory",
+      "label": "laundry-left-memory",
+      "x": 1128.6000000000001,
+      "y": 795.145,
+      "radius": 58
+    },
+    {
+      "id": "exit",
+      "label": "exit",
+      "x": 739.1551278557871,
+      "y": 836.478590224078,
+      "radius": 70
+    },
+    {
+      "id": "diary",
+      "label": "diary",
+      "x": 1438.0000758376432,
+      "y": 818.0000628553477,
+      "radius": 56
+    }
+  ],
+  "triggers": [
+    {
+      "id": "june25-bed-main-trigger",
+      "rect": {
+        "x": 610.28,
+        "y": 536.37,
+        "w": 150.48,
+        "h": 103.51
+      },
+      "chapterId": "june25-so-i-came",
+      "eventId": "june25-bed-main-memory",
+      "once": true
+    }
+  ],
+  "placementSlots": [],
+  "echoAnchors": {
+    "milk-residue": {
+      "x": 1414.512,
+      "y": 315.235,
+      "radius": 58
+    },
+    "door-arrival": {
+      "x": 1297.472,
+      "y": 366.99,
+      "radius": 66
+    },
+    "desk-memory": {
+      "x": 944.68,
+      "y": 334.055,
+      "radius": 58
+    },
+    "cards-memory": {
+      "x": 916.2560000000001,
+      "y": 418.745,
+      "radius": 46
+    },
+    "wardrobe-memory": {
+      "x": 317.68,
+      "y": 663.405,
+      "radius": 68
+    },
+    "hairdryer-memory": {
+      "x": 1148.664,
+      "y": 512.845,
+      "radius": 48
+    },
+    "bed-night-memory": {
+      "x": 610.28,
+      "y": 442.27,
+      "radius": 44
+    },
+    "bed-foot-morning-memory": {
+      "x": 627,
+      "y": 550.485,
+      "radius": 42
+    },
+    "laundry-left-memory": {
+      "x": 1128.6000000000001,
+      "y": 795.145,
+      "radius": 58
+    }
+  },
+  "anchors": {
+    "bed-main-memory": {
+      "x": 593.56,
+      "y": 319.94
+    }
+  }
+}

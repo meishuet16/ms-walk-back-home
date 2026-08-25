@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { CutsceneSystem, type CutsceneAction } from "../src/systems/CutsceneSystem.js";
 import {
+  renderMemoryPortraitSequenceBeat,
   renderMemoryDialogue,
   renderMemoryPortrait,
   resolveMemoryPortraitLayout
@@ -41,6 +42,27 @@ test("generic Memory Portrait resolves string and config portraits from viewport
   assert.equal("y" in portrait, false);
   assert.equal("anchor" in portrait, false);
   assert.equal("visualScale" in portrait, false);
+});
+
+test("portrait Memory Portraits use an 88 percent 16:9 presentation box while landscape stays unchanged", () => {
+  const portrait = resolveMemoryPortraitLayout("assets/example/full-background.png", {
+    orientation: "portrait",
+    width: 390,
+    height: 844
+  });
+  const landscape = resolveMemoryPortraitLayout("assets/example/full-background.png", {
+    orientation: "landscape",
+    width: 1280,
+    height: 720
+  });
+
+  assert.ok(Math.abs(portrait.width - 343.2) < 0.001);
+  assert.ok(Math.abs(portrait.height - 193.05) < 0.001);
+  assert.ok(Math.abs(portrait.width / portrait.height - 16 / 9) < 0.001);
+  assert.equal(portrait.fit, "contain");
+  assert.equal(portrait.position, "center-top");
+  assert.ok(Math.abs(landscape.width - 537.6) < 0.001);
+  assert.equal(landscape.height, 420);
 });
 
 test("generic Memory Portrait renders actual presentation markup without world coordinates", () => {
@@ -133,4 +155,27 @@ test("Echo compatibility wrapper delegates to the generic Memory Portrait render
   assert.match(echoSource, /renderMemoryPortrait/);
   assert.match(echoSource, /resolveMemoryPortraitLayout/);
   assert.doesNotMatch(echoSource, /return .*echo-portrait/);
+});
+
+test("portrait sequence renders a beat using the shared contained portrait renderer", () => {
+  const sequence = {
+    id: "example-sequence",
+    beats: [{
+      portrait: "assets/example/full-background.png",
+      dialogue: [{ speaker: "Memory", text: "first line" }]
+    }]
+  };
+  const markup = renderMemoryPortraitSequenceBeat(sequence, 0, 0, {
+    orientation: "landscape",
+    width: 1280,
+    height: 720
+  });
+  assert.match(markup, /src="assets\/example\/full-background\.png"/);
+  assert.match(markup, /object-fit:contain/);
+  assert.match(markup, /data-action="portrait-sequence-next"/);
+});
+
+test("portrait sequence buttons use the app click dispatcher to advance the sequence", () => {
+  assert.match(appSource, /action === "portrait-sequence-next"/);
+  assert.match(appSource, /advanceAuthoredPortraitSequence/);
 });

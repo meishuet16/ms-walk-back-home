@@ -6,6 +6,7 @@ import { april05Assets, april05Chapter, april05EchoActions, april05MainMemoryAct
 import { april06Assets, april06Chapter, april06EchoActions, april06MainMemoryActions, april06ReflectionChoices, resolveApril06Actions } from "../src/fixtures/april06Chapter.js";
 import { may23Assets, may23Chapter, may23EchoAnchors, may23ReflectionChoices, resolveMay23Actions } from "../src/fixtures/may23Chapter.js";
 import { june24Assets, june24Chapter, june24EchoDialogues, june24ReflectionChoices, resolveJune24Actions } from "../src/fixtures/june24Chapter.js";
+import { june25Chapter, june25DiaryEntry, june25EchoAvailability, june25EchoPortraitSequenceIds, june25PortraitSequences, june25ReflectionChoices } from "../src/fixtures/june25Chapter.js";
 import { chapterRegistry, forestEntries, routeForestEntry } from "../src/systems/ChapterRegistry.js";
 import type { SceneLayout } from "../src/systems/SceneLayouts.js";
 
@@ -18,7 +19,7 @@ function loadLayout(sceneId: string, orientation: "landscape" | "portrait" = "la
 test("all current authored scenes preserve their independent runtime contracts", async () => {
   const { authoredRuntimeByScene } = await loadRegistry();
 
-  assert.deepEqual(Object.keys(authoredRuntimeByScene).sort(), ["405", "406", "523", "624"]);
+  assert.deepEqual(Object.keys(authoredRuntimeByScene).sort(), ["405", "406", "523", "624", "625"]);
 
   assert.equal(authoredRuntimeByScene["405"]?.chapter, april05Chapter);
   assert.equal(authoredRuntimeByScene["405"]?.chapter.id, "april05-come-down");
@@ -66,6 +67,26 @@ test("all current authored scenes preserve their independent runtime contracts",
   assert.equal(authoredRuntimeByScene["624"]?.echoPortraitDialogues, june24EchoDialogues);
   assert.equal(authoredRuntimeByScene["624"]?.triggerId, "june24-table-arrival");
   assert.equal(authoredRuntimeByScene["624"]?.mainInteractionId, "table-memory");
+
+  assert.equal(authoredRuntimeByScene["625"]?.chapter, june25Chapter);
+  assert.equal(authoredRuntimeByScene["625"]?.reflectionChoices, june25ReflectionChoices);
+  assert.deepEqual(authoredRuntimeByScene["625"]?.portraitSequences, june25PortraitSequences);
+  assert.deepEqual(authoredRuntimeByScene["625"]?.echoPortraitSequenceIds, june25EchoPortraitSequenceIds);
+  assert.deepEqual(authoredRuntimeByScene["625"]?.echoAvailability, june25EchoAvailability);
+  assert.equal(authoredRuntimeByScene["625"]?.mainPortraitSequenceId, "june25-main");
+  assert.equal(authoredRuntimeByScene["625"]?.mainInteractionId, "bed-main-memory");
+  assert.equal(authoredRuntimeByScene["625"]?.triggerId, "june25-bed-main-trigger");
+});
+
+test("June 25 uses the canonical Section 7 diary body and shared diary asset contract", async () => {
+  const { authoredRuntimeByScene } = await loadRegistry();
+  const runtime = authoredRuntimeByScene["625"];
+  assert.equal(june25DiaryEntry.chapterId, june25Chapter.id);
+  assert.equal(june25DiaryEntry.body.split("\n\n")[0], "06.25 · She Really Came");
+  assert.match(june25DiaryEntry.body, /只是有一天，在完全可以不来的时候，你还是自己走来了。/);
+  assert.doesNotMatch(june25DiaryEntry.body, /raw June 25|source diary/i);
+  assert.equal(runtime?.chapter.diaryEntryId, june25DiaryEntry.id);
+  assert.equal(runtime?.chapter.runtimeScene, "625");
 });
 
 test("authored registry resolvers delegate unchanged for main and echo modes", async () => {
@@ -125,6 +146,29 @@ test("Scene 624 retains three distinct physical, anchor, and semantic Echo route
   assert.equal(runtime.echoPortraitDialogues?.["june24-angela-st-echo"], june24EchoDialogues["june24-angela-st-echo"]);
   assert.equal(runtime.echoPortraitDialogues?.["june24-room-study-echo"], june24EchoDialogues["june24-room-study-echo"]);
   assert.equal(runtime.echoPortraitDialogues?.["june24-haircut-echo"], june24EchoDialogues["june24-haircut-echo"]);
+});
+
+test("624 keeps its existing single-portrait authored runtime fields", async () => {
+  const { authoredRuntimeByScene } = await loadRegistry();
+  const runtime = authoredRuntimeByScene["624"];
+  assert.deepEqual(runtime?.echoPortraitIds?.["carrot-milk-memory"], "june24-angela-st-echo");
+  assert.equal(runtime?.portraitSequences, undefined);
+});
+
+test("authored Echo availability is resolved per interaction and main completion", async () => {
+  const { authoredEchoIsAvailable } = await loadRegistry();
+  const runtime = {
+    echoRequiresMainCompletion: false,
+    echoAvailability: {
+      "bed-night-memory": { requiresMainCompletion: true },
+      "door-arrival": { requiresMainCompletion: false }
+    }
+  };
+
+  assert.equal(authoredEchoIsAvailable(runtime, "bed-night-memory", false), false);
+  assert.equal(authoredEchoIsAvailable(runtime, "bed-night-memory", true), true);
+  assert.equal(authoredEchoIsAvailable(runtime, "door-arrival", false), true);
+  assert.equal(authoredEchoIsAvailable(runtime, "unknown-echo", false), true);
 });
 
 test("importing AuthoredChapterRegistry does not mutate fixture data", async () => {

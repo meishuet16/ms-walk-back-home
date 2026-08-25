@@ -1,0 +1,360 @@
+import type { Choice, ChapterDefinition, DiaryEntry } from "../types.js";
+import type { CutsceneAction } from "../systems/CutsceneSystem.js";
+import type { AuthoredPortraitSequence } from "../systems/MemoryPortraitPresentation.js";
+import type { SceneLayout } from "../systems/SceneLayouts.js";
+
+const portrait = (filename: string): string => `assets/625/memory-portrait/${filename}`;
+const memory = (text: string) => ({ speaker: "Memory", text });
+const dialogue = (speaker: string, text: string) => ({ speaker, text });
+const beat = (filename: string, ...lines: Array<{ speaker: string; text: string }>) => ({ portrait: portrait(filename), dialogue: lines });
+
+export const june25PortraitSequences: Record<string, AuthoredPortraitSequence> = {
+  "june25-main": {
+    id: "june25-main",
+    beats: [
+      beat("07A-locked.png",
+        memory("她讲休息一下，\n躺一下玩手机。"),
+        memory("我还在想她今晚是不是睡地上。"),
+        memory("我已经准备好要拿yoga mat给她躺了的时候，\n下一秒她直接躺在我旁边。"),
+        dialogue("MS", "！"),
+        memory("然后我看着她开始刷手机。\n\n够多东西刷哦。\n我干脆也看她刷了。\n结果她突然换姿势"),
+        dialogue("MS", "这样拿我就看不到手机屏幕了"),
+        dialogue("ET", "owhh sorry。。。")
+      ),
+      beat("07B-realize.png",
+        dialogue("ET", "？？\n不对啊\n你看我手机干嘛"),
+        dialogue("MS", "无聊啊"),
+        dialogue("ET", "读你的quiz啦"),
+        dialogue("MS", "我等下3am才读")
+      ),
+      beat("07C-speechless.png",
+        dialogue("ET", "服了"),
+        memory("但是她还是转回来给我看了。"),
+        dialogue("MS", "你要睡哪里"),
+        dialogue("ET", "不懂"),
+        dialogue("MS", "你要睡里面还是外面\n你会掉下去吗"),
+        dialogue("ET", "emmm我也可以睡地上"),
+        dialogue("MS", "不用啦\n塞得下啦"),
+        memory("然后我给她睡里面。\n我躺外面。"),
+        memory("我拿一堆娃娃压着她，\n再给她多一件被。"),
+        dialogue("ET", "要窒息了咯"),
+        dialogue("ET", "好久没抱家里的娃娃了"),
+        dialogue("MS", "拿去抱拿去抱"),
+        dialogue("MS", "不哭不哭"),
+        dialogue("ET", "什么鬼"),
+        dialogue("MS", "想哭就哭啊\n不要勉强"),
+        dialogue("ET", "我现在没有要哭\n昨天就有"),
+        dialogue("MS", "所以你昨天哭过了？"),
+        dialogue("ET", "对啊"),
+        dialogue("MS", "没事你现在也可以哭\n把未来的哭掉\n明天就不会哭了"),
+        dialogue("ET", "神经病"),
+        memory("我把脚搭在她腿上很久了，\n她才发现。"),
+        dialogue("ET", "你脚搭在我腿上诶"),
+        dialogue("MS", "哦那我放你腰上"),
+        dialogue("ET", "去你的")
+      ),
+      beat("08A-late-night-conversation.png",
+        memory("过后我们不懂聊什么，\n聊到她为什么那么累。"),
+        memory("她本来要睡了，\n一直被我忽悠到一点多。"),
+        dialogue("ET", "我其实是一个会敏感内耗的人。"),
+        dialogue("ET", "所以如果可以不社交，\n我不会去。"),
+        dialogue("ET", "因为我会努力让一个社交圈里的每个人感到开心。"),
+        dialogue("MS", "你不应该逼自己那么累。"),
+        dialogue("MS", "证明自己可以了，\n然后呢。"),
+        dialogue("MS", "偶尔要听从自己身体的求救。"),
+        dialogue("MS", "不要虐待自己。\n不要太逼自己。"),
+        dialogue("MS", "要允许自己休息一下。"),
+        dialogue("MS", "为什么你可以让别人不要那么累，\n不可以允许自己不要那么累呢。")
+      ),
+      beat("08B.png",
+        dialogue("ET", "哇佬"),
+        dialogue("ET", "我本来没觉得很累的"),
+        dialogue("ET", "你现在害我开始这样想了"),
+        dialogue("MS", "哈哈哈哈不要哭不要哭"),
+        memory("最近她真的累睡着了。"),
+        dialogue("ET", "早点睡"),
+        dialogue("MS", "你5am起来\n还会看到我醒着的"),
+        dialogue("ET", "小心脖子痛"),
+        dialogue("MS", "睡不睡都疼\n无所谓"),
+        dialogue("ET", "你现在也在虐待自己"),
+        dialogue("MS", "没事啦\n心脏累了自己会休息的"),
+        dialogue("ET", "。。。")
+      )
+    ]
+  },
+  "june25-milk": {
+    id: "june25-milk",
+    beats: [beat("01-waiting-with-milk.png",
+      memory("我饿了，\n就去外面蹲着喝牛奶看天空。"),
+      memory("我祈祷不要下雨。"),
+      memory("我希望她真的可以走向我一次。")
+    )]
+  },
+  "june25-door": {
+    id: "june25-door",
+    beats: [beat("02-door-arrival.png",
+      dialogue("MS", "我靠 牛逼"),
+      dialogue("ET", "什么"),
+      dialogue("MS", "你真的走路来meh"),
+      dialogue("ET", "肯定啦\n我不是讲我考试meh\n考完试我就从D06走路来了\n还好啦 不会很远\n你快点先选一杯你要的tealive喝"),
+      dialogue("MS", "我靠我才讲我很饿\n下一秒就天降免费tealive\n天降天使啊")
+    )]
+  },
+  "june25-desk": {
+    id: "june25-desk",
+    beats: [
+      beat("03-desk-and-bed.png",
+        dialogue("ET", "你真的一直躺吗 \n不用做东西吗"),
+        dialogue("MS", "我今天不想做\n忙又太忙\n无聊起来又太废哦"),
+        memory("然后我们继续自己做自己的。\n\n我继续躺着玩手机。\n偶尔抬头看她做东西。"),
+        dialogue("ET", "我真的来这里做功课的勒。\n因为你叫我来。\n所以我就来了。\n你不可以嫌我kacau哦。\n我真的等做完了才走的哦。"),
+        dialogue("MS", "哪里会kacau哦\n你不要走都可以。\n明天直接去上课。"),
+        dialogue("ET", "我现在就一直在kacau了啊\n我一直跟你讲话\n我的歌也很吵"),
+        dialogue("MS", "蛤还好吧")
+      ),
+      beat("04-conversation.png",
+        dialogue("ET", "你最近好吗"),
+        dialogue("MS", "蛤 不好\n我的脖子都这样了"),
+        dialogue("ET", "只有身体吗\nmental health也要注意了"),
+        dialogue("MS", "已经绝望了"),
+        dialogue("ET", "我可以跟你讲我最近发生了什么事"),
+        dialogue("MS", "什么事"),
+        dialogue("ET", "你想听吗"),
+        memory("我立马从床上爬起来坐到她面前。"),
+        dialogue("MS", "包的啊\n我很有兴趣\n来来来快点跟我讲什么事"),
+        memory("她说自己作为姐姐觉得很愧疚，study week 想回家，也在想要不要参加 final PALAPES dinner。"),
+        dialogue("MS", "你不用把别人的整个人生都扛在自己身上。"),
+        dialogue("ET", "我不介意把我的人生跟我弟弟绑在一起。"),
+        dialogue("ET", "你听了不要觉得有负担。"),
+        dialogue("MS", "不会打扰啦")
+      )
+    ]
+  },
+  "june25-wardrobe": {
+    id: "june25-wardrobe",
+    beats: [beat("05-wardrobe.png",
+      memory("MS挑了一套蜡笔小新上衣\n和粉色蜡笔小新短裤给她。"),
+      dialogue("MS", "哇你一身蜡笔小新很好笑 很可爱\n帮你拍起来记录一下哈哈哈"),
+      dialogue("ET", "你最好不要流传出去。\n不然我就不是et了。"),
+      dialogue("MS", "怎么可能流传出去。"),
+      dialogue("MS", "hehe这是et自己选的睡衣。\n她很喜欢"),
+      dialogue("ET", "屁。\n我是被迫的。\n只有蜡笔小新给我选。")
+    )]
+  },
+  "june25-hairdryer": {
+    id: "june25-hairdryer",
+    beats: [beat("06-hairdryer.png",
+      memory("我让她先吹干头发。\n\n我看她还在做功课，\n就灵机一动帮她吹。"),
+      memory("她不好意思，\n想抢回去自己吹。\n\n我不理她。\n继续帮她吹。"),
+      dialogue("ET", "你是不是专业的"),
+      dialogue("ET", "差不多就好了"),
+      memory("我不管。\n继续吹。\n\n偶尔发丝掉到她耳边，\n我也轻轻帮她撩起来。"),
+      dialogue("ET", "我来你这里好像来一日游那样。\n\n单凭帮我吹头发这一点\n就可以收钱了。"),
+      memory("我笑而不语。\n顺手薅几下她的刘海"),
+      dialogue("ET", "你就是想趁机拍我头吧"),
+      dialogue("MS", "厉害嘞\n我下次帮你洗"),
+      dialogue("ET", "这就不用了\n你帮我吹头发就很离谱了"),
+      dialogue("MS", "会吗"),
+      dialogue("ET", "平时朋友会帮忙吹头发吗")
+    )]
+  },
+  "june25-cards": {
+    id: "june25-cards",
+    beats: [beat("echo-cards.png",
+      memory("10pm那样，\n她差不多做好了。"),
+      memory("她说要跟我玩扑克牌。"),
+      memory("她自学了不懂什么塔罗算牌，\n然后给我算什么男生运女生运。"),
+      memory("最后算完了，\n要我转一毛钱工钱。"),
+      dialogue("MS", "那你刚才说女生运里面旺我的\n可以叫她转钱给我吗"),
+      dialogue("ET", "我不懂\n你问看"),
+      dialogue("MS", "就是你啊"),
+      dialogue("ET", "哇靠")
+    )]
+  },
+  "june25-night": {
+    id: "june25-night",
+    beats: [beat("09-night.png",
+      memory("然后她睡了。"),
+      memory("后半夜感觉她很多动作。\n睡相有点不老实。"),
+      memory("我一直帮她盖好被子。"),
+      memory("她有好几次一个大翻身朝我靠过来，\n脸正对着我的肩膀。"),
+      memory("都almost贴着我了。"),
+      memory("应该是因为外面走廊太亮了。\n她在找一个地方遮挡。"),
+      memory("可是她每次靠近的时候，\n我都会很紧张。"),
+      memory("我会很想看她的脸，\n可是又怕她突然醒来。"),
+      memory("我只好保持同一个姿势，\n维持了一整夜。"),
+      memory("她中间还会讲几句梦话"),
+      memory("我想推她。\n\n可是不敢。"),
+      memory("最后我真的整夜没睡。")
+    )]
+  },
+  "june25-morning": {
+    id: "june25-morning",
+    beats: [
+      beat("echo-morning A.png",
+        memory("5am她的闹钟响了。"),
+        memory("她起来关掉继续睡。"),
+        dialogue("ET", "我靠你真的没睡啊\n不懂在做什么"),
+        memory("然后每十分钟又响一次。"),
+        memory("到6am我有点无语。"),
+        dialogue("MS", "你真的不用起来吗"),
+        dialogue("ET", "几点了"),
+        dialogue("MS", "6am"),
+        dialogue("MS", "你还要睡吗"),
+        dialogue("ET", "我想"),
+        dialogue("MS", "可是可以吗")
+      ),
+      beat("echo-morning B.png",
+        memory("然后她才起来准备presentation。\n\n又是她坐在桌子前。\n我躺在床上看她做牛马。"),
+        dialogue("ET", "你。。。\n\n算了我不要念你了"),
+        dialogue("MS", "什么"),
+        dialogue("ET", "你酱紫的睡眠哪里可以"),
+        dialogue("MS", "唉就是睡不着啊")
+      )
+    ]
+  },
+  "june25-laundry": {
+    id: "june25-laundry",
+    beats: [beat("echo-left.png",
+      memory("最后我7am睡着一会儿。\n\n她出门去上课的时候，\n我才醒。"),
+      memory("她穿我的衬衫去present。\n有点小搞笑。"),
+      memory("醒来看手机才发现她走时发了几条信息"),
+      dialogue("ET", "先走了哦\n早上睡觉的人"),
+      dialogue("ET", "肮脏衣服我就没带回去了\n放在旁边的篮子里了"),
+      memory("仿佛做了一场梦\n有点不真实"),
+      memory("早上睡醒以后，\n房间又只是房间了。")
+    )]
+  }
+};
+
+export const june25EchoPortraitSequenceIds: Record<string, string> = {
+  "milk-residue": "june25-milk",
+  "door-arrival": "june25-door",
+  "desk-memory": "june25-desk",
+  "cards-memory": "june25-cards",
+  "wardrobe-memory": "june25-wardrobe",
+  "hairdryer-memory": "june25-hairdryer",
+  "bed-night-memory": "june25-night",
+  "bed-foot-morning-memory": "june25-morning",
+  "laundry-left-memory": "june25-laundry"
+};
+
+export const june25EchoAvailability: Record<string, { requiresMainCompletion?: boolean }> = {
+  "milk-residue": { requiresMainCompletion: false },
+  "door-arrival": { requiresMainCompletion: false },
+  "desk-memory": { requiresMainCompletion: false },
+  "cards-memory": { requiresMainCompletion: false },
+  "wardrobe-memory": { requiresMainCompletion: false },
+  "hairdryer-memory": { requiresMainCompletion: false },
+  "bed-night-memory": { requiresMainCompletion: true },
+  "bed-foot-morning-memory": { requiresMainCompletion: false },
+  "laundry-left-memory": { requiresMainCompletion: false }
+};
+
+export const june25EchoAnchors: Record<string, string> = {
+  "milk-residue": "milk-residue",
+  "door-arrival": "door-arrival",
+  "desk-memory": "desk-memory",
+  "cards-memory": "cards-memory",
+  "wardrobe-memory": "wardrobe-memory",
+  "hairdryer-memory": "hairdryer-memory",
+  "bed-night-memory": "bed-night-memory",
+  "bed-foot-morning-memory": "bed-foot-morning-memory",
+  "laundry-left-memory": "laundry-left-memory"
+};
+
+export const june25Assets = {};
+
+export function resolveJune25Actions(_layout: SceneLayout, _mode: "main" | "echo", _echoId = ""): CutsceneAction[] {
+  return [];
+}
+
+const choice = (id: string, label: string, effects: Choice["effects"], response: string): Choice => ({ id, label, effects, response });
+
+export const june25ReflectionChoices: Array<{ id: string; prompt: string; choices: Choice[] }> = [
+  {
+    id: "june25-reflection-1",
+    prompt: "有些人走来，\n并不是因为非来不可。",
+    choices: [
+      choice("june25-reflection-1-a", "可她还是来了。", { acceptance: 1, closeness: 1 }, "门响的时候，\n她真的站在那里。"),
+      choice("june25-reflection-1-b", "也许只是一个普通的晚上。", { acceptance: 1, honesty: 1 }, "也可以只是这样。\n她来做功课，\n后来天亮了。"),
+      choice("june25-reflection-1-c", "后来记住的，\n反而都是很小的事。", { companionship: 1, honesty: 1 }, "两杯饮料。\n一支吹风筒。\n五点响起来的闹钟。")
+    ]
+  }
+];
+
+export const june25Chapter: ChapterDefinition = {
+  id: "june25-so-i-came",
+  diaryEntryId: "authored-diary-june25-so-i-came",
+  runtimeScene: "625",
+  date: "2026-06-25",
+  title: "06.25 · 所以我就来了。",
+  mood: "an ordinary night that did not become ordinary",
+  weather: "quiet afternoon into morning",
+  location: "the room",
+  characters: ["Muji", "MS", "ET"],
+  objects: ["milk", "Tealive", "bed", "wardrobe", "hairdryer", "playing cards", "laundry"],
+  evidence: ["authored-625-portrait-scene-layout", "authored-625-landscape-scene-layout", "june25-approved-memory-portraits"],
+  dialogue: [],
+  canonicalClosure: {
+    historicalEventId: "june25-bed-main-memory",
+    lines: ["那晚没有发生什么需要被命名的事。", "只是天亮以后，房间里多了一篮没带走的衣服。"]
+  },
+  reflectionQuotes: [
+    { id: "june25-accepting", tone: "accepting", preference: { acceptance: 1, closeness: 1 }, lines: ["她本来有很多事情要做。", "后来门还是响了。"] },
+    { id: "june25-holding", tone: "holding", preference: { closeness: 1, companionship: 1 }, lines: ["后来有些话已经记不清了。", "倒还记得两杯饮料，\n一支吹风筒，\n和五点响起来的闹钟。"] },
+    { id: "june25-rewriting", tone: "rewriting", preference: { honesty: 1, acceptance: 1 }, lines: ["那晚没有发生什么需要被命名的事。", "只是天亮以后，\n房间里多了一篮没带走的衣服。"] },
+    { id: "june25-not-ready", tone: "not-ready", preference: { distance: 1, acceptance: 1 }, lines: ["早上以后，", "房间又只是房间了。"] }
+  ]
+};
+
+export const june25DiaryEntry: DiaryEntry = {
+  id: "authored-diary-june25-so-i-came",
+  source: "authored",
+  date: "2026-06-25",
+  title: "06.25 · She Really Came",
+  body: [
+    "06.25 · She Really Came",
+    "那天下午我一直在看会不会下雨。你说，等考试结束、录完 group project 的 video 就来。我嘴上还是不太信，心里却一直等。后来我一个人蹲在宿舍外面喝牛奶，看着天，偷偷希望雨不要落下来。",
+    "我那时候想得很简单。只是希望这一次，不是我走过去。希望你可以自己走来一次。",
+    "后来真的有人敲门。",
+    "我拿着手机去开门，门外站着的是你。背着很重的电脑 bag，手上还捧着两杯 Tealive。你说考试结束以后，就从 D06 一路走过来了。",
+    "我到现在都还记得自己那一瞬间有多意外。不是因为那两杯饮料，也不是因为你走了多远。只是有一件我已经不太敢期待的事情，忽然很普通地发生了。",
+    "你真的走来了。",
+    "后来你坐在我的桌子前做功课，我躺在床上玩手机。偶尔抬头看你，你就在那边开着电脑，放自己的歌。我们没有一直讲话，也没有特地安排要做什么。你只是说，因为我叫你来，所以你就来了。还很认真地强调，你会做完东西才走。",
+    "那时候我突然觉得，原来有些陪伴可以很安静。不是一直要聊天，不是一直要制造特别的瞬间。一个人做自己的事，另一个人也做自己的事。只要知道对方还在那里，好像就已经够了。",
+    "后来你忽然问我最近好吗。聊着聊着，你说了一句，你可以跟我讲最近发生了什么事。然后又问，我想不想听。",
+    "我从床上坐起来。",
+    "那天我第一次听见很多以前不知道的事情。你说家里的事，说弟弟，说你不知道该怎么做，说自己很愧疚。你一直觉得自己应该再多做一点，好像只要做得够多，就可以把所有人的生活都一起撑住。",
+    "我记得自己一直告诉你，不要把全部责任都往自己身上放。你和别人的人生不是同一条线。你可以关心，可以陪，可以很爱一个人，可是你不需要因为爱，就负责替他把所有路都走完。",
+    "现在回头想，那些话其实也像是在说给另一个人听。",
+    "你一直很会照顾别人，却好像不太会允许自己累。你会为了不让别人失望，把社交里的每个人都顾好；会为了证明自己可以，继续参加那些已经把身体弄得很疲惫的事情。后来我问你，证明了以后呢。你安慰别人不要那么累的时候很容易，为什么轮到自己就不肯。",
+    "你最后有点无奈地说，本来没有觉得那么累，被我讲到开始觉得累了。",
+    "我那时候只是笑。其实心里很心疼。",
+    "再后来已经很晚了。你本来说要回去，最后却真的留下来。衣服、毛巾、牙刷、睡衣，全都临时从我的房间里凑。你一直说不好意思，觉得用了我的东西很麻烦。",
+    "我说，我不是别人。",
+    "现在想起来，这句话好像比我当时以为的重一点。",
+    "后来你洗完澡，穿着那套很荒唐的蜡笔小新睡衣，我帮你吹头发。你一直觉得很离谱，说平时哪有朋友会这样。后来你又帮我洗头，小心按着我脖子后面的伤口，不让它碰到水。",
+    "那一晚好像一直都是这种很小的事情。没有谁在告白，也没有谁突然变成另外一种关系。只是两个人很自然地替对方做一点点事。",
+    "睡觉的时候你躺在里面，我躺在外面。你抱着娃娃，说很久没有抱家里的娃娃了。后来你睡着以后一直翻身，偶尔靠得很近。我不敢动，也不敢看太久。",
+    "其实你离我只有一点点距离。",
+    "可我那天第一次很清楚地知道，距离近和拥有一个人，从来不是同一件事。",
+    "我整晚没有睡。不是因为发生了什么。恰恰是因为什么都没有发生。你只是睡在那里，偶尔翻身，偶尔说梦话，偶尔把被子踢掉。我就一次次替你盖回去。",
+    "天快亮的时候，你的闹钟一直响。你起来看我一眼，发现我真的一整晚没睡，还问我到底在做什么。",
+    "我也不知道。",
+    "可能只是舍不得睡。",
+    "因为那一天太普通了。普通到像以后还会有很多次。",
+    "可是后来才知道，有些很像日常的东西，未必真的会成为日常。",
+    "所以我记得你背着电脑走来的样子，记得两杯 Tealive，记得你坐在桌前做功课，记得那套很丑的睡衣，记得凌晨一直响的闹钟。",
+    "也记得那天我曾经很安静地想：",
+    "原来我真正想要的，好像一直都不是谁需要我。",
+    "只是有一天，在完全可以不来的时候，你还是自己走来了。"
+  ].join("\n\n"),
+  location: "the room",
+  weather: "quiet afternoon into morning",
+  memoryKind: "chapter",
+  mood: "quiet",
+  chapterId: "june25-so-i-came",
+  photos: [],
+  scrapbookLayout: { elements: [] }
+};

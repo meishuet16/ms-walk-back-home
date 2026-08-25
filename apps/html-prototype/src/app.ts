@@ -11,7 +11,7 @@ import type { ChapterProgress, Choice, DiaryEntry, DiaryLibraryState, DiaryMedia
 import { AudioManager } from "./systems/AudioManager.js";
 import { AccountManager } from "./systems/AccountManager.js";
 import { loadAppConfig } from "./systems/AppConfig.js";
-import { authoredRuntimeByScene, type AuthoredRuntimeDefinition } from "./systems/AuthoredChapterRegistry.js";
+import { authoredEchoIsAvailable, authoredRuntimeByScene, type AuthoredRuntimeDefinition } from "./systems/AuthoredChapterRegistry.js";
 import { chapterRegistry, forestEntries, routeForestEntry, type AuthoredForestEntry } from "./systems/ChapterRegistry.js";
 import { beginChapterVisit, consumeAutomaticChapterTrigger, createChapterTriggerSession, finishChapterWalkthrough, initialChapterProgress, markChapterMemoryRead, type ChapterTriggerSession } from "./systems/ChapterProgressManager.js";
 import { applyChapterExperienceChoice, currentRunProgress, startChapterMemoryExperience, type ChapterExperienceMode, type ChapterMemoryExperienceRun } from "./systems/ChapterMemoryExperience.js";
@@ -102,14 +102,21 @@ import {
   type DialoguePortraitRenderModel
 } from "./systems/PresentationRenderer.js";
 import { renderEchoPortrait, resolveEchoPortraitLayout } from "./systems/EchoPortraitPresentation.js";
-import { renderMemoryDialogue } from "./systems/MemoryPortraitPresentation.js";
+import { renderMemoryDialogue, renderMemoryPortraitSequenceBeat } from "./systems/MemoryPortraitPresentation.js";
 
 type ForestNode = (AuthoredForestEntry | DiaryForestMemory) & { radius?: number; placementSlotId?: string };
 type LabisDialogueLine = { speaker: string; text: string };
 type LabisDialogueAfter = "motor-choice" | "photo-choice" | "filter-choice" | "finish-echo" | "show-reflection" | "finish-chicken-cake" | null;
 type LabisOverlayMode = "dialogue" | "choice" | "vignette" | "reflection" | null;
 type March30OverlayMode = "dialogue" | "reflection" | "response" | "closing" | null;
-type AuthoredOverlayMode = "dialogue" | "choice" | "response" | "echo-portrait" | null;
+type AuthoredOverlayMode = "dialogue" | "choice" | "response" | "echo-portrait" | "portrait-sequence" | null;
+type AuthoredPortraitSequenceState = {
+  interactionId: string;
+  sequenceId: string;
+  beatIndex: number;
+  dialogueIndex: number;
+  mode: "main" | "echo";
+};
 type March30PortraitPropId = "gift" | "waterGun" | "ordinaryKeychain" | "phoneCharm";
 
 const propPortraitSheetDimensions: Record<March30PortraitPropId, { w: number; h: number }> = {
@@ -352,6 +359,9 @@ export class WalkBackHomeApp {
   private authoredOverlayMode: AuthoredOverlayMode = null;
   private authoredCheckpointId = "";
   private authoredReflectionResponse = "";
+  private authoredPortraitSequenceState: AuthoredPortraitSequenceState | null = null;
+  private authoredSequenceReflectionPending = false;
+  private authoredMainCompletionAvailable = false;
   private echoPortraitState: { interactionId: string; index: number } | null = null;
   private authoredImages = new Map<string, HTMLImageElement>();
   private sceneImages = new Map<string, HTMLImageElement>();
@@ -760,6 +770,7 @@ export class WalkBackHomeApp {
     if (action === "march30-dialogue-next") this.advanceMarch30Dialogue();
     if (action === "authored-dialogue-next") this.advanceAuthoredDialogue();
     if (action === "echo-portrait-next") this.advanceEchoPortrait();
+    if (action === "portrait-sequence-next") this.advanceAuthoredPortraitSequence();
     if (action === "authored-reflection-choice") this.chooseAuthoredChoice(target.dataset.choice ?? "");
     if (action === "authored-reflection-next") this.advanceAuthoredReflection();
     if (action === "march30-reflection-choice") this.chooseMarch30Reflection(target.dataset.choice ?? "");
@@ -2282,6 +2293,10 @@ export class WalkBackHomeApp {
       this.activeObject = "";
       return;
     }
+    if (this.authoredPortraitSequenceState) {
+      this.activeObject = "";
+      return;
+    }
     if (this.authoredCutscene) {
       if (this.authoredOverlayMode) {
         this.activeObject = "";
@@ -2304,28 +2319,126 @@ export class WalkBackHomeApp {
     });
     const primaryTriggerId = runtime.triggerId ?? "main-memory";
     if (trigger?.id === primaryTriggerId && trigger.chapterId === runtime.chapter.id && trigger.eventId === runtime.chapter.canonicalClosure.historicalEventId && trigger.once && this.consumeChapterTrigger(runtime.chapter.id)) {
-      this.startAuthoredCutscene("main", false);
+      this.startAuthoredMemory("main", false);
       return;
     }
     this.moveInLayout(x, y, dt, layout);
     const interaction = layout.interactions.find((item) => Math.hypot(this.player.x - item.x, this.player.y - item.y) < item.radius);
-    const mainComplete = this.completedMemoryEvents.has(runtime.chapter.canonicalClosure.historicalEventId);
-    const echoesAvailable = runtime.echoRequiresMainCompletion === false || mainComplete;
-    const echoActive = echoesAvailable
-      ? Object.keys(runtime.echoAnchors).find((id) => {
-          const point = this.authoredEchoPoint(layout, id);
-          return point ? Math.hypot(this.player.x - point.x, point.y - this.player.y) < point.radius : false;
-        })
-      : undefined;
-    const mainInteractionId = runtime.mainInteractionId ?? "main-memory-replay";
-    const optionalMemory = interaction?.id === "bus-stop-memory";
-    const availableInteraction = interaction && (optionalMemory || mainComplete || ["exit", "diary", "diary memory", "diary-memory", mainInteractionId].includes(interaction.id)) ? interaction : null;
+    const mainComplete = this.completedMemoryEvents.has(runtime.chapter.canonicalClosure.historicalEventId) || this.authoredMainCompletionAvailable;
+    const echoActive = Object.keys(runtime.echoAnchors).find((id) => {
+      if (!this.authoredEchoIsAvailable(runtime, id, mainComplete)) return false;
+      const point = this.authoredEchoPoint(layout, id);
+      return point ? Math.hypot(this.player.x - point.x, point.y - this.player.y) < point.radius : false;
+    });
+    const availableInteraction = interaction && (!this.isAuthoredEchoInteraction(runtime, interaction.id) || this.authoredEchoIsAvailable(runtime, interaction.id, mainComplete))
+      ? interaction
+      : null;
     this.activeObject = availableInteraction?.id ?? echoActive ?? "";
+  }
+
+  private isAuthoredEchoInteraction(runtime: AuthoredRuntimeDefinition, interactionId: string): boolean {
+    return Boolean(runtime.echoAnchors[interactionId] || runtime.echoPortraitIds?.[interactionId] || runtime.echoPortraitSequenceIds?.[interactionId]);
+  }
+
+  private authoredEchoIsAvailable(runtime: AuthoredRuntimeDefinition, interactionId: string, mainComplete: boolean): boolean {
+    return authoredEchoIsAvailable(runtime, interactionId, mainComplete);
+  }
+
+  private startAuthoredMemory(mode: "main" | "echo", replay: boolean, echoId = ""): void {
+    const runtime = this.authoredRuntimeForScene();
+    const sequenceId = mode === "main" ? runtime?.mainPortraitSequenceId : runtime?.echoPortraitSequenceIds?.[echoId];
+    if (runtime && sequenceId && runtime.portraitSequences?.[sequenceId]) {
+      this.startAuthoredPortraitSequence(mode, replay, echoId, sequenceId);
+      return;
+    }
+    this.startAuthoredCutscene(mode, replay, echoId);
+  }
+
+  private startAuthoredPortraitSequence(mode: "main" | "echo", replay: boolean, interactionId: string, sequenceId: string): void {
+    const runtime = this.authoredRuntimeForScene();
+    const sequence = runtime?.portraitSequences?.[sequenceId];
+    if (!runtime || !sequence?.beats.length) return;
+    this.authoredMode = mode;
+    this.authoredReplayMode = replay;
+    this.authoredPortraitSequenceState = { interactionId, sequenceId, beatIndex: 0, dialogueIndex: 0, mode };
+    this.authoredSequenceReflectionPending = false;
+    if (mode === "main") {
+      this.startChapterMemoryRun(runtime.chapter.id, runtime.chapter.canonicalClosure.historicalEventId, replay ? "manual-replay" : "automatic");
+    }
+    this.authoredOverlayMode = "portrait-sequence";
+    this.authoredCheckpointId = "";
+    this.authoredReflectionResponse = "";
+    this.overlay.classList.add("dialogue-open", "lightweight-presentation");
+    this.showAuthoredPortraitSequence();
+    this.showToast(mode === "main" ? (replay ? "Replaying " + runtime.chapter.title : "The " + runtime.chapter.date + " memory begins") : "A secondary memory surfaces.");
+  }
+
+  private showAuthoredPortraitSequence(): void {
+    const runtime = this.authoredRuntimeForScene();
+    const state = this.authoredPortraitSequenceState;
+    const sequence = state ? runtime?.portraitSequences?.[state.sequenceId] : undefined;
+    if (!state || !sequence) return this.finishAuthoredPortraitSequence(false);
+    const rendered = renderMemoryPortraitSequenceBeat(sequence, state.beatIndex, state.dialogueIndex, {
+      orientation: this.currentSceneLayout().orientation,
+      width: window.innerWidth,
+      height: window.innerHeight
+    });
+    if (!rendered) return this.finishAuthoredPortraitSequence(false);
+    this.overlay.innerHTML = rendered;
+    this.focusStage();
+  }
+
+  private advanceAuthoredPortraitSequence(): void {
+    const state = this.authoredPortraitSequenceState;
+    const runtime = this.authoredRuntimeForScene();
+    const sequence = state ? runtime?.portraitSequences?.[state.sequenceId] : undefined;
+    if (!state || !sequence) return;
+    const beat = sequence.beats[state.beatIndex];
+    if (!beat) return this.finishAuthoredPortraitSequence(true);
+    if (state.dialogueIndex + 1 < beat.dialogue.length) {
+      state.dialogueIndex += 1;
+      this.showAuthoredPortraitSequence();
+      return;
+    }
+    if (state.beatIndex + 1 < sequence.beats.length) {
+      state.beatIndex += 1;
+      state.dialogueIndex = 0;
+      this.showAuthoredPortraitSequence();
+      return;
+    }
+    this.finishAuthoredPortraitSequence(true);
+  }
+
+  private finishAuthoredPortraitSequence(showToast: boolean): void {
+    const runtime = this.authoredRuntimeForScene();
+    const state = this.authoredPortraitSequenceState;
+    const mode = state?.mode ?? this.authoredMode;
+    const replay = this.authoredReplayMode;
+    this.authoredPortraitSequenceState = null;
+    this.authoredOverlayMode = null;
+    this.overlay.classList.remove("dialogue-open", "lightweight-presentation");
+    this.overlay.innerHTML = "";
+    if (!runtime || !mode) return;
+    if (mode === "main" && !replay) this.authoredMainCompletionAvailable = true;
+    if (mode === "main" && !replay && runtime.reflectionChoices.length) {
+      this.authoredMode = "main";
+      this.authoredSequenceReflectionPending = true;
+      this.authoredCheckpointId = runtime.reflectionChoices[0].id;
+      this.showAuthoredChoice();
+      return;
+    }
+    this.authoredMode = null;
+    this.authoredReplayMode = false;
+    if (mode === "main") this.showToast(replay ? "The memory returns, unchanged." : "The main memory fades.");
+    else if (showToast) this.showToast("The secondary memory fades without adding another event.");
+    this.autosave();
   }
 
   private startAuthoredCutscene(mode: "main" | "echo", replay: boolean, echoId = ""): void {
     const runtime = this.authoredRuntimeForScene();
     if (!runtime) return;
+    this.authoredPortraitSequenceState = null;
+    this.authoredSequenceReflectionPending = false;
     const actions = runtime.resolveActions(this.currentSceneLayout(), mode, echoId);
     this.authoredCutscene = new CutsceneSystem(actions);
     this.authoredMode = mode;
@@ -2426,7 +2539,7 @@ export class WalkBackHomeApp {
 
   private showAuthoredChoice(): void {
     const runtime = this.authoredRuntimeForScene();
-    const checkpoint = this.authoredCutscene?.currentCheckpoint;
+    const checkpoint = this.authoredSequenceReflectionPending ? this.authoredCheckpointId : this.authoredCutscene?.currentCheckpoint;
     if (!runtime || !checkpoint || this.authoredOverlayMode === "choice") return;
 
     const point = runtime.reflectionChoices.find((item) => item.id === checkpoint);
@@ -2451,7 +2564,7 @@ export class WalkBackHomeApp {
     const runtime = this.authoredRuntimeForScene();
     const point = runtime?.reflectionChoices.find((item) => item.id === this.authoredCheckpointId);
     const choice = point?.choices.find((item) => item.id === choiceId);
-    if (!runtime || !choice || !this.authoredCutscene?.currentCheckpoint) return;
+    if (!runtime || !choice || (!this.authoredSequenceReflectionPending && !this.authoredCutscene?.currentCheckpoint)) return;
     this.recordChapterExperienceChoice(
       runtime.chapter.id,
       runtime.chapter.canonicalClosure.historicalEventId,
@@ -2470,6 +2583,24 @@ export class WalkBackHomeApp {
 
   private advanceAuthoredReflection(): void {
     if (this.authoredOverlayMode !== "response") return;
+    if (this.authoredSequenceReflectionPending) {
+      const runtime = this.authoredRuntimeForScene();
+      if (runtime) {
+        const reflection = resolveChapterReflection(runtime.chapter, this.currentRunProgressFor(runtime.chapter.id));
+        this.completeChapterMemoryRun(runtime.chapter.id, runtime.chapter.canonicalClosure.historicalEventId, reflection);
+        this.authoredSequenceReflectionPending = false;
+        this.authoredMode = null;
+        this.authoredReplayMode = false;
+        this.authoredCheckpointId = "";
+        this.authoredReflectionResponse = "";
+        this.overlay.classList.remove("dialogue-open", "lightweight-presentation");
+        this.overlay.innerHTML = "";
+        this.renderEndingQuote(runtime.chapter.date + " · " + runtime.chapter.location, runtime.chapter.title, reflection, runtime.chapter.canonicalClosure.lines);
+        this.audio.ping("ending");
+        this.autosave();
+      }
+      return;
+    }
     this.authoredCutscene?.resolveCheckpoint();
     this.authoredOverlayMode = null;
     this.authoredCheckpointId = "";
@@ -2510,10 +2641,13 @@ export class WalkBackHomeApp {
 
   private resetAuthoredRuntime(): void {
     this.echoPortraitState = null;
+    this.authoredPortraitSequenceState = null;
     this.authoredCutscene = null;
     this.authoredMode = null;
     this.authoredReplayMode = false;
     this.authoredOverlayMode = null;
+    this.authoredSequenceReflectionPending = false;
+    this.authoredMainCompletionAvailable = false;
     this.authoredCheckpointId = "";
     this.authoredReflectionResponse = "";
   }
@@ -2887,13 +3021,15 @@ export class WalkBackHomeApp {
       if (this.overlay.innerHTML.trim() && !this.authoredOverlayMode) return;
       if (this.authoredOverlayMode === "dialogue") return this.advanceAuthoredDialogue();
       if (this.authoredOverlayMode === "echo-portrait") return this.advanceEchoPortrait();
+      if (this.authoredOverlayMode === "portrait-sequence") return this.advanceAuthoredPortraitSequence();
       if (this.authoredOverlayMode === "response") return this.advanceAuthoredReflection();
       if (this.authoredOverlayMode === "choice" || this.authoredCutscene?.currentCheckpoint) return;
       if (this.authoredCutscene) return;
       if (this.activeObject === "exit") return this.returnToForest();
       if (this.activeObject === "diary" || this.activeObject === "diary memory" || this.activeObject === "diary-memory") return this.showChapterDiary(this.currentMemoryKey());
       if (this.activeObject === "bus-stop-memory") return this.startAuthoredCutscene("echo", false, "bus-stop-memory");
-      if (this.activeObject === (runtime.mainInteractionId ?? "main-memory-replay") || this.activeObject === "main-memory-replay" || this.activeObject === "mcd-drop-memory") return this.startAuthoredCutscene("main", true);
+      if (this.activeObject === (runtime.mainInteractionId ?? "main-memory-replay") || this.activeObject === "main-memory-replay" || this.activeObject === "mcd-drop-memory") return this.startAuthoredMemory("main", true, this.activeObject);
+      if (runtime.echoPortraitSequenceIds?.[this.activeObject]) return this.startAuthoredMemory("echo", false, this.activeObject);
       if (runtime.echoPortraitIds?.[this.activeObject]) return this.startEchoPortrait(this.activeObject);
       if (runtime.echoAnchors[this.activeObject]) return this.startAuthoredCutscene("echo", false, this.activeObject);
       if (this.activeObject === "roadside-empty-car") return this.inspectAuthoredResidue(this.activeObject);
@@ -3688,13 +3824,17 @@ export class WalkBackHomeApp {
   private drawAuthoredInteractionTells(layout: SceneLayout, cameraX: number, cameraY: number, scale: number, time: number): void {
     const runtime = this.authoredRuntimeForScene();
     if (!runtime) return;
+    const mainComplete = this.completedMemoryEvents.has(runtime.chapter.canonicalClosure.historicalEventId) || this.authoredMainCompletionAvailable;
     const echoPoints = Object.keys(runtime.echoAnchors)
+      .filter((id) => this.authoredEchoIsAvailable(runtime, id, mainComplete))
       .map((id) => {
         const point = this.authoredEchoPoint(layout, id);
         return point ? { id, x: point.x, y: point.y, radius: point.radius } : null;
       })
       .filter((point): point is { id: string; x: number; y: number; radius: number } => Boolean(point));
-    const interactionPoints = layout.interactions.map((item) => ({ id: item.id, x: item.x, y: item.y, radius: item.radius }));
+    const interactionPoints = layout.interactions
+      .filter((item) => !this.isAuthoredEchoInteraction(runtime, item.id) || this.authoredEchoIsAvailable(runtime, item.id, mainComplete))
+      .map((item) => ({ id: item.id, x: item.x, y: item.y, radius: item.radius }));
     const points = [...interactionPoints, ...echoPoints.filter((echo) => !interactionPoints.some((interaction) => Math.hypot(interaction.x - echo.x, interaction.y - echo.y) < 1))];
     for (const point of points) {
       const x = (point.x - cameraX) * scale;

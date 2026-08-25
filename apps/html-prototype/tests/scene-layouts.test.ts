@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { test } from "node:test";
 import { forestDoors } from "../src/fixtures/chapterPlan.js";
 import { labisBlockers, labisDiaryMemorySpot, labisMemoryTriggers, labisSpawn } from "../src/fixtures/labisMotorMemory.js";
@@ -12,6 +14,7 @@ import {
   selectSceneOrientation,
   setSceneLayout
 } from "../src/systems/SceneLayouts.js";
+import type { SceneLayout } from "../src/systems/SceneLayouts.js";
 
 test("portrait scene layouts preconfigure exact existing portrait artwork paths", () => {
   assert.deepEqual(scenePortraitAssetPaths(), {
@@ -65,6 +68,41 @@ test("landscape scene layouts preserve current authored coordinates", () => {
     forestDoors.map((door) => ({ kind: "chapter", x: door.x, y: door.y }))
   );
   assert.deepEqual(getSceneLayout("forest", "landscape").interactions, []);
+});
+
+test("625 preserves authored geometry while exporting the nine intended landscape Echo radii", () => {
+  const landscape = JSON.parse(readFileSync(join("public", "scene-layouts", "625", "landscape.json"), "utf8")) as SceneLayout;
+  assert.deepEqual(landscape.spawn, { x: 1446.28, y: 701.045 });
+  assert.deepEqual(landscape.interactions.map(({ id, x, y, radius }) => ({ id, x, y, radius })), [
+    { id: "milk-residue", x: 1414.512, y: 315.235, radius: 58 },
+    { id: "door-arrival", x: 1297.472, y: 366.99, radius: 66 },
+    { id: "desk-memory", x: 944.68, y: 334.055, radius: 58 },
+    { id: "cards-memory", x: 916.2560000000001, y: 418.745, radius: 46 },
+    { id: "wardrobe-memory", x: 317.68, y: 663.405, radius: 68 },
+    { id: "hairdryer-memory", x: 1148.664, y: 512.845, radius: 48 },
+    { id: "bed-main-memory", x: 593.56, y: 319.94, radius: 48 },
+    { id: "bed-night-memory", x: 610.28, y: 442.27, radius: 44 },
+    { id: "bed-foot-morning-memory", x: 627, y: 550.485, radius: 42 },
+    { id: "laundry-left-memory", x: 1128.6000000000001, y: 795.145, radius: 58 },
+    { id: "exit", x: 739.1551278557871, y: 836.478590224078, radius: 70 },
+    { id: "diary", x: 1438.0000758376432, y: 818.0000628553477, radius: 56 }
+  ]);
+  assert.deepEqual(Object.fromEntries(Object.entries(landscape.echoAnchors).map(([id, point]) => [id, point.radius])), {
+    "milk-residue": 58,
+    "door-arrival": 66,
+    "desk-memory": 58,
+    "cards-memory": 46,
+    "wardrobe-memory": 68,
+    "hairdryer-memory": 48,
+    "bed-night-memory": 44,
+    "bed-foot-morning-memory": 42,
+    "laundry-left-memory": 58
+  });
+
+  const portrait = JSON.parse(readFileSync(join("public", "scene-layouts", "625", "portrait.json"), "utf8")) as SceneLayout;
+  assert.deepEqual(portrait.spawn, { x: 562.4999709742476, y: 1014.0000337664598 });
+  assert.equal(portrait.interactions.find((item) => item.id === "bed-night-memory")?.radius, 56);
+  assert.equal(portrait.echoAnchors["bed-night-memory"]?.radius, 56);
 });
 
 test("orientation selection resolves portrait only for portrait viewports", () => {

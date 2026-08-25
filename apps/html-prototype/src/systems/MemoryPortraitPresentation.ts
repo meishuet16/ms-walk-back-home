@@ -37,6 +37,21 @@ export type MemoryDialogueRenderOptions = {
   action: string;
 };
 
+export type AuthoredPortraitDialogueLine = {
+  speaker: string;
+  text: string;
+};
+
+export type AuthoredPortraitBeat = {
+  portrait: DialoguePortrait;
+  dialogue: AuthoredPortraitDialogueLine[];
+};
+
+export type AuthoredPortraitSequence = {
+  id: string;
+  beats: AuthoredPortraitBeat[];
+};
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -58,9 +73,9 @@ export function resolveMemoryPortraitLayout(
   const viewportWidth = positiveOrFallback(viewport.width, 390);
   const viewportHeight = positiveOrFallback(viewport.height, 844);
   const isPortrait = viewport.orientation === "portrait";
-  const defaultWidth = isPortrait ? Math.min(viewportWidth * 0.82, 420) : Math.min(viewportWidth * 0.42, 620);
-  const defaultHeight = isPortrait ? Math.min(viewportHeight * 0.48, 520) : Math.min(viewportHeight * 0.72, 420);
+  const defaultWidth = isPortrait ? viewportWidth * 0.88 : Math.min(viewportWidth * 0.42, 620);
   const width = Math.min(positiveOrFallback(config.width ?? defaultWidth, defaultWidth), viewportWidth);
+  const defaultHeight = isPortrait ? width * (9 / 16) : Math.min(viewportHeight * 0.72, 420);
   const height = Math.min(positiveOrFallback(config.height ?? defaultHeight, defaultHeight), viewportHeight);
 
   return {
@@ -114,5 +129,30 @@ export function renderMemoryDialogue(options: MemoryDialogueRenderOptions): stri
     layout: resolveMemoryPortraitLayout(options.portrait, options.viewport),
     canAdvance: true,
     action: options.action,
+  });
+}
+
+export function renderMemoryPortraitSequenceBeat(
+  sequence: AuthoredPortraitSequence,
+  beatIndex: number,
+  dialogueIndex: number,
+  viewport: MemoryPortraitViewport,
+  action = "portrait-sequence-next"
+): string {
+  const beat = sequence.beats[beatIndex];
+  const line = beat?.dialogue[dialogueIndex];
+  if (!beat || !line) return "";
+  const layout = resolveMemoryPortraitLayout(beat.portrait, viewport);
+  return renderMemoryPortrait({
+    portrait: beat.portrait,
+    speaker: line.speaker,
+    text: line.text,
+    layout,
+    canAdvance: true,
+    action,
+    presentationClassName: "memory-portrait portrait-sequence",
+    presentationId: "portrait-sequence",
+    presentationData: "portrait-sequence",
+    nextButtonAriaLabel: "Continue"
   });
 }
