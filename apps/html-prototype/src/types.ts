@@ -8,6 +8,7 @@ export type TendencyKey =
   | "closeness"
   | "distance"
   | "honesty"
+  | "holding"
   | "concealment"
   | "companionship"
   | "intervention";

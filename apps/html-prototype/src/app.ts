@@ -14,7 +14,7 @@ import { loadAppConfig } from "./systems/AppConfig.js";
 import { authoredEchoIsAvailable, authoredRuntimeByScene, type AuthoredRuntimeDefinition } from "./systems/AuthoredChapterRegistry.js";
 import { chapterRegistry, forestEntries, routeForestEntry, type AuthoredForestEntry } from "./systems/ChapterRegistry.js";
 import { consumeAutomaticChapterTrigger, createChapterTriggerSession, type ChapterTriggerSession } from "./systems/ChapterProgressManager.js";
-import { applyChapterExperienceChoice, currentRunReflectionInput, markChapterDiaryRead, markChapterEchoDiscovered, markChapterMainCompleted, resolveChapterRunReflection, startChapterMemoryExperience, type AuthoredChapterRun, type ChapterExperienceMode, type ChapterReflectionInput } from "./systems/ChapterMemoryExperience.js";
+import { applyChapterExperienceChoice, currentRunReflectionInput, markChapterDiaryRead, markChapterEchoDiscovered, markChapterMainCompleted, nextChapterReflectionPoint, resolveChapterRunReflection, startChapterMemoryExperience, type AuthoredChapterRun, type ChapterExperienceMode, type ChapterReflectionInput } from "./systems/ChapterMemoryExperience.js";
 import { inAnyRect, type Point } from "./systems/CollisionSystem.js";
 import { CutsceneSystem, type CutsceneAction } from "./systems/CutsceneSystem.js";
 import { createNewDiaryPage, deleteDiaryEntriesByIds, deleteDiaryEntryById, findChapterDiaryEntry, forestNodesForMonth, formatDiaryWeekday, getDiaryTimeline, openDiaryPageForDate, seedAuthoredChapterDiaryEntries, sharedChapterDiaryBookAssetPath, upsertDiaryEntry, upsertDiaryPageDraft } from "./systems/DiaryLibrary.js";
@@ -2310,12 +2310,15 @@ export class WalkBackHomeApp {
     this.moveInLayout(x, y, dt, layout);
     const interaction = layout.interactions.find((item) => Math.hypot(this.player.x - item.x, this.player.y - item.y) < item.radius);
     const mainComplete = this.chapterMemoryRun?.chapterId === runtime.chapter.id && this.chapterMemoryRun.mainCompleted;
+    const discoveredEchoIds = this.chapterMemoryRun?.chapterId === runtime.chapter.id
+      ? this.chapterMemoryRun.discoveredEchoIds
+      : new Set<string>();
     const echoActive = Object.keys(runtime.echoAnchors).find((id) => {
-      if (!this.authoredEchoIsAvailable(runtime, id, mainComplete)) return false;
+      if (!this.authoredEchoIsAvailable(runtime, id, mainComplete, discoveredEchoIds)) return false;
       const point = this.authoredEchoPoint(layout, id);
       return point ? Math.hypot(this.player.x - point.x, point.y - this.player.y) < point.radius : false;
     });
-    const availableInteraction = interaction && (!this.isAuthoredEchoInteraction(runtime, interaction.id) || this.authoredEchoIsAvailable(runtime, interaction.id, mainComplete))
+    const availableInteraction = interaction && (!this.isAuthoredEchoInteraction(runtime, interaction.id) || this.authoredEchoIsAvailable(runtime, interaction.id, mainComplete, discoveredEchoIds))
       ? interaction
       : null;
     this.activeObject = availableInteraction?.id ?? echoActive ?? "";
@@ -2325,8 +2328,8 @@ export class WalkBackHomeApp {
     return Boolean(runtime.echoAnchors[interactionId] || runtime.echoPortraitIds?.[interactionId] || runtime.echoPortraitSequenceIds?.[interactionId]);
   }
 
-  private authoredEchoIsAvailable(runtime: AuthoredRuntimeDefinition, interactionId: string, mainComplete: boolean): boolean {
-    return authoredEchoIsAvailable(runtime, interactionId, mainComplete);
+  private authoredEchoIsAvailable(runtime: AuthoredRuntimeDefinition, interactionId: string, mainComplete: boolean, discoveredEchoIds: ReadonlySet<string> = new Set()): boolean {
+    return authoredEchoIsAvailable(runtime, interactionId, mainComplete, discoveredEchoIds);
   }
 
   private startAuthoredMemory(mode: "main" | "echo", replay: boolean, echoId = ""): void {
@@ -2403,9 +2406,14 @@ export class WalkBackHomeApp {
     this.overlay.classList.remove("dialogue-open", "lightweight-presentation");
     this.overlay.innerHTML = "";
     if (!runtime || !mode) return;
+    const completedEchoId = this.authoredEchoId;
     if (mode === "main") this.markCurrentChapterMainCompleted(runtime.chapter.id);
-    else if (this.authoredEchoId) this.markCurrentChapterEchoDiscovered(runtime.chapter.id, this.authoredEchoId);
-    if (mode === "main" && runtime.reflectionChoices.length) {
+    else if (completedEchoId) this.markCurrentChapterEchoDiscovered(runtime.chapter.id, completedEchoId);
+    const shouldBeginReflection = runtime.reflectionChoices.length > 0 && (
+      (mode === "main" && !runtime.reflectionAfterEchoId) ||
+      (mode === "echo" && completedEchoId === runtime.reflectionAfterEchoId)
+    );
+    if (shouldBeginReflection) {
       this.authoredMode = "main";
       this.authoredSequenceReflectionPending = true;
       this.authoredCheckpointId = runtime.reflectionChoices[0].id;
@@ -2571,6 +2579,16 @@ export class WalkBackHomeApp {
     if (this.authoredSequenceReflectionPending) {
       const runtime = this.authoredRuntimeForScene();
       if (runtime) {
+        const nextPoint = nextChapterReflectionPoint(runtime.reflectionChoices, this.authoredCheckpointId);
+        if (nextPoint) {
+          this.authoredCheckpointId = nextPoint.id;
+          this.authoredReflectionResponse = "";
+          this.authoredOverlayMode = null;
+          this.overlay.classList.remove("dialogue-open", "lightweight-presentation");
+          this.overlay.innerHTML = "";
+          this.showAuthoredChoice();
+          return;
+        }
         const reflection = resolveChapterReflection(runtime.chapter, this.currentRunInputFor(runtime.chapter.id));
         this.completeChapterMemoryRun(runtime.chapter.id, reflection);
         this.authoredSequenceReflectionPending = false;
@@ -3757,15 +3775,18 @@ export class WalkBackHomeApp {
     const runtime = this.authoredRuntimeForScene();
     if (!runtime) return;
     const mainComplete = this.chapterMemoryRun?.chapterId === runtime.chapter.id && this.chapterMemoryRun.mainCompleted;
+    const discoveredEchoIds = this.chapterMemoryRun?.chapterId === runtime.chapter.id
+      ? this.chapterMemoryRun.discoveredEchoIds
+      : new Set<string>();
     const echoPoints = Object.keys(runtime.echoAnchors)
-      .filter((id) => this.authoredEchoIsAvailable(runtime, id, mainComplete))
+      .filter((id) => this.authoredEchoIsAvailable(runtime, id, mainComplete, discoveredEchoIds))
       .map((id) => {
         const point = this.authoredEchoPoint(layout, id);
         return point ? { id, x: point.x, y: point.y, radius: point.radius } : null;
       })
       .filter((point): point is { id: string; x: number; y: number; radius: number } => Boolean(point));
     const interactionPoints = layout.interactions
-      .filter((item) => !this.isAuthoredEchoInteraction(runtime, item.id) || this.authoredEchoIsAvailable(runtime, item.id, mainComplete))
+      .filter((item) => !this.isAuthoredEchoInteraction(runtime, item.id) || this.authoredEchoIsAvailable(runtime, item.id, mainComplete, discoveredEchoIds))
       .map((item) => ({ id: item.id, x: item.x, y: item.y, radius: item.radius }));
     const points = [...interactionPoints, ...echoPoints.filter((echo) => !interactionPoints.some((interaction) => Math.hypot(interaction.x - echo.x, interaction.y - echo.y) < 1))];
     for (const point of points) {

@@ -45,6 +45,7 @@ export const bakeryChapter: HtmlChapterScene = {
 
 export const forestDoors: ForestDoor[] = [
   { id: "labis-motor", date: "07.19", title: "719", x: 930, y: 520, chapterId: "labis-motor-day" },
+  { id: "july21-one-more-day", date: "07.21–07.22", title: "One More Day", x: 1180, y: 520, chapterId: "july21-why-cant-you-stay" },
   { id: "segamat", date: "07.31", title: "Went to Segamat", x: 700, y: 260, chapterId: "segamat-bakery" },
   { id: "yumido", date: "07.28", title: "Yumido Bread", x: 1120, y: 210, chapterId: "bakery-day" },
   { id: "night", date: "07.27", title: "Night Walk", x: 430, y: 300, chapterId: "night-bakery" },

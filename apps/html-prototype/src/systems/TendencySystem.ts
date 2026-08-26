@@ -6,6 +6,7 @@ export const emptyTendencies = (): Tendencies => ({
   closeness: 0,
   distance: 0,
   honesty: 0,
+  holding: 0,
   concealment: 0,
   companionship: 0,
   intervention: 0

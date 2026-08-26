@@ -40,7 +40,8 @@ test("save state includes a version and narrative persistence fields", () => {
       honesty: 1,
       concealment: 0,
       companionship: 0,
-      intervention: 0
+      intervention: 0,
+      holding: 0
     },
     scrapbook: ["The small pastry that stayed small"],
     favorites: [],

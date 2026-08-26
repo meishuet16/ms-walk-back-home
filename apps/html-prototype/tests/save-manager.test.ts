@@ -43,7 +43,8 @@ function legacyState(diaryEntries: DiaryEntry[]): SaveState {
       honesty: 1,
       concealment: 0,
       companionship: 0,
-      intervention: 0
+      intervention: 0,
+      holding: 0
     },
     scrapbook: ["old collectible text"],
     favorites: [],

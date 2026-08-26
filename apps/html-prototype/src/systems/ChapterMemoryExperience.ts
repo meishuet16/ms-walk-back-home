@@ -61,3 +61,8 @@ export function currentRunReflectionInput(run: AuthoredChapterRun): ChapterRefle
     tendencies: { ...run.tendencies }
   };
 }
+
+export function nextChapterReflectionPoint<T extends { id: string }>(points: ReadonlyArray<T>, currentId: string): T | null {
+  const currentIndex = points.findIndex((point) => point.id === currentId);
+  return currentIndex >= 0 ? points[currentIndex + 1] ?? null : null;
+}

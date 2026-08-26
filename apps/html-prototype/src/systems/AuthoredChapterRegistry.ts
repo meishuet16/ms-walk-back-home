@@ -4,6 +4,7 @@ import { april06Assets, april06Chapter, april06EchoActions, april06MainMemoryAct
 import { may23Assets, may23Chapter, may23EchoAnchors, may23ReflectionChoices, resolveMay23Actions } from "../fixtures/may23Chapter.js";
 import { june24Assets, june24Chapter, june24EchoDialogues, june24ReflectionChoices, resolveJune24Actions } from "../fixtures/june24Chapter.js";
 import { june25Assets, june25Chapter, june25EchoAnchors, june25EchoAvailability, june25EchoPortraitSequenceIds, june25PortraitSequences, june25ReflectionChoices, resolveJune25Actions } from "../fixtures/june25Chapter.js";
+import { july21Assets, july21Chapter, july21EchoAnchors, july21EchoAvailability, july21EchoPortraitSequenceIds, july21PortraitSequences, july21ReflectionChoices, resolveJuly21Actions } from "../fixtures/july21Chapter.js";
 import type { CutsceneAction } from "./CutsceneSystem.js";
 import type { SceneSpriteAsset } from "./SceneActorRenderer.js";
 import type { SceneLayout } from "./SceneLayouts.js";
@@ -23,18 +24,22 @@ export type AuthoredRuntimeDefinition = {
   portraitSequences?: Record<string, AuthoredPortraitSequence>;
   mainPortraitSequenceId?: string;
   echoPortraitSequenceIds?: Record<string, string>;
-  echoAvailability?: Record<string, { requiresMainCompletion?: boolean }>;
+  echoAvailability?: Record<string, { requiresMainCompletion?: boolean; requiresEchoIds?: string[] }>;
+  reflectionAfterEchoId?: string;
 };
 
 export function authoredEchoIsAvailable(
   runtime: Pick<AuthoredRuntimeDefinition, "echoAvailability" | "echoRequiresMainCompletion">,
   interactionId: string,
-  mainMemoryCompleted: boolean
+  mainMemoryCompleted: boolean,
+  discoveredEchoIds: ReadonlySet<string> = new Set()
 ): boolean {
-  const requiresMainCompletion = runtime.echoAvailability?.[interactionId]?.requiresMainCompletion
+  const availability = runtime.echoAvailability?.[interactionId];
+  const requiresMainCompletion = availability?.requiresMainCompletion
     ?? runtime.echoRequiresMainCompletion
     ?? true;
-  return !requiresMainCompletion || mainMemoryCompleted;
+  const requiresEchoIds = availability?.requiresEchoIds ?? [];
+  return (!requiresMainCompletion || mainMemoryCompleted) && requiresEchoIds.every((id) => discoveredEchoIds.has(id));
 }
 
 export const authoredRuntimeByScene: Record<string, AuthoredRuntimeDefinition> = {
@@ -93,5 +98,19 @@ export const authoredRuntimeByScene: Record<string, AuthoredRuntimeDefinition> =
     mainPortraitSequenceId: "june25-main",
     echoPortraitSequenceIds: june25EchoPortraitSequenceIds,
     echoAvailability: june25EchoAvailability
+  },
+  "721": {
+    chapter: july21Chapter,
+    assets: july21Assets,
+    resolveActions: (layout, mode, echoId) => resolveJuly21Actions(layout, mode, echoId),
+    reflectionChoices: july21ReflectionChoices,
+    echoAnchors: july21EchoAnchors,
+    mainInteractionId: "sofa-main-memory",
+    triggerId: "july21-sofa-main-trigger",
+    portraitSequences: july21PortraitSequences,
+    mainPortraitSequenceId: "july21-main",
+    echoPortraitSequenceIds: july21EchoPortraitSequenceIds,
+    echoAvailability: july21EchoAvailability,
+    reflectionAfterEchoId: "left-behind-memory"
   }
 };

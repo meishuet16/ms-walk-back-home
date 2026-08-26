@@ -17,6 +17,7 @@ test("forest month filter applies to public chapter doors and private fragment l
 
   assert.deepEqual(julyNodes.map((node) => node.id), [
     "labis-motor",
+    "july21-one-more-day",
     "segamat",
     "yumido",
     "night",

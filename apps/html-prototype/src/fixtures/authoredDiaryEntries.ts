@@ -1,7 +1,9 @@
 import type { DiaryEntry } from "../types.js";
+import { july21DiaryEntry } from "./july21Chapter.js";
 import { june25DiaryEntry } from "./june25Chapter.js";
 
 export const authoredChapterDiaryEntries: DiaryEntry[] = [
+  july21DiaryEntry,
   june25DiaryEntry,
   {
     id: "authored-diary-june24-only-came-for-you",

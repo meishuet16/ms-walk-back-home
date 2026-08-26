@@ -19,7 +19,7 @@ function loadLayout(sceneId: string, orientation: "landscape" | "portrait" = "la
 test("all current authored scenes preserve their independent runtime contracts", async () => {
   const { authoredRuntimeByScene } = await loadRegistry();
 
-  assert.deepEqual(Object.keys(authoredRuntimeByScene).sort(), ["405", "406", "523", "624", "625"]);
+  assert.deepEqual(Object.keys(authoredRuntimeByScene).sort(), ["405", "406", "523", "624", "625", "721"]);
 
   assert.equal(authoredRuntimeByScene["405"]?.chapter, april05Chapter);
   assert.equal(authoredRuntimeByScene["405"]?.chapter.id, "april05-come-down");
