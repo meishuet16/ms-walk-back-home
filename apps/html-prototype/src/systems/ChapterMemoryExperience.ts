@@ -1,81 +1,63 @@
-import type { Choice, ChapterProgress, Tendencies } from "../types.js";
-import { applyChoice } from "./TendencySystem.js";
+import type { ChapterReflection, ReflectionChoice, Tendencies } from "../types.js";
+import { applyChoice, emptyTendencies } from "./TendencySystem.js";
 
 export type ChapterExperienceMode = "automatic" | "manual-replay";
 
-export type ChapterMemoryExperienceRun = {
+export type AuthoredChapterRun = {
   chapterId: string;
-  eventId: string;
-  mode: ChapterExperienceMode;
-  choiceIds: string[];
-  baselineTendencies: Tendencies;
+  mainCompleted: boolean;
+  discoveredEchoIds: Set<string>;
+  reflectionChoiceIds: string[];
   tendencies: Tendencies;
-  persistentContribution: Tendencies;
-  firstCompletionPending: boolean;
+  resolvedReflection?: ChapterReflection;
+  diaryRead: boolean;
+  mode: ChapterExperienceMode;
 };
 
-export function startChapterMemoryExperience(options: {
-  chapterId: string;
-  eventId: string;
-  mode: ChapterExperienceMode;
-  baselineTendencies: Tendencies;
-  firstCompletionPending: boolean;
-}): ChapterMemoryExperienceRun {
+export type ChapterReflectionInput = {
+  choices: string[];
+  tendencies: Tendencies;
+};
+
+export function startChapterMemoryExperience(options: { chapterId: string; mode: ChapterExperienceMode }): AuthoredChapterRun {
   return {
     chapterId: options.chapterId,
-    eventId: options.eventId,
-    mode: options.mode,
-    choiceIds: [],
-    baselineTendencies: { ...options.baselineTendencies },
-    tendencies: { ...options.baselineTendencies },
-    persistentContribution: emptyTendencies(),
-    firstCompletionPending: options.firstCompletionPending
+    mainCompleted: false,
+    discoveredEchoIds: new Set(),
+    reflectionChoiceIds: [],
+    tendencies: emptyTendencies(),
+    diaryRead: false,
+    mode: options.mode
   };
 }
 
-export function applyChapterExperienceChoice(run: ChapterMemoryExperienceRun, choice: Choice): ChapterMemoryExperienceRun {
-  const tendencies = applyChoice(run.tendencies, choice);
-  const persistentContribution = run.firstCompletionPending
-    ? difference(tendencies, run.baselineTendencies)
-    : emptyTendencies();
+export function applyChapterExperienceChoice(run: AuthoredChapterRun, choice: ReflectionChoice): AuthoredChapterRun {
   return {
     ...run,
-    choiceIds: [...run.choiceIds, choice.id],
-    tendencies,
-    persistentContribution
+    reflectionChoiceIds: [...run.reflectionChoiceIds, choice.id],
+    tendencies: applyChoice(run.tendencies, choice)
   };
 }
 
-export function currentRunProgress(progress: ChapterProgress, run: ChapterMemoryExperienceRun): ChapterProgress {
+export function markChapterMainCompleted(run: AuthoredChapterRun): AuthoredChapterRun {
+  return { ...run, mainCompleted: true };
+}
+
+export function markChapterEchoDiscovered(run: AuthoredChapterRun, echoId: string): AuthoredChapterRun {
+  return { ...run, discoveredEchoIds: new Set([...run.discoveredEchoIds, echoId]) };
+}
+
+export function markChapterDiaryRead(run: AuthoredChapterRun): AuthoredChapterRun {
+  return { ...run, diaryRead: true };
+}
+
+export function resolveChapterRunReflection(run: AuthoredChapterRun, reflection: ChapterReflection): AuthoredChapterRun {
+  return { ...run, resolvedReflection: reflection };
+}
+
+export function currentRunReflectionInput(run: AuthoredChapterRun): ChapterReflectionInput {
   return {
-    ...progress,
-    choices: [...run.choiceIds],
+    choices: [...run.reflectionChoiceIds],
     tendencies: { ...run.tendencies }
-  };
-}
-
-export function emptyTendencies(): Tendencies {
-  return {
-    acceptance: 0,
-    avoidance: 0,
-    closeness: 0,
-    distance: 0,
-    honesty: 0,
-    concealment: 0,
-    companionship: 0,
-    intervention: 0
-  };
-}
-
-function difference(next: Tendencies, baseline: Tendencies): Tendencies {
-  return {
-    acceptance: next.acceptance - baseline.acceptance,
-    avoidance: next.avoidance - baseline.avoidance,
-    closeness: next.closeness - baseline.closeness,
-    distance: next.distance - baseline.distance,
-    honesty: next.honesty - baseline.honesty,
-    concealment: next.concealment - baseline.concealment,
-    companionship: next.companionship - baseline.companionship,
-    intervention: next.intervention - baseline.intervention
   };
 }

@@ -52,16 +52,16 @@ test("labis memory trigger remains available after historical completion", () =>
 
 test("labis motor trigger can start from quiet exploration without forcing diary first", () => {
   const trigger = labisMemoryTriggers[0];
-  assert.equal(canStartLabisMotorMemory({ x: trigger.rect.x + 20, y: trigger.rect.y + 20 }, new Set(), new Set()), true);
-  assert.equal(canStartLabisMotorMemory({ x: trigger.rect.x + 20, y: trigger.rect.y + 20 }, new Set(["labis-motor-day"]), new Set()), true);
+  assert.equal(canStartLabisMotorMemory({ x: trigger.rect.x + 20, y: trigger.rect.y + 20 }, false, false), true);
+  assert.equal(canStartLabisMotorMemory({ x: trigger.rect.x + 20, y: trigger.rect.y + 20 }, true, true), true);
 });
 
 test("labis diary memory remains repeatable and is not covered by the motor trigger", () => {
   const point = { x: labisDiaryMemorySpot.x, y: labisDiaryMemorySpot.y };
 
-  assert.equal(labisInteractionForPoint(point, new Set(), new Set()), "diary memory");
-  assert.equal(labisInteractionForPoint(point, new Set(["labis-motor-day"]), new Set()), "diary memory");
-  assert.equal(canStartLabisMotorMemory(point, new Set(["labis-motor-day"]), new Set()), false);
+  assert.equal(labisInteractionForPoint(point, false, false), "diary memory");
+  assert.equal(labisInteractionForPoint(point, true, true), "diary memory");
+  assert.equal(canStartLabisMotorMemory(point, true, true), false);
 });
 
 test("Labis photo manual and last-night echoes do not require motor completion", () => {
@@ -72,15 +72,15 @@ test("Labis photo manual and last-night echoes do not require motor completion",
   }
 });
 
-test("Labis ending reflection completes the canonical motor event after optional echoes", () => {
+test("Labis ending reflection records only the current run", () => {
   const finishEchoStart = appSource.indexOf("private finishLabisEcho");
   const reflectionStart = appSource.indexOf("private showLabisMemoryReflection");
   const finishEcho = appSource.slice(finishEchoStart, reflectionStart);
   const reflection = appSource.slice(reflectionStart, appSource.indexOf("private closeLabisReflection", reflectionStart));
 
-  assert.match(finishEcho, /if \(echo\) this\.commitChapterMemoryRunTendencies\("labis-motor-day", echo\.id\)/);
-  assert.match(finishEcho, /else if \(this\.chapterMemoryRun\?\.chapterId === "labis-motor-day"[\s\S]*commitChapterMemoryRunTendencies\("labis-motor-day", "july19-motor-learning"\)/);
-  assert.match(reflection, /this\.completeChapterMemoryRun\("labis-motor-day", "july19-motor-learning"/);
+  assert.match(finishEcho, /this\.markCurrentChapterEchoDiscovered\("labis-motor-day", echo\.id\)/);
+  assert.doesNotMatch(finishEcho, /commitChapterMemoryRunTendencies/);
+  assert.doesNotMatch(reflection, /completeChapterMemoryRun/);
   assert.doesNotMatch(reflection, /this\.chapterMemoryRun\?\.eventId/);
 });
 
@@ -114,24 +114,17 @@ test("labis cutscene reaches ET dialogue and completes after acknowledgement", (
   assert.equal(cutscene.actors.size, 0);
 });
 
-test("journey save preserves completed labis memory events", () => {
+test("legacy journey chapter progress is ignored by the new save loader", () => {
   installStorage();
-  const manager = new SaveManager();
-  manager.saveJourney({
-    version: 1,
-    savedAt: "now",
-    scene: "labis",
-    player: { x: 760, y: 560 },
-    visitedMemories: ["labis-motor"],
-    walkedThroughMemories: ["labis-motor-day"],
-    choices: [],
-    tendencies: emptyTendencies(),
-    readMemories: ["july19-motor-learning"],
-    completedMemoryEvents: ["july19-motor-learning"],
-    room: { visits: 0, reflections: [] },
-    finalJourney: []
-  });
-
-  assert.deepEqual(manager.loadJourney()?.completedMemoryEvents, ["july19-motor-learning"]);
+  localStorage.setItem("walk-back-home:html-prototype:v2:journey", JSON.stringify({
+    version: 1, savedAt: "now", scene: "labis", player: { x: 760, y: 560 },
+    visitedMemories: ["labis-motor"], walkedThroughMemories: ["labis-motor-day"], choices: [],
+    tendencies: emptyTendencies(), readMemories: ["july19-motor-learning"], completedMemoryEvents: ["july19-motor-learning"],
+    room: { visits: 2, reflections: ["unrelated room state"] }, finalJourney: []
+  }));
+  const journey = new SaveManager().loadJourney();
+  assert.equal("completedMemoryEvents" in (journey ?? {}), false);
+  assert.equal(journey?.room.visits, 2);
+  assert.deepEqual(journey?.room.reflections, ["unrelated room state"]);
   assert.equal(labisMotorChapter.canonicalClosure.historicalEventId, "july19-motor-learning");
 });

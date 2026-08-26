@@ -34,15 +34,15 @@ function inDiaryMemorySpot(point: Point): boolean {
   return Math.hypot(point.x - labisDiaryMemorySpot.x, point.y - labisDiaryMemorySpot.y) < labisDiaryMemorySpot.radius;
 }
 
-export function canStartLabisMotorMemory(point: Point, _readMemories: Set<string>, completedEventIds: Set<string>): boolean {
+export function canStartLabisMotorMemory(point: Point, _diaryRead: boolean, _mainCompleted: boolean): boolean {
   if (inDiaryMemorySpot(point)) return false;
-  return Boolean(activeMemoryTrigger(point, labisMemoryTriggers, completedEventIds));
+  return Boolean(activeMemoryTrigger(point, labisMemoryTriggers, new Set()));
 }
 
-export function labisInteractionForPoint(point: Point, readMemories: Set<string>, completedEventIds: Set<string>): "diary memory" | "motor memory" | "" {
+export function labisInteractionForPoint(point: Point, diaryRead: boolean, mainCompleted: boolean): "diary memory" | "motor memory" | "" {
   if (inDiaryMemorySpot(point)) return "diary memory";
-  if (completedEventIds.has("july19-motor-learning") && Math.hypot(point.x - 740, point.y - 545) < 88) return "motor memory";
-  if (!readMemories.has("labis-motor-day") && activeMemoryTrigger(point, labisMemoryTriggers, completedEventIds)) return "diary memory";
+  if (mainCompleted && Math.hypot(point.x - 740, point.y - 545) < 88) return "motor memory";
+  if (!diaryRead && activeMemoryTrigger(point, labisMemoryTriggers, new Set())) return "diary memory";
   return "";
 }
 

@@ -139,27 +139,23 @@ test("June 24 authored interactions win over overlapping residue fallbacks", () 
     "xiaoba-memory": "june24-haircut-echo"
   });
 });
-test("June 24 shares full replay progression while protecting first-completion contribution", () => {
+test("June 24 shares full replay progression with fresh run state", () => {
   const first = startChapterMemoryExperience({
     chapterId: june24Chapter.id,
-    eventId: june24Chapter.canonicalClosure.historicalEventId,
-    mode: "automatic",
-    baselineTendencies: emptyTendencies(),
-    firstCompletionPending: true
+    mode: "automatic"
   });
   const firstRun = applyChapterExperienceChoice(first, june24ReflectionChoices[0].choices[0]);
   const replay = startChapterMemoryExperience({
     chapterId: june24Chapter.id,
-    eventId: june24Chapter.canonicalClosure.historicalEventId,
-    mode: "manual-replay",
-    baselineTendencies: emptyTendencies(),
-    firstCompletionPending: false
+    mode: "manual-replay"
   });
   const replayRun = applyChapterExperienceChoice(replay, june24ReflectionChoices[1].choices[1]);
-  assert.equal(firstRun.choiceIds.length, 1);
-  assert.equal(replayRun.choiceIds.length, 1);
-  assert.deepEqual(replayRun.persistentContribution, emptyTendencies());
-  assert.equal(replayRun.eventId, june24Chapter.canonicalClosure.historicalEventId);
+  assert.equal(firstRun.reflectionChoiceIds.length, 1);
+  assert.equal(replayRun.reflectionChoiceIds.length, 1);
+  assert.notEqual(replayRun.reflectionChoiceIds[0], firstRun.reflectionChoiceIds[0]);
+  assert.equal(replayRun.tendencies.acceptance, 1);
+  assert.equal(replayRun.tendencies.closeness, 1);
+  assert.equal(replayRun.tendencies.companionship, 0);
 });
 
 test("June 24 automatic trigger resets on re-entry and Echo Portraits are independent", () => {

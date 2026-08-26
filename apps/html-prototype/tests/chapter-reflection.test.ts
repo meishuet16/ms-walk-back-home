@@ -4,16 +4,10 @@ import { chapterRegistry, forestEntries, routeForestEntry } from "../src/systems
 import { createDiaryLibrary, forestNodesForMonth } from "../src/systems/DiaryLibrary.js";
 import { resolveChapterReflection } from "../src/systems/EndingResolver.js";
 import { emptyTendencies } from "../src/systems/TendencySystem.js";
-import type { ChapterProgress } from "../src/types.js";
+import type { ChapterReflectionInput } from "../src/systems/ChapterMemoryExperience.js";
 
-function progress(choices: string[]): ChapterProgress {
+function progress(choices: string[]): ChapterReflectionInput {
   return {
-    chapterId: "bakery-day",
-    state: "visited",
-    visited: true,
-    memoryRead: true,
-    dialogueCompleted: true,
-    walkedThrough: false,
     choices,
     tendencies: emptyTendencies()
   };

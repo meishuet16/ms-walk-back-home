@@ -3,6 +3,7 @@ import { normalizeDiaryEntry } from "./DiaryImport.js";
 import { filterPersistableDiaryEntries } from "./DiaryOwnership.js";
 import { normalizePlaybackMode } from "./PersonalMusic.js";
 import { createReflectionWallState, migrateLegacyReflectionWall, normalizeReflectionWallState } from "./ReflectionWall.js";
+import { chapterRegistry } from "./ChapterRegistry.js";
 
 const key = (slot: number) => `walk-back-home:html-prototype:v1:slot-${slot}`;
 const autosaveKey = "walk-back-home:html-prototype:v1:autosave";
@@ -13,6 +14,26 @@ const personalPlayerKey = "walk-back-home:html-prototype:v1:personal-player";
 const reflectionWallKey = "walk-back-home:html-prototype:v1:reflection-wall";
 const toolboxStateKey = "walk-back-home:html-prototype:v1:toolbox";
 const livingWindowStateKey = "walk-back-home:html-prototype:v1:living-window";
+
+export function stripLegacyJourneyProgress(state: JourneyState): JourneyState {
+  const legacy = state as JourneyState & Record<string, unknown>;
+  const {
+    visitedMemories: _visitedMemories,
+    walkedThroughMemories: _walkedThroughMemories,
+    choices: _choices,
+    tendencies: _tendencies,
+    readMemories: _readMemories,
+    completedMemoryEvents: _completedMemoryEvents,
+    ...canonical
+  } = legacy;
+  return {
+    ...canonical,
+    room: {
+      ...canonical.room,
+      residueIds: canonical.room.residueIds?.filter((id) => !Object.prototype.hasOwnProperty.call(chapterRegistry, id))
+    }
+  } as JourneyState;
+}
 
 export class SaveManager {
   constructor(private ownerId = "") {}
@@ -27,11 +48,12 @@ export class SaveManager {
   }
 
   saveJourney(state: JourneyState): void {
-    localStorage.setItem(this.ownerKey(journeyKey), JSON.stringify({ ...state, savedAt: new Date().toISOString() }));
+    localStorage.setItem(this.ownerKey(journeyKey), JSON.stringify({ ...stripLegacyJourneyProgress(state), savedAt: new Date().toISOString() }));
   }
 
   loadJourney(): JourneyState | null {
-    return this.parseVersioned<JourneyState>(localStorage.getItem(this.ownerKey(journeyKey)));
+    const state = this.parseVersioned<JourneyState>(localStorage.getItem(this.ownerKey(journeyKey)));
+    return state ? stripLegacyJourneyProgress(state) : null;
   }
 
   saveMusicLibrary(state: PersonalMusicLibraryState): void {
@@ -99,26 +121,10 @@ export class SaveManager {
       savedAt: now,
       scene: legacy?.scene ?? "title",
       player: legacy?.player ?? { x: 880, y: 690 },
-      visitedMemories: legacy?.openedDoors ?? [],
-      walkedThroughMemories: legacy?.completedChapters ?? [],
-      choices: legacy?.choices ?? [],
-      tendencies: legacy?.tendencies ?? {
-        acceptance: 0,
-        avoidance: 0,
-        closeness: 0,
-        distance: 0,
-        honesty: 0,
-        concealment: 0,
-        companionship: 0,
-        intervention: 0
-      },
-      readMemories: legacy?.readMemories ?? [],
-      completedMemoryEvents: [],
       room: {
         visits: legacy?.room?.visits ?? 0,
         reflections: legacy?.room?.diary ?? [],
         lampOn: (legacy?.room?.warmth ?? 0) > 0,
-        residueIds: legacy?.completedChapters ?? []
       },
       finalJourney: legacy?.endingProgress ?? []
     };

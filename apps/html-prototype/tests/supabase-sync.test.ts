@@ -75,12 +75,6 @@ function emptyCloudBundle() {
       savedAt: "now",
       scene: "forest",
       player: { x: 0, y: 0 },
-      visitedMemories: [],
-      walkedThroughMemories: [],
-      choices: [],
-      tendencies: { acceptance: 0, avoidance: 0, closeness: 0, distance: 0, honesty: 0, concealment: 0, companionship: 0, intervention: 0 },
-      readMemories: [],
-      completedMemoryEvents: [],
       room: createDefaultRoomState(),
       personalPlayer,
       finalJourney: []
@@ -155,13 +149,10 @@ test("cloud pull strips legacy personal player state before applying a journey",
   const calls: CloudCall[] = [];
   const legacyPlayer = createDefaultPersonalPlayerState();
   installRecordingSupabase(calls, {
+    version: 1,
+    savedAt: "now",
     scene: "forest",
     player: { x: 0, y: 0 },
-    visitedMemories: [],
-    walkedThroughMemories: [],
-    choices: [],
-    tendencies: { acceptance: 0, avoidance: 0, closeness: 0, distance: 0, honesty: 0, concealment: 0, companionship: 0, intervention: 0 },
-    readMemories: [],
     room: createDefaultRoomState(),
     personalPlayer: legacyPlayer,
     finalJourney: []

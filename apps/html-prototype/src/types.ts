@@ -21,6 +21,10 @@ export type Choice = {
   response: string;
 };
 
+export type ReflectionChoice = Omit<Choice, "response"> & {
+  response?: string;
+};
+
 export type DialogueNode = {
   id: string;
   speaker: string;
@@ -155,8 +159,6 @@ export type ScrapbookLayout = {
 
 export type ReflectionTone = "accepting" | "holding" | "not-ready" | "rewriting";
 
-export type ChapterProgressState = "unseen" | "visited" | "walkedThrough";
-
 export type ToolboxPersistedState = {
   version: 1;
   selected: string;
@@ -283,28 +285,9 @@ export type JourneyState = {
   savedAt: string;
   scene: SceneId;
   player: { x: number; y: number };
-  visitedMemories: string[];
-  walkedThroughMemories: string[];
-  choices: string[];
-  tendencies: Tendencies;
-  readMemories: string[];
-  completedMemoryEvents?: string[];
   room: RoomJourneyState;
   personalPlayer?: PersonalPlayerState;
   finalJourney: string[];
-};
-
-export type ChapterProgress = {
-  chapterId: string;
-  state: ChapterProgressState;
-  visited: boolean;
-  memoryRead: boolean;
-  dialogueCompleted: boolean;
-  walkedThrough: boolean;
-  choices: string[];
-  tendencies: Tendencies;
-  reflectionTone?: ReflectionTone;
-  closingQuoteId?: string;
 };
 
 export type ChapterReflectionQuote = {

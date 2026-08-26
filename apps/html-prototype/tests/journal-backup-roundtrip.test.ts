@@ -1,8 +1,41 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createBackupBundle, restoreBackupBlobEntries, type BackupBlobWriter } from "../src/systems/BackupManager.js";
+import { createBackupBundle, parseBackupBundle, restoreBackupBlobEntries, type BackupBlobWriter } from "../src/systems/BackupManager.js";
 import { makeJournalAudioMedia } from "../src/systems/JournalMedia.js";
 import { makeDiaryEntry } from "../src/systems/DiaryImport.js";
+
+test("legacy backup chapter progress is ignored while unrelated Room state survives", () => {
+  const parsed = parseBackupBundle(JSON.stringify({
+    app: "walk-back-home-html-prototype",
+    version: 1,
+    exportedAt: "now",
+    provider: { mode: "manual-file", label: "Local backup file" },
+    diaryLibrary: null,
+    journey: {
+      version: 1,
+      savedAt: "now",
+      scene: "forest",
+      player: { x: 1, y: 2 },
+      visitedMemories: ["yumido"],
+      walkedThroughMemories: ["bakery-day"],
+      choices: ["remember"],
+      tendencies: { acceptance: 1 },
+      readMemories: ["bakery-day"],
+      completedMemoryEvents: ["yumido-rain-conversation-ends"],
+      room: { visits: 3, reflections: ["keep this room note"], residueIds: ["bakery-day", "generic-room-residue"] },
+      finalJourney: []
+    },
+    reflectionWall: null,
+    musicLibrary: null,
+    personalPlayer: null,
+    blobs: []
+  }));
+
+  assert.equal("completedMemoryEvents" in (parsed?.journey ?? {}), false);
+  assert.equal(parsed?.journey?.room.visits, 3);
+  assert.deepEqual(parsed?.journey?.room.reflections, ["keep this room note"]);
+  assert.deepEqual(parsed?.journey?.room.residueIds, ["generic-room-residue"]);
+});
 
 test("normal backup round trip preserves referenced Journal audio binary", async () => {
   const storageKey = "journal-media/entry/audio-1";

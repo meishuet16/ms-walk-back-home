@@ -1,4 +1,5 @@
-import type { ChapterDefinition, ChapterProgress, ChapterReflection, ReflectionTone, Tendencies } from "../types.js";
+import type { ChapterDefinition, ChapterReflection, ReflectionTone, Tendencies } from "../types.js";
+import type { ChapterReflectionInput } from "./ChapterMemoryExperience.js";
 
 export type Ending = {
   id: string;
@@ -7,8 +8,8 @@ export type Ending = {
   lines: string[];
 };
 
-function toneFromProgress(progress: ChapterProgress): ReflectionTone | null {
-  const picked = new Set(progress.choices);
+function toneFromProgress(input: ChapterReflectionInput): ReflectionTone | null {
+  const picked = new Set(input.choices);
   if (picked.has("labis-final-photo")) return "rewriting";
   if (picked.has("labis-final-happy")) return "holding";
   if (picked.has("labis-final-silent")) return "not-ready";
@@ -19,22 +20,22 @@ function toneFromProgress(progress: ChapterProgress): ReflectionTone | null {
   return null;
 }
 
-function preferredQuote(chapter: ChapterDefinition, progress: ChapterProgress): ChapterDefinition["reflectionQuotes"][number] | null {
+function preferredQuote(chapter: ChapterDefinition, input: ChapterReflectionInput): ChapterDefinition["reflectionQuotes"][number] | null {
   const candidates = chapter.reflectionQuotes
     .map((quote, index) => ({ quote, index, preference: quote.preference }))
     .filter((item) => item.preference);
   if (candidates.length === 0) return null;
   const scored = candidates.map((item) => ({
     ...item,
-    score: Object.entries(item.preference ?? {}).reduce((total, [key, weight]) => total + (progress.tendencies[key as keyof Tendencies] ?? 0) * (weight ?? 0), 0)
+    score: Object.entries(item.preference ?? {}).reduce((total, [key, weight]) => total + (input.tendencies[key as keyof Tendencies] ?? 0) * (weight ?? 0), 0)
   }));
   scored.sort((a, b) => b.score - a.score || a.index - b.index);
   return scored[0].score > 0 ? scored[0].quote : null;
 }
 
-export function resolveChapterReflection(chapter: ChapterDefinition, progress: ChapterProgress): ChapterReflection {
-  const explicitTone = toneFromProgress(progress);
-  const preferred = explicitTone === null ? preferredQuote(chapter, progress) : null;
+export function resolveChapterReflection(chapter: ChapterDefinition, input: ChapterReflectionInput): ChapterReflection {
+  const explicitTone = toneFromProgress(input);
+  const preferred = explicitTone === null ? preferredQuote(chapter, input) : null;
   const quote = preferred ?? chapter.reflectionQuotes.find((item) => item.tone === (explicitTone ?? "accepting")) ?? chapter.reflectionQuotes[0];
   return {
     tone: quote.tone,

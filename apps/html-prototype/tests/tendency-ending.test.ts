@@ -4,7 +4,8 @@ import { chapterRegistry } from "../src/systems/ChapterRegistry.js";
 import { april06Chapter } from "../src/fixtures/april06Chapter.js";
 import { resolveChapterReflection } from "../src/systems/EndingResolver.js";
 import { applyChoice, emptyTendencies } from "../src/systems/TendencySystem.js";
-import type { ChapterProgress, Choice } from "../src/types.js";
+import type { Choice } from "../src/types.js";
+import type { ChapterReflectionInput } from "../src/systems/ChapterMemoryExperience.js";
 
 test("choices accumulate tendencies without exposing raw values to UI", () => {
   const choice: Choice = {
@@ -19,14 +20,8 @@ test("choices accumulate tendencies without exposing raw values to UI", () => {
   assert.equal(next.avoidance, 0);
 });
 
-test("reflection resolver keeps historical closure fixed across different choices", () => {
-  const base: ChapterProgress = {
-    chapterId: "bakery-day",
-    state: "visited",
-    visited: true,
-    memoryRead: true,
-    dialogueCompleted: true,
-    walkedThrough: false,
+test("reflection resolver selects a quote from current choices while preserving authored closure text", () => {
+  const base: ChapterReflectionInput = {
     choices: [],
     tendencies: emptyTendencies()
   };
@@ -42,13 +37,7 @@ test("reflection resolver keeps historical closure fixed across different choice
 });
 
 test("April 6 reflection quotes follow authored tendency preferences", () => {
-  const base: ChapterProgress = {
-    chapterId: april06Chapter.id,
-    state: "visited",
-    visited: true,
-    memoryRead: true,
-    dialogueCompleted: true,
-    walkedThrough: false,
+  const base: ChapterReflectionInput = {
     choices: [],
     tendencies: emptyTendencies()
   };

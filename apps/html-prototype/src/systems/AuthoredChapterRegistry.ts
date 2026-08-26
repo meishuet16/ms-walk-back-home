@@ -1,4 +1,4 @@
-import type { ChapterDefinition, Choice } from "../types.js";
+import type { ChapterDefinition, ReflectionChoice } from "../types.js";
 import { april05Assets, april05Chapter, april05EchoActions, april05EchoAnchors, april05MainMemoryActions, april05ReflectionChoices, resolveApril05Actions, type April05EchoId } from "../fixtures/april05Chapter.js";
 import { april06Assets, april06Chapter, april06EchoActions, april06MainMemoryActions, april06ReflectionChoices, resolveApril06Actions } from "../fixtures/april06Chapter.js";
 import { may23Assets, may23Chapter, may23EchoAnchors, may23ReflectionChoices, resolveMay23Actions } from "../fixtures/may23Chapter.js";
@@ -13,7 +13,7 @@ export type AuthoredRuntimeDefinition = {
   chapter: ChapterDefinition;
   assets: Record<string, SceneSpriteAsset>;
   resolveActions: (layout: SceneLayout, mode: "main" | "echo", echoId?: string) => CutsceneAction[];
-  reflectionChoices: Array<{ id: string; prompt: string; choices: Choice[] }>;
+  reflectionChoices: Array<{ id: string; prompt: string; choices: ReflectionChoice[] }>;
   echoAnchors: Record<string, string>;
   triggerId?: string;
   mainInteractionId?: string;

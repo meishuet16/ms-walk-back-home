@@ -11,7 +11,7 @@ export const emptyTendencies = (): Tendencies => ({
   intervention: 0
 });
 
-export function applyChoice(tendencies: Tendencies, choice: Choice): Tendencies {
+export function applyChoice(tendencies: Tendencies, choice: Pick<Choice, "effects">): Tendencies {
   const next = { ...tendencies };
   for (const [key, value] of Object.entries(choice.effects)) {
     next[key as keyof Tendencies] += value ?? 0;

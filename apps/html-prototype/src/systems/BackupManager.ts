@@ -1,6 +1,7 @@
 import type { DiaryLibraryState, JourneyState, PersonalMusicLibraryState, PersonalPlayerState, ReflectionWallState } from "../types.js";
 import { normalizeReflectionWallState } from "./ReflectionWall.js";
 import { filterPersistableDiaryEntries } from "./DiaryOwnership.js";
+import { stripLegacyJourneyProgress } from "./SaveManager.js";
 
 export type BackupBlobEntry = {
   key: string;
@@ -39,7 +40,7 @@ export function createBackupBundle(input: Omit<WalkBackupBundle, "app" | "versio
       label: "Local backup file"
     },
       diaryLibrary: input.diaryLibrary ? { ...input.diaryLibrary, entries: filterPersistableDiaryEntries(input.diaryLibrary.entries) } : null,
-      journey: input.journey,
+      journey: input.journey ? stripLegacyJourneyProgress(input.journey) : null,
       reflectionWall: input.reflectionWall,
       musicLibrary: input.musicLibrary,
       personalPlayer: input.personalPlayer,
@@ -57,7 +58,7 @@ export function parseBackupBundle(text: string): WalkBackupBundle | null {
       exportedAt: typeof parsed.exportedAt === "string" ? parsed.exportedAt : new Date().toISOString(),
       provider: parsed.provider?.mode === "manual-file" ? parsed.provider : { mode: "manual-file", label: "Local backup file" },
       diaryLibrary: parsed.diaryLibrary?.version === 1 ? parsed.diaryLibrary : null,
-      journey: parsed.journey?.version === 1 ? parsed.journey : null,
+      journey: parsed.journey?.version === 1 ? stripLegacyJourneyProgress(parsed.journey) : null,
       reflectionWall: normalizeReflectionWallState(parsed.reflectionWall),
       musicLibrary: parsed.musicLibrary?.version === 1 ? parsed.musicLibrary : null,
       personalPlayer: parsed.personalPlayer?.version === 1 ? parsed.personalPlayer : null,

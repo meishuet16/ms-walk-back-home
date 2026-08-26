@@ -70,7 +70,7 @@ test("diary library autosaves independently from journey progress", () => {
   };
 
   manager.saveDiaryLibrary({ version: 1, savedAt: "now", entries: [entry], legacyArtifacts: [] });
-  manager.saveJourney({ version: 1, savedAt: "now", scene: "forest", player: { x: 1, y: 2 }, visitedMemories: ["yumido"], walkedThroughMemories: [], choices: [], tendencies: legacyState([]).tendencies, readMemories: [], room: { visits: 0, reflections: [] }, finalJourney: [] });
+  manager.saveJourney({ version: 1, savedAt: "now", scene: "forest", player: { x: 1, y: 2 }, room: { visits: 0, reflections: [] }, finalJourney: [] });
   manager.resetJourney();
 
   assert.equal(manager.loadDiaryLibrary()?.entries[0]?.body, "The diary stays.");
@@ -88,9 +88,35 @@ test("legacy v1 autosave migrates diary entries as diary-only and keeps old scra
   assert.equal(migrated.diary.entries[0].body, "Preserve me.");
   assert.equal(migrated.diary.entries[0].memoryKind, "chapter");
   assert.deepEqual(migrated.diary.legacyArtifacts, ["old collectible text"]);
-  assert.deepEqual(migrated.journey.walkedThroughMemories, ["bakery-day"]);
-  assert.deepEqual(migrated.journey.visitedMemories, ["yumido"]);
+  assert.equal("walkedThroughMemories" in migrated.journey, false);
+  assert.equal("visitedMemories" in migrated.journey, false);
   assert.deepEqual(migrated.journey.room.reflections, ["quiet room"]);
+  assert.equal(migrated.journey.room.residueIds, undefined);
+});
+
+test("new Journey saves never write legacy authored progress fields", () => {
+  installStorage();
+  const manager = new SaveManager();
+  const legacyCompatibleJourney = {
+    version: 1 as const,
+    savedAt: "now",
+    scene: "forest" as const,
+    player: { x: 1, y: 2 },
+    room: { visits: 4, reflections: ["room note"] },
+    finalJourney: [],
+    visitedMemories: ["yumido"],
+    walkedThroughMemories: ["bakery-day"],
+    choices: ["remember"],
+    tendencies: legacyState([]).tendencies,
+    readMemories: ["bakery-day"],
+    completedMemoryEvents: ["yumido-rain-conversation-ends"]
+  } as never;
+
+  manager.saveJourney(legacyCompatibleJourney);
+  const persisted = JSON.parse(localStorage.getItem("walk-back-home:html-prototype:v2:journey") ?? "{}");
+  assert.equal("visitedMemories" in persisted, false);
+  assert.equal("completedMemoryEvents" in persisted, false);
+  assert.equal(persisted.room.visits, 4);
 });
 
 test("diary library reload preserves photo attachments and scrapbook layout", () => {
@@ -133,7 +159,7 @@ test("music library persists imported metadata separately from journey reset", (
   };
 
   manager.saveMusicLibrary(library);
-  manager.saveJourney({ version: 1, savedAt: "now", scene: "forest", player: { x: 1, y: 2 }, visitedMemories: [], walkedThroughMemories: [], choices: [], tendencies: legacyState([]).tendencies, readMemories: [], room: { visits: 0, reflections: [] }, finalJourney: [] });
+  manager.saveJourney({ version: 1, savedAt: "now", scene: "forest", player: { x: 1, y: 2 }, room: { visits: 0, reflections: [] }, finalJourney: [] });
   manager.resetJourney();
 
   assert.equal(manager.loadJourney(), null);
@@ -207,7 +233,7 @@ test("reflection wall persists separately from resettable journey state", () => 
   };
 
   manager.saveReflectionWall(wall);
-  manager.saveJourney({ version: 1, savedAt: "now", scene: "forest", player: { x: 1, y: 2 }, visitedMemories: [], walkedThroughMemories: [], choices: [], tendencies: legacyState([]).tendencies, readMemories: [], room: { visits: 0, reflections: [] }, finalJourney: [] });
+  manager.saveJourney({ version: 1, savedAt: "now", scene: "forest", player: { x: 1, y: 2 }, room: { visits: 0, reflections: [] }, finalJourney: [] });
   manager.resetJourney();
 
   assert.equal(manager.loadJourney(), null);

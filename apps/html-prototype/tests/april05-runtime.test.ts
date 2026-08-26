@@ -5,7 +5,7 @@ import { test } from "node:test";
 import { applyChapterExperienceChoice, startChapterMemoryExperience } from "../src/systems/ChapterMemoryExperience.js";
 import { CutsceneSystem, type CutsceneAction } from "../src/systems/CutsceneSystem.js";
 import { resolveSceneEchoAnchor, type SceneLayout } from "../src/systems/SceneLayouts.js";
-import { emptyTendencies } from "../src/systems/ChapterMemoryExperience.js";
+import { emptyTendencies } from "../src/systems/TendencySystem.js";
 
 const loadApril05 = () => import("../src/fixtures/" + "april05Chapter.js");
 
@@ -228,15 +228,11 @@ test("April 5 is routed through the shared authored runtime and not a 406-only b
   assert.match(appSource, /april05Chapter/);
   assert.doesNotMatch(appSource, /this\\.scene === "406"/);
 });
-test("April 5 current-run replay does not add persistent tendencies after first completion", () => {
-  const baseline = emptyTendencies();
+test("April 5 current-run replay starts with fresh tendencies", () => {
   const choice = { id: "april05-choice", label: "keep the fact", effects: { acceptance: 1 }, response: "noted" };
-  const first = applyChapterExperienceChoice(startChapterMemoryExperience({
-    chapterId: "april05-come-down", eventId: "april05-ktho-night-memory", mode: "automatic", baselineTendencies: baseline, firstCompletionPending: true
-  }), choice);
-  const replay = applyChapterExperienceChoice(startChapterMemoryExperience({
-    chapterId: "april05-come-down", eventId: "april05-ktho-night-memory", mode: "manual-replay", baselineTendencies: { ...baseline, acceptance: 1 }, firstCompletionPending: false
-  }), choice);
-  assert.equal(first.persistentContribution.acceptance, 1);
-  assert.equal(replay.persistentContribution.acceptance, 0);
+  const first = applyChapterExperienceChoice(startChapterMemoryExperience({ chapterId: "april05-come-down", mode: "automatic" }), choice);
+  const replay = startChapterMemoryExperience({ chapterId: "april05-come-down", mode: "manual-replay" });
+  assert.equal(first.tendencies.acceptance, 1);
+  assert.deepEqual(replay.tendencies, emptyTendencies());
+  assert.deepEqual(replay.reflectionChoiceIds, []);
 });

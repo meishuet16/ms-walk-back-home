@@ -2,6 +2,7 @@ import type { AppConfig } from "./AppConfig.js";
 import type { DiaryEntry, DiaryLibraryState, DiaryMedia, JourneyState, ReflectionWallState, RoomJourneyState } from "../types.js";
 import { mergeCanonicalAndPersonalDiaries } from "./DiaryLibrary.js";
 import { filterPersistableDiaryEntries } from "./DiaryOwnership.js";
+import { stripLegacyJourneyProgress } from "./SaveManager.js";
 
 export type CloudSyncBundle = {
   diaryLibrary: DiaryLibraryState;
@@ -100,7 +101,7 @@ export class SupabaseSync {
       filterPersistableDiaryEntries(bundle.diaryLibrary.entries).map((entry) => ({ user_id: userId, id: entry.id, entry: sanitizeDiaryEntryForCloud(entry), updated_at: now, deleted_at: null })),
       { onConflict: "user_id,id" }
     ));
-    const { personalPlayer: _localPersonalPlayer, ...cloudJourney } = bundle.journey;
+    const { personalPlayer: _localPersonalPlayer, ...cloudJourney } = stripLegacyJourneyProgress(bundle.journey);
     await this.throwOnError(client.from("journey_states").upsert({ user_id: userId, state: cloudJourney, updated_at: now }));
     await this.throwOnError(client.from("reflection_notes").upsert(
       bundle.reflectionWall.notes.map((note) => ({ user_id: userId, id: note.id, note, updated_at: now, deleted_at: null })),
@@ -121,9 +122,9 @@ export class SupabaseSync {
     const savedAt = new Date().toISOString();
     const rawJourney = journeyRow?.state as JourneyState | undefined;
     const journey = rawJourney
-      ? (({ personalPlayer: _localPersonalPlayer, ...cloudJourney }) => cloudJourney as JourneyState)(rawJourney)
+      ? (({ personalPlayer: _localPersonalPlayer, ...cloudJourney }) => stripLegacyJourneyProgress(cloudJourney as JourneyState))(rawJourney)
       : undefined;
-    if (journey && roomRow?.state) journey.room = roomRow.state as RoomJourneyState;
+    if (journey && roomRow?.state) journey.room = stripLegacyJourneyProgress({ ...journey, room: roomRow.state as RoomJourneyState }).room;
     return {
       diaryLibrary: (diaryRows ?? []).length ? { version: 1, savedAt, entries: mergeCanonicalAndPersonalDiaries((diaryRows ?? []).map((row) => row.entry) as DiaryLibraryState["entries"]), legacyArtifacts: [] } : undefined,
       journey,
