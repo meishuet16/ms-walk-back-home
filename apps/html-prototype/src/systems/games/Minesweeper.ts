@@ -40,6 +40,7 @@ export function revealMinesweeperCell(state: MinesweeperGameState, index: number
     next.status = "lost";
     next.board = next.board.map((cell) => cell.mine ? { ...cell, revealed: true } : cell);
     next.elapsedSeconds = minesweeperElapsedSeconds(next, now);
+    next.startedAt = null;
     return next;
   }
   const queue = [index];
@@ -55,6 +56,7 @@ export function revealMinesweeperCell(state: MinesweeperGameState, index: number
   }
   if (next.board.every((cell) => cell.mine || cell.revealed)) next.status = "won";
   next.elapsedSeconds = minesweeperElapsedSeconds(next, now);
+  next.startedAt = next.status === "playing" ? now : null;
   return next;
 }
 

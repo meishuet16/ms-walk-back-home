@@ -51,6 +51,32 @@ test("Minesweeper computes counts, reveals floods, flags, and tracks elapsed tim
   assert.equal(minesweeperElapsedSeconds({ ...revealed, startedAt: 1_000 }, 4_500), 3);
 });
 
+test("Minesweeper elapsed time advances from the last checkpoint and freezes on loss", () => {
+  const initial = createMinesweeperState("small", () => 0);
+  const firstIndex = initial.board.findIndex((cell) => !cell.mine);
+  const first = revealMinesweeperCell(initial, firstIndex, 1_000);
+  const secondIndex = first.board.findIndex((cell) => !cell.mine && !cell.revealed);
+  const second = revealMinesweeperCell(first, secondIndex, 4_000);
+
+  assert.equal(minesweeperElapsedSeconds(second, 5_000), 4);
+  assert.ok(second.elapsedSeconds >= first.elapsedSeconds);
+
+  const mineIndex = second.board.findIndex((cell) => cell.mine && !cell.revealed);
+  const lost = revealMinesweeperCell(second, mineIndex, 7_000);
+  assert.equal(lost.status, "lost");
+  assert.equal(lost.startedAt, null);
+  assert.equal(minesweeperElapsedSeconds(lost, 20_000), lost.elapsedSeconds);
+});
+
+test("Minesweeper timer display refreshes one label from the existing app loop", () => {
+  const source = readFileSync("src/app.ts", "utf8");
+  assert.match(source, /private refreshMiniGamesMinesweeperTimer\(/);
+  const loop = source.slice(source.indexOf("private loop"), source.indexOf("private newMemory"));
+  assert.match(loop, /refreshMiniGamesMinesweeperTimer\(\)/);
+  assert.match(source, /data-minesweeper-elapsed/);
+  assert.doesNotMatch(source, /setInterval\([\s\S]*minesweeper/);
+});
+
 test("Memory Match flips pairs, turns mismatches back, counts moves, and completes", () => {
   let state = createMemoryMatchState(() => 0);
   state = flipMemoryCard(state, 0);

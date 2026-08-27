@@ -55,8 +55,24 @@ test("P1 integration keeps scroll browsing separate from seek and preserves one 
   assert.match(source, /full-lyrics-return/);
   assert.match(source, /seekPersonalMusic\(target\.seekTo\)/);
   assert.match(source, /this\.audio/);
-  const scrollHandler = source.slice(source.indexOf("private handleFullLyricsScroll"), source.indexOf("private updateFullLyricsReturnControl"));
+  const scrollHandler = source.slice(source.indexOf("private handleFullLyricsScroll"), source.indexOf("private handleFullLyricsUserInput"));
   assert.doesNotMatch(scrollHandler, /seek|audio/);
   assert.match(source, /private closeFullLyrics\(\)/);
   assert.match(source, /No synced lyrics/);
+});
+
+test("async lyric loading refreshes an open Full Lyrics view without resetting browse state", () => {
+  const source = readFileSync("src/app.ts", "utf8");
+  assert.match(source, /private refreshRecordsLyricsUI\(currentTime: number\)[\s\S]*if \(this\.fullLyricsOpen\) \{[\s\S]*this\.refreshFullLyricsUI\(currentTime\)/);
+  assert.equal(markLyricsManuallyScrolled(createLyricsViewerState(lines, 8)).followEnabled, false);
+  assert.match(source, /refreshFullLyricsUI\(currentTime\)/);
+});
+
+test("Full Lyrics only suspends follow for explicit user scroll input", () => {
+  const source = readFileSync("src/app.ts", "utf8");
+  assert.match(source, /private handleFullLyricsUserInput\(/);
+  assert.match(source, /addEventListener\("wheel",/);
+  const scrollHandler = source.slice(source.indexOf("private handleFullLyricsScroll"), source.indexOf("private handleFullLyricsUserInput"));
+  assert.doesNotMatch(scrollHandler, /fullLyricsAutoScrolling|markLyricsManuallyScrolled/);
+  assert.match(source, /handleFullLyricsUserInput/);
 });

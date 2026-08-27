@@ -237,7 +237,6 @@ export class WalkBackHomeApp {
   private recordsRenderToken = 0;
   private fullLyricsOpen = false;
   private fullLyricsState: LyricsViewerState | null = null;
-  private fullLyricsAutoScrolling = false;
   private fullLyricsFollowedIndex = -2;
   private selectedRecordIds = new Set<string>();
   private pendingBatchDelete = false;
@@ -419,6 +418,7 @@ export class WalkBackHomeApp {
     root.addEventListener("input", (event) => this.handleInput(event));
     root.addEventListener("pointerdown", (event) => this.handlePointerDown(event));
     root.addEventListener("pointermove", (event) => this.handlePointerMove(event));
+    root.addEventListener("wheel", (event) => this.handleFullLyricsUserInput(event), { passive: true });
     root.addEventListener("scroll", (event) => this.handleFullLyricsScroll(event), true);
     root.addEventListener("pointerup", (event) => {
       this.handleToolboxPointerUp(event);
@@ -2036,6 +2036,14 @@ export class WalkBackHomeApp {
       : this.formatToolboxDuration(stopwatchElapsed(this.timerState, now));
   }
 
+  private refreshMiniGamesMinesweeperTimer(): void {
+    if (!this.toolboxOpen || this.toolboxView.screen !== "tool" || this.toolboxView.selected !== "mini-games" || this.miniGamesGame !== "minesweeper") return;
+    const game = this.miniGamesState.minesweeper.game;
+    if (game.status !== "playing") return;
+    const display = this.overlay.querySelector<HTMLElement>("[data-minesweeper-elapsed]");
+    if (display) display.textContent = `${minesweeperElapsedSeconds(game)}s`;
+  }
+
   private resumeAfterRecordsClose(action: string): boolean {
     return !["close-records", "close", "vinyl-pause", "toggle-records-more-menu", "toggle-records-song-sheet"].includes(action);
   }
@@ -2268,6 +2276,7 @@ export class WalkBackHomeApp {
       if (completed.completed) { this.timerState = completed.state; this.renderToolboxOverlay(); this.showToast("Timer finished"); }
       this.refreshToolboxTimerDisplay(time);
     }
+    this.refreshMiniGamesMinesweeperTimer();
     this.syncPersonalPlaybackState();
     if (this.recordsPanelOpen) this.refreshRecordsPlaybackUI();
     this.updatePersonalMusicOverlay();
@@ -6894,6 +6903,7 @@ export class WalkBackHomeApp {
     this.renderToolboxOverlay();
   }
   private handlePointerDown(event: PointerEvent): void {
+    this.handleFullLyricsUserInput(event);
     const waveform = (event.target as HTMLElement | null)?.closest<HTMLCanvasElement>("[data-media-waveform]");
     if (waveform) {
       this.updateMediaWaveformPointer(event, waveform, true);
@@ -7445,7 +7455,6 @@ export class WalkBackHomeApp {
     this.recordsPanelOpen = false;
     this.fullLyricsOpen = false;
     this.fullLyricsState = null;
-    this.fullLyricsAutoScrolling = false;
     this.fullLyricsFollowedIndex = -2;
     this.recordsSongSheetOpen = false;
     this.recordsMoreMenuOpen = false;
@@ -7594,7 +7603,6 @@ export class WalkBackHomeApp {
     if (!this.fullLyricsOpen) return;
     this.fullLyricsOpen = false;
     this.fullLyricsState = null;
-    this.fullLyricsAutoScrolling = false;
     this.fullLyricsFollowedIndex = -2;
     void this.showRecords();
   }
@@ -7609,9 +7617,15 @@ export class WalkBackHomeApp {
   }
 
   private handleFullLyricsScroll(event: Event): void {
-    if (!this.fullLyricsOpen || this.fullLyricsAutoScrolling) return;
+    if (!this.fullLyricsOpen) return;
     const target = event.target as HTMLElement | null;
     if (!target?.matches(".full-lyrics-scroll")) return;
+  }
+
+  private handleFullLyricsUserInput(event: Event): void {
+    if (!this.fullLyricsOpen) return;
+    const target = event.target as HTMLElement | null;
+    if (!target?.closest(".full-lyrics-scroll")) return;
     if (this.fullLyricsState) this.fullLyricsState = markLyricsManuallyScrolled(this.fullLyricsState);
     this.updateFullLyricsReturnControl();
   }
@@ -7625,10 +7639,8 @@ export class WalkBackHomeApp {
     if (!this.fullLyricsOpen || !this.fullLyricsState || this.fullLyricsState.activeIndex < 0) return;
     const row = this.overlay.querySelector<HTMLElement>(`.full-lyrics-line[data-lyric-index="${this.fullLyricsState.activeIndex}"]`);
     if (!row) return;
-    this.fullLyricsAutoScrolling = true;
     this.fullLyricsFollowedIndex = this.fullLyricsState.activeIndex;
     row.scrollIntoView({ block: "center", behavior: immediate || this.settings.reducedMotion ? "auto" : "smooth" });
-    window.setTimeout(() => { this.fullLyricsAutoScrolling = false; }, immediate ? 40 : 500);
   }
 
   private refreshFullLyricsUI(currentTime: number): void {
@@ -7637,7 +7649,20 @@ export class WalkBackHomeApp {
     const state = this.fullLyricsState ?? createLyricsViewerState(lines, currentTime);
     const activeIndex = createLyricsViewerState(lines, currentTime).activeIndex;
     this.fullLyricsState = { ...state, activeIndex, seekTo: null };
+    const scroll = this.overlay.querySelector<HTMLElement>(".full-lyrics-scroll");
+    const previousScrollTop = scroll?.scrollTop ?? 0;
     const rows = Array.from(this.overlay.querySelectorAll<HTMLElement>(".full-lyrics-line"));
+    if (rows.length !== lines.length) {
+      const followEnabled = this.fullLyricsState.followEnabled;
+      this.renderFullLyrics();
+      if (!followEnabled) {
+        const nextScroll = this.overlay.querySelector<HTMLElement>(".full-lyrics-scroll");
+        if (nextScroll) nextScroll.scrollTop = previousScrollTop;
+      }
+      if (followEnabled && activeIndex >= 0) this.scrollFullLyricsToActive();
+      this.updateFullLyricsReturnControl();
+      return;
+    }
     rows.forEach((row, index) => {
       row.classList.toggle("active", index === activeIndex);
       row.classList.toggle("near", index !== activeIndex && Math.abs(index - activeIndex) <= 2);
@@ -8153,6 +8178,10 @@ export class WalkBackHomeApp {
   }
 
   private refreshRecordsLyricsUI(currentTime: number): void {
+    if (this.fullLyricsOpen) {
+      this.refreshFullLyricsUI(currentTime);
+      return;
+    }
     const lyrics = this.currentPersonalTrack()?.syncedLyrics ?? [];
     const active = activeLyricIndexAt(lyrics, currentTime);
     const rows = Array.from(this.overlay.querySelectorAll<HTMLElement>(".lyrics-pane p"));
