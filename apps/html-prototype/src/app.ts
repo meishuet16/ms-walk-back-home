@@ -88,7 +88,7 @@ import { addDateDays, dateDifference, localDateString, relativeDateLabel } from 
 import { renderMediaEditor, renderMediaPreview, renderToolbox, type ToolboxRenderState } from "./systems/ToolboxView.js";
 import { createLivingWindowViewModel, defaultWindowLocation, fetchOpenMeteoLocations, fetchOpenMeteoWeather, livingWindowStatusCopy, weatherCacheStatus, type WeatherSnapshot, type WindowLocation } from "./systems/LivingWindow.js";
 import { calculateMoonPhase, type MoonPhase } from "./systems/MoonPhase.js";
-import { getMujiAtlasMetadata, getMujiFrame, MUJI_ATLAS_COLUMNS, MUJI_ATLAS_ROWS, MUJI_DRAW_HEIGHT, MUJI_DRAW_OFFSET_X, MUJI_DRAW_OFFSET_Y, MUJI_DRAW_WIDTH, MUJI_IDLE_FRAME_MS, MUJI_WALK_FRAME_MS, type MujiDirection } from "./systems/MujiSprite.js";
+import { getMujiDrawPlacement, getMujiFrame, MUJI_DRAW_HEIGHT, MUJI_DRAW_OFFSET_X, MUJI_DRAW_OFFSET_Y, MUJI_DRAW_WIDTH, MUJI_FRAME_REGISTRY, MUJI_FRAME_VISUAL_SCALE, MUJI_IDLE_FRAME_MS, MUJI_WALK_FRAME_MS, type MujiDirection } from "./systems/MujiSprite.js";
 import { drawSceneAsset } from "./systems/SceneAssetRenderer.js";
 import { imagesToPdf, mergePdfFiles, movePdfPage, optimizePdf, pdfOutputFilename, pdfToPngImages, removePdfPage, reorderOrExtractPdf, splitPdfPageGroups, type PdfSplitMode } from "./systems/PdfToolkit.js";
 import { mediaOutputFilename, processMediaFile } from "./systems/MediaToolkit.js";
@@ -140,7 +140,7 @@ const assets = {
   forest: "assets/forest.png",
   bakery: "assets/bakery.png",
   labis: "assets/labis-july19.png",
-  muji: "assets/muji-sheet-v2.png",
+  muji: "assets/muji-sheet.png",
   mujiFallback: "assets/muji-sheet.png",
   friend: "assets/330/111.png",
   room: "assets/muji-room.png",
@@ -179,6 +179,7 @@ export class WalkBackHomeApp {
     friend: img(assets.friend),
     room: img(assets.roomFallback),
   };
+  private mujiV2Images: Record<string, HTMLImageElement> = Object.fromEntries(MUJI_FRAME_REGISTRY.map((frame) => [frame.id, img(frame.path)]));
   private scene: SceneId = "title";
   private player: Point = { x: 880, y: 690 };
   private facing: MujiDirection = "down";
@@ -4447,15 +4448,16 @@ export class WalkBackHomeApp {
 
   private drawMuji(position: Point, time: number, scale: number): void {
     const bob = Math.sin(time / 160) * 2;
-    const destinationX = position.x + MUJI_DRAW_OFFSET_X * scale;
-    const destinationY = position.y + MUJI_DRAW_OFFSET_Y * scale + bob;
-    const v2 = this.images.muji;
-    if (v2.complete && v2.naturalWidth > 0 && v2.naturalHeight > 0 && v2.naturalWidth % MUJI_ATLAS_COLUMNS === 0 && v2.naturalHeight % MUJI_ATLAS_ROWS === 0) {
-      const { frameWidth, frameHeight } = getMujiAtlasMetadata(v2.naturalWidth, v2.naturalHeight);
-      const frame = getMujiFrame(v2.naturalWidth, v2.naturalHeight, this.facing, this.mujiMoving, time);
-      this.ctx.drawImage(v2, frame.sourceX, frame.sourceY, frameWidth, frameHeight, destinationX, destinationY, MUJI_DRAW_WIDTH * scale, MUJI_DRAW_HEIGHT * scale);
+    const animation = this.mujiMoving ? "walk" : "idle";
+    const frame = getMujiFrame(this.facing, animation, time);
+    const v2 = this.mujiV2Images[frame.id];
+    if (v2.complete && v2.naturalWidth > 0 && v2.naturalHeight > 0) {
+      const placement = getMujiDrawPlacement(frame, v2.naturalWidth, v2.naturalHeight, position, scale * MUJI_FRAME_VISUAL_SCALE);
+      this.ctx.drawImage(v2, placement.x, placement.y + bob, placement.width, placement.height);
       return;
     }
+    const destinationX = position.x + MUJI_DRAW_OFFSET_X * scale;
+    const destinationY = position.y + MUJI_DRAW_OFFSET_Y * scale + bob;
     const legacyFrame = Math.floor(time / (this.mujiMoving ? MUJI_WALK_FRAME_MS : MUJI_IDLE_FRAME_MS)) % 4;
     const legacyRow = ({ down: 0, up: 1, left: 2, right: 3 } as const)[this.facing];
     this.ctx.drawImage(this.images.mujiFallback, legacyFrame * 96, legacyRow * 112, 96, 112, destinationX, destinationY, MUJI_DRAW_WIDTH * scale, MUJI_DRAW_HEIGHT * scale);
