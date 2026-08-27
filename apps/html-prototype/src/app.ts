@@ -89,6 +89,7 @@ import { renderMediaEditor, renderMediaPreview, renderToolbox, type ToolboxRende
 import { createLivingWindowViewModel, defaultWindowLocation, fetchOpenMeteoLocations, fetchOpenMeteoWeather, livingWindowStatusCopy, weatherCacheStatus, type WeatherSnapshot, type WindowLocation } from "./systems/LivingWindow.js";
 import { calculateMoonPhase, type MoonPhase } from "./systems/MoonPhase.js";
 import { getMujiDrawPlacement, getMujiFrame, MUJI_DRAW_HEIGHT, MUJI_DRAW_OFFSET_X, MUJI_DRAW_OFFSET_Y, MUJI_DRAW_WIDTH, MUJI_FRAME_REGISTRY, MUJI_FRAME_VISUAL_SCALE, MUJI_IDLE_FRAME_MS, MUJI_WALK_FRAME_MS, type MujiDirection } from "./systems/MujiSprite.js";
+import { RoomLifeDirector, type RoomLifeFrame } from "./systems/room-life/RoomLifeDirector.js";
 import { drawSceneAsset } from "./systems/SceneAssetRenderer.js";
 import { imagesToPdf, mergePdfFiles, movePdfPage, optimizePdf, pdfOutputFilename, pdfToPngImages, removePdfPage, reorderOrExtractPdf, splitPdfPageGroups, type PdfSplitMode } from "./systems/PdfToolkit.js";
 import { mediaOutputFilename, processMediaFile } from "./systems/MediaToolkit.js";
@@ -184,6 +185,8 @@ export class WalkBackHomeApp {
   private player: Point = { x: 880, y: 690 };
   private facing: MujiDirection = "down";
   private mujiMoving = false;
+  private roomLifeDirector = new RoomLifeDirector();
+  private roomLifeFrame: RoomLifeFrame | null = null;
   private last = performance.now();
   private activeDoor: ForestNode | null = null;
   private currentDoor: ForestNode | null = null;
@@ -412,7 +415,11 @@ export class WalkBackHomeApp {
     this.musicPlayer = root.querySelector(".music-player")!;
     this.overlay = root.querySelector(".overlay")!;
     this.input = new InputManager(root);
-    this.input.mountTouchControls(() => this.interact(), root.querySelector<HTMLElement>(".game-shell")!);
+    this.input.mountTouchControls(() => {
+      this.notifyRoomPlayerIntent(performance.now());
+      this.interact();
+    }, root.querySelector<HTMLElement>(".game-shell")!);
+    this.roomLifeDirector.reset(performance.now());
     this.renderTopNav();
     this.canvas.addEventListener("click", (event) => this.handleCanvasClick(event));
     this.musicPlayer.addEventListener("click", (event) => {
@@ -2059,6 +2066,7 @@ export class WalkBackHomeApp {
     const rect = this.canvas.getBoundingClientRect();
     const point = this.canvasPointToScenePoint(event.clientX - rect.left, event.clientY - rect.top);
     if (this.scene === "muji-room") {
+      this.notifyRoomPlayerIntent(performance.now());
       const interaction = this.roomInteractionAtPoint(point);
       if (interaction) {
         this.activateRoomInteraction(interaction);
@@ -2270,11 +2278,13 @@ export class WalkBackHomeApp {
     const input = this.input.read();
     this.mujiMoving = false;
     if (input.interact && !this.toolboxOpen && !this.livingWindowPanelOpen) this.interact();
-    const frameInput = (this.toolboxOpen || this.livingWindowPanelOpen) && this.scene === "muji-room" ? { x: 0, y: 0 } : input;
+    const roomLifePlayerIntent = this.scene === "muji-room" && (Math.hypot(input.x, input.y) > 0.05 || input.interact);
+    const roomGameplayBlocked = this.scene === "muji-room" && this.roomLifePanelBlocking();
+    const frameInput = this.scene === "muji-room" && (roomGameplayBlocked || this.toolboxOpen || this.livingWindowPanelOpen) ? { x: 0, y: 0 } : input;
     if (this.scene === "forest") this.updateForest(frameInput.x, frameInput.y, dt);
     if (this.scene === "bakery") this.updateBakery(frameInput.x, frameInput.y, dt);
     if (this.scene === "labis") this.updateLabis(frameInput.x, frameInput.y, dt);
-    if (this.scene === "muji-room") this.updateMujiRoom(frameInput.x, frameInput.y, dt);
+    if (this.scene === "muji-room") this.updateMujiRoom(frameInput.x, frameInput.y, dt, time, roomLifePlayerIntent);
     if (this.scene === "330-corridor") this.updateMarch30Scene(frameInput.x, frameInput.y, dt);
     else if (this.isAuthoredRuntimeScene()) this.updateAuthoredScene(frameInput.x, frameInput.y, dt);
     this.draw(time);
@@ -3084,27 +3094,48 @@ export class WalkBackHomeApp {
     this.march30ReflectionResponse = "";
   }
 
-  private updateMujiRoom(x: number, y: number, dt: number): void {
+  private updateMujiRoom(x: number, y: number, dt: number, now: number, playerIntent: boolean): void {
     const layout = this.currentSceneLayout("muji-room");
-    if (layout.orientation === "landscape") {
-      const moving = Math.hypot(x, y) > 0.05;
-      this.mujiMoving = moving;
-      if (moving) {
-        this.facing = Math.abs(x) > Math.abs(y) ? (x < 0 ? "left" : "right") : y < 0 ? "up" : "down";
-        this.player = moveRoomPlayer(this.player, x, y, dt);
-      }
-      this.activeRoomInteraction = nearestRoomInteraction(this.player);
-      this.activeObject = this.activeRoomInteraction?.label ?? "";
-      return;
-    }
-    const moving = Math.hypot(x, y) > 0.05;
+    const roomLifeFrame = this.roomLifeDirector.update({
+      now,
+      dt,
+      position: this.player,
+      layout,
+      blocked: this.roomLifePanelBlocking(),
+      playerIntent,
+      weatherCondition: this.livingWindowWeather?.current.condition.id ?? null,
+      musicPlaying: this.personalPlayer.playing && !this.audio.isPaused(),
+      night: this.isRoomNight(),
+      lampOn: this.room.lampOn !== false
+    });
+    this.roomLifeFrame = roomLifeFrame;
+    const movement = roomLifeFrame.moving ? roomLifeFrame.movement : { x, y };
+    const moving = roomLifeFrame.moving || Math.hypot(x, y) > 0.05;
     this.mujiMoving = moving;
-    if (moving) {
-      this.facing = Math.abs(x) > Math.abs(y) ? (x < 0 ? "left" : "right") : y < 0 ? "up" : "down";
-      this.moveInLayout(x, y, dt, layout);
+    if (!moving && roomLifeFrame.facing) this.facing = roomLifeFrame.facing;
+    if (moving && !this.roomLifePanelBlocking()) {
+      this.facing = Math.abs(movement.x) > Math.abs(movement.y) ? (movement.x < 0 ? "left" : "right") : movement.y < 0 ? "up" : "down";
+      this.player = moveRoomPlayer(this.player, movement.x, movement.y, dt, { size: layout.size, obstacles: layout.obstacles });
     }
-    this.activeRoomInteraction = layout.interactions.find((interaction) => Math.hypot(this.player.x - interaction.x, this.player.y - interaction.y) <= interaction.radius) ?? null;
+    this.activeRoomInteraction = layout.orientation === "landscape"
+      ? nearestRoomInteraction(this.player)
+      : layout.interactions.find((interaction) => Math.hypot(this.player.x - interaction.x, this.player.y - interaction.y) <= interaction.radius) ?? null;
     this.activeObject = this.activeRoomInteraction?.label ?? "";
+  }
+
+  private roomLifePanelBlocking(): boolean {
+    return Boolean(this.overlay.innerHTML.trim()) || this.toolboxOpen || this.livingWindowPanelOpen || this.recordsPanelOpen;
+  }
+
+  private notifyRoomPlayerIntent(now: number): void {
+    if (this.scene !== "muji-room") return;
+    this.roomLifeDirector.onPlayerIntent(now);
+    this.roomLifeFrame = null;
+  }
+
+  private isRoomNight(): boolean {
+    const hour = new Date().getHours();
+    return hour >= 20 || hour < 6;
   }
 
   private moveInLayout(x: number, y: number, dt: number, layout: SceneLayout): void {
@@ -3112,9 +3143,7 @@ export class WalkBackHomeApp {
     this.mujiMoving = moving;
     if (moving) {
       this.facing = Math.abs(x) > Math.abs(y) ? (x < 0 ? "left" : "right") : y < 0 ? "up" : "down";
-      const next = { x: this.player.x + x * 155 * dt, y: this.player.y + y * 155 * dt };
-      const outside = next.x < 0 || next.y < 0 || next.x > layout.size.w || next.y > layout.size.h;
-      if (!outside && !inAnyRect(next, layout.obstacles)) this.player = next;
+      this.player = moveRoomPlayer(this.player, x, y, dt, { size: layout.size, obstacles: layout.obstacles });
     }
   }
 
@@ -4474,6 +4503,7 @@ export class WalkBackHomeApp {
       if (toolbox) this.drawRoomToolbox(toolbox, scale);
       if (this.room.lampOn && lamp) this.drawLampGlow(lamp, scale);
       this.drawMuji({ x: this.player.x * scale, y: this.player.y * scale }, time, scale);
+      this.drawRoomLifeThought(scale);
 
       for (const interaction of roomInteractions) {
         this.drawRoomInteractionHint(interaction, this.activeRoomInteraction?.id === interaction.id, time, scale);
@@ -4488,10 +4518,58 @@ export class WalkBackHomeApp {
     if (toolbox) this.drawRoomToolbox(toolbox, scale);
     if (this.room.lampOn && lamp) this.drawLampGlow(lamp, scale);
     this.drawMuji({ x: this.player.x * scale, y: this.player.y * scale }, time, scale);
+    this.drawRoomLifeThought(scale);
 
     for (const interaction of layout.interactions) {
       this.drawRoomInteractionHint(interaction, this.activeRoomInteraction?.id === interaction.id, time, scale);
     }
+  }
+
+  private drawRoomLifeThought(scale: number): void {
+    const thought = this.roomLifeFrame?.thought;
+    if (!thought || this.roomLifePanelBlocking()) return;
+    const maxTextWidth = 170 * scale;
+    const fontSize = Math.max(11, 14 * scale);
+    this.ctx.save();
+    this.ctx.font = `${fontSize}px sans-serif`;
+    const lines: string[] = [];
+    let line = "";
+    for (const character of thought) {
+      const candidate = line + character;
+      if (line && this.ctx.measureText(candidate).width > maxTextWidth) {
+        lines.push(line);
+        line = character;
+      } else {
+        line = candidate;
+      }
+    }
+    if (line) lines.push(line);
+    const paddingX = 10 * scale;
+    const paddingY = 7 * scale;
+    const lineHeight = fontSize + 3 * scale;
+    const width = Math.min(this.canvas.width - 20 * scale, Math.max(86 * scale, Math.max(...lines.map((item) => this.ctx.measureText(item).width)) + paddingX * 2));
+    const height = lines.length * lineHeight + paddingY * 2;
+    const mujiX = this.player.x * scale;
+    const mujiY = this.player.y * scale;
+    const left = Math.max(10 * scale, Math.min(this.canvas.width - width - 10 * scale, mujiX - width / 2));
+    const aboveTop = mujiY - 84 * scale - height;
+    const top = aboveTop >= 8 * scale ? aboveTop : Math.min(this.canvas.height - height - 12 * scale, mujiY + 12 * scale);
+    this.ctx.fillStyle = "rgba(248, 241, 220, .94)";
+    this.ctx.strokeStyle = "rgba(113, 82, 53, .60)";
+    this.ctx.lineWidth = Math.max(1, scale);
+    this.ctx.beginPath();
+    this.ctx.roundRect(left, top, width, height, 8 * scale);
+    this.ctx.fill();
+    this.ctx.stroke();
+    const tailX = Math.max(left + 14 * scale, Math.min(left + width - 14 * scale, mujiX));
+    this.ctx.beginPath();
+    this.ctx.moveTo(tailX - 5 * scale, top + height - 1 * scale);
+    this.ctx.lineTo(tailX, top + height + 7 * scale);
+    this.ctx.lineTo(tailX + 7 * scale, top + height - 1 * scale);
+    this.ctx.fill();
+    this.ctx.fillStyle = "#513b2a";
+    lines.forEach((item, index) => this.ctx.fillText(item, left + paddingX, top + paddingY + fontSize + index * lineHeight));
+    this.ctx.restore();
   }
 
   private drawRoomInteractionHint(interaction: SceneInteraction, active: boolean, time: number, scale: number): void {
@@ -7082,6 +7160,8 @@ export class WalkBackHomeApp {
     this.player = layout.orientation === "landscape"
       ? (alreadyInRoom ? this.player : { ...roomSpawn })
       : (alreadyInRoom ? this.safeLayoutPoint(this.player, layout) : { ...layout.spawn });
+    this.roomLifeDirector.reset(performance.now());
+    this.roomLifeFrame = null;
     this.activeDoor = null;
     this.activeObject = "";
     this.activeRoomInteraction = null;

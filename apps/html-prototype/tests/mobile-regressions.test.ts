@@ -12,7 +12,7 @@ const stylesSource = readFileSync("src/styles.css", "utf8");
 const buildSource = readFileSync("scripts/build.mjs", "utf8");
 
 test("fullscreen touch controls mount once inside the fullscreen gameplay shell", () => {
-  assert.match(appSource, /this\.input\.mountTouchControls\(\(\) => this\.interact\(\),\s*root\.querySelector<HTMLElement>\("\.game-shell"\)/);
+  assert.match(appSource, /this\.input\.mountTouchControls\(\(\) => \{[\s\S]*?root\.querySelector<HTMLElement>\("\.game-shell"\)/);
   assert.doesNotMatch(inputSource, /this\.root\.append\(wrap\)/);
   assert.match(inputSource, /mountParent\.append\(wrap\)/);
   assert.equal((inputSource.match(/className = "touch-controls"/g) ?? []).length, 1);

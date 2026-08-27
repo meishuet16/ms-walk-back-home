@@ -69,8 +69,8 @@ test("Muji Room objects can be activated by tapping their scene positions", () =
 });
 
 test("Muji Room landscape keeps the original dedicated runtime path", () => {
-  assert.match(appSource, /if \(layout\.orientation === "landscape"\)[\s\S]*moveRoomPlayer\(this\.player, x, y, dt\)/);
-  assert.match(appSource, /if \(layout\.orientation === "landscape"\)[\s\S]*nearestRoomInteraction\(this\.player\)/);
+  assert.match(appSource, /private updateMujiRoom\([\s\S]*moveRoomPlayer\(this\.player, movement\.x, movement\.y, dt, \{ size: layout\.size, obstacles: layout\.obstacles \}\)/);
+  assert.match(appSource, /layout\.orientation === "landscape"[\s\S]*nearestRoomInteraction\(this\.player\)/);
   assert.match(appSource, /if \(layout\.orientation === "landscape"\)[\s\S]*drawSceneAsset\(this\.ctx, this\.images\.room/);
   assert.match(appSource, /for \(const interaction of roomInteractions\)/);
 });

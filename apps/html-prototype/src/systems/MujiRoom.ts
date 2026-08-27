@@ -69,6 +69,11 @@ export const roomObstacles: Rect[] = [
   { x: 804, y: 210, w: 66, h: 96 }
 ];
 
+export type RoomMovementGeometry = {
+  size: { w: number; h: number };
+  obstacles: Rect[];
+};
+
 export const roomInteractions: RoomInteraction[] = [
   { id: "door", label: "Return to Forest", x: 126, y: 456, radius: 58 },
   { id: "journal", label: "Journal", x: 620, y: 250, radius: 72 },
@@ -110,13 +115,13 @@ export function createDefaultRoomState(): RoomJourneyState {
   };
 }
 
-export function moveRoomPlayer(player: Point, x: number, y: number, dt: number): Point {
+export function moveRoomPlayer(player: Point, x: number, y: number, dt: number, geometry: RoomMovementGeometry = { size: roomSize, obstacles: roomObstacles }): Point {
   const speed = 155;
   const magnitude = Math.hypot(x, y);
   const input = magnitude > 1 ? { x: x / magnitude, y: y / magnitude } : { x, y };
   const next = { x: player.x + input.x * speed * dt, y: player.y + input.y * speed * dt };
-  const outsideRoom = next.x < 0 || next.y < 0 || next.x > roomSize.w || next.y > roomSize.h;
-  return outsideRoom || inAnyRect(next, roomObstacles) ? player : next;
+  const outsideRoom = next.x < 0 || next.y < 0 || next.x > geometry.size.w || next.y > geometry.size.h;
+  return outsideRoom || inAnyRect(next, geometry.obstacles) ? player : next;
 }
 
 export function nearestRoomInteraction(player: Point): RoomInteraction | null {

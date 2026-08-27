@@ -1,0 +1,160 @@
+{
+  "sceneId": "muji-room",
+  "label": "Muji Room",
+  "orientation": "landscape",
+  "asset": "assets/muji-room.png",
+  "size": {
+    "w": 1536,
+    "h": 1024
+  },
+  "spawn": {
+    "x": 126,
+    "y": 438
+  },
+  "obstacles": [
+    {
+      "x": 0,
+      "y": 0,
+      "w": 960,
+      "h": 62
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "w": 68,
+      "h": 540
+    },
+    {
+      "x": 892,
+      "y": 0,
+      "w": 68,
+      "h": 540
+    },
+    {
+      "x": 0,
+      "y": 494,
+      "w": 960,
+      "h": 46
+    },
+    {
+      "x": 128,
+      "y": 88,
+      "w": 190,
+      "h": 98
+    },
+    {
+      "x": 612,
+      "y": 86,
+      "w": 222,
+      "h": 126
+    },
+    {
+      "x": 784,
+      "y": 294,
+      "w": 74,
+      "h": 104
+    },
+    {
+      "x": 248.31151020107882,
+      "y": 438.69231443221764,
+      "w": 176,
+      "h": 88
+    },
+    {
+      "x": 84,
+      "y": 224,
+      "w": 98,
+      "h": 142
+    },
+    {
+      "x": 804,
+      "y": 210,
+      "w": 66,
+      "h": 96
+    }
+  ],
+  "interactions": [
+    {
+      "id": "door",
+      "label": "Return to Forest",
+      "x": 126,
+      "y": 456,
+      "radius": 58
+    },
+    {
+      "id": "journal",
+      "label": "Journal",
+      "x": 620,
+      "y": 250,
+      "radius": 72
+    },
+    {
+      "id": "lamp",
+      "label": "Lamp",
+      "x": 218,
+      "y": 210,
+      "radius": 58
+    },
+    {
+      "id": "window",
+      "label": "Look Outside",
+      "x": 486,
+      "y": 164,
+      "radius": 80
+    },
+    {
+      "id": "records",
+      "label": "Records",
+      "x": 748,
+      "y": 356,
+      "radius": 46
+    },
+    {
+      "id": "toolbox",
+      "label": "Toolbox",
+      "x": 562,
+      "y": 316,
+      "radius": 62
+    },
+    {
+      "id": "reflection",
+      "label": "Reflection Note",
+      "x": 504,
+      "y": 450,
+      "radius": 62
+    }
+  ],
+  "triggers": [],
+  "placementSlots": [],
+  "echoAnchors": {},
+  "anchors": {
+    "life-center": {
+      "x": 431.02969911917967,
+      "y": 287.74115762950964
+    },
+    "life-window": {
+      "x": 424.3410093892636,
+      "y": 224.71847916872977
+    },
+    "life-records": {
+      "x": 726.7228585159535,
+      "y": 299.8717469806628
+    },
+    "life-bedside": {
+      "x": 232.88747018490724,
+      "y": 288.1811012230788
+    },
+    "life-waypoint-upper": {
+      "x": 432.24953023028166,
+      "y": 262.55475474348674
+    },
+    "life-waypoint-window": {
+      "x": 431.13433080848074,
+      "y": 240.64923189621706
+    },
+    "life-waypoint-records": {
+      "x": 720.945908618252,
+      "y": 268.8268477376333
+    }
+  }
+}
