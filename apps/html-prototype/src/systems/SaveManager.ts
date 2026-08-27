@@ -4,6 +4,7 @@ import { filterPersistableDiaryEntries } from "./DiaryOwnership.js";
 import { normalizePlaybackMode } from "./PersonalMusic.js";
 import { createReflectionWallState, migrateLegacyReflectionWall, normalizeReflectionWallState } from "./ReflectionWall.js";
 import { chapterRegistry } from "./ChapterRegistry.js";
+import { normalizeMiniGamesState, type MiniGamesState } from "./games/MiniGamesState.js";
 
 const key = (slot: number) => `walk-back-home:html-prototype:v1:slot-${slot}`;
 const autosaveKey = "walk-back-home:html-prototype:v1:autosave";
@@ -14,6 +15,7 @@ const personalPlayerKey = "walk-back-home:html-prototype:v1:personal-player";
 const reflectionWallKey = "walk-back-home:html-prototype:v1:reflection-wall";
 const toolboxStateKey = "walk-back-home:html-prototype:v1:toolbox";
 const livingWindowStateKey = "walk-back-home:html-prototype:v1:living-window";
+const miniGamesStateKey = "walk-back-home:html-prototype:v1:mini-games";
 
 export function stripLegacyJourneyProgress(state: JourneyState): JourneyState {
   const legacy = state as JourneyState & Record<string, unknown>;
@@ -102,6 +104,18 @@ export class SaveManager {
 
   loadLivingWindowState(): LivingWindowPersistedState | null {
     return this.parseVersioned<LivingWindowPersistedState>(localStorage.getItem(this.ownerKey(livingWindowStateKey)));
+  }
+
+  saveMiniGamesState(state: MiniGamesState): void {
+    localStorage.setItem(this.ownerKey(miniGamesStateKey), JSON.stringify(normalizeMiniGamesState(state)));
+  }
+
+  loadMiniGamesState(): MiniGamesState {
+    try {
+      return normalizeMiniGamesState(this.parseRaw(localStorage.getItem(this.ownerKey(miniGamesStateKey))));
+    } catch {
+      return normalizeMiniGamesState(null);
+    }
   }
   resetJourney(): void {
     localStorage.removeItem(this.ownerKey(journeyKey));

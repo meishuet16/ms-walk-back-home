@@ -2,6 +2,7 @@ import type { DiaryLibraryState, JourneyState, PersonalMusicLibraryState, Person
 import { normalizeReflectionWallState } from "./ReflectionWall.js";
 import { filterPersistableDiaryEntries } from "./DiaryOwnership.js";
 import { stripLegacyJourneyProgress } from "./SaveManager.js";
+import { normalizeMiniGamesState, type MiniGamesState } from "./games/MiniGamesState.js";
 
 export type BackupBlobEntry = {
   key: string;
@@ -27,10 +28,11 @@ export type WalkBackupBundle = {
   reflectionWall: ReflectionWallState | null;
   musicLibrary: PersonalMusicLibraryState | null;
   personalPlayer: PersonalPlayerState | null;
+  miniGamesState: MiniGamesState;
   blobs: BackupBlobEntry[];
 };
 
-export function createBackupBundle(input: Omit<WalkBackupBundle, "app" | "version" | "exportedAt" | "provider">, now = new Date()): WalkBackupBundle {
+export function createBackupBundle(input: Omit<WalkBackupBundle, "app" | "version" | "exportedAt" | "provider" | "miniGamesState"> & { miniGamesState?: MiniGamesState | null }, now = new Date()): WalkBackupBundle {
   return {
     app: "walk-back-home-html-prototype",
     version: 1,
@@ -44,6 +46,7 @@ export function createBackupBundle(input: Omit<WalkBackupBundle, "app" | "versio
       reflectionWall: input.reflectionWall,
       musicLibrary: input.musicLibrary,
       personalPlayer: input.personalPlayer,
+      miniGamesState: normalizeMiniGamesState(input.miniGamesState),
       blobs: input.blobs
   };
 }
@@ -62,6 +65,7 @@ export function parseBackupBundle(text: string): WalkBackupBundle | null {
       reflectionWall: normalizeReflectionWallState(parsed.reflectionWall),
       musicLibrary: parsed.musicLibrary?.version === 1 ? parsed.musicLibrary : null,
       personalPlayer: parsed.personalPlayer?.version === 1 ? parsed.personalPlayer : null,
+      miniGamesState: normalizeMiniGamesState(parsed.miniGamesState),
       blobs: Array.isArray(parsed.blobs) ? parsed.blobs.filter(isBackupBlobEntry) : []
     };
   } catch {

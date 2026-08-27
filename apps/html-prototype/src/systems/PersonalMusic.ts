@@ -1,5 +1,6 @@
 import type { LyricsOverlayState, MusicPlaybackMode, MusicSort, PersonalMusicLibraryState, PersonalPlayerState, SceneId, SyncedLyricLine, UserMusicTrack } from "../types.js";
 import { vinylRecords } from "./MujiRoom.js";
+import { clampFloatingLyricsOverlay } from "./FloatingLyrics.js";
 
 export const builtInRecordIds = vinylRecords.map((record) => record.id);
 
@@ -120,16 +121,7 @@ export function lyricWindowForTime(lines: SyncedLyricLine[], currentTime: number
 }
 
 export function clampLyricsOverlay(overlay: LyricsOverlayState, stageWidth: number, stageHeight: number): LyricsOverlayState {
-  const width = Math.max(96, Math.min(520, overlay.width ?? 280));
-  const height = Math.max(44, Math.min(260, overlay.height ?? 116));
-  const maxX = Math.max(0, stageWidth - width - 8);
-  const maxY = Math.max(0, stageHeight - height - 8);
-  return {
-    x: Math.max(0, Math.min(maxX, overlay.x)),
-    y: Math.max(0, Math.min(maxY, overlay.y)),
-    width,
-    height
-  };
+  return clampFloatingLyricsOverlay(overlay, stageWidth, stageHeight);
 }
 
 export function personalMusicShouldPlayInScene(scene: SceneId): boolean {

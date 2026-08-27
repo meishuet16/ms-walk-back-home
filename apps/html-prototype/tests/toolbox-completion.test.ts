@@ -13,11 +13,12 @@ test("toolbox registry keeps six-slot pages stable and leaves page two sparse", 
   const pages = toolboxPages();
   assert.deepEqual(pages.map((page) => page.map((tool) => tool.id)), [
     ["spin-wheel", "calculator", "converter", "currency", "timer", "date"],
-    ["pdf", "media"]
+    ["pdf", "media", "mini-games"]
   ]);
-  assert.equal(toolboxToolRegistry.length, 8);
+  assert.equal(toolboxToolRegistry.length, 9);
   assert.equal(createToolboxState({ selected: "pdf" }).page, 1);
   assert.equal(moveToolSelection(createToolboxState({ selected: "pdf" }), "right", 2).selected, "media");
+  assert.equal(selectTool(createToolboxState({ selected: "media" }), "mini-games").selected, "mini-games");
   assert.equal(confirmTool(selectTool(createToolboxState({ selected: "pdf" }), "pdf")).selected, "pdf");
 });
 

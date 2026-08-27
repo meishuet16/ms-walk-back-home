@@ -34,6 +34,8 @@ import { MusicBlobStore } from "./systems/MusicBlobStore.js";
 import { ParticleSystem } from "./systems/ParticleSystem.js";
 import { BundledLyricsLoader, trackIdentity } from "./systems/BundledLyrics.js";
 import { LrclibLyricsProvider } from "./systems/LrclibLyrics.js";
+import { floatingLyricsPresentationMode, isFloatingLyricsDrag, resizeFloatingLyricsOverlay } from "./systems/FloatingLyrics.js";
+import { buildLyricsViewerLines, createLyricsViewerState, markLyricsManuallyScrolled, returnToCurrentLyric, seekTargetForLyricLine, type LyricsViewerState } from "./systems/LyricsViewer.js";
 import { activeLyricIndexAt, adjacentTrackIdForControl, applyBatchMusicMetadata, clampLyricsOverlay, createDefaultPersonalPlayerState, filterAndSortMusic, isBuiltInTrackId, lyricWindowForTime, nextTrackIdForPlayback, normalizePlaybackMode, parseLrc, personalMusicShouldPlayInScene, removeSelectedMusicTracks, removeUserMusicTrack, selectAllMusicTrackIds, type BatchMusicMetadata } from "./systems/PersonalMusic.js";
 import { changeReflectionPaper, createChapterReflectionNote, createReflectionNote, createReflectionWallState, deleteReflectionNote, migrateLegacyReflectionWall, reflectionPaperStyles, toggleReflectionNoteFlag, updateReflectionNote, visibleReflectionNotes } from "./systems/ReflectionWall.js";
 import { drawSceneActor, drawSceneSpriteAsset, type SceneSpriteAsset } from "./systems/SceneActorRenderer.js";
@@ -72,6 +74,11 @@ import {
 } from "./systems/MujiRoom.js";
 import { SaveManager } from "./systems/SaveManager.js";
 import { createToolboxState, confirmTool, backTool, moveToolSelection, moveToolboxPage, selectToolboxPage, selectTool, type ToolboxToolId, type ToolboxView as ToolboxScreen } from "./systems/ToolboxModel.js";
+import { createDefaultMiniGamesState, normalizeMiniGamesState, type MiniGameId, type MiniGamesState } from "./systems/games/MiniGamesState.js";
+import { move2048 } from "./systems/games/Game2048.js";
+import { createMinesweeperState, minesweeperElapsedSeconds, revealMinesweeperCell, toggleMinesweeperFlag } from "./systems/games/Minesweeper.js";
+import { createMemoryMatchState, flipMemoryCard, hideMismatchedMemoryCards } from "./systems/games/MemoryMatch.js";
+import { createLightsOutState, toggleLightsOut } from "./systems/games/LightsOut.js";
 import { addSpinChoiceToPreset, createSpinPreset, deleteSpinPreset, normalizeSelectedPresetId, removeSpinChoice, renameSpinPreset, spinChoiceIndex, spinTargetRotation, spinWheelGeometry, type SpinPreset } from "./systems/SpinWheel.js";
 import { applyCalculatorInput, evaluateCalculator } from "./systems/Calculator.js";
 import { convertUnit, formatUnitValue, swapUnits, unitsForCategory } from "./systems/UnitConverter.js";
@@ -228,14 +235,19 @@ export class WalkBackHomeApp {
   private recordsScrollTop = 0;
   private recordsSheetScrollTop = 0;
   private recordsRenderToken = 0;
+  private fullLyricsOpen = false;
+  private fullLyricsState: LyricsViewerState | null = null;
+  private fullLyricsAutoScrolling = false;
+  private fullLyricsFollowedIndex = -2;
   private selectedRecordIds = new Set<string>();
   private pendingBatchDelete = false;
   private activeRecordMenuTrackId = "";
   private pendingDeleteTrackId = "";
   private backupSyncOperation: "push" | "pull" | null = null;
   private backupSyncFeedback: { tone: "info" | "success" | "error"; message: string } | null = null;
-  private lyricsDrag: { offsetX: number; offsetY: number } | null = null;
-  private lyricsResize: { startX: number; startY: number; startWidth: number; startHeight: number } | null = null;
+  private lyricsDrag: { offsetX: number; offsetY: number; startX: number; startY: number; moved: boolean } | null = null;
+  private lyricsResize: { startX: number; startY: number; startWidth: number; startHeight: number; moved: boolean } | null = null;
+  private floatingLyricsGestureSuppressed = false;
   private pendingPersonalSeek: number | null = null;
   private bundledLyricsLoader = new BundledLyricsLoader();
   private bundledLyricsRuntime = new Map<string, { identity: string; lines: SyncedLyricLine[] }>();
@@ -247,6 +259,13 @@ export class WalkBackHomeApp {
   private settings = { rain: true, muted: false, volume: 0.45, compact: false, reducedMotion: false, musicEnabled: true, musicScene: "bakery" as MusicScene };
   private toolboxOpen = false;
   private toolboxView: ToolboxScreen = createToolboxState();
+  private miniGamesState: MiniGamesState = createDefaultMiniGamesState();
+  private miniGamesGame: MiniGameId | null = null;
+  private minesweeperFlagMode = false;
+  private miniGameSwipeStart: { x: number; y: number } | null = null;
+  private miniGameSwipeMoved = false;
+  private miniGameGestureSuppressed = false;
+  private memoryMismatchTimer = 0;
   private toolboxPresets: SpinPreset[] = [createSpinPreset("today", "今天吃什么", ["A", "B", "C"]), createSpinPreset("names", "Random names", ["Mochi", "Muji", "Mimi"])]
   private selectedToolboxPresetId = "today";
   private spinResult = "";
@@ -400,14 +419,18 @@ export class WalkBackHomeApp {
     root.addEventListener("input", (event) => this.handleInput(event));
     root.addEventListener("pointerdown", (event) => this.handlePointerDown(event));
     root.addEventListener("pointermove", (event) => this.handlePointerMove(event));
+    root.addEventListener("scroll", (event) => this.handleFullLyricsScroll(event), true);
     root.addEventListener("pointerup", (event) => {
       this.handleToolboxPointerUp(event);
+      this.handleMiniGamePointerUp(event);
       this.mediaWaveformDrag = null;
       this.journalCropDrag = null;
       this.scrapbookDrag = null;
+      if (this.lyricsDrag?.moved || this.lyricsResize) this.floatingLyricsGestureSuppressed = true;
       if (this.lyricsDrag || this.lyricsResize) this.autosave();
       this.lyricsDrag = null;
       this.lyricsResize = null;
+      window.setTimeout(() => { this.floatingLyricsGestureSuppressed = false; }, 0);
     });
     root.addEventListener("pointerdown", (event) => {
       const actionTarget = (event.target as HTMLElement).closest<HTMLElement>("[data-action]");
@@ -457,6 +480,14 @@ export class WalkBackHomeApp {
     if (!target) return;
     const action = target.dataset.action;
     if (!action) return;
+    if (this.floatingLyricsGestureSuppressed && target.closest(".floating-lyrics")) {
+      this.floatingLyricsGestureSuppressed = false;
+      return;
+    }
+    if (this.miniGameGestureSuppressed && target.closest('[data-game-board="2048"]')) {
+      this.miniGameGestureSuppressed = false;
+      return;
+    }
     if (this.resumeAfterRecordsClose(action)) void this.audio.ensurePlaying();
     if (action === "close" && this.isJournalEditorActive()) {
       this.handleJournalEditorBack();
@@ -635,7 +666,7 @@ export class WalkBackHomeApp {
       void this.handleLivingWindowAction(action, target);
       return;
     }
-    if (["toolbox-close", "toolbox-select", "toolbox-confirm", "toolbox-back", "toolbox-page", "toolbox-page-prev", "toolbox-page-next", "toolbox-spin-add", "toolbox-spin-remove", "toolbox-spin", "toolbox-spin-edit", "toolbox-spin-keep", "toolbox-preset-menu", "toolbox-preset-new", "toolbox-preset-create", "toolbox-preset-rename", "toolbox-preset-delete", "calculator-key", "converter-swap", "currency-swap", "currency-refresh", "timer-mode", "timer-start", "timer-pause", "timer-reset", "date-difference", "date-add", "date-subtract", "date-until-since", "media-zoom-in", "media-zoom-out", "media-zoom-reset", "media-play-selection", "pdf-process", "pdf-cancel", "pdf-page-up", "pdf-page-down", "pdf-page-delete", "media-process", "media-cancel"].includes(action)) {
+    if (["toolbox-close", "toolbox-select", "toolbox-confirm", "toolbox-back", "toolbox-page", "toolbox-page-prev", "toolbox-page-next", "toolbox-spin-add", "toolbox-spin-remove", "toolbox-spin", "toolbox-spin-edit", "toolbox-spin-keep", "toolbox-preset-menu", "toolbox-preset-new", "toolbox-preset-create", "toolbox-preset-rename", "toolbox-preset-delete", "calculator-key", "converter-swap", "currency-swap", "currency-refresh", "timer-mode", "timer-start", "timer-pause", "timer-reset", "date-difference", "date-add", "date-subtract", "date-until-since", "media-zoom-in", "media-zoom-out", "media-zoom-reset", "media-play-selection", "pdf-process", "pdf-cancel", "pdf-page-up", "pdf-page-down", "pdf-page-delete", "media-process", "media-cancel", "mini-game-select", "mini-2048-cell", "mini-2048-restart", "mini-minesweeper-cell", "mini-minesweeper-restart", "mini-minesweeper-difficulty", "mini-minesweeper-flag-mode", "mini-memory-card", "mini-memory-restart", "mini-lights-out-cell", "mini-lights-out-restart"].includes(action)) {
       void this.handleToolboxAction(action, target);
       return;
     }
@@ -659,6 +690,10 @@ export class WalkBackHomeApp {
     if (action === "reflection-wall-filter") this.setReflectionWallFilter(target.dataset.filter as ReflectionWallFilter);
     if (action === "room-diary") this.roomDiary();
     if (action === "room-records") this.showRecords();
+    if (action === "open-full-lyrics") this.openFullLyrics();
+    if (action === "close-full-lyrics") this.closeFullLyrics();
+    if (action === "full-lyrics-return") this.returnToCurrentFullLyric();
+    if (action === "full-lyrics-line") this.seekFullLyricsLine(Number(target.dataset.lyricIndex ?? -1));
     if (action === "close-records") this.closeRecords();
     if (action === "room-toolbox") this.openToolbox();
     if (action === "select-vinyl") void this.selectVinyl(target.dataset.record ?? "");
@@ -812,9 +847,19 @@ export class WalkBackHomeApp {
       return;
     }
     if (!this.toolboxOpen) return;
+    const key = event.key.toLowerCase();
+    if (this.toolboxView.screen === "tool" && this.toolboxView.selected === "mini-games" && this.miniGamesGame === "2048") {
+      const directions = { arrowleft: "left", arrowright: "right", arrowup: "up", arrowdown: "down" } as const;
+      const direction = directions[key as keyof typeof directions];
+      if (direction) {
+        this.miniGamesState = { ...this.miniGamesState, game2048: move2048(this.miniGamesState.game2048, direction) };
+        this.saveMiniGamesAndRender();
+        event.preventDefault();
+        return;
+      }
+    }
     const focusedControl = (event.target as HTMLElement | null)?.closest("input, textarea, select, button, audio, video, [contenteditable=true], [role=slider]");
     if (focusedControl) return;
-    const key = event.key.toLowerCase();
     if (key === "escape") {
       const next = backTool(this.toolboxView);
       if (next) {
@@ -853,7 +898,12 @@ export class WalkBackHomeApp {
     this.mediaAbortController?.abort();
     this.mediaLoadAbortController?.abort();
     cancelAnimationFrame(this.mediaPlaybackFrame);
+    window.clearTimeout(this.memoryMismatchTimer);
+    this.miniGameSwipeStart = null;
+    this.miniGameSwipeMoved = false;
+    this.miniGameGestureSuppressed = false;
     this.toolboxOpen = false;
+    this.miniGamesGame = null;
     this.toolboxView = createToolboxState({ selected: this.toolboxView.selected });
     this.persistToolboxState();
     this.overlay.classList.remove("toolbox-overlay");
@@ -934,7 +984,11 @@ export class WalkBackHomeApp {
       mediaPreviewUrl: this.mediaPreviewUrl,
       mediaPreviewKind: this.mediaPreviewKind,
       mediaWaveformReady: this.mediaPeaks.length > 0,
-      mediaZoom: this.mediaTimeline.zoom
+      mediaZoom: this.mediaTimeline.zoom,
+      miniGamesState: this.miniGamesState,
+      miniGamesGame: this.miniGamesGame,
+      minesweeperFlagMode: this.minesweeperFlagMode,
+      minesweeperElapsedSeconds: minesweeperElapsedSeconds(this.miniGamesState.minesweeper.game)
     };
     this.overlay.classList.add("toolbox-overlay");
     this.overlay.classList.remove("dialogue-open", "lightweight-presentation");
@@ -1077,11 +1131,80 @@ export class WalkBackHomeApp {
     this.drawMediaWaveformCanvas();
   }
 
+  private async handleMiniGameAction(action: string, target: HTMLElement): Promise<void> {
+    if (action === "mini-game-select") {
+      const game = target.dataset.game as MiniGameId;
+      if (["2048", "minesweeper", "memory-match", "lights-out"].includes(game)) {
+        this.miniGamesGame = game;
+        this.minesweeperFlagMode = false;
+        this.renderToolboxOverlay();
+      }
+      return;
+    }
+    if (action === "mini-2048-restart") {
+      this.miniGamesState = { ...this.miniGamesState, game2048: createDefaultMiniGamesState().game2048 };
+      return this.saveMiniGamesAndRender();
+    }
+    if (action === "mini-minesweeper-difficulty") {
+      const difficulty = target.dataset.difficulty === "medium" ? "medium" : "small";
+      this.miniGamesState = { ...this.miniGamesState, minesweeper: { ...this.miniGamesState.minesweeper, difficulty, game: createMinesweeperState(difficulty) } };
+      return this.saveMiniGamesAndRender();
+    }
+    if (action === "mini-minesweeper-flag-mode") {
+      this.minesweeperFlagMode = !this.minesweeperFlagMode;
+      return this.renderToolboxOverlay();
+    }
+    if (action === "mini-minesweeper-cell") {
+      const index = Number(target.dataset.index ?? -1);
+      const current = this.miniGamesState.minesweeper.game;
+      const nextGame = this.minesweeperFlagMode ? toggleMinesweeperFlag(current, index) : revealMinesweeperCell(current, index);
+      const bestTimes = { ...this.miniGamesState.minesweeper.bestTimes };
+      if (nextGame.status === "won" && current.status !== "won") bestTimes[this.miniGamesState.minesweeper.difficulty] = Math.min(bestTimes[this.miniGamesState.minesweeper.difficulty] ?? Number.POSITIVE_INFINITY, minesweeperElapsedSeconds(nextGame));
+      this.miniGamesState = { ...this.miniGamesState, minesweeper: { ...this.miniGamesState.minesweeper, game: nextGame, bestTimes } };
+      return this.saveMiniGamesAndRender();
+    }
+    if (action === "mini-minesweeper-restart") {
+      const difficulty = this.miniGamesState.minesweeper.difficulty;
+      this.miniGamesState = { ...this.miniGamesState, minesweeper: { ...this.miniGamesState.minesweeper, game: createMinesweeperState(difficulty) } };
+      return this.saveMiniGamesAndRender();
+    }
+    if (action === "mini-memory-card") {
+      const next = flipMemoryCard(this.miniGamesState.memoryMatch, Number(target.dataset.index ?? -1));
+      this.miniGamesState = { ...this.miniGamesState, memoryMatch: next };
+      if (next.flippedIndices.length === 2 && next.cards[next.flippedIndices[0]].pairId !== next.cards[next.flippedIndices[1]].pairId) {
+        window.clearTimeout(this.memoryMismatchTimer);
+        this.memoryMismatchTimer = window.setTimeout(() => {
+          this.miniGamesState = { ...this.miniGamesState, memoryMatch: hideMismatchedMemoryCards(this.miniGamesState.memoryMatch) };
+          this.saveMiniGamesAndRender();
+        }, 650);
+      }
+      return this.saveMiniGamesAndRender();
+    }
+    if (action === "mini-memory-restart") {
+      this.miniGamesState = { ...this.miniGamesState, memoryMatch: createMemoryMatchState() };
+      return this.saveMiniGamesAndRender();
+    }
+    if (action === "mini-lights-out-cell") {
+      this.miniGamesState = { ...this.miniGamesState, lightsOut: toggleLightsOut(this.miniGamesState.lightsOut, Number(target.dataset.index ?? -1)) };
+      return this.saveMiniGamesAndRender();
+    }
+    if (action === "mini-lights-out-restart") {
+      this.miniGamesState = { ...this.miniGamesState, lightsOut: createLightsOutState() };
+      return this.saveMiniGamesAndRender();
+    }
+  }
+
+  private saveMiniGamesAndRender(): void {
+    this.save.saveMiniGamesState(this.miniGamesState);
+    if (this.toolboxOpen) this.renderToolboxOverlay();
+  }
+
   private async handleToolboxAction(action: string, target: HTMLElement): Promise<void> {
     if (action === "toolbox-close") return this.closeToolbox();
     if (action === "toolbox-select") {
       const tool = target.dataset.tool as ToolboxToolId;
       if (tool) this.toolboxView = selectTool(this.toolboxView, tool);
+      if (this.toolboxView.selected !== "mini-games") this.miniGamesGame = null;
       this.persistToolboxState();
       return this.renderToolboxOverlay();
     }
@@ -1093,15 +1216,21 @@ export class WalkBackHomeApp {
     }
     if (action === "toolbox-confirm") {
       this.toolboxView = confirmTool(this.toolboxView);
+      if (this.toolboxView.selected === "mini-games") this.miniGamesGame = null;
       this.persistToolboxState();
       return this.renderToolboxOverlay();
     }
     if (action === "toolbox-back") {
+      if (this.toolboxView.screen === "tool" && this.toolboxView.selected === "mini-games" && this.miniGamesGame) {
+        this.miniGamesGame = null;
+        return this.renderToolboxOverlay();
+      }
       const next = backTool(this.toolboxView);
       if (next) this.toolboxView = next;
       else return this.closeToolbox();
       return this.renderToolboxOverlay();
     }
+    if (this.toolboxView.screen === "tool" && this.toolboxView.selected === "mini-games") return this.handleMiniGameAction(action, target);
     const preset = this.toolboxPresets.find((item) => item.id === this.selectedToolboxPresetId);
     if (action === "toolbox-spin-edit") {
       this.spinEditorOpen = !this.spinEditorOpen;
@@ -2206,6 +2335,7 @@ export class WalkBackHomeApp {
       if (savedToolbox.presets?.length) this.toolboxPresets = savedToolbox.presets.map((item) => createSpinPreset(item.id, item.name, item.choices));
       this.selectedToolboxPresetId = normalizeSelectedPresetId(this.toolboxPresets, this.selectedToolboxPresetId);
     }
+    this.miniGamesState = this.save.loadMiniGamesState();
     this.musicLibrary = this.save.loadMusicLibrary() ?? this.musicLibrary;
     this.personalPlayer = { ...this.personalPlayer, ...(this.save.loadPersonalPlayer() ?? {}) };
     this.reflectionWall = this.save.loadReflectionWall() ?? this.reflectionWall;
@@ -6771,6 +6901,12 @@ export class WalkBackHomeApp {
     }
     const toolbox = (event.target as HTMLElement | null)?.closest<HTMLElement>(".toolbox-panel");
     if (toolbox && this.toolboxOpen && this.toolboxView.screen === "root" && !(event.target as HTMLElement).closest("input, textarea, select, [contenteditable=true]")) this.toolboxSwipeStartX = event.clientX;
+    const miniGameBoard = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-game-board="2048"]');
+    if (miniGameBoard && this.toolboxOpen && this.toolboxView.screen === "tool" && this.toolboxView.selected === "mini-games") {
+      this.miniGameSwipeStart = { x: event.clientX, y: event.clientY };
+      this.miniGameSwipeMoved = false;
+      return;
+    }
     const cropTarget = (event.target as HTMLElement).closest<HTMLElement>("[data-action=\"journal-crop-drag\"]");
     const cropBox = cropTarget?.closest<HTMLElement>(".journal-crop-box");
     if (cropTarget && cropBox) {
@@ -6791,7 +6927,8 @@ export class WalkBackHomeApp {
         startX: event.clientX,
         startY: event.clientY,
         startWidth: rect.width,
-        startHeight: rect.height
+        startHeight: rect.height,
+        moved: false
       };
       event.preventDefault();
       return;
@@ -6800,7 +6937,13 @@ export class WalkBackHomeApp {
     const lyrics = (event.target as HTMLElement).closest<HTMLElement>(".floating-lyrics");
     if (lyrics && (event.target as HTMLElement).closest(".floating-drag-handle") && !(event.target as HTMLElement).closest(".floating-controls-bar,button,input,select,textarea")) {
       const rect = lyrics.getBoundingClientRect();
-      this.lyricsDrag = { offsetX: event.clientX - rect.left, offsetY: event.clientY - rect.top };
+      this.lyricsDrag = {
+        offsetX: event.clientX - rect.left,
+        offsetY: event.clientY - rect.top,
+        startX: event.clientX,
+        startY: event.clientY,
+        moved: false
+      };
       event.preventDefault();
       return;
     }
@@ -6822,6 +6965,13 @@ export class WalkBackHomeApp {
   }
 
   private handlePointerMove(event: PointerEvent): void {
+    if (this.miniGameSwipeStart) {
+      const dx = event.clientX - this.miniGameSwipeStart.x;
+      const dy = event.clientY - this.miniGameSwipeStart.y;
+      this.miniGameSwipeMoved = this.miniGameSwipeMoved || Math.max(Math.abs(dx), Math.abs(dy)) >= 24;
+      event.preventDefault();
+      return;
+    }
     if (this.mediaWaveformDrag) {
       const waveform = this.overlay.querySelector<HTMLCanvasElement>("[data-media-waveform]");
       if (waveform) this.updateMediaWaveformPointer(event, waveform, false);
@@ -6841,21 +6991,14 @@ export class WalkBackHomeApp {
     }
     if (this.lyricsResize) {
       const stageRect = this.stage.getBoundingClientRect();
-      const scaleX = this.canvas.width / stageRect.width;
-      const scaleY = this.canvas.height / stageRect.height;
-      const startWidth = this.lyricsResize.startWidth * scaleX;
-      const startHeight = this.lyricsResize.startHeight * scaleY;
-      const deltaX = (event.clientX - this.lyricsResize.startX) * scaleX;
-      const deltaY = (event.clientY - this.lyricsResize.startY) * scaleY;
-      const delta = (deltaX + deltaY) / 2;
-      const width = Math.max(96, Math.min(520, startWidth + delta));
-      const ratio = width / Math.max(1, startWidth);
-      const height = Math.max(44, Math.min(260, startHeight * ratio));
-      this.personalPlayer.lyricsOverlay = clampLyricsOverlay({
-        ...this.personalPlayer.lyricsOverlay,
-        width,
-        height
-      }, this.canvas.width, this.canvas.height);
+      this.lyricsResize.moved = true;
+      this.personalPlayer.lyricsOverlay = resizeFloatingLyricsOverlay(
+        { ...this.personalPlayer.lyricsOverlay, width: this.lyricsResize.startWidth, height: this.lyricsResize.startHeight },
+        event.clientX - this.lyricsResize.startX,
+        event.clientY - this.lyricsResize.startY,
+        stageRect.width,
+        stageRect.height
+      );
       this.save.savePersonalPlayer(this.personalPlayer);
       this.updatePersonalMusicOverlay();
       event.preventDefault();
@@ -6863,13 +7006,12 @@ export class WalkBackHomeApp {
     }
     if (this.lyricsDrag) {
       const stageRect = this.stage.getBoundingClientRect();
-      const scaleX = this.canvas.width / stageRect.width;
-      const scaleY = this.canvas.height / stageRect.height;
+      this.lyricsDrag.moved = this.lyricsDrag.moved || isFloatingLyricsDrag(this.lyricsDrag.startX, this.lyricsDrag.startY, event.clientX, event.clientY);
       this.personalPlayer.lyricsOverlay = clampLyricsOverlay({
         ...this.personalPlayer.lyricsOverlay,
-        x: (event.clientX - stageRect.left - this.lyricsDrag.offsetX) * scaleX,
-        y: (event.clientY - stageRect.top - this.lyricsDrag.offsetY) * scaleY
-      }, this.canvas.width, this.canvas.height);
+        x: event.clientX - stageRect.left - this.lyricsDrag.offsetX,
+        y: event.clientY - stageRect.top - this.lyricsDrag.offsetY
+      }, stageRect.width, stageRect.height);
       this.updatePersonalMusicOverlay();
       event.preventDefault();
       return;
@@ -6888,6 +7030,21 @@ export class WalkBackHomeApp {
       if (element) elementButton.style.left = `${element.x}%`;
       if (element) elementButton.style.top = `${element.y}%`;
     }
+  }
+
+  private handleMiniGamePointerUp(event: PointerEvent): void {
+    const start = this.miniGameSwipeStart;
+    const moved = this.miniGameSwipeMoved;
+    this.miniGameSwipeStart = null;
+    this.miniGameSwipeMoved = false;
+    if (!start || !this.toolboxOpen || this.toolboxView.screen !== "tool" || this.toolboxView.selected !== "mini-games" || this.miniGamesGame !== "2048") return;
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    if (!moved || Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
+    this.miniGameGestureSuppressed = true;
+    const direction = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "left" : "right") : (dy < 0 ? "up" : "down");
+    this.miniGamesState = { ...this.miniGamesState, game2048: move2048(this.miniGamesState.game2048, direction) };
+    this.saveMiniGamesAndRender();
   }
 
   private showMujiRoom(): void {
@@ -7286,6 +7443,10 @@ export class WalkBackHomeApp {
     this.recordsRenderToken += 1;
     this.overlay.innerHTML = "";
     this.recordsPanelOpen = false;
+    this.fullLyricsOpen = false;
+    this.fullLyricsState = null;
+    this.fullLyricsAutoScrolling = false;
+    this.fullLyricsFollowedIndex = -2;
     this.recordsSongSheetOpen = false;
     this.recordsMoreMenuOpen = false;
     this.activeRecordMenuTrackId = "";
@@ -7343,7 +7504,7 @@ export class WalkBackHomeApp {
           <button class="records-mobile-artwork ${this.personalPlayer.visualMode}" data-action="toggle-record-artwork" aria-label="Toggle vinyl or cover artwork">
             ${artworkHtml}
           </button>
-          <div class="records-mobile-lyrics" aria-live="off">${mobileLyricRows}</div>
+          <div class="records-mobile-lyrics" data-action="open-full-lyrics" role="button" tabindex="0" aria-label="Open full lyrics" aria-live="off">${mobileLyricRows}</div>
           <div class="time-row records-mobile-progress"><span data-music-current>${this.formatTime(currentTime)}</span><input data-music-seek id="music-seek" type="range" min="0" max="${maxTime}" step="0.1" value="${Math.min(currentTime, maxTime)}" aria-label="Seek"><span data-music-duration>${this.formatTime(duration || current?.duration || 0)}</span></div>
           <div class="records-mobile-controls">
             <button class="icon-button ${this.personalPlayer.shuffleEnabled ? "selected" : ""}" data-action="music-shuffle" aria-label="Shuffle" title="Shuffle">⤨</button>
@@ -7416,6 +7577,92 @@ export class WalkBackHomeApp {
       </div>`;
     this.focusStage();
     this.restoreRecordsScroll(renderToken);
+  }
+
+  private openFullLyrics(): void {
+    if (!this.recordsPanelOpen) return;
+    const lines = this.currentPersonalTrack()?.syncedLyrics ?? [];
+    this.fullLyricsOpen = true;
+    this.fullLyricsState = createLyricsViewerState(lines, this.currentPersonalPlaybackTime());
+    this.fullLyricsFollowedIndex = -2;
+    this.renderFullLyrics();
+    this.focusStage();
+    requestAnimationFrame(() => this.scrollFullLyricsToActive(true));
+  }
+
+  private closeFullLyrics(): void {
+    if (!this.fullLyricsOpen) return;
+    this.fullLyricsOpen = false;
+    this.fullLyricsState = null;
+    this.fullLyricsAutoScrolling = false;
+    this.fullLyricsFollowedIndex = -2;
+    void this.showRecords();
+  }
+
+  private renderFullLyrics(): void {
+    const track = this.currentPersonalTrack();
+    const lines = track?.syncedLyrics ?? [];
+    const state = this.fullLyricsState ?? createLyricsViewerState(lines, this.currentPersonalPlaybackTime());
+    this.fullLyricsState = state;
+    const rows = buildLyricsViewerLines(lines, state.activeIndex).map(({ index, line, state: lineState }) => `<button class="full-lyrics-line ${lineState}" data-action="full-lyrics-line" data-lyric-index="${index}">${this.escapeHtml(line.text)}</button>`).join("");
+    this.overlay.innerHTML = `<div class="modal game-panel full-lyrics-panel" role="dialog" aria-modal="true" aria-label="Full Lyrics"><header class="full-lyrics-header"><button data-action="close-full-lyrics">← Records</button><div><small>Now playing</small><h2>${this.escapeHtml(track?.title ?? "Lyrics")}</h2></div><button data-action="close-full-lyrics" aria-label="Close full lyrics">×</button></header><div class="full-lyrics-scroll" tabindex="0" aria-label="Synced lyrics">${rows || `<div class="full-lyrics-empty">No synced lyrics for this record.</div>`}</div><button class="full-lyrics-return" data-action="full-lyrics-return" hidden>♪ 回到当前歌词</button></div>`;
+  }
+
+  private handleFullLyricsScroll(event: Event): void {
+    if (!this.fullLyricsOpen || this.fullLyricsAutoScrolling) return;
+    const target = event.target as HTMLElement | null;
+    if (!target?.matches(".full-lyrics-scroll")) return;
+    if (this.fullLyricsState) this.fullLyricsState = markLyricsManuallyScrolled(this.fullLyricsState);
+    this.updateFullLyricsReturnControl();
+  }
+
+  private updateFullLyricsReturnControl(): void {
+    const button = this.overlay.querySelector<HTMLButtonElement>(".full-lyrics-return");
+    if (button) button.hidden = !this.fullLyricsState?.showReturnControl;
+  }
+
+  private scrollFullLyricsToActive(immediate = false): void {
+    if (!this.fullLyricsOpen || !this.fullLyricsState || this.fullLyricsState.activeIndex < 0) return;
+    const row = this.overlay.querySelector<HTMLElement>(`.full-lyrics-line[data-lyric-index="${this.fullLyricsState.activeIndex}"]`);
+    if (!row) return;
+    this.fullLyricsAutoScrolling = true;
+    this.fullLyricsFollowedIndex = this.fullLyricsState.activeIndex;
+    row.scrollIntoView({ block: "center", behavior: immediate || this.settings.reducedMotion ? "auto" : "smooth" });
+    window.setTimeout(() => { this.fullLyricsAutoScrolling = false; }, immediate ? 40 : 500);
+  }
+
+  private refreshFullLyricsUI(currentTime: number): void {
+    if (!this.fullLyricsOpen) return;
+    const lines = this.currentPersonalTrack()?.syncedLyrics ?? [];
+    const state = this.fullLyricsState ?? createLyricsViewerState(lines, currentTime);
+    const activeIndex = createLyricsViewerState(lines, currentTime).activeIndex;
+    this.fullLyricsState = { ...state, activeIndex, seekTo: null };
+    const rows = Array.from(this.overlay.querySelectorAll<HTMLElement>(".full-lyrics-line"));
+    rows.forEach((row, index) => {
+      row.classList.toggle("active", index === activeIndex);
+      row.classList.toggle("near", index !== activeIndex && Math.abs(index - activeIndex) <= 2);
+      row.classList.toggle("idle", index !== activeIndex && Math.abs(index - activeIndex) > 2);
+    });
+    if (this.fullLyricsState.followEnabled && activeIndex >= 0 && activeIndex !== this.fullLyricsFollowedIndex) this.scrollFullLyricsToActive();
+    this.updateFullLyricsReturnControl();
+  }
+
+  private returnToCurrentFullLyric(): void {
+    if (!this.fullLyricsState) return;
+    const lines = this.currentPersonalTrack()?.syncedLyrics ?? [];
+    this.fullLyricsState = returnToCurrentLyric(this.fullLyricsState, lines, this.currentPersonalPlaybackTime());
+    this.scrollFullLyricsToActive();
+    this.updateFullLyricsReturnControl();
+  }
+
+  private seekFullLyricsLine(index: number): void {
+    const lines = this.currentPersonalTrack()?.syncedLyrics ?? [];
+    const target = seekTargetForLyricLine(lines, index);
+    if (!target || !this.fullLyricsState) return;
+    this.fullLyricsState = { ...this.fullLyricsState, activeIndex: target.activeIndex, followEnabled: true, showReturnControl: false, seekTo: target.seekTo };
+    this.seekPersonalMusic(target.seekTo);
+    this.scrollFullLyricsToActive();
+    this.updateFullLyricsReturnControl();
   }
 
   private toggleRecordSelection(trackId: string): void {
@@ -7782,17 +8029,18 @@ export class WalkBackHomeApp {
   }
 
   private mobileLyricsOverlayDefault(): PersonalPlayerState["lyricsOverlay"] {
+    const stageRect = this.stage.getBoundingClientRect();
     if (!window.matchMedia("(max-width: 700px)").matches) {
-      return clampLyricsOverlay(this.personalPlayer.lyricsOverlay, this.canvas.width, this.canvas.height);
+      return clampLyricsOverlay(this.personalPlayer.lyricsOverlay, stageRect.width, stageRect.height);
     }
-    const width = Math.min(240, Math.max(96, this.canvas.width - 24));
-    const height = Math.min(96, Math.max(44, this.canvas.height - 48));
+    const width = Math.min(240, Math.max(96, stageRect.width - 24));
+    const height = Math.min(96, Math.max(44, stageRect.height - 48));
     return clampLyricsOverlay({
       x: 12,
       y: 12,
       width,
       height
-    }, this.canvas.width, this.canvas.height);
+    }, stageRect.width, stageRect.height);
   }
 
   private markUserTrackPlayed(id: string): void {
@@ -7897,6 +8145,10 @@ export class WalkBackHomeApp {
       seek.max = String(Math.max(1, duration || 1));
       seek.value = String(Math.min(currentTime, Math.max(1, duration || 1)));
     });
+    if (this.fullLyricsOpen) {
+      this.refreshFullLyricsUI(currentTime);
+      return;
+    }
     this.refreshRecordsLyricsUI(currentTime);
   }
 
@@ -7950,20 +8202,35 @@ export class WalkBackHomeApp {
     }
     const lyrics = track.syncedLyrics ?? [];
     const activeIndex = activeLyricIndexAt(lyrics, this.currentPersonalPlaybackTime());
-    const overlay = clampLyricsOverlay(this.personalPlayer.lyricsOverlay, this.canvas.width, this.canvas.height);
+    const stageRect = this.stage.getBoundingClientRect();
+    const overlay = clampLyricsOverlay(this.personalPlayer.lyricsOverlay, stageRect.width, stageRect.height);
     this.personalPlayer.lyricsOverlay = overlay;
+    const overlayWidth = overlay.width ?? 280;
     const overlayHeight = Math.round(overlay.height ?? 116);
+    const mode = floatingLyricsPresentationMode(overlayWidth, overlayHeight);
     const activeLyric = activeIndex >= 0 ? activeIndex : 0;
     const lyricStart = lyrics.length ? Math.max(0, Math.min(activeLyric - 1, Math.max(0, lyrics.length - 3))) : 0;
     const lyricLines = this.personalPlayer.lyricsVisible ? lyrics.slice(lyricStart, lyricStart + 3) : [];
+    const currentLyricHtml = lyrics[activeIndex]?.text ?? track.title;
     const lyricHtml = lyricLines.length
       ? lyricLines.map((line, index) => {
         const lyricIndex = lyricStart + index;
         return `<span class="${lyricIndex === activeIndex ? "active" : ""}">${this.escapeHtml(line.text)}</span>`;
       }).join("")
       : `<span class="muted">${this.escapeHtml(track.title)}</span><span class="active">${this.escapeHtml(track.artist ?? "Now playing")}</span>`;
+    const floatingTools = mode === "large"
+      ? `<div class="floating-lyrics-tools"><button class="floating-records-link floating-controls-bar" data-action="room-records">♪ Records</button><button class="floating-lyrics-reset floating-controls-bar" data-action="floating-lyrics-reset" aria-label="Move floating lyrics back into view" title="Move back into view">Reset</button></div>`
+      : "";
+    const floatingContent = mode === "large"
+      ? `<div class="floating-lyric-shortcut floating-drag-handle" data-action="room-records" role="button" tabindex="0" aria-label="Open records"><span class="floating-lyric-lines">${lyricHtml}</span></div>`
+      : mode === "compact"
+        ? `<div class="floating-lyric-shortcut floating-drag-handle" data-action="room-records" role="button" tabindex="0" aria-label="Open records"><span class="active">${this.escapeHtml(currentLyricHtml)}</span></div>`
+        : `<div class="floating-lyric-shortcut floating-drag-handle" data-action="room-records" role="button" tabindex="0" aria-label="Open records">♪ <span class="active">${this.escapeHtml(currentLyricHtml)}</span><span aria-hidden="true">›</span></div>`;
+    const floatingControls = mode === "large" || mode === "compact"
+      ? `<div class="floating-player-controls floating-controls-bar"><button class="icon-button primary" data-action="vinyl-pause" aria-label="${this.personalPlayer.playing ? "Pause" : "Play"}" title="${this.personalPlayer.playing ? "Pause" : "Play"}">${this.personalPlayer.playing ? "⏸" : "▶"}</button>${mode === "large" ? `<button class="icon-button" data-action="music-prev" aria-label="Previous" title="Previous">⏮</button><button class="icon-button" data-action="music-next" aria-label="Next" title="Next">⏭</button>` : ""}</div>`
+      : "";
     const floatingLyrics = this.personalPlayer.lyricsVisible
-      ? `<div class="floating-lyrics" style="left:${overlay.x}px;top:${overlay.y}px;width:${overlay.width}px;min-height:${overlayHeight}px" aria-live="off"><div class="floating-lyrics-tools"><button class="floating-records-link floating-controls-bar" data-action="room-records">♪ Records</button><button class="floating-lyrics-reset floating-controls-bar" data-action="floating-lyrics-reset" aria-label="Move floating lyrics back into view" title="Move back into view">Reset</button></div><div class="floating-lyric-shortcut floating-drag-handle" data-action="room-records" role="button" tabindex="0" aria-label="Open records">${lyricHtml}</div><div class="floating-player-controls floating-controls-bar"><button class="icon-button" data-action="music-prev" aria-label="Previous" title="Previous">⏮</button><button class="icon-button primary" data-action="vinyl-pause" aria-label="${this.personalPlayer.playing ? "Pause" : "Play"}" title="${this.personalPlayer.playing ? "Pause" : "Play"}">${this.personalPlayer.playing ? "⏸" : "▶"}</button><button class="icon-button" data-action="music-next" aria-label="Next" title="Next">⏭</button></div><span class="floating-resize-handle" aria-label="Resize floating lyrics" title="Resize floating lyrics">↘</span></div>`
+      ? `<div class="floating-lyrics mode-${mode}" style="left:${overlay.x}px;top:${overlay.y}px;width:${overlayWidth}px;height:${overlayHeight}px" aria-live="off">${floatingTools}${floatingContent}${floatingControls}<span class="floating-resize-handle" aria-label="Resize floating lyrics" title="Resize floating lyrics">↘</span></div>`
       : "";
     this.musicPlayer.innerHTML = `<button class="mini-now-playing" data-action="room-records">♪ ${this.escapeHtml(track.title)}</button>${floatingLyrics}`;
   }
@@ -8035,6 +8302,7 @@ export class WalkBackHomeApp {
     this.save.saveReflectionWall(this.reflectionWall);
     this.save.saveMusicLibrary(this.musicLibrary);
     this.save.savePersonalPlayer(this.personalPlayer);
+    this.save.saveMiniGamesState(this.miniGamesState);
   }
 
   private resetJourney(): void {
@@ -8208,6 +8476,7 @@ export class WalkBackHomeApp {
       reflectionWall: this.reflectionWall,
       musicLibrary: this.musicLibrary,
       personalPlayer: this.personalPlayer,
+      miniGamesState: this.miniGamesState,
       blobs
     });
     const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
@@ -8282,6 +8551,8 @@ export class WalkBackHomeApp {
       this.normalizePersonalPlayerToggles();
       this.save.savePersonalPlayer(this.personalPlayer);
     }
+    this.miniGamesState = normalizeMiniGamesState(bundle.miniGamesState);
+    this.save.saveMiniGamesState(this.miniGamesState);
     if (bundle.journey) {
       this.applyJourney(bundle.journey);
       if (bundle.personalPlayer) {

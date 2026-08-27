@@ -2,6 +2,8 @@ import type { ToolboxToolId, ToolboxView } from "./ToolboxModel.js";
 import { toolboxToolRegistry, toolboxToolsForPage, toolboxPages } from "./ToolboxModel.js";
 import type { SpinPreset } from "./SpinWheel.js";
 import { converterCategories, unitsForCategory } from "./UnitConverter.js";
+import { renderMiniGame, renderMiniGamesHome } from "./MiniGamesView.js";
+import type { MiniGameId, MiniGamesState } from "./games/MiniGamesState.js";
 
 export type ToolboxRenderState = {
   view: ToolboxView;
@@ -62,6 +64,10 @@ export type ToolboxRenderState = {
   mediaPreviewKind: "audio" | "video";
   mediaWaveformReady: boolean;
   mediaZoom: number;
+  miniGamesState: MiniGamesState;
+  miniGamesGame: MiniGameId | null;
+  minesweeperFlagMode: boolean;
+  minesweeperElapsedSeconds: number;
 };
 
 export function toolboxToolInfo(tool: ToolboxToolId): { name: string; icon: string; description: string } {
@@ -98,8 +104,9 @@ function renderTool(state: ToolboxRenderState): string {
         : state.view.selected === "currency" ? renderCurrency(state)
           : state.view.selected === "timer" ? renderTimer(state)
             : state.view.selected === "date" ? renderDate(state)
-              : state.view.selected === "pdf" ? renderPdf(state)
-                : renderMedia(state);
+                : state.view.selected === "pdf" ? renderPdf(state)
+                  : state.view.selected === "media" ? renderMedia(state)
+                    : state.miniGamesGame ? renderMiniGame(state.miniGamesGame, state.miniGamesState, state.minesweeperFlagMode, state.minesweeperElapsedSeconds) : renderMiniGamesHome();
   return `<div class="toolbox-toolbar"><button data-action="toolbox-back">← Back</button><span>Enter to choose · Esc to back</span></div><div class="toolbox-tool-body">${body}</div>`;
 }
 

@@ -1,7 +1,7 @@
 import type { ToolboxPersistedState } from "../types.js";
 
 export type ToolboxToolDefinition = {
-  id: "spin-wheel" | "calculator" | "converter" | "currency" | "timer" | "date" | "pdf" | "media";
+  id: "spin-wheel" | "calculator" | "converter" | "currency" | "timer" | "date" | "pdf" | "media" | "mini-games";
   label: string;
   shortLabel?: string;
   description: string;
@@ -17,7 +17,8 @@ export const toolboxToolRegistry = [
   { id: "timer", label: "Timer", icon: "◷", description: "计时，或者倒数。", available: true },
   { id: "date", label: "Date", icon: "日", description: "算算已经过了多少天。", available: true },
   { id: "pdf", label: "PDF", icon: "▤", description: "在设备上整理 PDF 和图片。", available: true },
-  { id: "media", label: "Media", icon: "♫", description: "在设备上剪辑和转换媒体。", available: true }
+  { id: "media", label: "Media", icon: "♫", description: "在设备上剪辑和转换媒体。", available: true },
+  { id: "mini-games", label: "Mini Games", icon: "🎮", description: "几分钟的小小游戏。", available: true }
 ] as const satisfies readonly ToolboxToolDefinition[];
 
 export const toolboxToolIds = toolboxToolRegistry.map((tool) => tool.id) as ToolboxToolId[];
