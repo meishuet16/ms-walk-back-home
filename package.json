@@ -15,7 +15,12 @@
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "authored:update": "node scripts/authored-content.mjs",
+    "authored:check": "node scripts/authored-content.mjs --check",
+    "verify": "npm run authored:check && npm run typecheck && npm test && npm run build && git diff --check",
+    "hooks:install": "node scripts/install-hooks.mjs",
+    "safe-push": "node scripts/safe-push.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.13.1",

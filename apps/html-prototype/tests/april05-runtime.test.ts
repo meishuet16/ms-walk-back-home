@@ -6,6 +6,7 @@ import { applyChapterExperienceChoice, startChapterMemoryExperience } from "../s
 import { CutsceneSystem, type CutsceneAction } from "../src/systems/CutsceneSystem.js";
 import { resolveSceneEchoAnchor, type SceneLayout } from "../src/systems/SceneLayouts.js";
 import { emptyTendencies } from "../src/systems/TendencySystem.js";
+import { authoredContentExpectations } from "../src/fixtures/generated/authoredContentExpectations.js";
 
 const loadApril05 = () => import("../src/fixtures/" + "april05Chapter.js");
 
@@ -25,6 +26,15 @@ function advanceUntilDialogue(cutscene: CutsceneSystem, text: string): CutsceneS
     if (cutscene.currentCheckpoint) cutscene.resolveCheckpoint();
   }
   throw new Error("dialogue not reached: " + text);
+}
+
+function dialogueActionIndex(actions: readonly CutsceneAction[], dialogueIndex: number): number {
+  let current = -1;
+  return actions.findIndex((action) => {
+    if (action.type !== "dialogue") return false;
+    current += 1;
+    return current === dialogueIndex;
+  });
 }
 
 function advanceUntilState(cutscene: CutsceneSystem, predicate: (cutscene: CutsceneSystem) => boolean): CutsceneSystem {
@@ -115,7 +125,7 @@ test("April 5 canonical water hit preserves visible identity, topology, gun owne
 const msFrameFourIndex = actions.findIndex((action) => action.type === "sprite" && action.actor === "ms" && assetPath(fixture, action.sprite.assetId).endsWith("assets/405/405-water-spraying/frame-04.png"));
   const effectIndex = actions.findIndex((action) => action.type === "effect" && action.id === "april05-water-hit");
   const etFrameOneIndex = actions.findIndex((action) => action.type === "sprite" && action.actor === "et" && assetPath(fixture, action.sprite.assetId).endsWith("assets/405/405-water-sprayed/et-april05-water-sprayed-frame-01.png"));
-  const hitDialogueIndex = actions.findIndex((action) => action.type === "dialogue" && action.speaker === "ET" && action.text === "！！？？wtf");
+  const hitDialogueIndex = dialogueActionIndex(actions, 3);
   assert.ok(msFrameFourIndex >= 0 && msFrameFourIndex < effectIndex && effectIndex < etFrameOneIndex && etFrameOneIndex < hitDialogueIndex, "visible hit order is encoded");
   const cutscene = new CutsceneSystem(actions);
   const leadIn = advanceUntilState(cutscene, (state) => state.props.get("water-gun")?.visible === true);
@@ -130,7 +140,7 @@ const msFrameFourIndex = actions.findIndex((action) => action.type === "sprite" 
   const activeHit = advanceUntilState(cutscene, (state) => state.effects.has("april05-water-hit"));
   assert.equal(activeHit.effects.get("april05-water-hit")?.actor, "ms");
   assert.equal(activeHit.effects.get("april05-water-hit")?.target, "et");
-  const resolvedHit = advanceUntilDialogue(cutscene, "！！？？wtf");
+  const resolvedHit = advanceUntilDialogue(cutscene, authoredContentExpectations.chapters.april05.dialogue[3]!.text);
   assert.match(assetPath(fixture, resolvedHit.actors.get("ms")?.sprite?.assetId ?? ""), /assets[\\/]405[\\/]405-water-spraying[\\/]frame-08\.png/);
   assert.match(assetPath(fixture, resolvedHit.actors.get("et")?.sprite?.assetId ?? ""), /assets[\\/]405[\\/]405-water-sprayed[\\/]et-april05-water-sprayed-frame-08\.png/);
   assert.ok((resolvedHit.actors.get("et")?.x ?? 0) < (resolvedHit.actors.get("ms")?.x ?? 0));
@@ -143,14 +153,14 @@ test("April 5 hair ruffle and side-lock use dedicated synchronized pairs without
   const fixture = await loadApril05();
   const actions = resolvedActions(fixture);
   const cutscene = new CutsceneSystem(actions);
-  const ruffleDialogue = "琢磨你们的朋友这样坏的。。。";
+  const ruffleDialogue = authoredContentExpectations.chapters.april05.dialogue[4]!.text;
   const ruffle = advanceUntilDialogue(cutscene, ruffleDialogue);
   const ruffleMs = assetPath(fixture, ruffle.actors.get("ms")?.sprite?.assetId ?? "");
   const ruffleEt = assetPath(fixture, ruffle.actors.get("et")?.sprite?.assetId ?? "");
   assert.match(ruffleMs, /assets\\405\\405-hair-ruffled\\08\.png|assets\/405\/405-hair-ruffled\/08\.png/);
   assert.match(ruffleEt, /assets\\405\\405-hair-ruffle\\08\.png|assets\/405\/405-hair-ruffle\/08\.png/);
   assert.equal([...ruffle.props.values()].filter((prop) => prop.id === "water-gun" && prop.visible).length, 0);
-  const lock = advanceUntilDialogue(new CutsceneSystem(actions), "我真的想象不到怎么会有那么抽象random的人");
+  const lock = advanceUntilDialogue(new CutsceneSystem(actions), authoredContentExpectations.chapters.april05.dialogue[6]!.text);
   assert.match(assetPath(fixture, lock.actors.get("ms")?.sprite?.assetId ?? ""), /assets[\\/]405[\\/]locked[\\/]08\.png/);
   assert.match(assetPath(fixture, lock.actors.get("et")?.sprite?.assetId ?? ""), /assets[\\/]405[\\/]lock[\\/]08\.png/);
   assert.ok((lock.actors.get("et")?.x ?? 0) < (lock.actors.get("ms")?.x ?? 0));
@@ -159,41 +169,9 @@ test("April 5 hair ruffle and side-lock use dedicated synchronized pairs without
 test("April 5 canonical dialogue and goodbye ordering are preserved", async () => {
   const fixture = await loadApril05();
   const actions = fixture.april05MainMemoryActions.filter((action: { type: string }) => action.type === "dialogue") as Array<{ type: "dialogue"; speaker: string; text: string }>;
-  for (const [speaker, text] of [
-    ["MS", "ei你在宿舍吗"], ["ET", "在啊怎么 你来了啊 不要跟我讲你又晚上骑脚车"], ["MS", "是诶我在你门口 你下来一下"],
-    ["ET", "！！？？wtf"], ["ET", "琢磨你们的朋友这样坏的。。。"], ["ST", "你看ms无差别攻击"],
-    ["ET", "我真的想象不到怎么会有那么抽象random的人"], ["MS", "啊你讲谁"], ["ET", "啧 顽皮"],
-    ["ET", "你知道今天是四月五号吗"], ["MS", "你哭过啊"], ["ET", "是啦 想起来一些伤心事"],
-    ["MS", "那你现在开心吗"], ["ET", "开心啊 因为可以见到你~"], ["ET", "你们看她不回我"], ["MS", "啊 我要回什么 恭喜你？"],
-    ["ET", "明天约跑步可以 要我背着重重的书包一起跑就不可以"], ["ET", "噢真的吗 这样就可以~"],
-    ["ET", "我不行了ms 我要去冲凉了"]
-  ]) {
-    assert.ok(actions.some((action) => action.speaker === speaker && action.text === text), speaker + " " + text);
-  }
-  const orderedTexts = [
-    "ei你在宿舍吗",
-    "在啊怎么 你来了啊 不要跟我讲你又晚上骑脚车",
-    "是诶我在你门口 你下来一下",
-    "！！？？wtf",
-    "琢磨你们的朋友这样坏的。。。",
-    "你看ms无差别攻击",
-    "我真的想象不到怎么会有那么抽象random的人",
-    "啊你讲谁",
-    "啧 顽皮",
-    "你知道今天是四月五号吗",
-    "你哭过啊",
-    "是啦 想起来一些伤心事",
-    "那你现在开心吗",
-    "开心啊 因为可以见到你~",
-    "你们看她不回我",
-    "啊 我要回什么 恭喜你？",
-    "明天约跑步可以 要我背着重重的书包一起跑就不可以",
-    "噢真的吗 这样就可以~",
-    "我不行了ms 我要去冲凉了"
-  ];
-  const orderedIndices = orderedTexts.map((text) => fixture.april05MainMemoryActions.findIndex((action: { type: string; text?: string }) => action.type === "dialogue" && action.text === text));
-  assert.equal(orderedIndices.every((index, position) => index >= 0 && (position === 0 || index > orderedIndices[position - 1])), true);
-  const finalDialogueIndex = fixture.april05MainMemoryActions.findIndex((action: { type: string; text?: string }) => action.type === "dialogue" && action.text === "我不行了ms 我要去冲凉了");
+  assert.deepEqual(actions.map((action) => action.speaker), ["MS", "ET", "MS", "ET", "ET", "ST", "ET", "MS", "ET", "ET", "ET", "MS", "ET", "MS", "ET", "ET", "MS", "ET", "MS", "ET", "ET", "ET"]);
+  assert.deepEqual(actions.map(({ text }) => text), authoredContentExpectations.chapters.april05.dialogue.map((line) => line.text));
+  const finalDialogueIndex = fixture.april05MainMemoryActions.reduce((last: number, action: { type: string }, index: number) => action.type === "dialogue" ? index : last, -1);
   const fadeIndex = fixture.april05MainMemoryActions.findIndex((action: { type: string }) => action.type === "fade");
   const despawnIndex = fixture.april05MainMemoryActions.findIndex((action: { type: string }) => action.type === "despawn");
   assert.ok(finalDialogueIndex >= 0 && finalDialogueIndex < fadeIndex && fadeIndex < despawnIndex);
@@ -203,9 +181,10 @@ test("April 5 secondary echoes stay dialogue-only and do not add a physical wate
   const fixture = await loadApril05();
   const echoSets = fixture.april05EchoActions as Record<string, Array<{ type: string; text?: string; asset?: string }>>;
   assert.deepEqual(Object.keys(echoSets).sort(), ["bicycle", "cat-echo", "phone-after-return"]);
-  assert.equal(echoSets["cat-echo"].some((action) => action.text === "我可以接受我主动靠近它 但是它不能主动靠近我"), true);
-  assert.equal(echoSets["bicycle"].some((action) => action.text === "你们两个是好朋友吗"), true);
-  assert.equal(echoSets["phone-after-return"].some((action) => action.text === "真的过了很久啦 只是今天想起来发现还是会痛"), true);
+  for (const [id, actions] of Object.entries(echoSets)) {
+    const expected = authoredContentExpectations.chapters.april05.collections?.[id as keyof typeof authoredContentExpectations.chapters.april05.collections];
+    assert.deepEqual(actions.filter((action) => action.type === "dialogue").map(({ text }) => ({ text })), expected?.map((line: { text: string }) => ({ text: line.text })));
+  }
   assert.equal(Object.values(echoSets).some((actions) => actions.some((action) => action.type === "prop")), false);
 });
 
@@ -214,10 +193,7 @@ test("April 5 keeps the three checkpoints and fixed factual closure", async () =
   assert.deepEqual(fixture.april05MainMemoryActions.filter((action: { type: string; id?: string }) => action.type === "checkpoint").map((action: { id?: string }) => action.id), [
     "april-five-sad-thing", "april-five-happy-because-see-you", "april-five-quiz"
   ]);
-  assert.deepEqual(fixture.april05Chapter.canonicalClosure.lines, [
-    "那晚，她最后还是回去冲凉了。",
-    "第二天早上，她还有 quiz。"
-  ]);
+  assert.deepEqual(fixture.april05Chapter.canonicalClosure.lines, authoredContentExpectations.chapters.april05.closure);
   const propIds = new Set(fixture.april05MainMemoryActions.filter((action: { type: string; id?: string }) => action.type === "prop").map((action: { id?: string }) => action.id));
   assert.deepEqual([...propIds], ["water-gun"]);
 });

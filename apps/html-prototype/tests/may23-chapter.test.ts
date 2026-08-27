@@ -8,6 +8,7 @@ import { CutsceneSystem, type CutsceneAction } from "../src/systems/CutsceneSyst
 import type { SceneLayout } from "../src/systems/SceneLayouts.js";
 import { drawSceneActor } from "../src/systems/SceneActorRenderer.js";
 import { sharedChapterDiaryBookAssetPath } from "../src/systems/DiaryLibrary.js";
+import { authoredContentExpectations } from "../src/fixtures/generated/authoredContentExpectations.js";
 
 function loadLayout(orientation: "portrait" | "landscape"): SceneLayout {
   return JSON.parse(readFileSync(`public/scene-layouts/523/${orientation}.json`, "utf8")) as SceneLayout;
@@ -54,10 +55,18 @@ test("May23 Portrait action resolver keeps approved facing semantics and histori
   const moveTo = (anchor: string) => actions.find((action): action is Extract<CutsceneAction, { type: "move" }> => action.type === "move" && action.x === layout.anchors[anchor]?.x && action.y === layout.anchors[anchor]?.y);
   assert.equal(moveTo("ms-wander-start")?.facing, "down");
   const upMove = actions.find((action): action is Extract<CutsceneAction, { type: "move" }> => action.type === "move" && action.actor === "ms" && action.spriteCycle?.[0]?.assetId.includes("/up/") === true);
-  const speakerFor = (text: string) => (actions.find((action) => action.type === "dialogue" && action.text === text) as Extract<CutsceneAction, { type: "dialogue" }> | undefined)?.speaker;
+  const mainDialogues = actions.flatMap((action) => {
+    if (action.type === "dialogue") return [{ speaker: action.speaker, text: action.text }];
+    if (action.type === "move" && action.dialogue) return [{ speaker: action.dialogue.speaker, text: action.dialogue.text }];
+    return [];
+  });
   assert.equal(upMove?.facing, "up");
-  assert.equal(speakerFor("我到了 你呢"), "MS");
-  assert.equal(speakerFor("你吃了吗 letsgo"), "ET");
+  assert.equal(mainDialogues[5]?.speaker, "MS");
+  assert.equal(mainDialogues[6]?.speaker, "ET");
+  assert.deepEqual(mainDialogues.map((action) => action.speaker), [
+    "MS", "ET", "ET", "MS", "MS", "MS", "ET", "MS", "MS", "MS", "ET", "ET", "ET", "ET"
+  ]);
+  assert.deepEqual(mainDialogues.map((action) => action.text), authoredContentExpectations.chapters.may23.dialogue.map((line) => line.text));
   assert.equal(actions.filter((action) => action.type === "spawn" && action.actor === "et").length, 2);
   assert.equal(actions.filter((action) => action.type === "spawn" && action.actor === "tung-ern").length, 2);
 });
@@ -158,19 +167,8 @@ test("May23 optional memory keeps authored points and uses the shared Labis diar
   assert.deepEqual(landscape.anchors["ms-bus-stop-wait"], { x: 775.3133822699041, y: 175.18691930645988 });
   assert.equal(sharedChapterDiaryBookAssetPath, "assets/labis/book-with-ms-photos.png");
   const optionalLines = may23EchoDialogues["bus-stop-memory"];
-  assert.deepEqual(optionalLines, [
-    { speaker: "MS", text: "明天你要去flying fox吗", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
-    { speaker: "ET", text: "我明天回家啦 又放你飞机了哈哈哈", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
-    { speaker: "MS", text: "靠背哦", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
-    { speaker: "MS", text: "去完再回", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
-    { speaker: "ET", text: "靠背哦", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
-    { speaker: "ET", text: "早八 巴士", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
-    { speaker: "MS", text: "靠北哦 sad", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
-    { speaker: "MEMORY", text: "后来朋友问我：\n“你没有提早跟她讲是吗？”", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
-    { speaker: "MEMORY", text: "我那时候想问，\n是我没提早讲吗。", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
-    { speaker: "MEMORY", text: "我原本就是因为她会去，\n才跟朋友约了这个活动。", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
-    { speaker: "MEMORY", text: "后来她不去了。\n我们也取消了。", portrait: "assets/523/memory-portrait/bus-stop-memory.png" }
-  ]);
+  assert.deepEqual(optionalLines.map(({ text, portrait }) => ({ text, portrait })), authoredContentExpectations.chapters.may23.collections?.["bus-stop-memory"]);
+  assert.deepEqual(optionalLines.map(({ speaker }) => speaker), ["MS", "ET", "MS", "MS", "ET", "ET", "MS", "MEMORY", "MEMORY", "MEMORY", "MEMORY"]);
   const optionalActions = resolveMay23Actions(portrait, "echo", "bus-stop-memory");
   assert.equal(optionalActions.every((action) => action.type === "dialogue"), true);
   assert.equal(optionalActions.some((action) => action.type === "checkpoint" || action.type === "move" || action.type === "spawn"), false);
@@ -243,9 +241,10 @@ test("May23 19:29 ordering requires physical return movement before 算了啦", 
   const layout = loadLayout("portrait");
   const actions = resolveMay23Actions(layout, "main");
   const where = (predicate: (action: typeof actions[number]) => boolean) => actions.findIndex(predicate);
-  const question = where((action) => action.type === "dialogue" && action.text === "你在哪里！！！！");
+  const expectedMain = authoredContentExpectations.chapters.may23.dialogue;
+  const question = where((action) => action.type === "dialogue" && action.text === expectedMain[10]?.text);
   const returnMove = where((action) => action.type === "move" && action.actor === "ms" && action.y === layout.anchors["ms-return-stop"]?.y);
-  const returnDialogue = actions.find((action) => action.type === "move" && action.dialogue?.text === "算了啦 我8：30要去吃饭");
+  const returnDialogue = actions.find((action) => action.type === "move" && action.dialogue?.text === expectedMain[11]?.text);
   assert.ok(question >= 0 && returnMove > question && returnDialogue);
   if (returnDialogue?.type === "move") assert.equal(returnDialogue.dialogueAtProgress, 0.35);
 });

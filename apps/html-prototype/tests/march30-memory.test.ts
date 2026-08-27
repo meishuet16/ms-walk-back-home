@@ -12,6 +12,7 @@ import {
   type March30Action,
   type March30AnchorKey
 } from "../src/fixtures/march30Memory.js";
+import { authoredContentExpectations } from "../src/fixtures/generated/authoredContentExpectations.js";
 
 test("March 30 asset metadata uses the inspected sheets without rounded frame slicing", () => {
   assert.equal(march30Assets.msBase.path, "assets/330/ms-base.png");
@@ -49,7 +50,7 @@ test("March 30 action data keeps the wipe and goodbye before reflection choice o
   const baseBeforeProps = march30MainMemoryActions.findIndex((action, index) => index > keychainFrame && action.type === "sprite" && action.actor === "ms" && action.asset === "msBase");
   assert.ok(keychainFrame < baseBeforeProps && baseBeforeProps < keychainProp);
   const keychainHide = march30MainMemoryActions.findIndex((action) => action.type === "prop" && action.id === "ordinaryKeychain" && !action.visible);
-  const sprayComplaint = march30MainMemoryActions.findIndex((action) => action.type === "dialogue" && action.text.startsWith("walao你刚刚拿水枪喷我"));
+  const sprayComplaint = dialogueActionIndex(march30MainMemoryActions, 19);
   assert.ok(keychainHide > keychainProp && keychainHide < sprayComplaint);
 });
 
@@ -69,33 +70,27 @@ test("March 30 resolves all authored normal and echo anchors per orientation", (
 
 test("March 30 canonical dialogue and echo copy are data, not reflection branches", () => {
   const text = march30MainMemoryActions.filter((action) => action.type === "dialogue").map((action) => action.text);
-  assert.ok(text.includes("halo~早上好叶同学"));
-  assert.ok(text.includes("这是什么"));
-  assert.ok(text.includes("里面有水啊？可以喷水的吗 怎样哦？"));
-  assert.ok(text.includes("惨了这个家伙要打我了"));
-  assert.ok(text.includes("不会啦 你那么可怜 上到6pm才放学 我1pm就放学了嘻嘻"));
-  assert.ok(text.some((line) => line.startsWith("我去！")));
+  assert.deepEqual(text, authoredContentExpectations.chapters.march30.dialogue.map((line) => line.text));
   const echoText = march30EchoActions.filter((action) => action.type === "dialogue").map((action) => action.text);
-  assert.ok(echoText.includes("额嘿嘿好巧哈哈 又见面了 太有缘了"));
-  assert.ok(echoText.includes("哎哟又遇到了 我们还是那么顺路 太有缘分了"));
+  assert.deepEqual(echoText, authoredContentExpectations.chapters.march30.collections?.echo?.map((line) => line.text));
 });
 
 test("March 30 uses the authored direct portraits for the keychain dialogue beats", () => {
-  const waterQuestion = march30MainMemoryActions.find((action) => action.type === "dialogue" && action.text === "这是什么");
-  const keychainChoice = march30MainMemoryActions.find((action) => action.type === "dialogue" && action.text === "这边两个同款图案的挂饰里面你选一个吧");
+  const waterQuestion = dialogueAt(march30MainMemoryActions, 4);
+  const keychainChoice = dialogueAt(march30MainMemoryActions, 11);
   assert.equal(waterQuestion?.type, "dialogue");
-  assert.deepEqual(waterQuestion?.portrait, { src: "assets/330/330-1.png", height: 200, offsetY: 8 });
+  assert.deepEqual(waterQuestion?.portrait, authoredContentExpectations.chapters.march30.dialogue[4]?.portrait);
   assert.equal(keychainChoice?.type, "dialogue");
-  assert.deepEqual(keychainChoice?.portrait, { src: "assets/330/330-7.png", height: 200, offsetY: 8 });
+  assert.deepEqual(keychainChoice?.portrait, authoredContentExpectations.chapters.march30.dialogue[11]?.portrait);
 });
 
 test("March 30 uses the authored direct portraits for ET's question and MS's answer", () => {
-  const giftQuestion = march30MainMemoryActions.find((action) => action.type === "dialogue" && action.text === "这是什么");
-  const waterGunAnswer = march30MainMemoryActions.find((action) => action.type === "dialogue" && action.text === "水枪");
+  const giftQuestion = dialogueAt(march30MainMemoryActions, 4);
+  const waterGunAnswer = dialogueAt(march30MainMemoryActions, 5);
   assert.equal(giftQuestion?.type, "dialogue");
-  assert.deepEqual(giftQuestion?.portrait, { src: "assets/330/330-1.png", height: 200, offsetY: 8 });
+  assert.deepEqual(giftQuestion?.portrait, authoredContentExpectations.chapters.march30.dialogue[4]?.portrait);
   assert.equal(waterGunAnswer?.type, "dialogue");
-  assert.deepEqual(waterGunAnswer?.portrait, { src: "assets/330/330-2.png", height: 200, offsetY: 8 });
+  assert.deepEqual(waterGunAnswer?.portrait, authoredContentExpectations.chapters.march30.dialogue[5]?.portrait);
 });
 
 test("March 30 dialogue actions accept the shared generic portrait config", () => {
@@ -116,3 +111,16 @@ test("March 30 dialogue actions accept the shared generic portrait config", () =
     offsetY: 8
   });
 });
+
+function dialogueAt(actions: typeof march30MainMemoryActions, dialogueIndex: number) {
+  return actions.filter((action) => action.type === "dialogue")[dialogueIndex];
+}
+
+function dialogueActionIndex(actions: typeof march30MainMemoryActions, dialogueIndex: number): number {
+  let current = -1;
+  return actions.findIndex((action) => {
+    if (action.type !== "dialogue") return false;
+    current += 1;
+    return current === dialogueIndex;
+  });
+}

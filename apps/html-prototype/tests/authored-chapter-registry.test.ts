@@ -8,6 +8,7 @@ import { may23Assets, may23Chapter, may23EchoAnchors, may23ReflectionChoices, re
 import { june24Assets, june24Chapter, june24EchoDialogues, june24ReflectionChoices, resolveJune24Actions } from "../src/fixtures/june24Chapter.js";
 import { june25Chapter, june25DiaryEntry, june25EchoAvailability, june25EchoPortraitSequenceIds, june25PortraitSequences, june25ReflectionChoices } from "../src/fixtures/june25Chapter.js";
 import { chapterRegistry, forestEntries, routeForestEntry } from "../src/systems/ChapterRegistry.js";
+import { authoredContentExpectations } from "../src/fixtures/generated/authoredContentExpectations.js";
 import type { SceneLayout } from "../src/systems/SceneLayouts.js";
 
 const loadRegistry = () => import("../src/systems/AuthoredChapterRegistry.js");
@@ -82,8 +83,8 @@ test("June 25 uses the canonical Section 7 diary body and shared diary asset con
   const { authoredRuntimeByScene } = await loadRegistry();
   const runtime = authoredRuntimeByScene["625"];
   assert.equal(june25DiaryEntry.chapterId, june25Chapter.id);
-  assert.equal(june25DiaryEntry.body.split("\n\n")[0], "06.25 · She Really Came");
-  assert.match(june25DiaryEntry.body, /只是有一天，在完全可以不来的时候，你还是自己走来了。/);
+  assert.equal(june25DiaryEntry.title, authoredContentExpectations.chapters.june25.diary?.title);
+  assert.equal(june25DiaryEntry.body, authoredContentExpectations.chapters.june25.diary?.body);
   assert.doesNotMatch(june25DiaryEntry.body, /raw June 25|source diary/i);
   assert.equal(runtime?.chapter.diaryEntryId, june25DiaryEntry.id);
   assert.equal(runtime?.chapter.runtimeScene, "625");

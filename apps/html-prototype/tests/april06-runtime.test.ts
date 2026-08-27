@@ -7,6 +7,7 @@ import { april06Assets, april06EchoActions, april06MainMemoryActions, resolveApr
 import { CutsceneSystem, type CutsceneAction } from "../src/systems/CutsceneSystem.js";
 import type { SceneLayout } from "../src/systems/SceneLayouts.js";
 import { resolveSceneAssetPath, resolveSceneEchoAnchor } from "../src/systems/SceneLayouts.js";
+import { authoredContentExpectations } from "../src/fixtures/generated/authoredContentExpectations.js";
 
 test("April 6 legacy and authored background paths resolve to the committed scene assets", () => {
   for (const orientation of ["landscape", "portrait"] as const) {
@@ -85,9 +86,7 @@ test("April 6 main memory keeps the authored anchors and canonical dialogue cont
     "et-chat-position", "car-return-edge", "ms-exit-pickup"
   ] as const) assert.equal(anchorKeys.has(key), true);
   const dialogue = april06MainMemoryActions.filter((action) => action.type === "dialogue").map((action) => action.text);
-  for (const line of ["叶同学 你的宵夜已送到", "诶还没走啊~", "为了要抓你嘛", "njhl", "5.30am"]) {
-    assert.equal(dialogue.some((text) => text.includes(line)), true);
-  }
+  assert.deepEqual(dialogue, authoredContentExpectations.chapters.april06.dialogue.map((line) => line.text));
 });
 
 test("April 6 echo uses one semantic alias and no physical water-gun prop", () => {
@@ -196,33 +195,10 @@ test("April 6 standalone MCD remains a world-only single prop", () => {
 });
 
 test("April 6 canonical dialogue keeps the required speaker assignments", () => {
-  const expected: Record<string, string> = {
-    "诶还没走啊~": "ET",
-    "……你下来的很快哦。": "MS",
-    "肯定，为了要抓你嘛。": "ET",
-    "你现在怎样回去？": "ET",
-    "我朋友等下来载我 hehe。": "MS",
-    "你吃了吗？": "ET",
-    "多少钱我转你啦。": "ET",
-    "不用不用。": "MS",
-    "你吃了就等于我吃了。": "MS",
-    "你要带着我的那份吃下去嘻嘻。": "MS",
-    "Angela 不在宿舍，去 inspection 了。": "ET",
-    "明天她要 5.30am 起床。": "ET",
-    "那你几点？": "MS",
-    "也是 5.30am。": "ET",
-    "你明天有没有去 faculty 的活动？": "ET",
-    "你去吗？": "MS",
-    "我和我朋友都去。": "ET",
-    "njhl。": "MS",
-    "怎么，你有上课？": "ET",
-    "对啊。": "MS",
-    "噢你朋友来了。": "ET"
-  };
   const dialogueActions = april06MainMemoryActions.filter((action): action is Extract<typeof april06MainMemoryActions[number], { type: "dialogue" }> => action.type === "dialogue");
-  for (const [line, speaker] of Object.entries(expected)) assert.equal(dialogueActions.find((action) => action.text === line)?.speaker, speaker, line);
-  const goodbyes = dialogueActions.filter((action) => action.text === "拜拜。");
-  assert.deepEqual(goodbyes.map((action) => action.speaker), ["ET", "MS"]);
+  assert.deepEqual(dialogueActions.map((action) => action.speaker), ["MS", "MS", "MS", "MS", "ET", "MS", "ET", "ET", "MS", "ET", "ET", "MS", "MS", "MS", "ET", "ET", "MS", "ET", "ET", "MS", "ET", "MS", "ET", "MS", "ET", "ET", "MS"]);
+  assert.deepEqual(dialogueActions.map((action) => action.text), authoredContentExpectations.chapters.april06.dialogue.map((line) => line.text));
+  assert.deepEqual(dialogueActions.slice(-2).map((action) => action.speaker), ["ET", "MS"]);
 });
 
 test("April 6 chat actors consume distinct authored anchors", () => {
@@ -282,23 +258,19 @@ test("April 6 morning uses authoritative opposing starts, facing, and exact pair
 test("April 6 morning aftermath uses the canonical offscreen dialogue after the dissolve", () => {
   const fadeIndex = april06EchoActions.findIndex((action) => action.type === "fade");
   const aftermath = april06EchoActions.slice(fadeIndex + 1).filter((action): action is Extract<typeof april06EchoActions[number], { type: "dialogue" }> => action.type === "dialogue");
-  assert.deepEqual(aftermath, [
-    { type: "dialogue", speaker: "Ziqi", text: "今天不 monday blue 了咯", portrait: "assets/624/echo-portraits/group-echoes/01-morning-angela-st.png" },
-    { type: "dialogue", speaker: "MS", text: "hehe 本来就不blue 你不懂昨天晚上发生了啥", portrait: "assets/523/memory-portrait/02.png" },
-    { type: "dialogue", speaker: "Ziqi", text: "啥 快告诉我！", portrait: "assets/624/echo-portraits/group-echoes/01-morning-angela-st.png" },
-    { type: "dialogue", speaker: "MS", text: "hehe", portrait: "assets/523/memory-portrait/02.png" }
-  ]);
+  assert.deepEqual(aftermath.map(({ text, portrait }) => ({ text, portrait })), authoredContentExpectations.chapters.april06.collections?.echo);
+  assert.deepEqual(aftermath.map(({ speaker }) => speaker), ["Ziqi", "MS", "Ziqi", "MS"]);
 });
 
 test("April 6 rendered-state checkpoints use approved current visuals", () => {
-  const emptyCar = advanceUntilDialogue("wtf？？？");
+  const emptyCar = advanceUntilDialogue(authoredContentExpectations.chapters.april06.dialogue[3]!.text);
   assert.equal(april06Assets[emptyCar.actors.get("ms")?.sprite?.assetId as keyof typeof april06Assets]?.path, "assets/406/406-caught/406-caught-abrupt stop.png");
-  const catchLine = advanceUntilDialogue("诶还没走啊~");
+  const catchLine = advanceUntilDialogue(authoredContentExpectations.chapters.april06.dialogue[4]!.text);
   assert.equal(april06Assets[catchLine.actors.get("et")?.sprite?.assetId as keyof typeof april06Assets]?.path, "assets/406/406-catch/406-catch-small amused reaction.png");
-  const chat = advanceUntilDialogue("你现在怎样回去？");
+  const chat = advanceUntilDialogue(authoredContentExpectations.chapters.april06.dialogue[7]!.text);
   assert.equal(april06Assets[chat.actors.get("ms")?.sprite?.assetId as keyof typeof april06Assets]?.path, "assets/406/406-caught/406-caught-conversational idle A.png");
   assert.equal(april06Assets[chat.actors.get("et")?.sprite?.assetId as keyof typeof april06Assets]?.path, "assets/406/406-eat/406-eat-hold bag.png");
-  const ending = advanceUntilDialogue("噢你朋友来了。");
+  const ending = advanceUntilDialogue(authoredContentExpectations.chapters.april06.dialogue[24]!.text);
   assert.equal(april06Assets[ending.actors.get("et")?.sprite?.assetId as keyof typeof april06Assets]?.path, "assets/406/406-eat/406-eat-glance.png");
   assert.equal(april06Assets[ending.actors.get("alza")?.sprite?.assetId as keyof typeof april06Assets]?.path, "assets/406/prop/vehicle-406-arrival-1.png");
 });

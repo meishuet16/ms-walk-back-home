@@ -6,6 +6,7 @@ import { authoredChapterDiaryEntries } from "../src/fixtures/authoredDiaryEntrie
 import { forestEntries } from "../src/systems/ChapterRegistry.js";
 import { chapterRegistry, routeForestEntry } from "../src/systems/ChapterRegistry.js";
 import { consumeAutomaticChapterTrigger, createChapterTriggerSession } from "../src/systems/ChapterProgressManager.js";
+import { authoredContentExpectations } from "../src/fixtures/generated/authoredContentExpectations.js";
 
 const loadApril05 = () => import("../src/fixtures/" + "april05Chapter.js");
 
@@ -24,8 +25,8 @@ test("April 5 is registered as the authored 405 chapter and Forest route", async
   assert.equal(april05Chapter.id, "april05-come-down");
   assert.equal(april05Chapter.runtimeScene, "405");
   assert.equal(april05Chapter.date, "04.05");
-  assert.equal(april05Chapter.title, "下来一下");
-  assert.equal(april05Chapter.location, "KTHO residential-college entrance / front sitting area");
+  assert.equal(april05Chapter.title, authoredContentExpectations.chapters.april05.display.title);
+  assert.equal(april05Chapter.location, authoredContentExpectations.chapters.april05.display.location);
   assert.equal(april05Chapter.canonicalClosure.historicalEventId, "april05-ktho-night-memory");
   assert.equal(chapterRegistry["april05-come-down"], april05Chapter);
   const forestEntry = forestEntries.find((entry) => entry.chapterId === april05Chapter.id);

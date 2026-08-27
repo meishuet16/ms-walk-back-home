@@ -5,6 +5,7 @@ import { createDiaryLibrary, forestNodesForMonth } from "../src/systems/DiaryLib
 import { resolveChapterReflection } from "../src/systems/EndingResolver.js";
 import { emptyTendencies } from "../src/systems/TendencySystem.js";
 import type { ChapterReflectionInput } from "../src/systems/ChapterMemoryExperience.js";
+import { authoredContentExpectations } from "../src/fixtures/generated/authoredContentExpectations.js";
 
 function progress(choices: string[]): ChapterReflectionInput {
   return {
@@ -48,5 +49,5 @@ test("March 30 authored chapter appears through the Forest month placement input
   const nodes = forestNodesForMonth(forestEntries, createDiaryLibrary(), "2026-03");
   const march30 = nodes.find((node) => "chapterId" in node && node.chapterId === "march30-too-fated");
   assert.ok(march30);
-  assert.equal(march30?.title, "Too Fated");
+  assert.equal(march30?.title, authoredContentExpectations.chapters.march30.display.title);
 });

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
 import { march30EchoActions, march30MainMemoryActions, resolveMarch30CutsceneActions } from "../src/fixtures/march30Memory.js";
+import { authoredContentExpectations } from "../src/fixtures/generated/authoredContentExpectations.js";
 
 const root = process.cwd();
 const layout = JSON.parse(readFileSync(join(root, "public/scene-layouts/330-corridor/landscape.json"), "utf8"));
@@ -13,9 +14,10 @@ test("March 30 resolver binds symbolic choreography to authored anchors", () => 
   assert.equal(spawns.length, 2);
   assert.deepEqual([spawns[0].x, spawns[0].y], [layout.anchors["et-bench-seat"].x, layout.anchors["et-bench-seat"].y]);
   assert.equal(actions.filter((action) => action.type === "effect").length, 3);
-  assert.equal(actions.filter((action) => action.type === "dialogue" && action.text === "惨了这个家伙要打我了").length, 1);
-  assert.equal(actions.filter((action) => action.type === "dialogue" && action.text === "不会啦 你那么可怜 上到6pm才放学 我1pm就放学了嘻嘻").length, 1);
-  assert.equal(actions.filter((action) => action.type === "dialogue" && action.text.startsWith("我去！")).length, 1);
+  const dialogue = actions.filter((action) => action.type === "dialogue");
+  assert.equal(dialogue[20]?.text, authoredContentExpectations.chapters.march30.dialogue[20]?.text);
+  assert.equal(dialogue[21]?.text, authoredContentExpectations.chapters.march30.dialogue[21]?.text);
+  assert.equal(dialogue[22]?.text, authoredContentExpectations.chapters.march30.dialogue[22]?.text);
 });
 
 test("March 30 echo keeps the elevator reveal and paired walking offset data", () => {
@@ -23,7 +25,7 @@ test("March 30 echo keeps the elevator reveal and paired walking offset data", (
   const spawns = actions.filter((action) => action.type === "spawn");
   assert.equal(spawns.length, 2);
   assert.equal(actions.filter((action) => action.type === "move").length, 2);
-  assert.ok(actions.find((action) => action.type === "dialogue" && action.text.includes("太有缘了")));
+  assert.deepEqual(actions.filter((action) => action.type === "dialogue").map((action) => action.text), authoredContentExpectations.chapters.march30.collections?.echo?.map((line) => line.text));
 });
 
 test("app routes authored 330-corridor into the March 30 visual runtime", () => {

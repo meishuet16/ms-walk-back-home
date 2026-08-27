@@ -20,6 +20,7 @@ import { renderMemoryPortraitSequenceBeat } from "../src/systems/MemoryPortraitP
 import type { SceneLayout } from "../src/systems/SceneLayouts.js";
 import { sharedChapterDiaryBookAssetPath } from "../src/systems/DiaryLibrary.js";
 import { renderReflection } from "../src/systems/PresentationRenderer.js";
+import { authoredContentExpectations } from "../src/fixtures/generated/authoredContentExpectations.js";
 
 const runtime = authoredRuntimeByScene["721"];
 const echoIds = [
@@ -45,7 +46,7 @@ test("721 is one registered playable chapter and not a July 20 chapter", () => {
   assert.equal(routeForestEntry(forestEntries.find((entry) => entry.chapterId === july21Chapter.id)!).kind, "implemented-chapter");
   assert.equal(forestEntries.find((entry) => entry.chapterId === july21Chapter.id)?.date, "07.21–07.22");
   assert.equal(july21Chapter.date, "07.21–07.22");
-  assert.equal(july21Chapter.title, "One More Day");
+  assert.equal(july21Chapter.title, authoredContentExpectations.chapters.july21.display.title);
 });
 
 test("721 layouts use the exact approved scene assets and geometry", () => {
@@ -100,23 +101,17 @@ test("721 reuses the Labis diary book and the exact authored body", () => {
   assert.equal(sharedChapterDiaryBookAssetPath, "assets/labis/book-with-ms-photos.png");
   assert.equal(july21DiaryEntry.body, july21DiaryBody.join("\n\n"));
   assert.equal(july21DiaryEntry.chapterId, july21Chapter.id);
-  assert.equal(july21DiaryEntry.title, "07.21–07.22 · One More Day");
-  assert.equal(july21DiaryEntry.body.split("\n\n")[0], "07.21–07.22 · One More Day");
-  assert.match(july21DiaryEntry.body, /而你的水壶，还留在这里。$/);
+  assert.equal(july21DiaryEntry.title, authoredContentExpectations.chapters.july21.diary?.title);
+  assert.equal(july21DiaryEntry.body, authoredContentExpectations.chapters.july21.diary?.body);
 });
 
 test("721 Main is one continuous five-beat portrait sequence in semantic order", () => {
-  assert.deepEqual(july21MainPortraitSequence.beats.map((beat) => beat.portrait), [
-    "assets/721/memory-portrait/main-01.png",
-    "assets/721/memory-portrait/main-02.png",
-    "assets/721/memory-portrait/main-03.png",
-    "assets/721/memory-portrait/main-04.png",
-    "assets/721/memory-portrait/main-05.png"
-  ]);
+  assert.deepEqual(july21MainPortraitSequence.beats.map((beat) => beat.portrait), authoredContentExpectations.chapters.july21.beatPortraits?.["july21-main"]);
   const dialogue = july21MainPortraitSequence.beats.flatMap((beat) => beat.dialogue);
-  assert.equal(dialogue.some((line) => line.text.includes("为什么不能没有 plan 也留下来？")), true);
-  assert.equal(dialogue.some((line) => line.text.includes("因为我喜欢你")), false);
-  assert.equal(dialogue.at(-1)?.text, "我们还有明天半天不是。");
+  assert.deepEqual(dialogue.map((line) => line.speaker), [
+    "ET", "ET", "ET", "Memory", "Memory", "Memory", "MS", "ET", "MS", "MS", "ET", "MS", "ET", "MS", "ET", "Memory", "ET", "MS", "ET", "ET", "ET", "MS", "MS", "ET", "ET", "MS", "Memory", "Memory", "MS", "ET", "MS", "ET", "MS", "ET", "ET", "ET", "ET", "ET", "MS", "ET", "MS", "MS", "MS", "MS", "ET", "ET", "ET"
+  ]);
+  assert.deepEqual(dialogue.map((line) => ({ text: line.text })), authoredContentExpectations.chapters.july21.dialogue.map((line) => ({ text: line.text })));
   for (const [index, beat] of july21MainPortraitSequence.beats.entries()) {
     for (let line = 0; line < beat.dialogue.length; line += 1) {
       const markup = renderMemoryPortraitSequenceBeat(july21MainPortraitSequence, index, line, { orientation: "landscape", width: 1280, height: 720 });
@@ -127,10 +122,11 @@ test("721 Main is one continuous five-beat portrait sequence in semantic order",
 
 test("721 Echo portrait sequences cover every authored interaction and use the approved assets", () => {
   assert.deepEqual(Object.keys(july21EchoPortraitSequenceIds), echoIds);
-  const paths = Object.values(july21PortraitSequences).flatMap((sequence) => sequence.beats.map((beat) => typeof beat.portrait === "string" ? beat.portrait : beat.portrait.src));
-  for (const path of ["echo-distance.png", "echo-hike.png", "echo-deer.png", "echo-eat.png", "echo-temple01.png", "echo-temple02.png", "echo-ask.png", "echo-luggage.png", "echo-gift.png", "echo-station.png", "echo-leave.png", "echo-watch.png", "echo-muji.png"]) {
-    assert.equal(paths.includes(`assets/721/memory-portrait/${path}`), true, path);
-  }
+  const paths = Object.fromEntries(Object.entries(july21PortraitSequences).map(([id, sequence]) => [
+    id,
+    sequence.beats.map((beat) => typeof beat.portrait === "string" ? beat.portrait : beat.portrait.src)
+  ]));
+  assert.deepEqual(paths, authoredContentExpectations.chapters.july21.beatPortraits);
 });
 
 test("721 uses current-run Main, departure, and left-behind gating", () => {
