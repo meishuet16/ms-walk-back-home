@@ -88,6 +88,7 @@ import { addDateDays, dateDifference, localDateString, relativeDateLabel } from 
 import { renderMediaEditor, renderMediaPreview, renderToolbox, type ToolboxRenderState } from "./systems/ToolboxView.js";
 import { createLivingWindowViewModel, defaultWindowLocation, fetchOpenMeteoLocations, fetchOpenMeteoWeather, livingWindowStatusCopy, weatherCacheStatus, type WeatherSnapshot, type WindowLocation } from "./systems/LivingWindow.js";
 import { calculateMoonPhase, type MoonPhase } from "./systems/MoonPhase.js";
+import { getMujiAtlasMetadata, getMujiFrame, MUJI_ATLAS_COLUMNS, MUJI_ATLAS_ROWS, MUJI_DRAW_HEIGHT, MUJI_DRAW_OFFSET_X, MUJI_DRAW_OFFSET_Y, MUJI_DRAW_WIDTH, MUJI_IDLE_FRAME_MS, MUJI_WALK_FRAME_MS, type MujiDirection } from "./systems/MujiSprite.js";
 import { drawSceneAsset } from "./systems/SceneAssetRenderer.js";
 import { imagesToPdf, mergePdfFiles, movePdfPage, optimizePdf, pdfOutputFilename, pdfToPngImages, removePdfPage, reorderOrExtractPdf, splitPdfPageGroups, type PdfSplitMode } from "./systems/PdfToolkit.js";
 import { mediaOutputFilename, processMediaFile } from "./systems/MediaToolkit.js";
@@ -139,7 +140,8 @@ const assets = {
   forest: "assets/forest.png",
   bakery: "assets/bakery.png",
   labis: "assets/labis-july19.png",
-  muji: "assets/muji-sheet.png",
+  muji: "assets/muji-sheet-v2.png",
+  mujiFallback: "assets/muji-sheet.png",
   friend: "assets/330/111.png",
   room: "assets/muji-room.png",
   roomFallback: "assets/room-panel.jpg",
@@ -173,13 +175,14 @@ export class WalkBackHomeApp {
     bakery: img(assets.bakery),
     labis: img(assets.labis),
     muji: img(assets.muji),
+    mujiFallback: img(assets.mujiFallback),
     friend: img(assets.friend),
     room: img(assets.roomFallback),
   };
   private scene: SceneId = "title";
   private player: Point = { x: 880, y: 690 };
-  private facing = 0;
-  private frame = 0;
+  private facing: MujiDirection = "down";
+  private mujiMoving = false;
   private last = performance.now();
   private activeDoor: ForestNode | null = null;
   private currentDoor: ForestNode | null = null;
@@ -2264,6 +2267,7 @@ export class WalkBackHomeApp {
     this.last = time;
     this.syncSceneOrientation();
     const input = this.input.read();
+    this.mujiMoving = false;
     if (input.interact && !this.toolboxOpen && !this.livingWindowPanelOpen) this.interact();
     const frameInput = (this.toolboxOpen || this.livingWindowPanelOpen) && this.scene === "muji-room" ? { x: 0, y: 0 } : input;
     if (this.scene === "forest") this.updateForest(frameInput.x, frameInput.y, dt);
@@ -3083,24 +3087,20 @@ export class WalkBackHomeApp {
     const layout = this.currentSceneLayout("muji-room");
     if (layout.orientation === "landscape") {
       const moving = Math.hypot(x, y) > 0.05;
+      this.mujiMoving = moving;
       if (moving) {
-        this.facing = Math.abs(x) > Math.abs(y) ? (x < 0 ? 2 : 3) : y < 0 ? 1 : 0;
-        this.frame = Math.floor(performance.now() / 140) % 4;
+        this.facing = Math.abs(x) > Math.abs(y) ? (x < 0 ? "left" : "right") : y < 0 ? "up" : "down";
         this.player = moveRoomPlayer(this.player, x, y, dt);
-      } else {
-        this.frame = 0;
       }
       this.activeRoomInteraction = nearestRoomInteraction(this.player);
       this.activeObject = this.activeRoomInteraction?.label ?? "";
       return;
     }
     const moving = Math.hypot(x, y) > 0.05;
+    this.mujiMoving = moving;
     if (moving) {
-      this.facing = Math.abs(x) > Math.abs(y) ? (x < 0 ? 2 : 3) : y < 0 ? 1 : 0;
-      this.frame = Math.floor(performance.now() / 140) % 4;
+      this.facing = Math.abs(x) > Math.abs(y) ? (x < 0 ? "left" : "right") : y < 0 ? "up" : "down";
       this.moveInLayout(x, y, dt, layout);
-    } else {
-      this.frame = 0;
     }
     this.activeRoomInteraction = layout.interactions.find((interaction) => Math.hypot(this.player.x - interaction.x, this.player.y - interaction.y) <= interaction.radius) ?? null;
     this.activeObject = this.activeRoomInteraction?.label ?? "";
@@ -3108,14 +3108,12 @@ export class WalkBackHomeApp {
 
   private moveInLayout(x: number, y: number, dt: number, layout: SceneLayout): void {
     const moving = Math.hypot(x, y) > 0.05;
+    this.mujiMoving = moving;
     if (moving) {
-      this.facing = Math.abs(x) > Math.abs(y) ? (x < 0 ? 2 : 3) : y < 0 ? 1 : 0;
-      this.frame = Math.floor(performance.now() / 140) % 4;
+      this.facing = Math.abs(x) > Math.abs(y) ? (x < 0 ? "left" : "right") : y < 0 ? "up" : "down";
       const next = { x: this.player.x + x * 155 * dt, y: this.player.y + y * 155 * dt };
       const outside = next.x < 0 || next.y < 0 || next.x > layout.size.w || next.y > layout.size.h;
       if (!outside && !inAnyRect(next, layout.obstacles)) this.player = next;
-    } else {
-      this.frame = 0;
     }
   }
 
@@ -4449,7 +4447,18 @@ export class WalkBackHomeApp {
 
   private drawMuji(position: Point, time: number, scale: number): void {
     const bob = Math.sin(time / 160) * 2;
-    this.ctx.drawImage(this.images.muji, this.frame * 96, this.facing * 112, 96, 112, position.x - 24 * scale, position.y - 58 * scale + bob, 48 * scale, 56 * scale);
+    const destinationX = position.x + MUJI_DRAW_OFFSET_X * scale;
+    const destinationY = position.y + MUJI_DRAW_OFFSET_Y * scale + bob;
+    const v2 = this.images.muji;
+    if (v2.complete && v2.naturalWidth > 0 && v2.naturalHeight > 0 && v2.naturalWidth % MUJI_ATLAS_COLUMNS === 0 && v2.naturalHeight % MUJI_ATLAS_ROWS === 0) {
+      const { frameWidth, frameHeight } = getMujiAtlasMetadata(v2.naturalWidth, v2.naturalHeight);
+      const frame = getMujiFrame(v2.naturalWidth, v2.naturalHeight, this.facing, this.mujiMoving, time);
+      this.ctx.drawImage(v2, frame.sourceX, frame.sourceY, frameWidth, frameHeight, destinationX, destinationY, MUJI_DRAW_WIDTH * scale, MUJI_DRAW_HEIGHT * scale);
+      return;
+    }
+    const legacyFrame = Math.floor(time / (this.mujiMoving ? MUJI_WALK_FRAME_MS : MUJI_IDLE_FRAME_MS)) % 4;
+    const legacyRow = ({ down: 0, up: 1, left: 2, right: 3 } as const)[this.facing];
+    this.ctx.drawImage(this.images.mujiFallback, legacyFrame * 96, legacyRow * 112, 96, 112, destinationX, destinationY, MUJI_DRAW_WIDTH * scale, MUJI_DRAW_HEIGHT * scale);
   }
 
   private drawMujiRoomScene(time: number): void {
