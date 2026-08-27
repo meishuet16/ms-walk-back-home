@@ -63,3 +63,29 @@ test("Floating Lyrics integration uses stage CSS bounds and free resize", () => 
   assert.match(source, /floatingLyricsPresentationMode/);
   assert.match(source, /floatingLyricsGestureSuppressed/);
 });
+
+test("Floating Lyrics keeps all responsive modes content-rich and usable", () => {
+  const source = readFileSync("src/app.ts", "utf8");
+  const styles = readFileSync("src/styles.css", "utf8");
+  const render = source.slice(source.indexOf("private updatePersonalMusicOverlay"), source.indexOf("private makeDiaryLibrary"));
+
+  assert.match(render, /mode === "large"[\s\S]*floating-lyric-lines[\s\S]*data-action="vinyl-pause"[\s\S]*data-action="music-prev"[\s\S]*data-action="music-next"/);
+  assert.match(render, /mode === "compact"[\s\S]*currentLyricHtml[\s\S]*data-action="vinyl-pause"/);
+  assert.match(render, /mode === "compact"[\s\S]*currentLyricHtml[\s\S]*currentLyricHtml/);
+  assert.match(render, /lyrics\[activeIndex\]\?\.text \?\? track\.title/);
+  assert.match(styles, /\.floating-lyrics\.mode-large\s*\{[\s\S]*display:\s*grid/);
+  assert.doesNotMatch(styles, /\.music-player \.floating-lyrics\s*\{[\s\S]*display:\s*block/);
+  assert.match(styles, /\.music-player \.floating-lyrics > div\s*\{[\s\S]*height:\s*auto/);
+});
+
+test("Floating Lyrics uses its non-control body as a drag surface without hijacking controls", () => {
+  const source = readFileSync("src/app.ts", "utf8");
+  const pointerDown = source.slice(source.indexOf("private handlePointerDown"), source.indexOf("private handlePointerMove"));
+  const click = source.slice(source.indexOf("private handleClick"), source.indexOf("private handleChange"));
+
+  assert.match(pointerDown, /const lyrics = .*closest<HTMLElement>\("\.floating-lyrics"\)/);
+  assert.match(pointerDown, /lyrics && !\(event\.target as HTMLElement\)\.closest\("\.floating-resize-handle/);
+  assert.match(pointerDown, /floating-controls-bar,button,input,select,textarea/);
+  assert.doesNotMatch(pointerDown, /closest\("\.floating-drag-handle"\)/);
+  assert.match(click, /floatingLyricsGestureSuppressed/);
+});

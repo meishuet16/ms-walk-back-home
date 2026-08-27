@@ -76,3 +76,20 @@ test("Full Lyrics only suspends follow for explicit user scroll input", () => {
   assert.doesNotMatch(scrollHandler, /fullLyricsAutoScrolling|markLyricsManuallyScrolled/);
   assert.match(source, /handleFullLyricsUserInput/);
 });
+
+test("Full Lyrics is an immersive Records view with readable lyrics and a bottom player dock", () => {
+  const source = readFileSync("src/app.ts", "utf8");
+  const styles = readFileSync("src/styles.css", "utf8");
+  const render = source.slice(source.indexOf("private renderFullLyrics"), source.indexOf("private handleFullLyricsScroll"));
+
+  assert.match(render, /full-lyrics-track/);
+  assert.match(render, /track\?\.artist/);
+  assert.match(render, /full-lyrics-player/);
+  assert.match(render, /data-music-seek/);
+  assert.match(render, /data-action="music-prev"[\s\S]*data-action="vinyl-pause"[\s\S]*data-action="music-next"/);
+  assert.match(render, /buildLyricsViewerLines\(lines, state\.activeIndex\)/);
+  assert.doesNotMatch(render, /notebook|ruled|lyric-card/);
+  assert.match(styles, /\.full-lyrics-panel\s*\{[\s\S]*grid-template-rows:\s*auto minmax\(0, 1fr\) auto/);
+  assert.doesNotMatch(styles, /\.full-lyrics-scroll\s*\{[\s\S]*padding:\s*34vh/);
+  assert.match(styles, /\.full-lyrics-line\s*\{[\s\S]*color:\s*rgba\(245, 222, 184, \.6/);
+});

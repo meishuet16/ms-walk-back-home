@@ -6943,9 +6943,8 @@ export class WalkBackHomeApp {
       event.preventDefault();
       return;
     }
-    const pointerTarget = event.target as HTMLElement;
     const lyrics = (event.target as HTMLElement).closest<HTMLElement>(".floating-lyrics");
-    if (lyrics && (event.target as HTMLElement).closest(".floating-drag-handle") && !(event.target as HTMLElement).closest(".floating-controls-bar,button,input,select,textarea")) {
+    if (lyrics && !(event.target as HTMLElement).closest(".floating-resize-handle,.floating-controls-bar,button,input,select,textarea")) {
       const rect = lyrics.getBoundingClientRect();
       this.lyricsDrag = {
         offsetX: event.clientX - rect.left,
@@ -7612,8 +7611,11 @@ export class WalkBackHomeApp {
     const lines = track?.syncedLyrics ?? [];
     const state = this.fullLyricsState ?? createLyricsViewerState(lines, this.currentPersonalPlaybackTime());
     this.fullLyricsState = state;
+    const currentTime = this.currentPersonalPlaybackTime();
+    const duration = this.audio.getDuration() || track?.duration || 0;
+    const maxTime = Math.max(1, duration);
     const rows = buildLyricsViewerLines(lines, state.activeIndex).map(({ index, line, state: lineState }) => `<button class="full-lyrics-line ${lineState}" data-action="full-lyrics-line" data-lyric-index="${index}">${this.escapeHtml(line.text)}</button>`).join("");
-    this.overlay.innerHTML = `<div class="modal game-panel full-lyrics-panel" role="dialog" aria-modal="true" aria-label="Full Lyrics"><header class="full-lyrics-header"><button data-action="close-full-lyrics">← Records</button><div><small>Now playing</small><h2>${this.escapeHtml(track?.title ?? "Lyrics")}</h2></div><button data-action="close-full-lyrics" aria-label="Close full lyrics">×</button></header><div class="full-lyrics-scroll" tabindex="0" aria-label="Synced lyrics">${rows || `<div class="full-lyrics-empty">No synced lyrics for this record.</div>`}</div><button class="full-lyrics-return" data-action="full-lyrics-return" hidden>♪ 回到当前歌词</button></div>`;
+    this.overlay.innerHTML = `<div class="modal game-panel full-lyrics-panel" role="dialog" aria-modal="true" aria-label="Full Lyrics"><header class="full-lyrics-header"><button data-action="close-full-lyrics">← Records</button><div class="full-lyrics-track"><small>Now playing</small><h2>${this.escapeHtml(track?.title ?? "Lyrics")}</h2><p>${this.escapeHtml(track?.artist ?? "Unknown artist")}</p></div><button data-action="close-full-lyrics" aria-label="Close full lyrics">×</button></header><div class="full-lyrics-scroll" tabindex="0" aria-label="Synced lyrics"><div class="full-lyrics-list">${rows || `<div class="full-lyrics-empty">No synced lyrics available.</div>`}</div><button class="full-lyrics-return" data-action="full-lyrics-return" hidden>♪ 回到当前歌词</button></div><footer class="full-lyrics-player" aria-label="Records player"><div class="time-row full-lyrics-progress"><span data-music-current>${this.formatTime(currentTime)}</span><input data-music-seek id="full-lyrics-seek" type="range" min="0" max="${maxTime}" step="0.1" value="${Math.min(currentTime, maxTime)}" aria-label="Seek"><span data-music-duration>${this.formatTime(duration)}</span></div><div class="full-lyrics-controls"><button class="icon-button" data-action="music-prev" aria-label="Previous" title="Previous">⏮</button><button class="icon-button primary" data-action="vinyl-pause" aria-label="${this.personalPlayer.playing ? "Pause" : "Play"}" title="${this.personalPlayer.playing ? "Pause" : "Play"}">${this.personalPlayer.playing ? "⏸" : "▶"}</button><button class="icon-button" data-action="music-next" aria-label="Next" title="Next">⏭</button></div></footer></div>`;
   }
 
   private handleFullLyricsScroll(event: Event): void {
@@ -8259,7 +8261,7 @@ export class WalkBackHomeApp {
       ? `<div class="floating-player-controls floating-controls-bar"><button class="icon-button primary" data-action="vinyl-pause" aria-label="${this.personalPlayer.playing ? "Pause" : "Play"}" title="${this.personalPlayer.playing ? "Pause" : "Play"}">${this.personalPlayer.playing ? "⏸" : "▶"}</button>${mode === "large" ? `<button class="icon-button" data-action="music-prev" aria-label="Previous" title="Previous">⏮</button><button class="icon-button" data-action="music-next" aria-label="Next" title="Next">⏭</button>` : ""}</div>`
       : "";
     const floatingLyrics = this.personalPlayer.lyricsVisible
-      ? `<div class="floating-lyrics mode-${mode}" style="left:${overlay.x}px;top:${overlay.y}px;width:${overlayWidth}px;height:${overlayHeight}px" aria-live="off">${floatingTools}${floatingContent}${floatingControls}<span class="floating-resize-handle" aria-label="Resize floating lyrics" title="Resize floating lyrics">↘</span></div>`
+      ? `<div class="floating-lyrics mode-${mode}" data-action="room-records" style="left:${overlay.x}px;top:${overlay.y}px;width:${overlayWidth}px;height:${overlayHeight}px" aria-live="off">${floatingTools}${floatingContent}${floatingControls}<span class="floating-resize-handle" aria-label="Resize floating lyrics" title="Resize floating lyrics">↘</span></div>`
       : "";
     this.musicPlayer.innerHTML = `<button class="mini-now-playing" data-action="room-records">♪ ${this.escapeHtml(track.title)}</button>${floatingLyrics}`;
   }
