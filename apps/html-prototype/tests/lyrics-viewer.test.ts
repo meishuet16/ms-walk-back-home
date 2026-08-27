@@ -92,4 +92,8 @@ test("Full Lyrics is an immersive Records view with readable lyrics and a bottom
   assert.match(styles, /\.full-lyrics-panel\s*\{[\s\S]*grid-template-rows:\s*auto minmax\(0, 1fr\) auto/);
   assert.doesNotMatch(styles, /\.full-lyrics-scroll\s*\{[\s\S]*padding:\s*34vh/);
   assert.match(styles, /\.full-lyrics-line\s*\{[\s\S]*color:\s*rgba\(245, 222, 184, \.6/);
+  assert.match(styles, /\.full-lyrics-line\s*\{[\s\S]*border:\s*0[\s\S]*background:\s*transparent[\s\S]*box-shadow:\s*none/);
+  assert.match(styles, /\.full-lyrics-line\.active\s*\{[\s\S]*font-weight:\s*700/);
+  assert.match(styles, /\.full-lyrics-line\.near\s*\{[\s\S]*color:/);
+  assert.match(styles, /\.full-lyrics-line\.idle\s*\{[\s\S]*opacity:/);
 });
