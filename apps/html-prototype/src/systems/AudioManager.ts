@@ -53,12 +53,12 @@ export class AudioManager {
     if (this.track) this.track.volume = this.volume;
   }
 
-  setTrack(src: string): void {
-    if (!this.track) return;
+  setTrack(src: string, autoPlay = true): boolean {
+    if (!this.track) return false;
     const nextSrc = resolveAudioSource(src);
     if (sameAudioSource(this.track.src, nextSrc)) {
-      if (!this.track.paused && !this.muted) void this.ensurePlaying();
-      return;
+      if (autoPlay && !this.track.paused && !this.muted) void this.ensurePlaying();
+      return false;
     }
     const wasPaused = this.track.paused;
     this.track.pause();
@@ -69,7 +69,8 @@ export class AudioManager {
     this.track.muted = this.muted;
     this.track.currentTime = 0;
     this.track.load();
-    if (!wasPaused && !this.muted) void this.ensurePlaying();
+    if (autoPlay && !wasPaused && !this.muted) void this.ensurePlaying();
+    return true;
   }
 
   isCurrentTrack(src: string): boolean {
@@ -99,6 +100,69 @@ export class AudioManager {
     if (!this.track) return;
     const duration = Number.isFinite(this.track.duration) ? this.track.duration : Number.POSITIVE_INFINITY;
     this.track.currentTime = Math.max(0, Math.min(duration, seconds));
+  }
+
+  async waitForSeekReady(): Promise<boolean> {
+    const track = this.track;
+    if (!track) return false;
+    const isReady = (): boolean => track.readyState >= 1 && (track.seekable.length > 0 || (Number.isFinite(track.duration) && track.duration > 0));
+    if (isReady()) return true;
+    return new Promise((resolve) => {
+      const readinessEvents = ["loadedmetadata", "durationchange", "canplay", "progress"];
+      const cleanup = (): void => {
+        for (const event of readinessEvents) track.removeEventListener(event, check);
+        track.removeEventListener("error", fail);
+        track.removeEventListener("abort", fail);
+        track.removeEventListener("emptied", fail);
+      };
+      const finish = (ready: boolean): void => {
+        cleanup();
+        resolve(ready);
+      };
+      const check = (): void => {
+        if (isReady()) finish(true);
+      };
+      const fail = (): void => finish(false);
+      for (const event of readinessEvents) track.addEventListener(event, check);
+      track.addEventListener("error", fail);
+      track.addEventListener("abort", fail);
+      track.addEventListener("emptied", fail);
+      check();
+    });
+  }
+
+  async seekAndWait(seconds: number): Promise<boolean> {
+    const track = this.track;
+    if (!track) return false;
+    const duration = Number.isFinite(track.duration) ? track.duration : Number.POSITIVE_INFINITY;
+    const target = Math.max(0, Math.min(duration, seconds));
+    if (Math.abs(track.currentTime - target) < 0.4) return true;
+    return new Promise((resolve) => {
+      let settled = false;
+      const cleanup = (): void => {
+        track.removeEventListener("seeked", onSeeked);
+        track.removeEventListener("error", fail);
+        track.removeEventListener("abort", fail);
+        track.removeEventListener("emptied", fail);
+      };
+      const finish = (success: boolean): void => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve(success);
+      };
+      const onSeeked = (): void => finish(Math.abs(track.currentTime - target) < 0.4);
+      const fail = (): void => finish(false);
+      track.addEventListener("seeked", onSeeked);
+      track.addEventListener("error", fail);
+      track.addEventListener("abort", fail);
+      track.addEventListener("emptied", fail);
+      try {
+        track.currentTime = target;
+      } catch {
+        finish(false);
+      }
+    });
   }
 
   getCurrentTime(): number {

@@ -248,6 +248,8 @@ export class WalkBackHomeApp {
   private lyricsResize: { startX: number; startY: number; startWidth: number; startHeight: number; moved: boolean } | null = null;
   private floatingLyricsGestureSuppressed = false;
   private pendingPersonalSeek: number | null = null;
+  private pendingPersonalSeekRequestId: number | null = null;
+  private personalMusicRequestId = 0;
   private bundledLyricsLoader = new BundledLyricsLoader();
   private bundledLyricsRuntime = new Map<string, { identity: string; lines: SyncedLyricLine[] }>();
   private bundledLyricsRequestToken = 0;
@@ -7825,6 +7827,7 @@ export class WalkBackHomeApp {
     this.recordsMoreMenuOpen = false;
     this.activeRecordMenuTrackId = "";
     this.pendingPersonalSeek = null;
+    this.pendingPersonalSeekRequestId = null;
     if (isBuiltInTrackId(recordId)) this.room = this.selectAvailableVinylRecord(recordId);
     else this.room = { ...this.room, selectedVinylId: recordId, vinylPlaying: true, musicOn: true };
     await this.playPersonalMusic(recordId, startPosition);
@@ -7973,12 +7976,19 @@ export class WalkBackHomeApp {
   private async playPersonalMusic(trackId = this.personalPlayer.selectedTrackId, position = this.personalPlayer.playbackPosition): Promise<void> {
     const track = this.allPersonalTracks().find((item) => item.id === trackId) ?? this.currentPersonalTrack();
     if (!track) return;
+    const requestId = ++this.personalMusicRequestId;
     try {
       const src = await this.sourceForPersonalTrack(track);
       if (!src) return;
-      this.audio.setTrack(src);
+      if (requestId !== this.personalMusicRequestId || this.personalPlayer.selectedTrackId !== track.id) return;
+      const sourceChanged = !this.audio.isCurrentTrack(src);
+      if (sourceChanged) this.audio.setTrack(src, false);
       this.audio.setLoop(this.personalPlayer.repeatOne);
-      this.audio.seek(position);
+      if (sourceChanged && position !== 0 && !await this.audio.waitForSeekReady()) return;
+      if (requestId !== this.personalMusicRequestId || this.personalPlayer.selectedTrackId !== track.id) return;
+      if (position === 0) this.audio.seek(0);
+      else if (!await this.audio.seekAndWait(position)) return;
+      if (requestId !== this.personalMusicRequestId || this.personalPlayer.selectedTrackId !== track.id) return;
       if (this.settings.musicEnabled && !this.settings.muted) await this.audio.ensurePlaying();
       this.personalPlayer.selectedTrackId = track.id;
       this.personalPlayer.playing = true;
@@ -7986,6 +7996,7 @@ export class WalkBackHomeApp {
       this.room.vinylPlaying = true;
       if (track.source === "user") this.markUserTrackPlayed(track.id);
     } catch {
+      if (requestId !== this.personalMusicRequestId || this.personalPlayer.selectedTrackId !== track.id) return;
       this.personalPlayer.playing = false;
       this.room.vinylPlaying = false;
       this.showToast("This audio file could not be played in this browser.");
@@ -8105,22 +8116,64 @@ export class WalkBackHomeApp {
   private seekPersonalMusic(seconds: number): void {
     const duration = this.audio.getDuration() || this.currentPersonalTrack()?.duration || Number.POSITIVE_INFINITY;
     const targetTime = Math.max(0, Math.min(duration, Number.isFinite(seconds) ? seconds : 0));
+    const requestId = ++this.personalMusicRequestId;
     this.pendingPersonalSeek = targetTime;
+    this.pendingPersonalSeekRequestId = requestId;
     this.personalPlayer.playbackPosition = targetTime;
-    void this.seekLoadedPersonalMusic(targetTime);
-    if (this.personalPlayer.playing && this.audio.isPaused() && this.settings.musicEnabled && !this.settings.muted) void this.audio.ensurePlaying();
+    void this.seekLoadedPersonalMusic(targetTime, requestId);
     this.refreshRecordsPlaybackUI();
     this.updatePersonalMusicOverlay();
     this.save.savePersonalPlayer(this.personalPlayer);
   }
 
-  private async seekLoadedPersonalMusic(targetTime: number): Promise<void> {
+  private async seekLoadedPersonalMusic(targetTime: number, requestId: number): Promise<void> {
     const track = this.currentPersonalTrack();
-    if (!track) return;
-    const src = await this.sourceForPersonalTrack(track);
-    if (src && !this.audio.isCurrentTrack(src)) this.audio.setTrack(src);
-    this.audio.seek(targetTime);
-    if (this.personalPlayer.playing && this.settings.musicEnabled && !this.settings.muted) await this.audio.ensurePlaying();
+    if (!track) {
+      this.settlePersonalSeek(requestId, false);
+      return;
+    }
+    try {
+      const src = await this.sourceForPersonalTrack(track);
+      if (requestId !== this.personalMusicRequestId || this.personalPlayer.selectedTrackId !== track.id) {
+        this.cancelPersonalSeek(requestId);
+        return;
+      }
+      const sourceChanged = !!src && !this.audio.isCurrentTrack(src);
+      if (sourceChanged) {
+        this.audio.setTrack(src, false);
+        if (targetTime !== 0 && !await this.audio.waitForSeekReady()) {
+          this.settlePersonalSeek(requestId, false);
+          return;
+        }
+      }
+      if (requestId !== this.personalMusicRequestId || this.personalPlayer.selectedTrackId !== track.id) return;
+      const settled = targetTime === 0 ? (this.audio.seek(0), true) : await this.audio.seekAndWait(targetTime);
+      if (requestId !== this.personalMusicRequestId || this.personalPlayer.selectedTrackId !== track.id) return;
+      this.settlePersonalSeek(requestId, settled);
+      if (this.personalPlayer.playing && this.settings.musicEnabled && !this.settings.muted) await this.audio.ensurePlaying();
+    } catch {
+      if (requestId === this.personalMusicRequestId && this.personalPlayer.selectedTrackId === track.id) this.settlePersonalSeek(requestId, false);
+    }
+  }
+
+  private cancelPersonalSeek(requestId: number): void {
+    if (this.pendingPersonalSeekRequestId !== requestId) return;
+    this.pendingPersonalSeek = null;
+    this.pendingPersonalSeekRequestId = null;
+    this.personalPlayer.playbackPosition = this.audio.getCurrentTime();
+    this.refreshRecordsPlaybackUI();
+    this.updatePersonalMusicOverlay();
+    this.save.savePersonalPlayer(this.personalPlayer);
+  }
+
+  private settlePersonalSeek(requestId: number, _success: boolean): void {
+    if (this.pendingPersonalSeekRequestId !== requestId) return;
+    this.personalPlayer.playbackPosition = this.audio.getCurrentTime();
+    this.pendingPersonalSeek = null;
+    this.pendingPersonalSeekRequestId = null;
+    this.refreshRecordsPlaybackUI();
+    this.updatePersonalMusicOverlay();
+    this.save.savePersonalPlayer(this.personalPlayer);
   }
 
   private currentPersonalPlaybackTime(): number {
@@ -8138,7 +8191,10 @@ export class WalkBackHomeApp {
   private handlePersonalTimeUpdate(): void {
     if (!this.personalPlayer.playing || !personalMusicShouldPlayInScene(this.scene)) return;
     this.personalPlayer.playbackPosition = this.audio.getCurrentTime();
-    if (this.pendingPersonalSeek !== null && Math.abs(this.personalPlayer.playbackPosition - this.pendingPersonalSeek) < 0.4) this.pendingPersonalSeek = null;
+    if (this.pendingPersonalSeek !== null && Math.abs(this.personalPlayer.playbackPosition - this.pendingPersonalSeek) < 0.4) {
+      this.pendingPersonalSeek = null;
+      this.pendingPersonalSeekRequestId = null;
+    }
     this.refreshRecordsPlaybackUI();
     this.updatePersonalMusicOverlay();
   }

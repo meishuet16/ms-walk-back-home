@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { UserMusicTrack } from "../src/types.js";
+import { WalkBackHomeApp } from "../src/app.js";
 import {
   adjacentTrackIdForControl,
   activeLyricIndexAt,
@@ -204,4 +205,146 @@ test("Select All copies every filtered Records id", () => {
 
   assert.deepEqual(selected, ids);
   assert.notEqual(selected, ids);
+});
+
+type TestPersonalApp = Record<string, any>;
+type TestPersonalTrack = UserMusicTrack & { source: "built-in" | "user"; src?: string };
+
+function makePersonalSeekApp(options: { currentSource?: boolean; source?: string; seekResult?: boolean } = {}): {
+  app: TestPersonalApp;
+  audio: { currentTime: number; seekCalls: number[]; setTrackCalls: string[]; waitForSeekReady: () => Promise<boolean> };
+  track: TestPersonalTrack;
+} {
+  const track: TestPersonalTrack = { id: "audio-track-115657", title: "小半", artist: "陳粒", source: "built-in", src: options.source ?? "assets/audio/%E5%B0%8F%E5%8D%8A-%E9%99%B3%E7%B2%92.mp3", audioBlobKey: "", addedAt: 1 };
+  const audio = {
+    currentTime: 20,
+    seekCalls: [] as number[],
+    setTrackCalls: [] as string[],
+    getDuration: () => 180,
+    getCurrentTime: () => audio.currentTime,
+    isCurrentTrack: () => options.currentSource ?? true,
+    setTrack: (src: string) => { audio.setTrackCalls.push(src); return true; },
+    setLoop: () => undefined,
+    seek: (seconds: number) => { audio.seekCalls.push(seconds); audio.currentTime = seconds; },
+    seekAndWait: async (seconds: number) => { audio.seekCalls.push(seconds); audio.currentTime = options.seekResult === false ? 3 : seconds; return options.seekResult !== false; },
+    waitForSeekReady: async () => true,
+    isPaused: () => true,
+    ensurePlaying: async () => undefined
+  };
+  const app = Object.create(WalkBackHomeApp.prototype) as TestPersonalApp;
+  app.audio = audio;
+  app.personalPlayer = { selectedTrackId: track.id, playing: true, playbackPosition: 20 };
+  app.settings = { musicEnabled: false, muted: false };
+  app.scene = "muji-room";
+  app.room = {};
+  app.personalMusicRequestId = 0;
+  app.pendingPersonalSeek = null;
+  app.pendingPersonalSeekRequestId = null;
+  app.currentPersonalTrack = () => track;
+  app.allPersonalTracks = () => [track];
+  app.sourceForPersonalTrack = async () => track.src ?? "";
+  app.refreshRecordsPlaybackUI = () => undefined;
+  app.updatePersonalMusicOverlay = () => undefined;
+  app.save = { savePersonalPlayer: () => undefined };
+  return { app, audio, track };
+}
+
+async function flushPersonalMusicTasks(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
+test("personal seek keeps a current built-in source in place and settles to media time", async () => {
+  const { app, audio } = makePersonalSeekApp({ currentSource: true });
+
+  app.seekPersonalMusic(90);
+  await flushPersonalMusicTasks();
+
+  assert.deepEqual(audio.setTrackCalls, []);
+  assert.deepEqual(audio.seekCalls, [90]);
+  assert.equal(app.pendingPersonalSeek, null);
+  assert.equal(app.personalPlayer.playbackPosition, 90);
+});
+
+test("personal seek does not apply a non-zero target until a changed source is ready", async () => {
+  const { app, audio } = makePersonalSeekApp({ currentSource: false });
+  let resolveReady!: (ready: boolean) => void;
+  audio.waitForSeekReady = () => new Promise<boolean>((resolve) => { resolveReady = resolve; });
+
+  const play = app.playPersonalMusic(app.personalPlayer.selectedTrackId, 90);
+  await flushPersonalMusicTasks();
+
+  assert.deepEqual(audio.setTrackCalls, ["assets/audio/%E5%B0%8F%E5%8D%8A-%E9%99%B3%E7%B2%92.mp3"]);
+  assert.deepEqual(audio.seekCalls, []);
+  resolveReady(true);
+  await play;
+
+  assert.deepEqual(audio.seekCalls, [90]);
+});
+
+test("newer personal seeks supersede older async source lookups", async () => {
+  const { app, audio, track } = makePersonalSeekApp({ currentSource: true });
+  const resolvers: Array<(source: string) => void> = [];
+  app.sourceForPersonalTrack = () => new Promise<string>((resolve) => resolvers.push(resolve));
+
+  app.seekPersonalMusic(90);
+  app.seekPersonalMusic(120);
+  resolvers[0](track.src ?? "");
+  await flushPersonalMusicTasks();
+  resolvers[1](track.src ?? "");
+  await flushPersonalMusicTasks();
+
+  assert.deepEqual(audio.seekCalls, [120]);
+  assert.equal(app.pendingPersonalSeek, null);
+});
+
+test("newer personal play requests supersede older async source lookups", async () => {
+  const { app, audio, track } = makePersonalSeekApp({ currentSource: true });
+  const resolvers: Array<(source: string) => void> = [];
+  app.sourceForPersonalTrack = () => new Promise<string>((resolve) => resolvers.push(resolve));
+
+  const older = app.playPersonalMusic(track.id, 90);
+  const newer = app.playPersonalMusic(track.id, 120);
+  resolvers[0](track.src ?? "");
+  await flushPersonalMusicTasks();
+  resolvers[1](track.src ?? "");
+  await Promise.all([older, newer]);
+
+  assert.deepEqual(audio.seekCalls, [120]);
+});
+
+test("a track change supersedes an older pending personal seek", async () => {
+  const { app, audio, track } = makePersonalSeekApp({ currentSource: true });
+  let resolveSource!: (source: string) => void;
+  app.sourceForPersonalTrack = () => new Promise<string>((resolve) => { resolveSource = resolve; });
+
+  app.seekPersonalMusic(90);
+  app.personalPlayer.selectedTrackId = "audio-other";
+  resolveSource(track.src ?? "");
+  await flushPersonalMusicTasks();
+
+  assert.deepEqual(audio.seekCalls, []);
+});
+
+test("current imported blob source seeks without a source reload", async () => {
+  const { app, audio, track } = makePersonalSeekApp({ currentSource: true, source: "blob:http://localhost:4173/music-1" });
+  track.source = "user";
+  track.audioBlobKey = "music/audio/user-1";
+
+  app.seekPersonalMusic(90);
+  await flushPersonalMusicTasks();
+
+  assert.deepEqual(audio.setTrackCalls, []);
+  assert.deepEqual(audio.seekCalls, [90]);
+});
+
+test("failed personal seek reconciles pending position to actual media time", async () => {
+  const { app, audio } = makePersonalSeekApp({ currentSource: true, seekResult: false });
+
+  app.seekPersonalMusic(90);
+  await flushPersonalMusicTasks();
+
+  assert.deepEqual(audio.seekCalls, [90]);
+  assert.equal(app.pendingPersonalSeek, null);
+  assert.equal(app.personalPlayer.playbackPosition, 3);
 });
