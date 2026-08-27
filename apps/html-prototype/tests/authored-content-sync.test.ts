@@ -10,7 +10,7 @@ import {
   serializeAuthoredContent,
   type AuthoredContentManifest
 } from "../src/authoring/authoredContent.js";
-import { authoredContentManifest } from "../src/authoring/authoredContentManifest.js";
+import { authoredContentManifest, authoredPublicAssetUrl } from "../src/authoring/authoredContentManifest.js";
 import { authoredContentExpectations } from "../src/fixtures/generated/authoredContentExpectations.js";
 
 const sampleManifest: AuthoredContentManifest = {
@@ -79,6 +79,11 @@ test("the explicit manifest contains current authored chapter presentation field
   assert.ok(authoredContentManifest.chapters.july21);
   assert.ok(authoredContentManifest.chapters.march30.dialogue.length > 0);
   assert.ok(authoredContentManifest.chapters.july21.dialogue.length > 0);
+});
+
+test("authored manifest resolves tracked source layouts before the app build", () => {
+  assert.equal(existsSync(authoredPublicAssetUrl("scene-layouts/523/portrait.json")), true);
+  assert.equal(existsSync(authoredPublicAssetUrl("scene-layouts/624/portrait.json")), true);
 });
 
 test("generated expectations match the explicit manifest", () => {

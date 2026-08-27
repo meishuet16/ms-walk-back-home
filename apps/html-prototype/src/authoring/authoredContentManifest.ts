@@ -12,6 +12,10 @@ import { readFileSync } from "node:fs";
 
 type ChapterForDisplay = { title: string; mood: string; weather: string; location: string };
 
+export function authoredPublicAssetUrl(relativePath: string): URL {
+  return new URL(`../../../public/${relativePath}`, import.meta.url);
+}
+
 function display(chapter: ChapterForDisplay): Record<string, string> {
   return { title: chapter.title, mood: chapter.mood, weather: chapter.weather, location: chapter.location };
 }
@@ -69,7 +73,7 @@ function dialogueCollections(dialogues: Record<string, readonly unknown[]>): Rec
 }
 
 function resolvedJune24Collections(): Record<string, AuthoredDialoguePresentation[]> {
-  const layout = JSON.parse(readFileSync(new URL("../../public/scene-layouts/624/portrait.json", import.meta.url), "utf8")) as Parameters<typeof resolveJune24Actions>[0];
+  const layout = JSON.parse(readFileSync(authoredPublicAssetUrl("scene-layouts/624/portrait.json"), "utf8")) as Parameters<typeof resolveJune24Actions>[0];
   return {
     main: actionPresentation(resolveJune24Actions(layout, "main")),
     ...dialogueCollections(june24EchoDialogues)
@@ -77,7 +81,7 @@ function resolvedJune24Collections(): Record<string, AuthoredDialoguePresentatio
 }
 
 function resolvedMay23Collections(): Record<string, AuthoredDialoguePresentation[]> {
-  const layout = JSON.parse(readFileSync(new URL("../../public/scene-layouts/523/portrait.json", import.meta.url), "utf8")) as Parameters<typeof resolveMay23Actions>[0];
+  const layout = JSON.parse(readFileSync(authoredPublicAssetUrl("scene-layouts/523/portrait.json"), "utf8")) as Parameters<typeof resolveMay23Actions>[0];
   return {
     main: actionPresentation(resolveMay23Actions(layout, "main")),
     ...dialogueCollections(may23EchoDialogues)
