@@ -82,12 +82,12 @@ export function roomLifeRouteIsSafe(route: readonly RoomLifeNodeId[] | null, lay
   return true;
 }
 
-export function findRoomLifeEntry(position: Point, layout: Pick<SceneLayout, "anchors" | "size" | "obstacles">, maxDistance = 96): RoomLifeNodeId | null {
+export function findRoomLifeEntry(position: Point, layout: Pick<SceneLayout, "anchors" | "size" | "obstacles">): RoomLifeNodeId | null {
   const anchors = resolveRoomLifeAnchors(layout);
   if (!anchors || !inBounds(position, layout.size) || inAnyRect(position, layout.obstacles)) return null;
   return ROOM_LIFE_NODE_IDS
     .map((id) => ({ id, distance: Math.hypot(position.x - anchors[id].x, position.y - anchors[id].y) }))
-    .filter(({ id, distance }) => distance <= maxDistance && roomLifeSegmentIsSafe(position, anchors[id], layout))
+    .filter(({ id }) => roomLifeSegmentIsSafe(position, anchors[id], layout))
     .sort((a, b) => a.distance - b.distance)[0]?.id ?? null;
 }
 

@@ -61,7 +61,7 @@ test("destination activity exposes an authored arrival-facing direction", () => 
 });
 
 test("thought timing stays deterministic and bubbles never appear during player control", () => {
-  const director = new RoomLifeDirector({ random: () => 0 });
+  const director = new RoomLifeDirector({ random: () => 0.5 });
   const before = director.update(input({ now: 0 }));
   const entered = director.update(input({ now: 9_000 }));
   const thought = director.update(input({ now: 12_000 }));
@@ -115,6 +115,46 @@ test("a route that stops making progress returns to autonomous idle", () => {
   assert.equal(walking.moving, true);
   assert.equal(stalled.mode, "autonomous-idle");
   assert.equal(stalled.moving, false);
+});
+
+test("failed graph entry retries on a bounded cooldown instead of every frame", () => {
+  const blockedLayout: SceneLayout = {
+    ...layout,
+    size: { w: 600, h: 500 },
+    obstacles: [{ x: 100, y: 200, w: 100, h: 100 }],
+    anchors: Object.fromEntries([
+      "life-center", "life-window", "life-records", "life-bedside", "life-waypoint-upper", "life-waypoint-window", "life-waypoint-records"
+    ].map((id) => [id, { x: 300, y: 250 }]))
+  } as SceneLayout;
+  const openLayout = { ...blockedLayout, obstacles: [] };
+  const director = new RoomLifeDirector({ random: () => 0 });
+  const position = { x: 20, y: 250 };
+  const failed = director.update(input({ now: 9_000, position, layout: blockedLayout }));
+  const tooSoon = director.update(input({ now: 9_001, position, layout: openLayout }));
+  const retried = director.update(input({ now: 12_001, position, layout: openLayout }));
+  assert.equal(failed.mode, "autonomous-idle");
+  assert.equal(tooSoon.mode, "autonomous-idle");
+  assert.equal(retried.mode, "autonomous-activity");
+  assert.deepEqual(position, { x: 20, y: 250 });
+});
+
+test("anti-stagnation nudges decisions after repeated idle outcomes but remains capped", () => {
+  const clear = { weatherCondition: null, musicPlaying: false, night: false, lampOn: false } as const;
+  const normal = roomLifeDecisionWeights(clear, 0);
+  const repeated = roomLifeDecisionWeights(clear, 3);
+  const capped = roomLifeDecisionWeights(clear, 100);
+  assert.ok(repeated["do-nothing"] < normal["do-nothing"]);
+  assert.ok(repeated["do-nothing"] > 0);
+  assert.ok(repeated["life-window"] > normal["life-window"]);
+  assert.deepEqual(capped, roomLifeDecisionWeights(clear, 5));
+});
+
+test("bubble typography is based on screen scale and uses strong readable styling", () => {
+  const appSource = readFileSync("src/app.ts", "utf8");
+  assert.match(appSource, /getBoundingClientRect\(\)\.width/);
+  assert.match(appSource, /15 \* canvasToScreen/);
+  assert.match(appSource, /rgba\(255, 248, 226, \.96\)/);
+  assert.match(appSource, /fontWeight = "600"/);
 });
 
 test("Room Life state is session-only and does not alter persistence model declarations", () => {

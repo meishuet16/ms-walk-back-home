@@ -8,6 +8,7 @@ import {
   roomLifeRoute,
   roomLifeRouteFromNode,
   roomLifeRouteIsSafe,
+  roomLifeSegmentIsSafe,
   type RoomLifeDestinationId,
   type RoomLifeNodeId
 } from "../src/systems/room-life/RoomRoutine.js";
@@ -77,10 +78,50 @@ test("authored route segments are safe in both orientations", () => {
   }
 });
 
-test("graph entry accepts a nearby destination but rejects an unsafe or distant position", () => {
+test("graph entry accepts a nearby destination and rejects an unsafe position", () => {
   const layout = fixture("landscape");
   assert.equal(findRoomLifeEntry(layout.anchors["life-window"], layout), "life-window");
   assert.equal(findRoomLifeEntry({ x: 250, y: 130 }, layout), null);
+});
+
+test("graph entry accepts a farther collision-safe node without a 96-unit cutoff", () => {
+  const layout: SceneLayout = {
+    ...fixture("landscape"),
+    size: { w: 600, h: 500 },
+    obstacles: [],
+    anchors: {
+      "life-center": { x: 300, y: 250 },
+      "life-window": { x: 300, y: 150 },
+      "life-records": { x: 450, y: 250 },
+      "life-bedside": { x: 150, y: 250 },
+      "life-waypoint-upper": { x: 300, y: 200 },
+      "life-waypoint-window": { x: 300, y: 175 },
+      "life-waypoint-records": { x: 400, y: 200 }
+    }
+  };
+  const position = { x: 20, y: 250 };
+  assert.ok(Math.hypot(position.x - layout.anchors["life-bedside"].x, position.y - layout.anchors["life-bedside"].y) > 96);
+  assert.equal(findRoomLifeEntry(position, layout), "life-bedside");
+});
+
+test("blocked graph-entry segments remain rejected", () => {
+  const layout: SceneLayout = {
+    ...fixture("landscape"),
+    size: { w: 600, h: 500 },
+    obstacles: [{ x: 100, y: 200, w: 100, h: 100 }],
+    anchors: {
+      "life-center": { x: 300, y: 250 },
+      "life-window": { x: 300, y: 250 },
+      "life-records": { x: 300, y: 250 },
+      "life-bedside": { x: 300, y: 250 },
+      "life-waypoint-upper": { x: 300, y: 250 },
+      "life-waypoint-window": { x: 300, y: 250 },
+      "life-waypoint-records": { x: 300, y: 250 }
+    }
+  };
+  const position = { x: 20, y: 250 };
+  assert.equal(roomLifeSegmentIsSafe(position, layout.anchors["life-center"], layout), false);
+  assert.equal(findRoomLifeEntry(position, layout), null);
 });
 
 test("missing Room Life anchors fail safely", () => {

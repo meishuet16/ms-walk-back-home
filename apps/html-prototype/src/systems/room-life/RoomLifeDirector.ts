@@ -34,8 +34,11 @@ const IDLE_MIN_MS = 8_000;
 const IDLE_MAX_MS = 18_000;
 const ARRIVAL_DISTANCE = 10;
 const STALL_LIMIT_MS = 1_500;
+const GRAPH_ENTRY_RETRY_MIN_MS = 3_000;
+const GRAPH_ENTRY_RETRY_MAX_MS = 7_000;
+const MAX_IDLE_ADJUSTMENT = 18;
 
-export function roomLifeDecisionWeights(context: RoomLifeContext): Record<RoomLifeDecision, number> {
+export function roomLifeDecisionWeights(context: RoomLifeContext, consecutiveIdleDecisions = 0): Record<RoomLifeDecision, number> {
   const weights: Record<RoomLifeDecision, number> = {
     "do-nothing": 48,
     "life-center": 22,
@@ -47,11 +50,19 @@ export function roomLifeDecisionWeights(context: RoomLifeContext): Record<RoomLi
   else if (context.weatherCondition === "cloud" || context.weatherCondition === "fog") weights["life-window"] += 5;
   if (context.musicPlaying) weights["life-records"] += 18;
   if (context.night && context.lampOn) weights["life-bedside"] += 14;
+  const adjustment = Math.min(MAX_IDLE_ADJUSTMENT, Math.max(0, consecutiveIdleDecisions - 1) * 6);
+  if (adjustment > 0) {
+    weights["do-nothing"] -= adjustment;
+    weights["life-center"] += Math.ceil(adjustment * 0.5);
+    weights["life-window"] += Math.ceil(adjustment * 0.25);
+    weights["life-records"] += Math.ceil(adjustment * 0.15);
+    weights["life-bedside"] += Math.max(0, adjustment - Math.ceil(adjustment * 0.5) - Math.ceil(adjustment * 0.25) - Math.ceil(adjustment * 0.15));
+  }
   return weights;
 }
 
-export function chooseRoomLifeDecision(context: RoomLifeContext, random: () => number = Math.random): RoomLifeDecision {
-  const weights = roomLifeDecisionWeights(context);
+export function chooseRoomLifeDecision(context: RoomLifeContext, random: () => number = Math.random, consecutiveIdleDecisions = 0): RoomLifeDecision {
+  const weights = roomLifeDecisionWeights(context, consecutiveIdleDecisions);
   const total = Object.values(weights).reduce((sum, weight) => sum + weight, 0);
   const sampled = random();
   const value = Number.isFinite(sampled) ? Math.max(0, Math.min(0.999999, sampled)) * total : 0;
@@ -75,8 +86,11 @@ export class RoomLifeDirector {
   private activityFacing: RoomLifeFacing | null = null;
   private activityEndsAt = 0;
   private thought: string | null = null;
+  private recentThoughts: string[] = [];
   private thoughtExpiresAt = 0;
   private nextThoughtAt = Number.POSITIVE_INFINITY;
+  private graphEntryRetryAt = Number.POSITIVE_INFINITY;
+  private consecutiveIdleDecisions = 0;
   private lastDistance = Number.POSITIVE_INFINITY;
   private stalledForMs = 0;
 
@@ -86,6 +100,7 @@ export class RoomLifeDirector {
     this.mode = "player";
     this.lastPlayerIntentAt = now;
     this.nextDecisionAt = now + this.idleDelay();
+    this.consecutiveIdleDecisions = 0;
     this.clearAutonomousState();
   }
 
@@ -110,6 +125,7 @@ export class RoomLifeDirector {
     }
     if (this.mode === "autonomous-walk") return this.updateWalk(input);
     if (this.mode === "autonomous-activity") return this.updateActivity(input);
+    if (!this.currentNode && input.now >= this.graphEntryRetryAt) this.tryGraphEntry(input);
     if (input.now >= this.nextDecisionAt) this.makeDecision(input);
     return this.advanceThought(input);
   }
@@ -117,12 +133,21 @@ export class RoomLifeDirector {
   private enterAutonomous(input: RoomLifeUpdate): void {
     this.mode = "autonomous-idle";
     this.nextDecisionAt = input.now + this.between(2_500, 6_000);
+    this.graphEntryRetryAt = input.now;
+    this.tryGraphEntry(input);
+  }
+
+  private tryGraphEntry(input: RoomLifeUpdate): void {
     this.currentNode = findRoomLifeEntry(input.position, input.layout);
     if (!this.currentNode) {
+      this.recordIdleOutcome();
+      this.graphEntryRetryAt = input.now + this.between(GRAPH_ENTRY_RETRY_MIN_MS, GRAPH_ENTRY_RETRY_MAX_MS);
       this.nextDecisionAt = Number.POSITIVE_INFINITY;
-      this.nextThoughtAt = input.now + this.between(1_200, 3_000);
+      this.nextThoughtAt = input.now + this.between(4_000, 7_000);
       return;
     }
+    this.graphEntryRetryAt = Number.POSITIVE_INFINITY;
+    this.consecutiveIdleDecisions = 0;
     const activity = roomLifeActivityFor(this.currentNode);
     if (activity && isDestination(this.currentNode)) {
       const anchors = resolveRoomLifeAnchors(input.layout);
@@ -133,19 +158,25 @@ export class RoomLifeDirector {
 
   private makeDecision(input: RoomLifeUpdate): void {
     if (!this.currentNode) return;
-    const decision = chooseRoomLifeDecision(input, this.options.random ?? Math.random);
+    const decision = chooseRoomLifeDecision(input, this.options.random ?? Math.random, this.consecutiveIdleDecisions);
     this.nextDecisionAt = input.now + this.between(7_000, 16_000);
     if (decision === "do-nothing") {
+      this.recordIdleOutcome();
       this.nextThoughtAt = input.now + this.between(1_500, 4_000);
       return;
     }
     const route = roomLifeRouteFromNode(this.currentNode, decision);
-    if (!route || !roomLifeRouteIsSafe(route, input.layout)) return;
+    if (!route || !roomLifeRouteIsSafe(route, input.layout)) {
+      this.recordIdleOutcome();
+      this.nextThoughtAt = input.now + this.between(1_500, 4_000);
+      return;
+    }
     this.destination = decision;
     if (route.length <= 1) return this.beginActivity(decision, input.now);
     this.route = route;
     this.routeIndex = 1;
     this.mode = "autonomous-walk";
+    this.consecutiveIdleDecisions = 0;
     this.activity = null;
     this.lastDistance = Number.POSITIVE_INFINITY;
     this.stalledForMs = 0;
@@ -193,6 +224,7 @@ export class RoomLifeDirector {
     this.destination = destination;
     this.currentNode = destination;
     this.activity = roomLifeActivityFor(destination);
+    this.consecutiveIdleDecisions = 0;
     this.activityFacing = facing ?? defaultFacingForActivity(this.activity);
     this.activityEndsAt = now + this.between(4_000, 11_000);
     this.mode = "autonomous-activity";
@@ -207,6 +239,7 @@ export class RoomLifeDirector {
     this.routeIndex = 0;
     this.activity = null;
     this.destination = null;
+    this.recordIdleOutcome();
     this.nextDecisionAt = input.now + this.between(3_000, 6_000);
     this.nextThoughtAt = input.now + this.between(1_000, 3_000);
     this.stalledForMs = 0;
@@ -219,9 +252,15 @@ export class RoomLifeDirector {
       this.nextThoughtAt = input.now + this.between(4_000, 9_000);
     }
     if (!this.thought && this.mode !== "player" && this.mode !== "paused" && input.now >= this.nextThoughtAt) {
-      this.thought = selectMujiThought(this.thoughtContext(input), this.options.random ?? Math.random);
-      this.thoughtExpiresAt = input.now + this.between(2_000, 4_000);
-      this.nextThoughtAt = Number.POSITIVE_INFINITY;
+      const selected = selectMujiThought(this.thoughtContext(input), this.options.random ?? Math.random, this.recentThoughts);
+      if (selected) {
+        this.thought = selected;
+        this.recentThoughts = [selected, ...this.recentThoughts].slice(0, 3);
+        this.thoughtExpiresAt = input.now + this.between(2_000, 4_000);
+        this.nextThoughtAt = Number.POSITIVE_INFINITY;
+      } else {
+        this.nextThoughtAt = input.now + this.between(4_000, 9_000);
+      }
     }
     return this.frame();
   }
@@ -249,8 +288,13 @@ export class RoomLifeDirector {
     this.thought = null;
     this.thoughtExpiresAt = 0;
     this.nextThoughtAt = Number.POSITIVE_INFINITY;
+    this.graphEntryRetryAt = Number.POSITIVE_INFINITY;
     this.lastDistance = Number.POSITIVE_INFINITY;
     this.stalledForMs = 0;
+  }
+
+  private recordIdleOutcome(): void {
+    this.consecutiveIdleDecisions = Math.min(5, this.consecutiveIdleDecisions + 1);
   }
 
   private idleDelayFromLastIntent(): number {

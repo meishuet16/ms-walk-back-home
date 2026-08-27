@@ -4528,10 +4528,13 @@ export class WalkBackHomeApp {
   private drawRoomLifeThought(scale: number): void {
     const thought = this.roomLifeFrame?.thought;
     if (!thought || this.roomLifePanelBlocking()) return;
-    const maxTextWidth = 170 * scale;
-    const fontSize = Math.max(11, 14 * scale);
+    const canvasCssWidth = this.canvas.getBoundingClientRect().width || this.canvas.width;
+    const canvasToScreen = this.canvas.width / canvasCssWidth;
+    const maxTextWidth = Math.min(220, Math.max(170, canvasCssWidth * 0.52)) * canvasToScreen;
+    const fontSize = 15 * canvasToScreen;
+    const fontWeight = "600";
     this.ctx.save();
-    this.ctx.font = `${fontSize}px sans-serif`;
+    this.ctx.font = `${fontWeight} ${fontSize}px sans-serif`;
     const lines: string[] = [];
     let line = "";
     for (const character of thought) {
@@ -4544,28 +4547,34 @@ export class WalkBackHomeApp {
       }
     }
     if (line) lines.push(line);
-    const paddingX = 10 * scale;
-    const paddingY = 7 * scale;
-    const lineHeight = fontSize + 3 * scale;
-    const width = Math.min(this.canvas.width - 20 * scale, Math.max(86 * scale, Math.max(...lines.map((item) => this.ctx.measureText(item).width)) + paddingX * 2));
+    const paddingX = 12 * canvasToScreen;
+    const paddingY = 8 * canvasToScreen;
+    const lineHeight = fontSize * 1.35;
+    const width = Math.min(this.canvas.width - 20 * canvasToScreen, Math.max(86 * canvasToScreen, Math.max(...lines.map((item) => this.ctx.measureText(item).width)) + paddingX * 2));
     const height = lines.length * lineHeight + paddingY * 2;
     const mujiX = this.player.x * scale;
     const mujiY = this.player.y * scale;
-    const left = Math.max(10 * scale, Math.min(this.canvas.width - width - 10 * scale, mujiX - width / 2));
+    const left = Math.max(10 * canvasToScreen, Math.min(this.canvas.width - width - 10 * canvasToScreen, mujiX - width / 2));
     const aboveTop = mujiY - 84 * scale - height;
-    const top = aboveTop >= 8 * scale ? aboveTop : Math.min(this.canvas.height - height - 12 * scale, mujiY + 12 * scale);
-    this.ctx.fillStyle = "rgba(248, 241, 220, .94)";
+    const top = aboveTop >= 8 * canvasToScreen ? aboveTop : Math.min(this.canvas.height - height - 12 * canvasToScreen, mujiY + 12 * scale);
+    this.ctx.fillStyle = "rgba(255, 248, 226, .96)";
     this.ctx.strokeStyle = "rgba(113, 82, 53, .60)";
-    this.ctx.lineWidth = Math.max(1, scale);
+    this.ctx.lineWidth = 1.25 * canvasToScreen;
+    this.ctx.shadowColor = "rgba(0, 0, 0, .25)";
+    this.ctx.shadowBlur = 6 * canvasToScreen;
+    this.ctx.shadowOffsetY = 2 * canvasToScreen;
     this.ctx.beginPath();
-    this.ctx.roundRect(left, top, width, height, 8 * scale);
+    this.ctx.roundRect(left, top, width, height, 8 * canvasToScreen);
     this.ctx.fill();
     this.ctx.stroke();
-    const tailX = Math.max(left + 14 * scale, Math.min(left + width - 14 * scale, mujiX));
+    this.ctx.shadowColor = "transparent";
+    this.ctx.shadowBlur = 0;
+    this.ctx.shadowOffsetY = 0;
+    const tailX = Math.max(left + 14 * canvasToScreen, Math.min(left + width - 14 * canvasToScreen, mujiX));
     this.ctx.beginPath();
-    this.ctx.moveTo(tailX - 5 * scale, top + height - 1 * scale);
-    this.ctx.lineTo(tailX, top + height + 7 * scale);
-    this.ctx.lineTo(tailX + 7 * scale, top + height - 1 * scale);
+    this.ctx.moveTo(tailX - 5 * canvasToScreen, top + height - 1 * canvasToScreen);
+    this.ctx.lineTo(tailX, top + height + 7 * canvasToScreen);
+    this.ctx.lineTo(tailX + 7 * canvasToScreen, top + height - 1 * canvasToScreen);
     this.ctx.fill();
     this.ctx.fillStyle = "#513b2a";
     lines.forEach((item, index) => this.ctx.fillText(item, left + paddingX, top + paddingY + fontSize + index * lineHeight));
