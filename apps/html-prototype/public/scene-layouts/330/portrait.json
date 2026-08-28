@@ -25,7 +25,7 @@
     { "x": 316.8334270812984, "y": 183.83154122898614, "w": 296.4079137332011, "h": 47.501667905533594 }
   ],
   "interactions": [
-    { "id": "bench-memory", "label": "bench-memory", "x": 413.7359565571422, "y": 282.63504635099724, "radius": 56 },
+    { "id": "march30-bench-memory", "label": "bench-memory", "x": 413.7359565571422, "y": 282.63504635099724, "radius": 56 },
     { "id": "elevator", "label": "elevator", "x": 677.8430706204322, "y": 333.93686725906514, "radius": 75 },
     { "id": "exit", "label": "exit", "x": 430.8364106097093, "y": 962.8592455105445, "radius": 80 },
     { "id": "interaction", "label": "Interaction", "x": 594.240778326709, "y": 738.6512539450355, "radius": 56 },
