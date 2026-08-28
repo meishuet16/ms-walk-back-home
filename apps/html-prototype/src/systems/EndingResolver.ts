@@ -17,6 +17,7 @@ function toneFromProgress(input: ChapterReflectionInput): ReflectionTone | null 
   if (picked.has("pretty") || picked.has("rewrite-me")) return "rewriting";
   if (picked.has("quiet") || picked.has("remember-me") || picked.has("sad") || picked.has("labis-teach-hold") || picked.has("labis-release-hold")) return "holding";
   if (picked.has("unimportant") || picked.has("silent-leave")) return "not-ready";
+  if (input.tendencies.avoidance >= input.tendencies.acceptance && input.tendencies.avoidance > 0) return "not-ready";
   return null;
 }
 

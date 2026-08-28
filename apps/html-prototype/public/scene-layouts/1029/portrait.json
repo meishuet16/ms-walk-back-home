@@ -1,0 +1,122 @@
+{
+  "sceneId": "1029",
+  "label": "October 29 — A Little Closer",
+  "orientation": "portrait",
+  "asset": "assets/1029/1029-portrait.png",
+  "size": {
+    "w": 941,
+    "h": 1672
+  },
+  "spawn": {
+    "x": 188.48629303442772,
+    "y": 1356.6209231987348
+  },
+  "obstacles": [
+    {
+      "x": 0,
+      "y": 0,
+      "w": 941,
+      "h": 30.095999999999997
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "w": 23.525000000000002,
+      "h": 1672
+    },
+    {
+      "x": 917.475,
+      "y": 0,
+      "w": 23.525000000000002,
+      "h": 1672
+    },
+    {
+      "x": 0,
+      "y": 1646.92,
+      "w": 941,
+      "h": 25.08
+    }
+  ],
+  "interactions": [
+    {
+      "id": "oct29-main-memory",
+      "label": "oct29-main-memory",
+      "x": 443.9217830162865,
+      "y": 1287.218593440783,
+      "radius": 56
+    },
+    {
+      "id": "singles-selection-echo",
+      "label": "singles-selection-echo",
+      "x": 786.265004509937,
+      "y": 1155.2128567784662,
+      "radius": 48
+    },
+    {
+      "id": "hiking-shoe-echo",
+      "label": "hiking-shoe-echo",
+      "x": 723.0205653130099,
+      "y": 634.3616845520912,
+      "radius": 46
+    },
+    {
+      "id": "score-forgotten-echo",
+      "label": "score-forgotten-echo",
+      "x": 688.466865259296,
+      "y": 1022.2253741875858,
+      "radius": 46
+    },
+    {
+      "id": "diary",
+      "label": "diary",
+      "x": 99.21041649522142,
+      "y": 834.8219939970535,
+      "radius": 48
+    },
+    {
+      "id": "exit",
+      "label": "exit",
+      "x": 438.49987741078945,
+      "y": 1487.6799927447742,
+      "radius": 70
+    }
+  ],
+  "triggers": [
+    {
+      "id": "oct29-court-main-trigger",
+      "rect": {
+        "x": 270.00000437818613,
+        "y": 1089.9999817478597,
+        "w": 431.99997648751906,
+        "h": 296.000066437791
+      },
+      "chapterId": "oct29-a-little-closer",
+      "eventId": "oct29-main-memory",
+      "once": true
+    }
+  ],
+  "placementSlots": [],
+  "echoAnchors": {
+    "singles-selection-echo": {
+      "x": 787.0332845516918,
+      "y": 1154.444424147253,
+      "radius": 48
+    },
+    "hiking-shoe-echo": {
+      "x": 724.5575068662525,
+      "y": 632.824819289665,
+      "radius": 46
+    },
+    "score-forgotten-echo": {
+      "x": 693.3411329164597,
+      "y": 1024.7283496971377,
+      "radius": 46
+    }
+  },
+  "anchors": {
+    "oct29-main-memory": {
+      "x": 440.7949519108958,
+      "y": 1290.3455008464884
+    }
+  }
+}

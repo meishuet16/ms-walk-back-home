@@ -1,0 +1,122 @@
+{
+  "sceneId": "1029",
+  "label": "October 29 — A Little Closer",
+  "orientation": "landscape",
+  "asset": "assets/1029/1029-landscape.png",
+  "size": {
+    "w": 1672,
+    "h": 941
+  },
+  "spawn": {
+    "x": 949.7062093507723,
+    "y": 767.8505068358481
+  },
+  "obstacles": [
+    {
+      "x": 0,
+      "y": 0,
+      "w": 1672,
+      "h": 23.525000000000002
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "w": 30.095999999999997,
+      "h": 941
+    },
+    {
+      "x": 1641.904,
+      "y": 0,
+      "w": 30.095999999999997,
+      "h": 941
+    },
+    {
+      "x": 0,
+      "y": 917.475,
+      "w": 1672,
+      "h": 23.525000000000002
+    }
+  ],
+  "interactions": [
+    {
+      "id": "oct29-main-memory",
+      "label": "oct29-main-memory",
+      "x": 808.0754236846527,
+      "y": 634.76634101205,
+      "radius": 58
+    },
+    {
+      "id": "singles-selection-echo",
+      "label": "singles-selection-echo",
+      "x": 1170.3999999999999,
+      "y": 366.99,
+      "radius": 50
+    },
+    {
+      "id": "hiking-shoe-echo",
+      "label": "hiking-shoe-echo",
+      "x": 535.04,
+      "y": 592.83,
+      "radius": 48
+    },
+    {
+      "id": "score-forgotten-echo",
+      "label": "score-forgotten-echo",
+      "x": 1220.56,
+      "y": 583.42,
+      "radius": 48
+    },
+    {
+      "id": "diary",
+      "label": "diary",
+      "x": 296.74917686406144,
+      "y": 685.2625004307243,
+      "radius": 50
+    },
+    {
+      "id": "exit",
+      "label": "exit",
+      "x": 814.3787097799259,
+      "y": 800.1087318462364,
+      "radius": 70
+    }
+  ],
+  "triggers": [
+    {
+      "id": "oct29-court-main-trigger",
+      "rect": {
+        "x": 726.8740977396642,
+        "y": 565.3190132257705,
+        "w": 318.3299313473119,
+        "h": 158.28508633742433
+      },
+      "chapterId": "oct29-a-little-closer",
+      "eventId": "oct29-main-memory",
+      "once": true
+    }
+  ],
+  "placementSlots": [],
+  "echoAnchors": {
+    "singles-selection-echo": {
+      "x": 1170.3999999999999,
+      "y": 366.99,
+      "radius": 50
+    },
+    "hiking-shoe-echo": {
+      "x": 535.04,
+      "y": 592.83,
+      "radius": 48
+    },
+    "score-forgotten-echo": {
+      "x": 1220.56,
+      "y": 583.42,
+      "radius": 48
+    }
+  },
+  "anchors": {
+    "oct29-main-memory": {
+      "x": 809.6305232003413,
+      "y": 633.8872821599051
+    }
+  }
+}

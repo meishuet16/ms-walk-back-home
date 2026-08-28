@@ -3,12 +3,14 @@ import { july21DiaryEntry } from "./july21Chapter.js";
 import { june25DiaryEntry } from "./june25Chapter.js";
 import { april25DiaryEntry } from "./april25Chapter.js";
 import { november22DiaryEntry } from "./november22Chapter.js";
+import { oct29DiaryEntry } from "./oct29Chapter.js";
 
 export const authoredChapterDiaryEntries: DiaryEntry[] = [
   april25DiaryEntry,
   july21DiaryEntry,
   june25DiaryEntry,
   november22DiaryEntry,
+  oct29DiaryEntry,
   {
     id: "authored-diary-june24-only-came-for-you",
     source: "authored",

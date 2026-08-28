@@ -57,5 +57,6 @@ export const forestDoors: ForestDoor[] = [
   { id: "may23-i-arrived", date: "05.23", title: "我到了，你呢", x: 0, y: 0, chapterId: "may23-i-arrived" },
   { id: "june24-only-came-for-you", date: "06.24", title: "只为你而来", x: 0, y: 0, chapterId: "june24-only-came-for-you" },
   { id: "june25-so-i-came", date: "06.25", title: "所以我就来了。", x: 0, y: 0, chapterId: "june25-so-i-came" },
+  { id: "oct29-a-little-closer", date: "10.29", title: "A Little Closer", x: 0, y: 0, chapterId: "oct29-a-little-closer" },
   { id: "november22-before-sunrise", date: "11.21–11.22", title: "Before Sunrise", x: 0, y: 0, chapterId: "1122-before-sunrise" }
 ];

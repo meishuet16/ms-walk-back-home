@@ -5507,6 +5507,912 @@ export const authoredContentExpectations = {
           "prompt": "那我现在还需要知道，那些事对她意味着什么吗？"
         }
       ]
+    },
+    "oct29": {
+      "beatPortraits": {
+        "oct29-hiking-shoe": [
+          "assets/1029/memory-portrait/echo-shoes.png",
+          "assets/1029/memory-portrait/echo-shoes.png"
+        ],
+        "oct29-main": [
+          "assets/1029/memory-portrait/main-arrival.png",
+          "assets/1029/memory-portrait/main-single-challenge.png",
+          "assets/1029/memory-portrait/main-training.png",
+          "assets/1029/memory-portrait/main-cant-hear.png",
+          "assets/1029/memory-portrait/main-closer.png",
+          "assets/1029/memory-portrait/main-good-job.png",
+          "assets/1029/memory-portrait/main-training-continue.png",
+          "assets/1029/memory-portrait/main-training-continue.png"
+        ],
+        "oct29-score-forgotten": [
+          "assets/1029/memory-portrait/echo-score.png"
+        ],
+        "oct29-singles-selection": [
+          "assets/1029/memory-portrait/echo-singles.png",
+          "assets/1029/memory-portrait/echo-score.png",
+          "assets/1029/memory-portrait/echo-singles.png"
+        ]
+      },
+      "closure": [
+        "2025 年 10 月 29 日，training 结束的时候，她对我来说还是 coach。",
+        "我拿到了 single，脚也真的起泡了。",
+        "那天我没有觉得，我们之间发生了什么特别的事。"
+      ],
+      "collections": {
+        "oct29-hiking-shoe": [
+          {
+            "portrait": "assets/1029/memory-portrait/echo-shoes.png",
+            "text": "打到后面。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-shoes.png",
+            "text": "我的脚开始痛了。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-shoes.png",
+            "text": "那双 hiking 鞋一直在割我的脚。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-shoes.png",
+            "text": "跑起来。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-shoes.png",
+            "text": "呜呜呜。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-shoes.png",
+            "text": "不是我不跑。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-shoes.png",
+            "text": "我的鞋在杀我。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-shoes.png",
+            "text": "结果后半场。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-shoes.png",
+            "text": "她甚至换拖鞋跟我打。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-shoes.png",
+            "text": "……"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-shoes.png",
+            "text": "我也想脱鞋。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-shoes.png",
+            "text": "她还是继续训练。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-shoes.png",
+            "text": "我还是继续跑。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-shoes.png",
+            "text": "七点 training 结束的时候。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-shoes.png",
+            "text": "我的脚真的起泡了。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-shoes.png",
+            "text": "我的脚没救了嘤嘤嘤。"
+          }
+        ],
+        "oct29-main": [
+          {
+            "portrait": "assets/1029/memory-portrait/main-arrival.png",
+            "text": "那天下午其实很累。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-arrival.png",
+            "text": "四点多还是爬起来去羽球 training。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-arrival.png",
+            "text": "一走进去。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-arrival.png",
+            "text": "大家打球都很有力。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-arrival.png",
+            "text": "……"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-arrival.png",
+            "text": "我很快就得出了一个结论。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-arrival.png",
+            "text": "完了。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-arrival.png",
+            "text": "我应该是这里最菜的那个。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-arrival.png",
+            "text": "而且我穿的是 hiking 鞋。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-arrival.png",
+            "text": "很好。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-arrival.png",
+            "text": "非常专业。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
+            "text": "一开始跟其他人打了一下。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
+            "text": "然后 coach 过来问我。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
+            "text": "你要打 single 还是 double？"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
+            "text": "prefer single。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
+            "text": "她看了我一下。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
+            "text": "我也要 single。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
+            "text": "so kita kena lawan。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
+            "text": "sape menang dia dapat。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
+            "text": "……"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
+            "text": "我突然觉得。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
+            "text": "single 好像也没有那么值得坚持。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
+            "text": "其实给你也可以。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
+            "text": "真的。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training.png",
+            "text": "然后她就开始训练我。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training.png",
+            "text": "教我开球。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training.png",
+            "text": "教我放球。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training.png",
+            "text": "还有——"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training.png",
+            "text": "疯狂偷我后场。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training.png",
+            "text": "呜呜呜。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training.png",
+            "text": "我最讨厌后场了。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training.png",
+            "text": "跑起来。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training.png",
+            "text": "她体力很好。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training.png",
+            "text": "球也很有力。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training.png",
+            "text": "我这个野生羽球人已经开始汗流浃背。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-cant-hear.png",
+            "text": "然后我发现另外一件事。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-cant-hear.png",
+            "text": "她讲话很小声。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-cant-hear.png",
+            "text": "偏偏球场又很吵。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-cant-hear.png",
+            "text": "……"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-cant-hear.png",
+            "text": "蛤？"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-cant-hear.png",
+            "text": "我完全没有听到。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-cant-hear.png",
+            "text": "所以往前走了一点。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-closer.png",
+            "text": "刚才那粒不错。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-closer.png",
+            "text": "蛤？"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-closer.png",
+            "text": "还是听不清。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-closer.png",
+            "text": "于是。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-closer.png",
+            "text": "再走近一点。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-closer.png",
+            "text": "你刚才讲什么？"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-good-job.png",
+            "text": "很棒。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-good-job.png",
+            "text": "她又重复了一次。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-good-job.png",
+            "text": "很棒。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-good-job.png",
+            "text": "然后给了我一个大拇指。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-good-job.png",
+            "text": "……"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-good-job.png",
+            "text": "不要 pua 我。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-good-job.png",
+            "text": "明明刚刚还一直被她偷后场。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-good-job.png",
+            "text": "跑又跑不过。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-good-job.png",
+            "text": "鞋又痛。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-good-job.png",
+            "text": "到底哪里很棒。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+            "text": "后来她又夸了几次。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+            "text": "我还是经常听不见。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+            "text": "……"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+            "text": "蛤？"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+            "text": "然后还是会走过去一点。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+            "text": "现在已经记不得。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+            "text": "那天下午到底这样走过去多少次。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+            "text": "可能根本没有很多。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+            "text": "几步而已。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+            "text": "那时候当然不会觉得几步路有什么值得记的。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+            "text": "只是球场太吵。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+            "text": "她讲话太小声。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+            "text": "听不见。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+            "text": "就走近一点。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+            "text": "还是听不清。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+            "text": "那就再走近一点。"
+          }
+        ],
+        "oct29-score-forgotten": [
+          {
+            "portrait": "assets/1029/memory-portrait/echo-score.png",
+            "text": "多少了？"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-score.png",
+            "text": "……"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-score.png",
+            "text": "我真的不记得。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-score.png",
+            "text": "那打多一场咯。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-score.png",
+            "text": "……"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-score.png",
+            "text": "就这样。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-score.png",
+            "text": "因为不会记分。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-score.png",
+            "text": "喜提加赛一场。"
+          }
+        ],
+        "oct29-singles-selection": [
+          {
+            "portrait": "assets/1029/memory-portrait/echo-singles.png",
+            "text": "后来 NG 也想争 single。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-singles.png",
+            "text": "我可以做候补吗？"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-singles.png",
+            "text": "没有候补。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-singles.png",
+            "text": "2 single。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-singles.png",
+            "text": "2 double。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-singles.png",
+            "text": "然后她直接叫 NG 跟我打十一粒。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-singles.png",
+            "text": "……"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-singles.png",
+            "text": "我开始瑟瑟发抖。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-score.png",
+            "text": "第一场打着打着。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-score.png",
+            "text": "好像已经差不多 10-6。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-score.png",
+            "text": "多少了？"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-score.png",
+            "text": "……"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-score.png",
+            "text": "不记得了。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-score.png",
+            "text": "是吗？"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-score.png",
+            "text": "那打多一场咯。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-score.png",
+            "text": "……"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-score.png",
+            "text": "非常好。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-score.png",
+            "text": "谢谢。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-singles.png",
+            "text": "第二场打到 4-10 的时候。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-singles.png",
+            "text": "我已经开始怀疑人生。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-singles.png",
+            "text": "感觉 NG 是不是在放水。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-singles.png",
+            "text": "所以我也偷偷放了两粒。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-singles.png",
+            "text": "这样比较公平。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-singles.png",
+            "text": "结果最后。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-singles.png",
+            "text": "还是给我赢掉了。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-singles.png",
+            "text": "……"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-singles.png",
+            "text": "single 就这样变成我了。"
+          },
+          {
+            "portrait": "assets/1029/memory-portrait/echo-singles.png",
+            "text": "突然想去 double。"
+          }
+        ]
+      },
+      "dialogue": [
+        {
+          "portrait": "assets/1029/memory-portrait/main-arrival.png",
+          "text": "那天下午其实很累。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-arrival.png",
+          "text": "四点多还是爬起来去羽球 training。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-arrival.png",
+          "text": "一走进去。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-arrival.png",
+          "text": "大家打球都很有力。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-arrival.png",
+          "text": "……"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-arrival.png",
+          "text": "我很快就得出了一个结论。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-arrival.png",
+          "text": "完了。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-arrival.png",
+          "text": "我应该是这里最菜的那个。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-arrival.png",
+          "text": "而且我穿的是 hiking 鞋。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-arrival.png",
+          "text": "很好。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-arrival.png",
+          "text": "非常专业。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
+          "text": "一开始跟其他人打了一下。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
+          "text": "然后 coach 过来问我。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
+          "text": "你要打 single 还是 double？"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
+          "text": "prefer single。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
+          "text": "她看了我一下。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
+          "text": "我也要 single。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
+          "text": "so kita kena lawan。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
+          "text": "sape menang dia dapat。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
+          "text": "……"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
+          "text": "我突然觉得。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
+          "text": "single 好像也没有那么值得坚持。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
+          "text": "其实给你也可以。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
+          "text": "真的。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training.png",
+          "text": "然后她就开始训练我。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training.png",
+          "text": "教我开球。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training.png",
+          "text": "教我放球。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training.png",
+          "text": "还有——"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training.png",
+          "text": "疯狂偷我后场。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training.png",
+          "text": "呜呜呜。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training.png",
+          "text": "我最讨厌后场了。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training.png",
+          "text": "跑起来。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training.png",
+          "text": "她体力很好。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training.png",
+          "text": "球也很有力。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training.png",
+          "text": "我这个野生羽球人已经开始汗流浃背。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-cant-hear.png",
+          "text": "然后我发现另外一件事。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-cant-hear.png",
+          "text": "她讲话很小声。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-cant-hear.png",
+          "text": "偏偏球场又很吵。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-cant-hear.png",
+          "text": "……"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-cant-hear.png",
+          "text": "蛤？"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-cant-hear.png",
+          "text": "我完全没有听到。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-cant-hear.png",
+          "text": "所以往前走了一点。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-closer.png",
+          "text": "刚才那粒不错。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-closer.png",
+          "text": "蛤？"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-closer.png",
+          "text": "还是听不清。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-closer.png",
+          "text": "于是。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-closer.png",
+          "text": "再走近一点。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-closer.png",
+          "text": "你刚才讲什么？"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-good-job.png",
+          "text": "很棒。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-good-job.png",
+          "text": "她又重复了一次。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-good-job.png",
+          "text": "很棒。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-good-job.png",
+          "text": "然后给了我一个大拇指。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-good-job.png",
+          "text": "……"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-good-job.png",
+          "text": "不要 pua 我。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-good-job.png",
+          "text": "明明刚刚还一直被她偷后场。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-good-job.png",
+          "text": "跑又跑不过。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-good-job.png",
+          "text": "鞋又痛。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-good-job.png",
+          "text": "到底哪里很棒。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+          "text": "后来她又夸了几次。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+          "text": "我还是经常听不见。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+          "text": "……"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+          "text": "蛤？"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+          "text": "然后还是会走过去一点。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+          "text": "现在已经记不得。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+          "text": "那天下午到底这样走过去多少次。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+          "text": "可能根本没有很多。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+          "text": "几步而已。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+          "text": "那时候当然不会觉得几步路有什么值得记的。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+          "text": "只是球场太吵。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+          "text": "她讲话太小声。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+          "text": "听不见。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+          "text": "就走近一点。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+          "text": "还是听不清。"
+        },
+        {
+          "portrait": "assets/1029/memory-portrait/main-training-continue.png",
+          "text": "那就再走近一点。"
+        }
+      ],
+      "diary": {
+        "body": "10.29 · A Little Closer\n\n那天下午其实很累。\n\n中午睡觉的时候还做了一个很奇怪的梦，梦见有人勒着我的脖子。醒来以后整个人还是昏昏沉沉的，很想继续睡。\n\n可是四点多有羽球 training。\n\n所以最后还是爬起来去了。\n\n我穿了一双根本不适合打羽球的 hiking 鞋。\n\n走进球场的时候，看见其他人打球都很有力，我很快就得出了一个结论：\n\n完了。\n\n我应该是这里最菜的那个。\n\n一开始跟几个 Malay 同学打了一下。球来得很快，我也不知道自己到底在干嘛，只记得一直跑。后来你过来问我，想打 single 还是 double。\n\n我说，prefer single。\n\n你说，你也要 single。\n\n然后看着我，很自然地说，那我们两个就要打，谁赢谁拿。\n\n我听完以后，突然觉得 single 也没有那么值得坚持。\n\n其实让给你也可以。\n\n真的。\n\n因为你打球很凶。\n\n球一直往后场飞，而我最不会接的偏偏就是后场。你又一直叫我跑起来，教我开球，教我放球。\n\n我一边被你溜，一边开始怀疑自己为什么要来。\n\n鞋子也很痛。\n\n那双 hiking 鞋一直磨脚，打到后面已经开始起水泡。\n\n可是现在回头找那一天，最先想起来的却不是脚痛。\n\n是你讲话很小声。\n\n球场其实很吵。\n\n鞋底摩擦地板的声音，球拍碰到球的声音，旁边的人讲话，还有球落在地上的声音。\n\n你站在另一边说了什么。\n\n我没有听见。\n\n所以我问：蛤？\n\n然后往前走了一点。\n\n后来又有一次。\n\n你说了一句话，我还是听不清。\n\n我只好再走过去一点，问你刚才说什么。\n\n你看着我，又重复了一次。\n\n很棒。\n\n然后给了我一个大拇指。\n\n我那时候第一反应不是开心。\n\n我只觉得：不要 pua 我。\n\n明明刚刚还一直被你打后场，跑也跑不过，鞋子又痛得要死，到底哪里很棒。\n\n可是后来你又夸了几次。\n\n我还是经常听不见。\n\n所以还是会问，蛤？\n\n然后走近一点。\n\n现在已经记不得那天下午到底走过去多少次了。\n\n可能根本没有很多。\n\n几步而已。\n\n那时候当然不会觉得几步路有什么值得记的。\n\n只是球场太吵。\n\n你讲话太小声。\n\n听不见，就走近一点。\n\n很普通。\n\n后来为了决定 single 的人选，我又跟别人打了十一分。第一场赢了。第二场打到一半，我甚至开始怀疑对方是不是故意放水。\n\n所以我也偷偷放了两粒。\n\n结果最后不知道为什么，还是赢了。\n\nsingle 最后真的变成我。\n\n我反而开始后悔。\n\n早知道去 double。\n\n七点左右 training 终于结束。\n\n我的脚已经起泡了。\n\n回去以后还有 OS quiz、Linux workshop，还有 pizza。整个晚上乱七八糟的，脑子里装的也都是比赛、功课，还有明天到底要去哪里借一双正常的鞋。\n\n所以如果只看那一天，其实真的没有什么特别的。\n\n没有谁在等谁。\n\n没有谁为了谁绕路。\n\n没有宿舍楼下，没有凌晨的洗衣店，没有一起回家的火车。\n\n也没有后来那些我以为自己会永远记得，最后却还是慢慢模糊掉的事情。\n\n那时候你甚至还只是 coach。\n\n一个羽球打得很厉害、体力很好、讲话有点小声，偶尔会对我竖起大拇指的人。\n\n而我也只是一个穿错鞋去 training，被打到到处跑，还很担心自己比赛会丢脸的人。\n\n我没有想过以后。\n\n没有想过我们会认识多久。\n\n没有想过以后会一起去哪里。\n\n更没有想过，有一天我会坐下来，把那一年发生过的事情一件一件重新找回来。\n\n如果那时候有人告诉我，我以后会记得这个下午，我大概也不会相信。\n\n因为真的没有什么值得记的。\n\n甚至关于你的部分，在当天的日记里也只占了一小块。\n\n可是记忆很奇怪。\n\n它不会把重要的东西提前标出来。\n\n不会有人告诉你，这一句以后会记很久，这一个动作以后还会想起，这几步路最好看清楚一点。\n\n事情发生的时候，都只是事情。\n\n所以我也不想替那一天加上后来才有的意义。\n\n我不知道那时候是不是已经有什么开始了。\n\n也不知道如果没有后来，我还会不会记得你说过那一句很棒。\n\n这些都是已经走到很远以后，才会问的问题。\n\n十月二十九号的我不知道。\n\n她只是站在球场上。\n\n球网还在中间。\n\n你站在另一边。\n\n你说了一句话。\n\n她没有听见。\n\n所以往前走了一点。\n\n还是没有听清。\n\n那就再走近一点。\n\n然后终于听见你说：\n\n很棒。\n\n就记得这个吧。",
+        "title": "10.29 · A Little Closer"
+      },
+      "display": {
+        "location": "University badminton court",
+        "mood": "an ordinary badminton memory remembered later",
+        "title": "再走近一点",
+        "weather": "晴"
+      },
+      "reflections": [
+        {
+          "choices": [
+            {
+              "label": "就只是几步路。",
+              "response": "球场很吵。\n她讲话很小声。\n所以我走近了一点。\n\n当时真的只有这么多。"
+            },
+            {
+              "label": "后来记住了，所以它才变得不一样。",
+              "response": "那时候没有人替它画重点。\n\n只是很多事情都忘了以后，\n这几步还在。"
+            },
+            {
+              "label": "我还是会想，那是不是某种开始。",
+              "response": "也许。\n\n也许不是。\n\n十月二十九号的我没有停下来确认。"
+            }
+          ],
+          "prompt": "那天下午我走过去很多次。其实只是因为听不见。现在回头看，我想怎样记住那几步？"
+        },
+        {
+          "choices": [
+            {
+              "label": "可能只是因为那时候真的很需要一点鼓励。",
+              "response": "脚很痛。\n后场也接不到。\n\n那一个大拇指来得刚刚好。"
+            },
+            {
+              "label": "也可能因为，说这句话的人后来变得重要了。",
+              "response": "那句话没有变。\n\n变的是后来再想起它的人。"
+            },
+            {
+              "label": "我不知道。记忆自己留下来的。",
+              "response": "有些事情没有理由。\n\n别的都淡了。\n它偏偏还在。"
+            }
+          ],
+          "prompt": "我后来为什么会记得那一句“很棒”？"
+        },
+        {
+          "choices": [
+            {
+              "label": "不用。发生过就够了。",
+              "response": "那时候她还是 coach。\n\n我还是那个穿错鞋的人。\n\n不用提前知道后来。"
+            },
+            {
+              "label": "至少对现在的我来说，这是我记得的起点。",
+              "response": "不是关系的起点。\n\n只是记忆往回走的时候，\n最早还能看清的地方。"
+            },
+            {
+              "label": "我宁愿不知道。",
+              "response": "那天下午没有答案。\n\n只有球网、鞋底声，\n还有一句很小声的话。"
+            }
+          ],
+          "prompt": "如果那天下午真的只是普通的一天，我还需要把它叫作“开始”吗？"
+        }
+      ]
     }
   },
   "version": 1
