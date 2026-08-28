@@ -1,6 +1,6 @@
 import { bakeryChapter, forestDoors } from "../fixtures/chapterPlan.js";
 import { labisMotorChapter } from "../fixtures/labisMotorChapter.js";
-import { march30Chapter } from "../fixtures/march30Chapter.js";
+import { march30RefinedChapter } from "../fixtures/march30RefinedChapter.js";
 import { april06Chapter } from "../fixtures/april06Chapter.js";
 import { april05Chapter } from "../fixtures/april05Chapter.js";
 import { april25Chapter } from "../fixtures/april25Chapter.js";
@@ -54,7 +54,7 @@ export const chapterRegistry: Record<string, ChapterDefinition> = {
     ]
   },
   "labis-motor-day": labisMotorChapter,
-  "march30-too-fated": march30Chapter,
+  "march30-too-fated": march30RefinedChapter,
   "april05-come-down": april05Chapter,
   "april06-not-gone-yet": april06Chapter,
   "april25-just-good-friends": april25Chapter,
