@@ -53,7 +53,7 @@ export const authoredRuntimeByScene: Record<string, AuthoredRuntimeDefinition> =
     resolveActions: (layout, mode) => resolveMarch30RefinedActions(layout, mode),
     reflectionChoices: march30RefinedReflectionChoices,
     echoAnchors: march30EchoAnchors,
-    mainInteractionId: "bench-memory",
+    mainInteractionId: "march30-bench-memory",
     triggerId: "main-memory",
     portraitSequences: march30PortraitSequences,
     echoPortraitSequenceIds: march30EchoPortraitSequenceIds,
