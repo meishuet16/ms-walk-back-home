@@ -1,6 +1,7 @@
 import type { ChapterDefinition, ReflectionChoice } from "../types.js";
 import { april05Assets, april05Chapter, april05EchoActions, april05EchoAnchors, april05MainMemoryActions, april05ReflectionChoices, resolveApril05Actions, type April05EchoId } from "../fixtures/april05Chapter.js";
 import { april06Assets, april06Chapter, april06EchoActions, april06MainMemoryActions, april06ReflectionChoices, resolveApril06Actions } from "../fixtures/april06Chapter.js";
+import { april25Assets, april25Chapter, april25EchoAnchors, april25EchoAvailability, april25EchoPortraitSequenceIds, april25PortraitSequences, april25ReflectionChoices, resolveApril25Actions } from "../fixtures/april25Chapter.js";
 import { may23Assets, may23Chapter, may23EchoAnchors, may23ReflectionChoices, resolveMay23Actions } from "../fixtures/may23Chapter.js";
 import { june24Assets, june24Chapter, june24EchoDialogues, june24ReflectionChoices, resolveJune24Actions } from "../fixtures/june24Chapter.js";
 import { june25Assets, june25Chapter, june25EchoAnchors, june25EchoAvailability, june25EchoPortraitSequenceIds, june25PortraitSequences, june25ReflectionChoices, resolveJune25Actions } from "../fixtures/june25Chapter.js";
@@ -56,6 +57,20 @@ export const authoredRuntimeByScene: Record<string, AuthoredRuntimeDefinition> =
     resolveActions: (layout, mode) => resolveApril06Actions(layout, mode === "main" ? april06MainMemoryActions : april06EchoActions),
     reflectionChoices: april06ReflectionChoices,
     echoAnchors: { "watergun-crossing": "watergun-crossing" }
+  },
+  "425": {
+    chapter: april25Chapter,
+    assets: april25Assets,
+    resolveActions: (layout, mode, echoId) => resolveApril25Actions(layout, mode, echoId),
+    reflectionChoices: april25ReflectionChoices,
+    echoAnchors: april25EchoAnchors,
+    mainInteractionId: "apr25-main-memory",
+    triggerId: "apr25-ktho-main-trigger",
+    portraitSequences: april25PortraitSequences,
+    mainPortraitSequenceId: "apr25-main",
+    echoPortraitSequenceIds: april25EchoPortraitSequenceIds,
+    echoAvailability: april25EchoAvailability,
+    reflectionAfterEchoId: "st-room-echo"
   },
   "523": {
     chapter: may23Chapter,

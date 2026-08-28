@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { april05Assets, april05Chapter, april05EchoActions, april05MainMemoryActions, april05ReflectionChoices, resolveApril05Actions } from "../src/fixtures/april05Chapter.js";
 import { april06Assets, april06Chapter, april06EchoActions, april06MainMemoryActions, april06ReflectionChoices, resolveApril06Actions } from "../src/fixtures/april06Chapter.js";
+import { april25Chapter, april25EchoAvailability, april25EchoPortraitSequenceIds, april25PortraitSequences, april25ReflectionChoices } from "../src/fixtures/april25Chapter.js";
 import { may23Assets, may23Chapter, may23EchoAnchors, may23ReflectionChoices, resolveMay23Actions } from "../src/fixtures/may23Chapter.js";
 import { june24Assets, june24Chapter, june24EchoDialogues, june24ReflectionChoices, resolveJune24Actions } from "../src/fixtures/june24Chapter.js";
 import { june25Chapter, june25DiaryEntry, june25EchoAvailability, june25EchoPortraitSequenceIds, june25PortraitSequences, june25ReflectionChoices } from "../src/fixtures/june25Chapter.js";
@@ -20,7 +21,7 @@ function loadLayout(sceneId: string, orientation: "landscape" | "portrait" = "la
 test("all current authored scenes preserve their independent runtime contracts", async () => {
   const { authoredRuntimeByScene } = await loadRegistry();
 
-  assert.deepEqual(Object.keys(authoredRuntimeByScene).sort(), ["405", "406", "523", "624", "625", "721"]);
+  assert.deepEqual(Object.keys(authoredRuntimeByScene).sort(), ["405", "406", "425", "523", "624", "625", "721"]);
 
   assert.equal(authoredRuntimeByScene["405"]?.chapter, april05Chapter);
   assert.equal(authoredRuntimeByScene["405"]?.chapter.id, "april05-come-down");
@@ -41,6 +42,16 @@ test("all current authored scenes preserve their independent runtime contracts",
   assert.equal(authoredRuntimeByScene["406"]?.reflectionChoices, april06ReflectionChoices);
   assert.equal(authoredRuntimeByScene["406"]?.triggerId, undefined);
   assert.equal(authoredRuntimeByScene["406"]?.mainInteractionId, undefined);
+
+  assert.equal(authoredRuntimeByScene["425"]?.chapter, april25Chapter);
+  assert.equal(authoredRuntimeByScene["425"]?.reflectionChoices, april25ReflectionChoices);
+  assert.deepEqual(authoredRuntimeByScene["425"]?.portraitSequences, april25PortraitSequences);
+  assert.deepEqual(authoredRuntimeByScene["425"]?.echoPortraitSequenceIds, april25EchoPortraitSequenceIds);
+  assert.deepEqual(authoredRuntimeByScene["425"]?.echoAvailability, april25EchoAvailability);
+  assert.equal(authoredRuntimeByScene["425"]?.mainPortraitSequenceId, "apr25-main");
+  assert.equal(authoredRuntimeByScene["425"]?.mainInteractionId, "apr25-main-memory");
+  assert.equal(authoredRuntimeByScene["425"]?.triggerId, "apr25-ktho-main-trigger");
+  assert.equal(authoredRuntimeByScene["425"]?.reflectionAfterEchoId, "st-room-echo");
 
   assert.equal(authoredRuntimeByScene["523"]?.chapter, may23Chapter);
   assert.equal(authoredRuntimeByScene["523"]?.chapter.id, "may23-i-arrived");
@@ -195,9 +206,10 @@ test("importing AuthoredChapterRegistry does not mutate fixture data", async () 
 test("ChapterRegistry remains the separate Forest identity and routing registry", () => {
   assert.equal(chapterRegistry["april05-come-down"], april05Chapter);
   assert.equal(chapterRegistry["april06-not-gone-yet"], april06Chapter);
+  assert.equal(chapterRegistry["april25-just-good-friends"], april25Chapter);
   assert.equal(chapterRegistry["may23-i-arrived"], may23Chapter);
   assert.equal(chapterRegistry["june24-only-came-for-you"], june24Chapter);
-  for (const chapter of [april05Chapter, april06Chapter, may23Chapter, june24Chapter]) {
+  for (const chapter of [april05Chapter, april06Chapter, april25Chapter, may23Chapter, june24Chapter]) {
     const entry = forestEntries.find((candidate) => candidate.chapterId === chapter.id);
     assert.ok(entry);
     assert.equal(routeForestEntry(entry!).kind, "implemented-chapter");

@@ -73,6 +73,7 @@ test("the explicit manifest contains current authored chapter presentation field
   assert.ok(authoredContentManifest.chapters.march30);
   assert.ok(authoredContentManifest.chapters.april05);
   assert.ok(authoredContentManifest.chapters.april06);
+  assert.ok(authoredContentManifest.chapters.april25);
   assert.ok(authoredContentManifest.chapters.may23);
   assert.ok(authoredContentManifest.chapters.june24);
   assert.ok(authoredContentManifest.chapters.june25);

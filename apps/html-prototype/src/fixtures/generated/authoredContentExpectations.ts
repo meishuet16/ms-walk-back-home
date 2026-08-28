@@ -405,6 +405,1333 @@ export const authoredContentExpectations = {
         }
       ]
     },
+    "april25": {
+      "beatPortraits": {
+        "apr25-main": [
+          "assets/425/memory-portrait/echo-wait.png",
+          "assets/425/memory-portrait/echo-wait.png",
+          "assets/425/memory-portrait/echo-look.png",
+          "assets/425/memory-portrait/echo-chat.png",
+          "assets/425/memory-portrait/echo-ig.png",
+          "assets/425/memory-portrait/echo-chat.png",
+          "assets/425/memory-portrait/echo-hair-start.png",
+          "assets/425/memory-portrait/echo-hair-02.png",
+          "assets/425/memory-portrait/echo-hair-03.png",
+          "assets/425/memory-portrait/echo-hair-04.png",
+          "assets/425/memory-portrait/echo-bang.png",
+          "assets/425/memory-portrait/echo-argue.png",
+          "assets/425/memory-portrait/echo-ig.png",
+          "assets/425/memory-portrait/echo-arm.png",
+          "assets/425/memory-portrait/echo-argue.png",
+          "assets/425/memory-portrait/echo-wait.png",
+          "assets/425/memory-portrait/echo-arm.png",
+          "assets/425/memory-portrait/echo-invite.png",
+          "assets/425/memory-portrait/echo-invite.png"
+        ],
+        "apr26-badminton-companion": [
+          "assets/425/memory-portrait/echo-badminton-arrival.png",
+          "assets/425/memory-portrait/echo-badminton2.png",
+          "assets/425/memory-portrait/echo-badminton.png"
+        ],
+        "apr26-car-introvert": [
+          "assets/425/memory-portrait/echo-introvert.png"
+        ],
+        "apr26-st-room": [
+          "assets/425/memory-portrait/echo-guilty.png",
+          "assets/425/memory-portrait/echo-guilty.png"
+        ],
+        "apr26-watermelon-juice": [
+          "assets/425/memory-portrait/echo-watermelon-01.png",
+          "assets/425/memory-portrait/echo-watermelon.png"
+        ]
+      },
+      "closure": [
+        "4 月 26 日晚上，我在朋友房间待到凌晨十二点。",
+        "那时候我仍然把我们叫作“好朋友”。",
+        "我始终没有去问，她怎么看这段关系。"
+      ],
+      "collections": {
+        "apr25-main": [
+          {
+            "portrait": "assets/425/memory-portrait/echo-wait.png",
+            "text": "傍晚骑脚车，要回的时候，我本来只是打算去 KTHO 装水了顺路找 ST。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-wait.png",
+            "text": "结果一转进去。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-wait.png",
+            "text": "远远就看到一个熟悉的身影。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-wait.png",
+            "text": "哇塞。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-wait.png",
+            "text": "今天竟然给我遇到了。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-wait.png",
+            "text": "我远远就看到一个骑脚车的身影。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-wait.png",
+            "text": "感觉是你。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-wait.png",
+            "text": "所以我就多等了一下。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-wait.png",
+            "text": "好有缘哦。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-wait.png",
+            "text": "巧咯。来剪刘海。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-wait.png",
+            "text": "我满头大汗 wor。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-look.png",
+            "text": "我去装水喝。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-look.png",
+            "text": "然后把脚车放在旁边。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-look.png",
+            "text": "她叫我去 lobby 里面坐。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-chat.png",
+            "text": "她拍了一张我坐在她对面的照片发给朋友。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-chat.png",
+            "text": "我也拍她坐在我对面的照片发给同个人。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-chat.png",
+            "text": "。。。上一秒她才发给我罢了。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-chat.png",
+            "text": "那个朋友叫她下次打羽球 jio 我。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-chat.png",
+            "text": "很 ok 啊。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-chat.png",
+            "text": "Jio 你去了一定很热闹。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-ig.png",
+            "text": "然后她当着我的面看我发的单人照 IG Story。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-ig.png",
+            "text": "。。。你可以不要当面鞭尸吗。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-ig.png",
+            "text": "她看了我一眼，还是 like 了。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-ig.png",
+            "text": "哇，这是哪个天使。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-chat.png",
+            "text": "过后我们又坐了一会。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-chat.png",
+            "text": "她突然开口问"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-chat.png",
+            "text": "你有什么话要讲吗？"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-chat.png",
+            "text": "蛤？"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-chat.png",
+            "text": "讲什么？"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-chat.png",
+            "text": "跟谁讲？"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-chat.png",
+            "text": "跟我讲啊。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-chat.png",
+            "text": "八卦什么的。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-chat.png",
+            "text": "后来我跟她确认下一次爬山的时间。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-chat.png",
+            "text": "本来还想 jio 她去 Flying Fox。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-chat.png",
+            "text": "她其实 ok，也得空。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-chat.png",
+            "text": "只是 Grab 太远了。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-hair-start.png",
+            "text": "然后就是剪刘海环节。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-hair-start.png",
+            "text": "她带我去厕所剪。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-hair-start.png",
+            "text": "她下手完全不犹豫。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-hair-start.png",
+            "text": "我全程举着手机录 vlog。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-hair-02.png",
+            "text": "剪到一半。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-hair-02.png",
+            "text": "她突然对着我的脸吹气。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-hair-02.png",
+            "text": "把碎头发吹走。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-hair-02.png",
+            "text": "what。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-hair-02.png",
+            "text": "她笑得很大声。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-hair-03.png",
+            "text": "然后她的剪刀一直划过我的眉毛。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-hair-03.png",
+            "text": "我很害怕。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-hair-03.png",
+            "text": "一直皱着脸。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-hair-03.png",
+            "text": "不要皱着脸先。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-hair-03.png",
+            "text": "我的眉毛。。。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-hair-04.png",
+            "text": "大概十分钟就好了。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-hair-04.png",
+            "text": "她看起来很满意她的试验品。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-bang.png",
+            "text": "可爱的刘海。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-bang.png",
+            "text": "定位错了吧。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-bang.png",
+            "text": "我要帅气。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-bang.png",
+            "text": "不要要求那么高。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-argue.png",
+            "text": "回到 lobby 的时候遇到 Angela。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-argue.png",
+            "text": "很可爱的刘海。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-argue.png",
+            "text": "错了错了。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-argue.png",
+            "text": "我不要可爱。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-argue.png",
+            "text": "不要那么执着帅气风格。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-argue.png",
+            "text": "你懂她刚才剪刀感觉要剪掉我的眉毛吗。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-argue.png",
+            "text": "什么。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-argue.png",
+            "text": "你一直皱着脸。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-ig.png",
+            "text": "我顺便逼她 repost 我发的剪头发视频。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-ig.png",
+            "text": "告诉她不 repost 就不让她回房间。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-ig.png",
+            "text": "最后她勉强发了 CF story。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-ig.png",
+            "text": "这里有屁孩逼我转发。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "我后来 show muscle 视频给她们看。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "她一看到就要跟我掰手腕。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "Angela 帮我录。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "然后她输了。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "我的 muscle 没有你大粒。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "哎哟。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "你放水了。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "我之前没有赢过。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "我是你赢的第一个人。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "然后她不服输。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "换个位置又来一次。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "又输了。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "是角度问题吗。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "不确定。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-argue.png",
+            "text": "不然现在比跑步。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-argue.png",
+            "text": "跑整个学校一圈。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-argue.png",
+            "text": "绝对可以拉爆你。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-wait.png",
+            "text": "跑步我肯定被你拉爆。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-wait.png",
+            "text": "我骑脚车你跑步就可以。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-wait.png",
+            "text": "最后也没有真的跑。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-wait.png",
+            "text": "散场以前我又约她明天。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-wait.png",
+            "text": "明天我要去练羽球。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-wait.png",
+            "text": "我们报名混双了。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "他约你就去。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "是比赛我就去啊。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "那你放他飞机。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "为什么你可以放我飞机，不可以放别人飞机。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "怎样放。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "给报名费了 ei。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "haizz，又是他。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "怎么了？"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "那个男生有黑历史吗？"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "也没什么。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "只是一个有点敏感多疑的小男生。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "是朋友就快点告诉我。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "没什么啦。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "那明天他如果要找人，我可以拉你吗？"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-arm.png",
+            "text": "。。。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-invite.png",
+            "text": "回到宿舍冲好凉。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-invite.png",
+            "text": "那个男生真的来找我。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-invite.png",
+            "text": "还 mention ET 也去。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-invite.png",
+            "text": "是你叫他问的吗？"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-invite.png",
+            "text": "他要你啦。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-invite.png",
+            "text": "你来就可以陪我了哈哈哈。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-invite.png",
+            "text": "一起受苦。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-invite.png",
+            "text": "什么鬼。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-invite.png",
+            "text": "你提的是吗？"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-invite.png",
+            "text": "他先提的。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-invite.png",
+            "text": "。。。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-invite.png",
+            "text": "剪头发视频一发。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-invite.png",
+            "text": "好多 message。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-invite.png",
+            "text": "群里也炸了。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-invite.png",
+            "text": "大家都被震惊了。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-invite.png",
+            "text": "妈妈要打我了 把头发给别人剪"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-invite.png",
+            "text": "妈妈问我那是谁"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-invite.png",
+            "text": "我们只是好朋友。"
+          }
+        ],
+        "apr26-badminton-companion": [
+          {
+            "portrait": "assets/425/memory-portrait/echo-badminton-arrival.png",
+            "text": "结果你最后还是来陪我了。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-badminton-arrival.png",
+            "text": "我来看你打罢了。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-badminton-arrival.png",
+            "text": "你不要下场打吗？"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-badminton-arrival.png",
+            "text": "我晕车了哦。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-badminton-arrival.png",
+            "text": "去你的。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-badminton2.png",
+            "text": "你看这是什么。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-badminton2.png",
+            "text": "好眼熟。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-badminton2.png",
+            "text": "哇，是我送的 ACE 钥匙圈。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-badminton2.png",
+            "text": "挂在这里是不是很适合？"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-badminton2.png",
+            "text": "不适合。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-badminton2.png",
+            "text": "=_= 无语"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-badminton.png",
+            "text": "后来她知道我不喜欢开球。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-badminton.png",
+            "text": "还是一直把球留给我开。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-badminton.png",
+            "text": "不要逃避了。来这粒也给你开。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-badminton.png",
+            "text": "。。。我谢谢你。"
+          }
+        ],
+        "apr26-car-introvert": [
+          {
+            "portrait": "assets/425/memory-portrait/echo-introvert.png",
+            "text": "怎样，今天什么感想？"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-introvert.png",
+            "text": "啥感想？"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-introvert.png",
+            "text": "为什么你这么安静？"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-introvert.png",
+            "text": "我是大i人啊。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-introvert.png",
+            "text": "而且我跟他也是第一次见 ei。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-introvert.png",
+            "text": "屁啦。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-introvert.png",
+            "text": "你对我又不看你i。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-introvert.png",
+            "text": "嘿嘿。"
+          }
+        ],
+        "apr26-st-room": [
+          {
+            "portrait": "assets/425/memory-portrait/echo-guilty.png",
+            "text": "你觉得你们现在是什么关系？"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-guilty.png",
+            "text": "朋友。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-guilty.png",
+            "text": "然后我开始讲我真正介意的东西。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-guilty.png",
+            "text": "我很愧疚。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-guilty.png",
+            "text": "我觉得对她不公平。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-guilty.png",
+            "text": "朋友好像并不这样觉得。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-guilty.png",
+            "text": "她说，我的想法不一定就是对方的想法。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-guilty.png",
+            "text": "她也说，也许事情不一定只有我想的那一种。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-guilty.png",
+            "text": "她让我去确认清楚。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-guilty.png",
+            "text": "可是问了又如何。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-guilty.png",
+            "text": "朋友就是朋友。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-guilty.png",
+            "text": "最后我在她房间坐了三个小时。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-guilty.png",
+            "text": "想到最后还是想不通。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-guilty.png",
+            "text": "半夜十二点才骑脚车回自己房间。"
+          }
+        ],
+        "apr26-watermelon-juice": [
+          {
+            "portrait": "assets/425/memory-portrait/echo-watermelon-01.png",
+            "text": "打完球吃午餐的时候，她点了一杯西瓜汁。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-watermelon-01.png",
+            "text": "说是叫给我喝的。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-watermelon-01.png",
+            "text": "你给我喝哦。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-watermelon-01.png",
+            "text": "别急呀。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-watermelon-01.png",
+            "text": "你等我吃完。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-watermelon-01.png",
+            "text": "快点喝。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-watermelon-01.png",
+            "text": "你不要拒绝我 ei。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-watermelon-01.png",
+            "text": "等下我伤心了，吃不下了。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-watermelon-01.png",
+            "text": "你别急呀 你等我吞完我的食物先。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-watermelon-01.png",
+            "text": "我吞完以后。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-watermelon.png",
+            "text": "她直接把西瓜汁送到我嘴边。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-watermelon.png",
+            "text": "你要我喂你是吗？"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-watermelon.png",
+            "text": "来。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-watermelon.png",
+            "text": "公主请喝水。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-watermelon.png",
+            "text": "只有一根吸管。"
+          },
+          {
+            "portrait": "assets/425/memory-portrait/echo-watermelon.png",
+            "text": "我最后还是喝了。"
+          }
+        ]
+      },
+      "dialogue": [
+        {
+          "portrait": "assets/425/memory-portrait/echo-wait.png",
+          "text": "傍晚骑脚车，要回的时候，我本来只是打算去 KTHO 装水了顺路找 ST。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-wait.png",
+          "text": "结果一转进去。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-wait.png",
+          "text": "远远就看到一个熟悉的身影。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-wait.png",
+          "text": "哇塞。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-wait.png",
+          "text": "今天竟然给我遇到了。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-wait.png",
+          "text": "我远远就看到一个骑脚车的身影。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-wait.png",
+          "text": "感觉是你。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-wait.png",
+          "text": "所以我就多等了一下。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-wait.png",
+          "text": "好有缘哦。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-wait.png",
+          "text": "巧咯。来剪刘海。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-wait.png",
+          "text": "我满头大汗 wor。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-look.png",
+          "text": "我去装水喝。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-look.png",
+          "text": "然后把脚车放在旁边。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-look.png",
+          "text": "她叫我去 lobby 里面坐。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-chat.png",
+          "text": "她拍了一张我坐在她对面的照片发给朋友。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-chat.png",
+          "text": "我也拍她坐在我对面的照片发给同个人。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-chat.png",
+          "text": "。。。上一秒她才发给我罢了。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-chat.png",
+          "text": "那个朋友叫她下次打羽球 jio 我。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-chat.png",
+          "text": "很 ok 啊。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-chat.png",
+          "text": "Jio 你去了一定很热闹。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-ig.png",
+          "text": "然后她当着我的面看我发的单人照 IG Story。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-ig.png",
+          "text": "。。。你可以不要当面鞭尸吗。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-ig.png",
+          "text": "她看了我一眼，还是 like 了。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-ig.png",
+          "text": "哇，这是哪个天使。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-chat.png",
+          "text": "过后我们又坐了一会。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-chat.png",
+          "text": "她突然开口问"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-chat.png",
+          "text": "你有什么话要讲吗？"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-chat.png",
+          "text": "蛤？"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-chat.png",
+          "text": "讲什么？"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-chat.png",
+          "text": "跟谁讲？"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-chat.png",
+          "text": "跟我讲啊。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-chat.png",
+          "text": "八卦什么的。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-chat.png",
+          "text": "后来我跟她确认下一次爬山的时间。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-chat.png",
+          "text": "本来还想 jio 她去 Flying Fox。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-chat.png",
+          "text": "她其实 ok，也得空。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-chat.png",
+          "text": "只是 Grab 太远了。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-hair-start.png",
+          "text": "然后就是剪刘海环节。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-hair-start.png",
+          "text": "她带我去厕所剪。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-hair-start.png",
+          "text": "她下手完全不犹豫。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-hair-start.png",
+          "text": "我全程举着手机录 vlog。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-hair-02.png",
+          "text": "剪到一半。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-hair-02.png",
+          "text": "她突然对着我的脸吹气。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-hair-02.png",
+          "text": "把碎头发吹走。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-hair-02.png",
+          "text": "what。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-hair-02.png",
+          "text": "她笑得很大声。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-hair-03.png",
+          "text": "然后她的剪刀一直划过我的眉毛。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-hair-03.png",
+          "text": "我很害怕。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-hair-03.png",
+          "text": "一直皱着脸。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-hair-03.png",
+          "text": "不要皱着脸先。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-hair-03.png",
+          "text": "我的眉毛。。。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-hair-04.png",
+          "text": "大概十分钟就好了。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-hair-04.png",
+          "text": "她看起来很满意她的试验品。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-bang.png",
+          "text": "可爱的刘海。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-bang.png",
+          "text": "定位错了吧。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-bang.png",
+          "text": "我要帅气。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-bang.png",
+          "text": "不要要求那么高。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-argue.png",
+          "text": "回到 lobby 的时候遇到 Angela。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-argue.png",
+          "text": "很可爱的刘海。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-argue.png",
+          "text": "错了错了。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-argue.png",
+          "text": "我不要可爱。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-argue.png",
+          "text": "不要那么执着帅气风格。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-argue.png",
+          "text": "你懂她刚才剪刀感觉要剪掉我的眉毛吗。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-argue.png",
+          "text": "什么。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-argue.png",
+          "text": "你一直皱着脸。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-ig.png",
+          "text": "我顺便逼她 repost 我发的剪头发视频。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-ig.png",
+          "text": "告诉她不 repost 就不让她回房间。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-ig.png",
+          "text": "最后她勉强发了 CF story。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-ig.png",
+          "text": "这里有屁孩逼我转发。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "我后来 show muscle 视频给她们看。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "她一看到就要跟我掰手腕。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "Angela 帮我录。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "然后她输了。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "我的 muscle 没有你大粒。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "哎哟。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "你放水了。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "我之前没有赢过。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "我是你赢的第一个人。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "然后她不服输。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "换个位置又来一次。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "又输了。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "是角度问题吗。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "不确定。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-argue.png",
+          "text": "不然现在比跑步。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-argue.png",
+          "text": "跑整个学校一圈。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-argue.png",
+          "text": "绝对可以拉爆你。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-wait.png",
+          "text": "跑步我肯定被你拉爆。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-wait.png",
+          "text": "我骑脚车你跑步就可以。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-wait.png",
+          "text": "最后也没有真的跑。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-wait.png",
+          "text": "散场以前我又约她明天。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-wait.png",
+          "text": "明天我要去练羽球。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-wait.png",
+          "text": "我们报名混双了。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "他约你就去。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "是比赛我就去啊。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "那你放他飞机。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "为什么你可以放我飞机，不可以放别人飞机。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "怎样放。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "给报名费了 ei。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "haizz，又是他。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "怎么了？"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "那个男生有黑历史吗？"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "也没什么。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "只是一个有点敏感多疑的小男生。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "是朋友就快点告诉我。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "没什么啦。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "那明天他如果要找人，我可以拉你吗？"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-arm.png",
+          "text": "。。。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-invite.png",
+          "text": "回到宿舍冲好凉。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-invite.png",
+          "text": "那个男生真的来找我。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-invite.png",
+          "text": "还 mention ET 也去。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-invite.png",
+          "text": "是你叫他问的吗？"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-invite.png",
+          "text": "他要你啦。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-invite.png",
+          "text": "你来就可以陪我了哈哈哈。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-invite.png",
+          "text": "一起受苦。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-invite.png",
+          "text": "什么鬼。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-invite.png",
+          "text": "你提的是吗？"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-invite.png",
+          "text": "他先提的。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-invite.png",
+          "text": "。。。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-invite.png",
+          "text": "剪头发视频一发。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-invite.png",
+          "text": "好多 message。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-invite.png",
+          "text": "群里也炸了。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-invite.png",
+          "text": "大家都被震惊了。"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-invite.png",
+          "text": "妈妈要打我了 把头发给别人剪"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-invite.png",
+          "text": "妈妈问我那是谁"
+        },
+        {
+          "portrait": "assets/425/memory-portrait/echo-invite.png",
+          "text": "我们只是好朋友。"
+        }
+      ],
+      "diary": {
+        "body": "04.25–04.26 · Just Friends\n\n那两天其实没有发生什么很大的事情。\n\n四月二十五号中午醒来的时候，第一条听见的是你的语音。你说，早安美雪，你的饭团到了。我还很认真地问，你怎么知道。\n\n后来才想起来，那阵子我好像常常买。名字一次又一次出现在订单里面，被你看见，也不是什么奇怪的事。\n\n晚上我去骑脚车。骑完以后，本来只是想去 KTHO 装水，再去找别人。\n\n转进去的时候，远远看见一个很熟悉的人。\n\n你说，你也是远远看到一个骑脚车的人，觉得好像是我，所以多等了一下。\n\n我第一反应还是那句。\n\n好有缘哦。\n\n那时候我很喜欢把这种事情叫作缘分。\n\n后来才觉得，也许真正让我开心的，从来不是刚好遇见。\n\n是你本来可以走，却因为觉得那个人可能是我，所以多站了一会儿。\n\n我们后来坐在 lobby 聊天。你拍我，我也拍你。你当着我的面看我发的照片，还留言说，这是哪个天使。\n\n我嘴上一直嫌你烦。\n\n其实也没有真的想让你停。\n\n后来你突然说，要帮我剪刘海。\n\n我刚骑完脚车，满头都是汗，还是跟着你去了厕所。你拿着剪刀下手一点都不犹豫，我却一直担心自己的眉毛会不会顺便一起消失。\n\n碎头发落在脸上的时候，你很自然地凑过来，对着我的脸吹了一口气。\n\n我愣了一下。\n\n你已经在笑了。\n\n好像刚才什么都没有发生。\n\n可能真的什么都没有发生。\n\n剪完以后，你很满意，说很可爱。\n\n我说，我要的是帅气。\n\n后来 Angela 来了，也说可爱。你们两个像讲好的一样，我一个人坚持了半天，最后还是没有人理。\n\n再后来你看到我练 muscle 的视频，突然要跟我掰手腕。\n\n第一次输了，你不服，换了位置又来一次。\n\n还是输。\n\n你说，我是第一个赢你的人。\n\n那天的视频后来被别人看见。\n\n有人问我，我们两个到底是什么关系。\n\n我说，只是好朋友。\n\n那时候我应该是真的这样觉得。\n\n至少我不知道还能叫什么。\n\n第二天，我还是去了球场。\n\n其实前一晚睡得很迟，早上起来也很累。上车以后还晕车。你坐在副驾驶，我一路都觉得自己到底为什么要来。\n\n到了球场，一进门就看见你。\n\n你也看见我。\n\n然后我们两个不知道为什么先笑了。\n\n你说：结果你最后还是来陪我了。\n\n我马上说，我只是来看你打罢了。\n\n那时候我好像很喜欢把一些东西说轻一点。\n\n陪就是陪。\n\n偏偏要说只是来看。\n\n想来就是想来。\n\n又总觉得应该顺便找一个别的理由。\n\n后来你问我为什么天天吃饭团。你说，每天整理订单都看到我的名字，还很认真地谢谢我支持。\n\n我也不知道为什么连续买了那么多天。\n\n可能真的只是好吃。\n\n只是现在想起来觉得很好玩。\n\n一个人的名字出现在另一个人的生活里，有时候就是从这种很无聊的地方开始。\n\n一张订单。\n\n一条语音。\n\n一句早安。\n\n然后某一天，对方已经知道那个名字今天又出现了。\n\n后来你突然给我看你的羽球 bag。\n\n上面挂着我以前送你的 Ace 钥匙圈。\n\n你问，挂在这里是不是很适合。\n\n我说，不适合。\n\n你白了我一眼。\n\n其实很适合。\n\n我只是那时候不知道为什么，不太想让你发现，我看到它还在那里，会有一点开心。\n\n后来真的下场打球。\n\n六个人里面五个人都在为了比赛练习，只有我是来玩的。结果最后打最久的好像也是我。\n\n你一直叫我不要把球打那么高，又一直逼我练开球。\n\n我说，我又没有比赛。\n\n你说，下次。\n\n双打的时候，你知道我会逃开球，所以一直把机会留给我。\n\n你说，不要逃避了。\n\n那时候当然只是在讲羽球。\n\n我也只是觉得你很烦。\n\n后来再想起这句话，才发现那阵子的我确实很会逃。\n\n不太敢承认自己为什么那么想来。\n\n不太敢承认为什么你说“陪我”，我会记那么久。\n\n不太敢承认一个钥匙圈还挂在你的 bag 上，居然也可以让我开心。\n\n不过这些都是后来才有的答案。\n\n那时候我只是继续打球。\n\n打完以后，我们去买水。你说请我喝，我说我不喝饮料。\n\n你还是买了。\n\n第一次让我喝的时候，我还很小心，没有碰到瓶口。\n\n后来去吃 Arabic food，你又点了西瓜汁，说是给我喝的。\n\n我一直拖，说等我吃完。\n\n你隔一会儿就把杯子推回来，说快点喝，不要拒绝你，不然你会伤心到吃不下。\n\n最后你直接把西瓜汁送到我面前。\n\n你说，你要我喂你是吗。\n\n来，公主请喝水。\n\n我看了一眼那根已经被你用过的吸管。\n\n停了一下。\n\n然后还是喝了。\n\n那时候我只觉得，你这个 e 人攻势实在太猛，我招架不住。\n\n现在想起来，真正让我招架不住的可能从来不是那杯西瓜汁。\n\n是你做很多事情的时候都太自然了。\n\n自然到我不知道哪些事情值得记，哪些其实根本没有别的意思。\n\n你会在我下场以后走过来，抓着我的肩膀念我。\n\n经过的时候又顺手揉乱我的头发，说这个刘海真的很可爱。\n\n你记得我平时很安静，所以那天还问我怎么了。\n\n我说，我本来就是 i 人。\n\n你说，屁啦，你对我又不看你 i。\n\n我只会嘿嘿。\n\n其实那句话也没有错。\n\n有些人不会真的把你变成另外一种人。\n\n只是她在的时候，你好像比较愿意往外走一点。\n\n后来我又想起前一天别人问我的那个问题。\n\n我们到底是什么关系。\n\n如果那时候再问一次，我大概还是会回答一样。\n\n朋友。\n\n因为那些事情本来就可以发生在朋友之间。\n\n等一个人一下，替她剪头发，挂着她送的东西，陪她打球，把饮料推过去，顺手揉乱她的头发。\n\n没有哪一件事情单独拿出来，可以证明什么。\n\n我也不想替那时候的你，把它们改写成别的意思。\n\n只是很奇怪。\n\n为什么那么多普通的小事，后来偏偏都没有忘。\n\n我记得你远远认出脚车上的我。\n\n记得脸上的碎头发。\n\n记得那个 Ace 还挂在那里。\n\n记得你说，结果你最后还是来陪我了。\n\n记得一杯被推回来很多次的西瓜汁。\n\n甚至记得那根吸管。\n\n可能那时候真正开始改变的，并不是我们之间的关系。\n\n只是我看你的方式。\n\n朋友这个答案一直都没有错。\n\n只是从那两天开始，\n\n我好像第一次发现，\n\n有些朋友，会被记得比别的朋友仔细一点。",
+        "title": "04.25–04.26 · Just Friends"
+      },
+      "display": {
+        "location": "KTHO / April 26 memory residues",
+        "mood": "quiet",
+        "title": "只是好朋友",
+        "weather": "晴"
+      },
+      "reflections": [
+        {
+          "choices": [
+            {
+              "label": "她只是等了我一下。这样就够了。",
+              "response": "她没有说为什么这件事应该特别。\n\n只是认出一个身影以后，没有马上走。"
+            },
+            {
+              "label": "我确实因为她等了而开心。",
+              "response": "那时候我骑进去，看见她还在那里。\n\n开心这件事，不需要先知道她为什么等。"
+            },
+            {
+              "label": "我还是会想，她为什么愿意多等一下。",
+              "response": "最后的最后还是只留下她自己当时的答案：\n\n“感觉是你。”\n\n再后面的，没有答案。"
+            }
+          ],
+          "prompt": "她说，远远觉得那个骑脚车的人像我。\n所以多等了一下。\n\n现在想起这件事，我最想留下哪一部分？"
+        },
+        {
+          "choices": [
+            {
+              "label": "不需要替每个动作取一个名字。",
+              "response": "头发吹走了。\n\n西瓜汁也喝完了。\n\n它们先只是这样发生过。"
+            },
+            {
+              "label": "对我来说，它们确实不普通。",
+              "response": "别人看见的是十几秒的视频。\n\n我记住的，却是她说“不要皱着脸先”的时候。"
+            },
+            {
+              "label": "就是因为在意，我才会想退远一点。",
+              "response": "那两天最奇怪的地方，大概就是这样。\n\n刚刚还很开心。\n\n安静下来以后，又想往后退。"
+            }
+          ],
+          "prompt": "那两天后来留下来的，\n是一口气、一根吸管、几句玩笑，\n还有很多人问：“你们现在什么关系？”"
+        },
+        {
+          "choices": [
+            {
+              "label": "我把自己的感觉，当成了对她的冒犯。",
+              "response": "我那晚一直在替一件没有说出口的事道歉。\n\n可是她当时没有给它定过罪。"
+            },
+            {
+              "label": "我怕我想要的，比好朋友多。",
+              "response": "“好朋友是肯定是的。”\n\n难的是后面那半句。\n\n我一直没有说。"
+            },
+            {
+              "label": "我不知道她怎么想，所以那时候宁愿不动。",
+              "response": "那晚我没有去问她。\n\n半夜十二点以后，还是带着疑问自己骑脚车回宿舍。"
+            }
+          ],
+          "prompt": "那晚我说：\n\n“她对我越好，我越愧疚。”"
+        }
+      ]
+    },
     "july21": {
       "beatPortraits": {
         "july21-bedroom": [

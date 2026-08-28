@@ -37,6 +37,7 @@ export const ownedSourcePaths = [
   "apps/html-prototype/src/fixtures/authoredDiaryEntries.ts",
   "apps/html-prototype/src/fixtures/april05Chapter.ts",
   "apps/html-prototype/src/fixtures/april06Chapter.ts",
+  "apps/html-prototype/src/fixtures/april25Chapter.ts",
   "apps/html-prototype/src/fixtures/july21Chapter.ts",
   "apps/html-prototype/src/fixtures/june24Chapter.ts",
   "apps/html-prototype/src/fixtures/june25Chapter.ts",

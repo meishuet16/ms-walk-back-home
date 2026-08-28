@@ -3,6 +3,7 @@ import { labisMotorChapter } from "../fixtures/labisMotorChapter.js";
 import { march30Chapter } from "../fixtures/march30Chapter.js";
 import { april06Chapter } from "../fixtures/april06Chapter.js";
 import { april05Chapter } from "../fixtures/april05Chapter.js";
+import { april25Chapter } from "../fixtures/april25Chapter.js";
 import { may23Chapter } from "../fixtures/may23Chapter.js";
 import { june24Chapter } from "../fixtures/june24Chapter.js";
 import { june25Chapter } from "../fixtures/june25Chapter.js";
@@ -54,6 +55,7 @@ export const chapterRegistry: Record<string, ChapterDefinition> = {
   "march30-too-fated": march30Chapter,
   "april05-come-down": april05Chapter,
   "april06-not-gone-yet": april06Chapter,
+  "april25-just-good-friends": april25Chapter,
   "may23-i-arrived": may23Chapter,
   "june24-only-came-for-you": june24Chapter,
   "june25-so-i-came": june25Chapter,
