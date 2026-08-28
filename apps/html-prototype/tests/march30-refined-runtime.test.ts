@@ -18,9 +18,12 @@ import { renderMemoryPortraitSequenceBeat } from "../src/systems/MemoryPortraitP
 const root = process.cwd();
 const layout = JSON.parse(readFileSync(join(root, "public/scene-layouts/330/landscape.json"), "utf8"));
 
-function withoutIdentity(layoutValue: Record<string, unknown>): Record<string, unknown> {
-  const { sceneId: _sceneId, label: _label, ...rest } = layoutValue;
-  return rest;
+function geometryOnly(layoutValue: Record<string, unknown>): Record<string, unknown> {
+  const { sceneId: _sceneId, label: _label, interactions, ...rest } = layoutValue;
+  return {
+    ...rest,
+    interactions: (interactions as Array<Record<string, unknown>>).map(({ id: _id, label: _interactionLabel, ...geometry }) => geometry)
+  };
 }
 
 test("refined March 30 is additive and leaves the legacy 330-corridor chapter definition intact", () => {
@@ -35,10 +38,11 @@ test("refined March 30 is registered in the shared authored runtime", () => {
   assert.ok(runtime);
   assert.equal(runtime.chapter, march30RefinedChapter);
   assert.equal(runtime.triggerId, "main-memory");
-  assert.equal(runtime.mainInteractionId, "bench-memory");
+  assert.equal(runtime.mainInteractionId, "march30-bench-memory");
   assert.equal(runtime.reflectionAfterEchoId, "elevator");
   assert.deepEqual(runtime.echoPortraitSequenceIds, { elevator: "march30-elevator" });
   assert.deepEqual(march30EchoAvailability, { elevator: { requiresMainCompletion: true } });
+  assert.equal(layout.triggers[0].eventId, runtime.mainInteractionId);
 });
 
 test("refined March 30 preserves Main WORLD choreography while using modern portrait-free dialogue", () => {
@@ -107,6 +111,6 @@ test("refined 330 layouts preserve approved legacy geometry", () => {
   for (const orientation of ["landscape", "portrait"] as const) {
     const legacy = JSON.parse(readFileSync(join(root, `public/scene-layouts/330-corridor/${orientation}.json`), "utf8"));
     const refined = JSON.parse(readFileSync(join(root, `public/scene-layouts/330/${orientation}.json`), "utf8"));
-    assert.deepEqual(withoutIdentity(refined), withoutIdentity(legacy));
+    assert.deepEqual(geometryOnly(refined), geometryOnly(legacy));
   }
 });
