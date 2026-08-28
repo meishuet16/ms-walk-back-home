@@ -57,11 +57,21 @@ export function moveSceneActor(actor: SceneActor, x: number, y: number): SceneAc
 export function drawSceneActor(ctx: CanvasRenderingContext2D, actor: SceneActor, cameraX: number, cameraY: number, scale: number, spriteAssets?: Record<string, SceneSpriteAsset>, images?: SceneSpriteImageMap): void {
   if (!actor.visible || actor.opacity === 0) return;
   const spriteAsset = actor.sprite ? spriteAssets?.[actor.sprite.assetId] : undefined;
-  const image = spriteAsset && images ? images.get(spriteAsset.path) : undefined;
+  let image = spriteAsset && images ? images.get(spriteAsset.path) : undefined;
+  if (actor.sprite && spriteAsset && images && !image && typeof Image !== "undefined") {
+    const pending = new Image();
+    pending.src = spriteAsset.path;
+    images.set(spriteAsset.path, pending);
+    image = pending;
+  }
   if (actor.sprite && spriteAsset && image && isImageReady(image)) {
     drawSceneSpriteAsset(ctx, image, spriteAsset, { x: actor.x, y: actor.y }, cameraX, cameraY, scale, actor.facing, actor.opacity ?? 1, 154, actor.visualScale ?? 1);
     return;
   }
+  // An authored sprite should never silently turn into the generic fallback person.
+  // If its image is still loading, leave the actor hidden for this frame and draw it
+  // as soon as the authored asset becomes ready on a subsequent frame.
+  if (actor.sprite && spriteAsset) return;
   ctx.save();
   ctx.globalAlpha = actor.opacity ?? 1;
   const x = (actor.x - cameraX) * scale;
