@@ -6,6 +6,7 @@ import { may23Assets, may23Chapter, may23EchoAnchors, may23ReflectionChoices, re
 import { june24Assets, june24Chapter, june24EchoDialogues, june24ReflectionChoices, resolveJune24Actions } from "../fixtures/june24Chapter.js";
 import { june25Assets, june25Chapter, june25EchoAnchors, june25EchoAvailability, june25EchoPortraitSequenceIds, june25PortraitSequences, june25ReflectionChoices, resolveJune25Actions } from "../fixtures/june25Chapter.js";
 import { july21Assets, july21Chapter, july21EchoAnchors, july21EchoAvailability, july21EchoPortraitSequenceIds, july21PortraitSequences, july21ReflectionChoices, resolveJuly21Actions } from "../fixtures/july21Chapter.js";
+import { november22Chapter, november22EchoAnchors, november22EchoAvailability, november22EchoPortraitSequenceIds, november22PortraitSequences, november22ReflectionChoices } from "../fixtures/november22Chapter.js";
 import type { CutsceneAction } from "./CutsceneSystem.js";
 import type { SceneSpriteAsset } from "./SceneActorRenderer.js";
 import type { SceneLayout } from "./SceneLayouts.js";
@@ -127,5 +128,19 @@ export const authoredRuntimeByScene: Record<string, AuthoredRuntimeDefinition> =
     echoPortraitSequenceIds: july21EchoPortraitSequenceIds,
     echoAvailability: july21EchoAvailability,
     reflectionAfterEchoId: "left-behind-memory"
+  },
+  "1122": {
+    chapter: november22Chapter,
+    assets: {},
+    resolveActions: () => [],
+    reflectionChoices: november22ReflectionChoices,
+    echoAnchors: november22EchoAnchors,
+    mainInteractionId: "main-memory",
+    triggerId: "1122-main-memory-trigger",
+    portraitSequences: november22PortraitSequences,
+    mainPortraitSequenceId: "1122-main",
+    echoPortraitSequenceIds: november22EchoPortraitSequenceIds,
+    echoAvailability: november22EchoAvailability,
+    reflectionAfterEchoId: "memory-empty-room-rain"
   }
 };

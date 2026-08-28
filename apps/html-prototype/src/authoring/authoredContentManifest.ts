@@ -3,6 +3,7 @@ import { april05Chapter, april05EchoActions, april05MainMemoryActions, april05Re
 import { april06Chapter, april06EchoActions, april06MainMemoryActions, april06ReflectionChoices } from "../fixtures/april06Chapter.js";
 import { april25Chapter, april25MainPortraitSequence, april25PortraitSequences, april25ReflectionChoices, april25DiaryEntry } from "../fixtures/april25Chapter.js";
 import { july21Chapter, july21MainPortraitSequence, july21PortraitSequences, july21ReflectionChoices, july21DiaryEntry } from "../fixtures/july21Chapter.js";
+import { november22Chapter, november22DiaryEntry, november22MainPortraitSequence, november22PortraitSequences, november22ReflectionChoices } from "../fixtures/november22Chapter.js";
 import { june24Chapter, june24EchoDialogues, june24ReflectionChoices, resolveJune24Actions } from "../fixtures/june24Chapter.js";
 import { june25Chapter, june25PortraitSequences, june25ReflectionChoices, june25DiaryEntry } from "../fixtures/june25Chapter.js";
 import { march30Chapter } from "../fixtures/march30Chapter.js";
@@ -124,6 +125,10 @@ export const authoredContentManifest: AuthoredContentManifest = {
         "july21-main": july21MainPortraitSequence.beats.flatMap((beat) => beat.portrait === undefined ? [] : [beat.portrait as AuthoredPortrait]),
         ...sequenceBeatPortraits(july21PortraitSequences)
       }
+    },
+    november22: {
+      ...chapterContent(november22Chapter, sequencePresentation(november22MainPortraitSequence), sequenceCollections(november22PortraitSequences), november22ReflectionChoices, { title: november22DiaryEntry.title, body: november22DiaryEntry.body }),
+      beatPortraits: sequenceBeatPortraits(november22PortraitSequences)
     }
   }
 };

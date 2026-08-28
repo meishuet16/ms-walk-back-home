@@ -4638,6 +4638,875 @@ export const authoredContentExpectations = {
           "prompt": "现在回头看，最难放下的是哪一步？"
         }
       ]
+    },
+    "november22": {
+      "beatPortraits": {
+        "1122-car-mbti": [
+          "assets/1122/memory-portrait/echo-car-02.png"
+        ],
+        "1122-dark-corridor": [
+          "assets/1122/memory-portrait/echo-corridor.png"
+        ],
+        "1122-dobi-conversation": [
+          "assets/1122/memory-portrait/echo-dobi02.png",
+          "assets/1122/memory-portrait/echo-dobi04.png"
+        ],
+        "1122-dobi-invite": [
+          "assets/1122/memory-portrait/echo-car-02.png"
+        ],
+        "1122-main": [
+          "assets/1122/memory-portrait/echo-hi.png",
+          "assets/1122/memory-portrait/echo-bye.png",
+          "assets/1122/memory-portrait/echo-drop.png",
+          "assets/1122/memory-portrait/echo-drop.png",
+          "assets/1122/memory-portrait/echo-drop.png",
+          "assets/1122/memory-portrait/echo-drop.png",
+          "assets/1122/memory-portrait/echo-drop.png"
+        ],
+        "1122-memory-empty-room-rain": [
+          "assets/1122/memory-portrait/echo-empty-room.png",
+          "assets/1122/memory-portrait/echo-photo-kept.png"
+        ],
+        "1122-memory-laundry-pods": [
+          "assets/1122/memory-portrait/echo-dobi01.png"
+        ],
+        "1122-wrong-way-again": [
+          "assets/1122/memory-portrait/echo-car-02.png"
+        ]
+      },
+      "closure": [
+        "那天，凌晨五点的开心是真的。",
+        "下午一个人的空虚也是真的。",
+        "意识到自己不想把全部安全感压在别人身上，这也是真的。",
+        "但这三件事不需要互相定罪。"
+      ],
+      "collections": {
+        "1122-car-mbti": [
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "诶，你 MBTI 是什么？"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "ENTJ。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "铁 E。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "铁 J。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "不会变的。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "但是我不是那种会主动跟陌生人讲话、\n对陌生人很 friendly 的人。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "我是主动高冷。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "不是啊。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "你连高冷都看起来那么 cute。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "什么！！"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "然后就到了。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "我回房间躺着了。"
+          }
+        ],
+        "1122-dark-corridor": [
+          {
+            "portrait": "assets/1122/memory-portrait/echo-corridor.png",
+            "text": "回到宿舍。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-corridor.png",
+            "text": "我吃饱太得空。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-corridor.png",
+            "text": "突然走去 H01 dobi 看有没有人洗衣。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-corridor.png",
+            "text": "穿过那条又长又暗的走廊。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-corridor.png",
+            "text": "去到 dobi。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-corridor.png",
+            "text": "很多人。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-corridor.png",
+            "text": "没有我的份。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-corridor.png",
+            "text": "……"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-corridor.png",
+            "text": "于是我又灰溜溜回去。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-corridor.png",
+            "text": "路途太阴森，回程我用跑的。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-corridor.png",
+            "text": "然后。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-corridor.png",
+            "text": "她开始跟我讲鬼故事。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-corridor.png",
+            "text": "……"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-corridor.png",
+            "text": "而且那些故事的场景。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-corridor.png",
+            "text": "跟我每天的必经之路。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-corridor.png",
+            "text": "完美重叠。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-corridor.png",
+            "text": "……"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-corridor.png",
+            "text": "我要碎掉了。"
+          }
+        ],
+        "1122-dobi-conversation": [
+          {
+            "portrait": "assets/1122/memory-portrait/echo-dobi02.png",
+            "text": "其实也没有什么特别重要的话题。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-dobi02.png",
+            "text": "只是衣服一直在转。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-dobi02.png",
+            "text": "我们就一直坐在那里。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-dobi02.png",
+            "text": "天也差不多亮了。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-dobi04.png",
+            "text": "她的衣服洗好了。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-dobi04.png",
+            "text": "但是我的还没烘干好。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-dobi04.png",
+            "text": "所以我们继续等。"
+          }
+        ],
+        "1122-dobi-invite": [
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "我明天也要去 dobi 洗衣。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "哇那你可以顺便也帮我拿去洗。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "如果你要我是 ok 的哦。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "我早上五点去洗。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "……"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "这是什么阴间时间。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "dobi 没人的时间。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "我等下开车来你的 blok 载你。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "真的早上五点吗 bruhh。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "看你。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "没人拿枪逼你。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "很乐意。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "快拿枪逼我。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "有人乐意就好。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "嘻嘻。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "凌晨四点五十分。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "起床了吗"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "还醒着"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "哈哈哈哈"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "然后她真的开车来了。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "你没睡吗？"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "这个作息很正常呀嘻嘻。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "哇，我至少有睡到。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "开到路口的时候，她突然想起昨天的事。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "诶，我昨天讲的话，你不要放心上诶。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "……"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "我想了一下才反应过来她再说鬼故事的事情。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "太迟了。\n已经放心上了。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "我看着她把车开出 KTF。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "看了一会儿。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "诶。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "我要去哪里？"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "我也在思考。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "真是 der。\n你怎么不提醒我？"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "我以为你这么做一定有自己的道理。\n有自己的想法。嘻嘻。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "屁啦。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "然后我们又 U-turn 回去了。"
+          }
+        ],
+        "1122-main": [
+          {
+            "portrait": "assets/1122/memory-portrait/echo-hi.png",
+            "text": "那天早上考完试出来，朋友都在哀嚎考题的抽象程度"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-hi.png",
+            "text": "我蹲在地上逗椅子底下的猫"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-hi.png",
+            "text": "结果一转头看到一个熟悉的身影"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-hi.png",
+            "text": "大脑当机了几秒 愣了几秒才认出彼此"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-hi.png",
+            "text": "今天竟然给我遇到了。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-bye.png",
+            "text": "怎样 刚刚考试 ok 吗？"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-bye.png",
+            "text": "不 ok。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-bye.png",
+            "text": "蛤，怎样不 ok 勒？"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-bye.png",
+            "text": "我指了指另一个刚刚在哀嚎的朋友"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-bye.png",
+            "text": "你问她就懂了。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-bye.png",
+            "text": "然后其中一个朋友当场拆台。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-bye.png",
+            "text": "你知道吗。她一个小时多就很快做完。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-bye.png",
+            "text": "然后开始东张西望了。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-bye.png",
+            "text": "她还讲她不会做。屁勒。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-bye.png",
+            "text": "emmm……ok..."
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-bye.png",
+            "text": "考得挺好的。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-bye.png",
+            "text": "假笑.jpg"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-bye.png",
+            "text": "ok就好。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-bye.png",
+            "text": "她离开后，朋友都让我收一收那不值钱的笑容"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-bye.png",
+            "text": "你不要再笑了。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-bye.png",
+            "text": "收敛一点。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-drop.png",
+            "text": "然后我开始思考。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-drop.png",
+            "text": "气泡水什么时候要给她。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-drop.png",
+            "text": "其实刚才见面的时候也可以当面给。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-drop.png",
+            "text": "但是我想了一下。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-drop.png",
+            "text": "……"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-drop.png",
+            "text": "算了。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-drop.png",
+            "text": "还是按照原计划。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-drop.png",
+            "text": "去她宿舍楼下。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-drop.png",
+            "text": "放脚车后篮。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-drop.png",
+            "text": "本来计划午餐回来放的"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-drop.png",
+            "text": "结果计划落空。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-drop.png",
+            "text": "……"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-drop.png",
+            "text": "没关系。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-drop.png",
+            "text": "还有晚上。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-drop.png",
+            "text": "非常小算盘.jpg。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-drop.png",
+            "text": "晚上终于去到目的地。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-drop.png",
+            "text": "在一群 motor 里面找了一下。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-drop.png",
+            "text": "找到目标脚车了。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-drop.png",
+            "text": "然后我很快速地——"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-drop.png",
+            "text": "放进去。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-drop.png",
+            "text": "走人。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-drop.png",
+            "text": "空投计划，通。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-drop.png",
+            "text": "我可真是个甜菜。"
+          }
+        ],
+        "1122-memory-empty-room-rain": [
+          {
+            "portrait": "assets/1122/memory-portrait/echo-empty-room.png",
+            "text": "学校突然变得很空。全部人都回家了。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-empty-room.png",
+            "text": "我本来应该做 project。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-empty-room.png",
+            "text": "但是完全不想动。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-photo-kept.png",
+            "text": "早上明明还很兴奋。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-photo-kept.png",
+            "text": "下午突然就没电了。"
+          }
+        ],
+        "1122-memory-laundry-pods": [
+          {
+            "portrait": "assets/1122/memory-portrait/echo-dobi01.png",
+            "text": "到了 dobi。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-dobi01.png",
+            "text": "完了。\n我没带洗衣液。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-dobi01.png",
+            "text": "我有洗衣球。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-dobi01.png",
+            "text": "我本来只想给她一粒。结果投了三粒。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-dobi01.png",
+            "text": "……"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-dobi01.png",
+            "text": "……"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-dobi01.png",
+            "text": "不知道为什么。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-dobi01.png",
+            "text": "我们两个突然都笑了。"
+          }
+        ],
+        "1122-wrong-way-again": [
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "我又看着她把车开出了 KTF。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "你又要去哪儿呀？"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "诶。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "哎呀，我又在干什么。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "你怎么不提醒我？"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "again。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "你一定有自己的想法。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "noooooo。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "我没有自己的想法呜呜呜。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "早知道我等你载我回你的 KTHO 才提醒你。"
+          },
+          {
+            "portrait": "assets/1122/memory-portrait/echo-car-02.png",
+            "text": "喂！！！"
+          }
+        ]
+      },
+      "dialogue": [
+        {
+          "portrait": "assets/1122/memory-portrait/echo-hi.png",
+          "text": "那天早上考完试出来，朋友都在哀嚎考题的抽象程度"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-hi.png",
+          "text": "我蹲在地上逗椅子底下的猫"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-hi.png",
+          "text": "结果一转头看到一个熟悉的身影"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-hi.png",
+          "text": "大脑当机了几秒 愣了几秒才认出彼此"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-hi.png",
+          "text": "今天竟然给我遇到了。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-bye.png",
+          "text": "怎样 刚刚考试 ok 吗？"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-bye.png",
+          "text": "不 ok。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-bye.png",
+          "text": "蛤，怎样不 ok 勒？"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-bye.png",
+          "text": "我指了指另一个刚刚在哀嚎的朋友"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-bye.png",
+          "text": "你问她就懂了。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-bye.png",
+          "text": "然后其中一个朋友当场拆台。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-bye.png",
+          "text": "你知道吗。她一个小时多就很快做完。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-bye.png",
+          "text": "然后开始东张西望了。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-bye.png",
+          "text": "她还讲她不会做。屁勒。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-bye.png",
+          "text": "emmm……ok..."
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-bye.png",
+          "text": "考得挺好的。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-bye.png",
+          "text": "假笑.jpg"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-bye.png",
+          "text": "ok就好。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-bye.png",
+          "text": "她离开后，朋友都让我收一收那不值钱的笑容"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-bye.png",
+          "text": "你不要再笑了。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-bye.png",
+          "text": "收敛一点。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-drop.png",
+          "text": "然后我开始思考。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-drop.png",
+          "text": "气泡水什么时候要给她。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-drop.png",
+          "text": "其实刚才见面的时候也可以当面给。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-drop.png",
+          "text": "但是我想了一下。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-drop.png",
+          "text": "……"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-drop.png",
+          "text": "算了。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-drop.png",
+          "text": "还是按照原计划。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-drop.png",
+          "text": "去她宿舍楼下。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-drop.png",
+          "text": "放脚车后篮。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-drop.png",
+          "text": "本来计划午餐回来放的"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-drop.png",
+          "text": "结果计划落空。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-drop.png",
+          "text": "……"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-drop.png",
+          "text": "没关系。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-drop.png",
+          "text": "还有晚上。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-drop.png",
+          "text": "非常小算盘.jpg。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-drop.png",
+          "text": "晚上终于去到目的地。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-drop.png",
+          "text": "在一群 motor 里面找了一下。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-drop.png",
+          "text": "找到目标脚车了。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-drop.png",
+          "text": "然后我很快速地——"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-drop.png",
+          "text": "放进去。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-drop.png",
+          "text": "走人。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-drop.png",
+          "text": "空投计划，通。"
+        },
+        {
+          "portrait": "assets/1122/memory-portrait/echo-drop.png",
+          "text": "我可真是个甜菜。"
+        }
+      ],
+      "diary": {
+        "body": "11.21–11.22 · Before Sunrise\n\n那两天一直下雨。\n\n十一月二十一号早上，我去考试。写得很快，剩下的时间只能坐在那里东张西望。考完以后，大家都在复盘题目，我蹲在小卖部外面玩猫，然后抬头看见你走过来。\n\n我愣了几秒才打招呼。旁边的人马上开始笑，说我的笑容太不值钱。后来你准备走的时候，又绕回来问我考试怎么样。你走以后，她们告诉我，你刚才好像特地在等我跟你说拜拜。\n\n我不知道她们有没有看得太多。\n\n只记得自己听完以后，又笑了一下。\n\n下午我一直带着一瓶气泡水。原本可以当面给你，却不知道为什么觉得那样太正式，所以还是按照原计划，想偷偷放进你的脚车后篮。\n\n那瓶明明“不是特地送你的”气泡水，就这样跟着我唱 K、吃饭，再一路回到学校。朋友看不下去，问我为什么一直带着。\n\n我还是说，没什么。\n\n晚上终于去了 KTHO。我在一排 motor 里面找到脚车，把气泡水和一张小纸条放进后篮，然后很快走掉。\n\n后来回宿舍，我一个人经过很暗的走廊，越走越怕，最后直接跑起来。你看到我发的 status，很快问我回到宿舍了吗。\n\n聊着聊着，说到了洗衣。\n\n你说，明天早上五点去 dobi。\n\n我开玩笑叫你顺便帮我洗。\n\n你说，可以啊。\n\n还说可以开车来载我。\n\n我问，真的五点吗。\n\n你说，看你，没人拿枪逼你。\n\n我说，很乐意，快拿枪逼我。\n\n那时候我大概只把它当成一句很好玩的玩笑。\n\n后来我去冲凉。出来以后，看见你发来一张照片。\n\n是那瓶气泡水。\n\n你写：喂！！！\n\n再后来，你发现里面还有纸条，把它发到 close friends，说被治愈了。\n\n我看着手机偷笑。\n\n那天晚上没有睡多少。\n\n4:50，你发消息来。\n\n起床了吗。\n\n我回，还醒着。\n\n然后你真的开车来了。\n\n天还没有亮，学校很安静。我们去 dobi，把衣服丢进洗衣机，然后坐下来等。\n\n你提起前一天的空投，问我到底怎样偷偷放进去的。又问我是不是也喜欢小八。\n\n我没有很会回答。\n\n因为有些东西，那时候连我自己都还没有想清楚。\n\n洗衣机一直转。\n\n我们就坐在那里聊天。聊一些很普通的东西，功课、比赛、早餐，还有之后要做什么。\n\n后来你的衣服洗好了，你却没有马上走。\n\n你坐在那里，等我的衣服烘完。\n\n其实你完全可以先回去。\n\n我那时候甚至想过，要不要主动叫你走。\n\n最后还是没有说。\n\n有一点不好意思。\n\n又有一点，不想那个早上那么快结束。\n\n回去的时候，天已经亮了。\n\n我后来想，这两天其实也没有发生什么很特别的事情。\n\n只是前一天，我偷偷给你留了一点东西。\n\n第二天，天还没亮，你真的来了。\n\n没有谁说这代表什么。\n\n它也不一定代表什么。\n\n只是那时候的我，好像已经开始把这种很普通的事情，记得比别的事情清楚一点。\n\n下午大家陆续回家以后，宿舍忽然变得很空。早上的兴奋退下去，我一个人待在房间，第一次认真提醒自己：\n\n不要把太多情绪放在一个人身上。\n\n我那时候已经知道这个道理。\n\n只是还没有很会做到。\n\n毕竟有时候，一天变得很好，并不是因为发生了什么了不起的事情。\n\n只是因为一句前一天说过的话，\n\n第二天真的有人记得。",
+        "title": "11.21–11.22 · Before Sunrise"
+      },
+      "display": {
+        "location": "KTF / H01 dobi",
+        "mood": "a real morning without a required meaning",
+        "title": "Before Sunrise",
+        "weather": "rain into the quiet before dawn"
+      },
+      "reflections": [
+        {
+          "choices": [
+            {
+              "label": "因为她真的来了。",
+              "response": "五点很早。\n洗衣也没什么特别。\n可她真的把车开过来了。"
+            },
+            {
+              "label": "因为那几个小时很普通。",
+              "response": "没有什么需要纪念的大事。\n洗衣、等衣服、聊早餐、聊作业。\n也许正因为这样，才一直记得。"
+            },
+            {
+              "label": "因为那时候的我太开心了。",
+              "response": "开心是真的。\n后来的害怕也是真的。\n它们不需要互相证明谁才是真的。"
+            }
+          ],
+          "prompt": "现在回头看，那天早上为什么留得这么清楚？"
+        },
+        {
+          "choices": [
+            {
+              "label": "我怕自己越来越依赖她。",
+              "response": "那时候的我已经注意到了自己的重心在移动。\n注意到，不代表已经失去自己。"
+            },
+            {
+              "label": "我怕快乐不是我的。",
+              "response": "好像只要快乐来自别人，就必须赶快收回来一点。\n可一段共同发生的时间，本来就会属于两个人。"
+            },
+            {
+              "label": "我只是太累了。",
+              "response": "三点起床、五点出门、睡眠不足、朋友离开、整天下雨。\n有些空虚，也许真的没有那么宏大的答案。"
+            }
+          ],
+          "prompt": "后来我为什么那么快开始警告自己？"
+        },
+        {
+          "choices": [
+            {
+              "label": "想知道。",
+              "response": "想知道没有错。\n只是那一天本身已经不会因此改变。"
+            },
+            {
+              "label": "不知道也可以。",
+              "response": "她为什么等、为什么来、为什么留下。\n有些答案没有被写下来。\n发生过的部分已经够完整。"
+            },
+            {
+              "label": "我更想知道，那时候的我为什么那么害怕。",
+              "response": "她留下了几个小时。\n我却已经开始练习怎么把自己往回拉。\n也许真正需要重新看的，一直是这一边。"
+            }
+          ],
+          "prompt": "那我现在还需要知道，那些事对她意味着什么吗？"
+        }
+      ]
     }
   },
   "version": 1

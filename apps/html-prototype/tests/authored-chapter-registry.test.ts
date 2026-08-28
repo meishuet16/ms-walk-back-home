@@ -8,6 +8,7 @@ import { april25Chapter, april25EchoAvailability, april25EchoPortraitSequenceIds
 import { may23Assets, may23Chapter, may23EchoAnchors, may23ReflectionChoices, resolveMay23Actions } from "../src/fixtures/may23Chapter.js";
 import { june24Assets, june24Chapter, june24EchoDialogues, june24ReflectionChoices, resolveJune24Actions } from "../src/fixtures/june24Chapter.js";
 import { june25Chapter, june25DiaryEntry, june25EchoAvailability, june25EchoPortraitSequenceIds, june25PortraitSequences, june25ReflectionChoices } from "../src/fixtures/june25Chapter.js";
+import { november22Chapter, november22EchoAnchors, november22EchoAvailability, november22EchoPortraitSequenceIds, november22PortraitSequences, november22ReflectionChoices } from "../src/fixtures/november22Chapter.js";
 import { chapterRegistry, forestEntries, routeForestEntry } from "../src/systems/ChapterRegistry.js";
 import { authoredContentExpectations } from "../src/fixtures/generated/authoredContentExpectations.js";
 import type { SceneLayout } from "../src/systems/SceneLayouts.js";
@@ -21,7 +22,7 @@ function loadLayout(sceneId: string, orientation: "landscape" | "portrait" = "la
 test("all current authored scenes preserve their independent runtime contracts", async () => {
   const { authoredRuntimeByScene } = await loadRegistry();
 
-  assert.deepEqual(Object.keys(authoredRuntimeByScene).sort(), ["405", "406", "425", "523", "624", "625", "721"]);
+  assert.deepEqual(Object.keys(authoredRuntimeByScene).sort(), ["405", "406", "425", "523", "624", "625", "721", "1122"].sort());
 
   assert.equal(authoredRuntimeByScene["405"]?.chapter, april05Chapter);
   assert.equal(authoredRuntimeByScene["405"]?.chapter.id, "april05-come-down");
@@ -88,6 +89,16 @@ test("all current authored scenes preserve their independent runtime contracts",
   assert.equal(authoredRuntimeByScene["625"]?.mainPortraitSequenceId, "june25-main");
   assert.equal(authoredRuntimeByScene["625"]?.mainInteractionId, "bed-main-memory");
   assert.equal(authoredRuntimeByScene["625"]?.triggerId, "june25-bed-main-trigger");
+
+  assert.equal(authoredRuntimeByScene["1122"]?.chapter, november22Chapter);
+  assert.equal(authoredRuntimeByScene["1122"]?.reflectionChoices, november22ReflectionChoices);
+  assert.equal(authoredRuntimeByScene["1122"]?.portraitSequences, november22PortraitSequences);
+  assert.deepEqual(authoredRuntimeByScene["1122"]?.echoAnchors, november22EchoAnchors);
+  assert.equal(authoredRuntimeByScene["1122"]?.mainPortraitSequenceId, "1122-main");
+  assert.equal(authoredRuntimeByScene["1122"]?.mainInteractionId, "main-memory");
+  assert.equal(authoredRuntimeByScene["1122"]?.triggerId, "1122-main-memory-trigger");
+  assert.deepEqual(authoredRuntimeByScene["1122"]?.echoPortraitSequenceIds, november22EchoPortraitSequenceIds);
+  assert.deepEqual(authoredRuntimeByScene["1122"]?.echoAvailability, november22EchoAvailability);
 });
 
 test("June 25 uses the canonical Section 7 diary body and shared diary asset contract", async () => {
