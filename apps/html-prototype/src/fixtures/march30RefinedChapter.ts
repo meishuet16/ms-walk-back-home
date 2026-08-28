@@ -30,10 +30,12 @@ function frameAsset(assetId: March30AssetId, frame: number): SceneSpriteAsset {
 
 function propAsset(id: "gift" | "waterGun" | "ordinaryKeychain" | "phoneCharm"): SceneSpriteAsset {
   const asset = march30Assets[id];
+  const baseHeight = id === "gift" ? 42 : id === "waterGun" ? 44 : 50;
   return {
     path: asset.path,
     source: asset.source,
-    feet: { x: 0.5, y: 1 },
+    feet: { x: 0.5, y: 0.5 },
+    baseHeight,
     materialScale: 2
   };
 }
@@ -173,9 +175,9 @@ export const march30RefinedChapter: ChapterDefinition = {
         "那天可能真的没有什么特别的。",
         "礼物交换了。水枪喷了三下。一件 jacket 擦过湿掉的脸。",
         "然后说再见。后来又在电梯前碰见。",
-        "事情发生的时候，它们都只是事情。",
-        "三月三十号不需要提前知道以后。"
-      ]
+        "事情发生的时候，它们都只是事情。"
+      ],
+      afterline: "三月三十号不需要提前知道以后。"
     },
     {
       id: "march30-still-call-it-fate",
@@ -185,9 +187,9 @@ export const march30RefinedChapter: ChapterDefinition = {
       lines: [
         "我知道“太有缘”可能只是后来替那一天加上的名字。",
         "可是如果一定要记住那个早晨，我还是会记得——",
-        "已经说过再见了。下一扇电梯门打开，又是她。",
-        "巧合没有变。只是后来，我舍不得把它叫得太普通。"
-      ]
+        "已经说过再见了。下一扇电梯门打开，又是她。"
+      ],
+      afterline: "巧合没有变。只是后来，我舍不得把它叫得太普通。"
     },
     {
       id: "march30-what-made-it-heavy",
@@ -198,9 +200,9 @@ export const march30RefinedChapter: ChapterDefinition = {
         "也许真正变重的，从来不是三月三十号。",
         "那天的水还是那三下。jacket 也只是那一件 jacket。电梯也只开了一次。",
         "变的是后来回头看的人。",
-        "因为知道了后来，才开始觉得当时每一个很小的动作，好像都值得重新看一遍。",
-        "记忆没有改变过去。它只是改变了光落下来的地方。"
-      ]
+        "因为知道了后来，才开始觉得当时每一个很小的动作，好像都值得重新看一遍。"
+      ],
+      afterline: "记忆没有改变过去。它只是改变了光落下来的地方。"
     },
     {
       id: "march30-no-answer-yet",
@@ -211,9 +213,9 @@ export const march30RefinedChapter: ChapterDefinition = {
         "我还是会想，为什么偏偏又遇见。",
         "为什么那三下水会留下来。为什么那件 jacket 会留下来。",
         "为什么那么多普通的早晨里，偏偏这一段没有被忘掉。",
-        "但记忆走到这里，还是没有答案。",
-        "有些问题可以一起带回去，不一定要留在三月三十号解决。"
-      ]
+        "但记忆走到这里，还是没有答案。"
+      ],
+      afterline: "有些问题可以一起带回去，不一定要留在三月三十号解决。"
     }
   ]
 };
