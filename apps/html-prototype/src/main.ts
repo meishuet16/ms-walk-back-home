@@ -1,22 +1,8 @@
 import { WalkBackHomeApp } from "./app.js";
+import { installAuthoredCutsceneLifecycleBridge } from "./systems/AuthoredCutsceneLifecycleBridge.js";
 import { SceneDebugEditor } from "./systems/SceneDebugEditor.js";
 
-// Shared authored chapters that explicitly gate Reflection behind an Echo must not
-// show the generic post-Main ending card. Their final ending is rendered by the
-// Reflection sequence after the configured Echo is completed.
-type AuthoredRuntimeAwareApp = {
-  authoredRuntimeForScene: () => { reflectionAfterEchoId?: string } | null;
-  chapterMemoryRun: { resolvedReflection?: unknown } | null;
-  showChapterEndingQuote: (...args: unknown[]) => void;
-};
-
-const appPrototype = WalkBackHomeApp.prototype as unknown as AuthoredRuntimeAwareApp;
-const showChapterEndingQuote = appPrototype.showChapterEndingQuote;
-appPrototype.showChapterEndingQuote = function (...args: unknown[]): void {
-  const runtime = this.authoredRuntimeForScene?.();
-  if (runtime?.reflectionAfterEchoId && !this.chapterMemoryRun?.resolvedReflection) return;
-  showChapterEndingQuote.apply(this, args);
-};
+installAuthoredCutsceneLifecycleBridge(WalkBackHomeApp.prototype);
 
 // Labis is still on its legacy lifecycle. Keep this bridge intentionally narrow:
 // completing Main marks the current run, and the approved final filter interaction
