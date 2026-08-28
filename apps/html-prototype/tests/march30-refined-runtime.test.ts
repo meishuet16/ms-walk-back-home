@@ -56,7 +56,7 @@ test("Elevator Echo no longer replays WORLD choreography and is dialogue-only po
   const sequence = march30PortraitSequences["march30-elevator"];
   assert.ok(sequence);
   assert.equal(sequence.beats.length, 1);
-  assert.equal(sequence.beats[0].portrait, undefined);
+  assert.equal(sequence.beats[0].portrait, "");
   assert.equal(sequence.beats[0].dialogue[0].text, "额嘿嘿好巧哈哈 又见面了 太有缘了");
   assert.equal(sequence.beats[0].dialogue.at(-1)?.text, "这都还没到你教室 我们竟然真的那么顺路的吗 ");
   const rendered = renderMemoryPortraitSequenceBeat(sequence, 0, 0, { orientation: "portrait", width: 390, height: 844 });
