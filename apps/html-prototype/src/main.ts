@@ -4,7 +4,7 @@ import { SceneDebugEditor } from "./systems/SceneDebugEditor.js";
 // Shared authored chapters that explicitly gate Reflection behind an Echo must not
 // show the generic post-Main ending card. Their final ending is rendered by the
 // Reflection sequence after the configured Echo is completed.
-type AuthoredRuntimeAwareApp = WalkBackHomeApp & {
+type AuthoredRuntimeAwareApp = {
   authoredRuntimeForScene: () => { reflectionAfterEchoId?: string } | null;
   chapterMemoryRun: { resolvedReflection?: unknown } | null;
   showChapterEndingQuote: (...args: unknown[]) => void;
