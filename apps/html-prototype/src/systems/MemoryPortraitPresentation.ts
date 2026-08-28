@@ -43,7 +43,7 @@ export type AuthoredPortraitDialogueLine = {
 };
 
 export type AuthoredPortraitBeat = {
-  portrait: DialoguePortrait;
+  portrait?: DialoguePortrait;
   dialogue: AuthoredPortraitDialogueLine[];
 };
 
@@ -142,6 +142,14 @@ export function renderMemoryPortraitSequenceBeat(
   const beat = sequence.beats[beatIndex];
   const line = beat?.dialogue[dialogueIndex];
   if (!beat || !line) return "";
+  if (!beat.portrait) {
+    return renderMemoryDialogue({
+      speaker: line.speaker,
+      text: line.text,
+      viewport,
+      action
+    });
+  }
   const layout = resolveMemoryPortraitLayout(beat.portrait, viewport);
   return renderMemoryPortrait({
     portrait: beat.portrait,
