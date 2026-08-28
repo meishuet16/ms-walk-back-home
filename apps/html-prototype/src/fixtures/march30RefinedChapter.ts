@@ -3,20 +3,73 @@ import type { CutsceneAction } from "../systems/CutsceneSystem.js";
 import type { SceneSpriteAsset } from "../systems/SceneActorRenderer.js";
 import type { SceneLayout } from "../systems/SceneLayouts.js";
 import type { AuthoredPortraitSequence } from "../systems/MemoryPortraitPresentation.js";
-import { march30Assets, march30MainMemoryActions, resolveMarch30CutsceneActions } from "./march30Memory.js";
+import { march30Assets, march30MainMemoryActions, resolveMarch30CutsceneActions, type March30AssetId } from "./march30Memory.js";
 
 const choice = (id: string, label: string, effects: ReflectionChoice["effects"], response: string): ReflectionChoice => ({ id, label, effects, response });
-const memory = (text: string) => ({ speaker: "Memory", text });
 const ms = (text: string) => ({ speaker: "MS", text });
 const et = (text: string) => ({ speaker: "ET", text });
+const frameAssetId = (assetId: string, frame: number): string => `${assetId}:${frame}`;
 
-export const march30RefinedAssets = march30Assets as unknown as Record<string, SceneSpriteAsset>;
+function frameAsset(assetId: March30AssetId, frame: number): SceneSpriteAsset {
+  const asset = march30Assets[assetId];
+  const frameRect = asset.frames[frame];
+  if (!frameRect) throw new Error(`Missing March 30 frame ${assetId}:${frame}`);
+  return {
+    path: asset.path,
+    source: frameRect.source,
+    visibleBounds: asset.visibleBounds?.[frame],
+    feet: {
+      x: frameRect.feet.x / frameRect.source.w,
+      y: frameRect.feet.y / frameRect.source.h
+    },
+    materialScale: 1.2,
+    nozzleOrigin: asset.nozzleOrigin,
+    mirrorForLeft: asset.mirrorForLeft
+  };
+}
+
+function propAsset(id: "gift" | "waterGun" | "ordinaryKeychain" | "phoneCharm"): SceneSpriteAsset {
+  const asset = march30Assets[id];
+  return {
+    path: asset.path,
+    source: asset.source,
+    feet: { x: 0.5, y: 1 },
+    materialScale: 2
+  };
+}
+
+const actorAssetIds: March30AssetId[] = [
+  "msBase", "etBase", "approach", "waterSpraying", "waterSprayed", "keychains", "jacketAction", "jacketReaction", "waterVfx", "dissolve"
+];
+
+export const march30RefinedAssets: Record<string, SceneSpriteAsset> = {
+  ...Object.fromEntries(actorAssetIds.flatMap((assetId) =>
+    Object.keys(march30Assets[assetId].frames).map((frame) => [frameAssetId(assetId, Number(frame)), frameAsset(assetId, Number(frame))])
+  )),
+  gift: propAsset("gift"),
+  waterGun: propAsset("waterGun"),
+  ordinaryKeychain: propAsset("ordinaryKeychain"),
+  phoneCharm: propAsset("phoneCharm")
+};
+
+function refinedSpriteAction(action: CutsceneAction): CutsceneAction {
+  if (action.type === "dialogue") return { ...action, portrait: undefined };
+  if (action.type === "prop") return { ...action, assetId: action.id };
+  if (action.type === "spawn" && action.sprite) {
+    return { ...action, sprite: { ...action.sprite, assetId: frameAssetId(action.sprite.assetId, action.sprite.frame), frame: 0 } };
+  }
+  if (action.type === "move" && action.sprite) {
+    return { ...action, sprite: { ...action.sprite, assetId: frameAssetId(action.sprite.assetId, action.sprite.frame), frame: 0 } };
+  }
+  if (action.type === "sprite") {
+    return { ...action, sprite: { ...action.sprite, assetId: frameAssetId(action.sprite.assetId, action.sprite.frame), frame: 0 } };
+  }
+  return action;
+}
 
 export function resolveMarch30RefinedActions(layout: SceneLayout, mode: "main" | "echo"): CutsceneAction[] {
   if (mode === "echo") return [];
-  return resolveMarch30CutsceneActions(layout, march30MainMemoryActions).map((action) =>
-    action.type === "dialogue" ? { ...action, portrait: undefined } : action
-  );
+  return resolveMarch30CutsceneActions(layout, march30MainMemoryActions).map(refinedSpriteAction);
 }
 
 export const march30PortraitSequences: Record<string, AuthoredPortraitSequence> = {
