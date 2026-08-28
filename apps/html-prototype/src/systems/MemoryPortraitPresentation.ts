@@ -43,7 +43,7 @@ export type AuthoredPortraitDialogueLine = {
 };
 
 export type AuthoredPortraitBeat = {
-  portrait?: DialoguePortrait;
+  portrait: DialoguePortrait;
   dialogue: AuthoredPortraitDialogueLine[];
 };
 
