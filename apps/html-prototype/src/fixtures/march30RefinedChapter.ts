@@ -77,6 +77,7 @@ export const march30PortraitSequences: Record<string, AuthoredPortraitSequence> 
     id: "march30-elevator",
     beats: [
       {
+        portrait: "",
         dialogue: [
           ms("额嘿嘿好巧哈哈 又见面了 太有缘了"),
           et("是咯~你怎么还在这里"),
