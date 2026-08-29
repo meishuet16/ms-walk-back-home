@@ -1,0 +1,137 @@
+/* Final visual/interaction overrides after removing the conflicting enhancement layer. */
+
+/* Preset management belongs inside Edit wheel. It must never become a second modal/backdrop. */
+.spin-choice-sheet .spin-preset-inline-slot,
+.spin-choice-sheet .spin-preset-inline-slot .spin-preset-menu {
+  position: static !important;
+  inset: auto !important;
+  width: auto !important;
+  max-width: none !important;
+  max-height: none !important;
+  transform: none !important;
+  backdrop-filter: none !important;
+}
+
+.spin-choice-sheet .spin-preset-inline-slot .spin-preset-menu {
+  margin-top: 10px !important;
+  padding: 11px !important;
+  border: 1px solid rgba(205, 157, 86, .22) !important;
+  border-radius: 5px !important;
+  background: linear-gradient(180deg, rgba(27, 38, 34, .96), rgba(17, 26, 23, .98)) !important;
+  box-shadow: inset 0 1px rgba(255,255,255,.018) !important;
+}
+
+.spin-choice-sheet .spin-editor-preset-hub.is-managing {
+  border-color: rgba(209, 160, 87, .42);
+}
+
+/* Result is a compact checkpoint over the wheel, not a full-page result screen. */
+.spin-wheel-tool .spin-wheel-stage > .spin-winner-card {
+  top: 50% !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  inset: auto !important;
+  width: min(86%, 320px) !important;
+  max-height: calc(100% - 30px) !important;
+  transform: translate(-50%, -50%) !important;
+  place-content: initial !important;
+  justify-items: stretch !important;
+  gap: 7px !important;
+  padding: 15px 15px 14px !important;
+  overflow-y: auto !important;
+  animation: none !important;
+}
+
+.spin-wheel-tool .spin-wheel-stage > .spin-winner-card > .spin-result-back-clean {
+  position: static !important;
+  justify-self: end;
+  min-height: 30px !important;
+  padding: 5px 8px !important;
+  margin: -3px -3px 0 0 !important;
+  font-size: 10px !important;
+}
+
+.spin-wheel-tool .spin-wheel-stage > .spin-winner-card > small:first-of-type {
+  margin-top: 0 !important;
+  text-align: center;
+  font-size: 9px !important;
+  letter-spacing: .13em;
+}
+
+.spin-wheel-tool .spin-wheel-stage > .spin-winner-card strong {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  margin: 1px 0 0 !important;
+  font-size: clamp(22px, 7vw, 30px) !important;
+  line-height: 1.05 !important;
+  text-align: center;
+}
+
+.spin-wheel-tool .spin-wheel-stage > .spin-winner-card .spin-winner-emoji {
+  font-size: 30px !important;
+  line-height: 1 !important;
+}
+
+.spin-wheel-tool .spin-wheel-stage > .spin-winner-card > span:not(.spin-winner-emoji) {
+  margin: 0 0 2px !important;
+  font-size: 12px !important;
+  line-height: 1.25 !important;
+  text-align: center;
+}
+
+.spin-wheel-tool .spin-result-actions-clean {
+  width: 100% !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 7px !important;
+  margin-top: 3px !important;
+}
+
+.spin-wheel-tool .spin-result-actions-clean button {
+  min-height: 44px !important;
+  padding: 8px 9px !important;
+  font-size: 13px !important;
+}
+
+.spin-wheel-tool .spin-result-remove-clean {
+  width: 100% !important;
+  min-height: 38px !important;
+  margin-top: 0 !important;
+  padding: 7px 10px !important;
+  font-size: 11px !important;
+}
+
+.spin-wheel-tool .spin-result-choice-hint {
+  max-width: none !important;
+  margin-top: 0 !important;
+  font-size: 9px !important;
+  line-height: 1.25 !important;
+}
+
+@media (max-width: 700px) {
+  .spin-wheel-tool .spin-wheel-stage > .spin-winner-card {
+    width: min(88%, 300px) !important;
+    max-height: calc(100% - 22px) !important;
+    padding: 12px 12px 11px !important;
+  }
+
+  .spin-wheel-tool .spin-wheel-stage > .spin-winner-card strong {
+    font-size: clamp(21px, 7vw, 27px) !important;
+  }
+
+  .spin-wheel-tool .spin-result-actions-clean {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .spin-wheel-tool .spin-result-choice-hint {
+    display: none !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .spin-wheel-tool .spin-result-actions-clean {
+    grid-template-columns: 1fr !important;
+  }
+}
