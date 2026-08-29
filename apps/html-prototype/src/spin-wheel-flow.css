@@ -1,0 +1,108 @@
+/* Result semantics + warmer worn-tool palette, layered after the experimental wheel styles. */
+.spin-wheel-tool {
+  --spin-ink: #111918;
+  --spin-brass: #c98b45;
+  --spin-paper: #ead6ad;
+  --spin-glow: #f2b75d;
+}
+
+.spin-wheel-stage {
+  background:
+    radial-gradient(circle at 50% 42%, rgba(91,113,91,.16), transparent 42%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0 1px, transparent 1px 4px),
+    linear-gradient(180deg, #111c1b 0%, #0b1514 100%) !important;
+}
+.spin-wheel-frame {
+  filter: saturate(.9) contrast(1.04);
+  box-shadow:
+    0 0 0 2px #2a211a,
+    0 0 0 4px rgba(190,126,59,.78),
+    0 0 0 6px #33271e,
+    0 9px 20px rgba(0,0,0,.46) !important;
+}
+.spin-wheel-canvas { filter: saturate(.88) sepia(.08) contrast(1.03); }
+
+.spin-winner-card {
+  background:
+    radial-gradient(circle at 50% 18%, rgba(226,171,87,.09), transparent 35%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0 1px, transparent 1px 4px),
+    linear-gradient(180deg, rgba(18,29,27,.985), rgba(11,20,19,.99)) !important;
+}
+.spin-winner-actions {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 9px !important;
+}
+.spin-winner-actions .spin-use-result {
+  background: linear-gradient(180deg, #e6b05e, #bd7532) !important;
+  color: #24170f !important;
+  border-color: #f0c77f !important;
+  font-weight: 800 !important;
+}
+.spin-winner-actions .spin-use-remove {
+  min-height: 48px;
+  grid-column: 1 / -1;
+  border: 1px solid rgba(205,147,73,.68);
+  border-radius: 4px;
+  background: linear-gradient(180deg, #3c3027, #261f1a);
+  color: #e7c997;
+  font: 700 14px/1.1 ui-monospace, "Courier New", monospace;
+  letter-spacing: .02em;
+  box-shadow: inset 0 1px rgba(255,255,255,.05), 0 2px 0 rgba(0,0,0,.32);
+}
+.spin-winner-actions .spin-use-remove:active { transform: translateY(1px); }
+.spin-result-back {
+  align-self: flex-start;
+  min-height: 40px;
+  margin: -4px 0 5px;
+  padding: 5px 7px;
+  border: 0;
+  background: transparent;
+  color: #bda989;
+  font: 700 12px/1 ui-monospace, "Courier New", monospace;
+  text-decoration: none;
+}
+.spin-result-back:hover,
+.spin-result-back:focus-visible { color: #f0d9ad; text-decoration: underline; text-underline-offset: 4px; }
+.spin-keep-hint {
+  display: block;
+  max-width: 330px;
+  margin: 10px auto 0;
+  color: #998b73 !important;
+  font-size: 10px !important;
+  line-height: 1.45;
+  text-align: center;
+}
+
+/* Preset/editor hierarchy: one task per section, destructive action stays quiet. */
+.spin-preset-sheet .spin-preset-current,
+.spin-choice-sheet .spin-choice-list li {
+  border-color: rgba(193,137,68,.25) !important;
+  background: linear-gradient(180deg, #1b2522, #141c1a) !important;
+}
+.spin-preset-sheet .spin-preset-menu {
+  gap: 12px !important;
+}
+.spin-preset-sheet [data-action='toolbox-preset-create'] {
+  min-height: 50px;
+  background: linear-gradient(180deg, #dca557, #ae692f) !important;
+  color: #24170f !important;
+  font-weight: 800 !important;
+}
+.spin-preset-sheet [data-action='toolbox-preset-rename'] { min-height: 46px; }
+.spin-preset-sheet [data-action='toolbox-preset-delete'] {
+  min-height: 44px;
+  opacity: .78;
+  background: transparent !important;
+  border-color: rgba(175,101,72,.45) !important;
+  color: #c99a82 !important;
+}
+.spin-choice-sheet-hint { max-width: 46ch; }
+
+@media (max-width: 700px) {
+  .spin-winner-card { inset: 18px 16px !important; padding: 15px 14px 14px !important; }
+  .spin-winner-actions { grid-template-columns: 1fr !important; }
+  .spin-winner-actions .spin-use-remove { grid-column: auto; }
+  .spin-winner-actions button { min-height: 50px !important; }
+  .spin-result-back { min-height: 44px; padding-inline: 2px; }
+}
