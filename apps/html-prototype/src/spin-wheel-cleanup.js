@@ -23,20 +23,23 @@
     const card = tool.querySelector(".spin-winner-card");
     if (!(card instanceof HTMLElement)) return;
 
-    // Remove every enhancement left by older preview scripts before rebuilding a single stable layout.
-    card.querySelectorAll(".spin-result-back, .spin-use-remove, [data-spin-flow], [data-spin-cleanup]").forEach((node) => node.remove());
-
     const nativeKeep = card.querySelector("[data-action='toolbox-spin-keep']");
     const nativeSpin = card.querySelector("[data-action='toolbox-spin']");
     const actions = nativeKeep?.parentElement;
     if (!(nativeKeep instanceof HTMLButtonElement) || !(nativeSpin instanceof HTMLButtonElement) || !(actions instanceof HTMLElement)) return;
 
-    actions.classList.add("spin-result-actions-clean");
     nativeSpin.textContent = "Spin again";
     nativeSpin.classList.add("spin-result-secondary");
     nativeKeep.textContent = "Use result";
     nativeKeep.classList.add("spin-result-primary");
     nativeKeep.setAttribute("aria-label", "Use result and keep all choices in the wheel");
+    actions.classList.add("spin-result-actions-clean");
+
+    if (card.dataset.spinCleanupReady === "true") return;
+    card.dataset.spinCleanupReady = "true";
+
+    // Strip controls injected by older preview scripts exactly once for this freshly rendered card.
+    card.querySelectorAll(".spin-result-back, .spin-use-remove, [data-spin-flow]").forEach((node) => node.remove());
 
     const back = document.createElement("button");
     back.type = "button";
@@ -54,13 +57,10 @@
     remove.setAttribute("aria-label", "Use result and remove this choice from the next round");
     actions.after(remove);
 
-    let hint = card.querySelector(".spin-result-choice-hint");
-    if (!(hint instanceof HTMLElement)) {
-      hint = document.createElement("small");
-      hint.className = "spin-result-choice-hint";
-      hint.textContent = "Keep it for future spins, or remove it for allocation rounds.";
-      card.append(hint);
-    }
+    const hint = document.createElement("small");
+    hint.className = "spin-result-choice-hint";
+    hint.textContent = "Keep it for future spins, or remove it for allocation rounds.";
+    card.append(hint);
   };
 
   const normalizeEditor = (tool) => {
@@ -69,7 +69,8 @@
     const manage = sheet.querySelector(".spin-manage-presets");
     const menu = sheet.querySelector(".spin-preset-menu");
     if (manage instanceof HTMLButtonElement) {
-      manage.textContent = menu ? "Done" : "Manage";
+      const next = menu ? "Done" : "Manage";
+      if (manage.textContent !== next) manage.textContent = next;
       manage.setAttribute("aria-expanded", String(Boolean(menu)));
     }
   };
@@ -111,8 +112,6 @@
     }
 
     if (button.matches(".spin-editor-close")) {
-      // If preset management is expanded, collapse it first so reparented native controls
-      // cannot survive inside a detached sheet and block the next editor open.
       const menu = tool.querySelector(".spin-choice-sheet .spin-preset-menu");
       const manage = tool.querySelector(".spin-choice-sheet .spin-manage-presets");
       if (menu && manage instanceof HTMLButtonElement) {
@@ -135,6 +134,8 @@
       decorate();
     });
   };
-  new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true });
+  new MutationObserver((mutations) => {
+    if (mutations.some((mutation) => mutation.type === "childList" && (mutation.addedNodes.length || mutation.removedNodes.length))) schedule();
+  }).observe(document.documentElement, { childList: true, subtree: true });
   window.addEventListener("DOMContentLoaded", schedule, { once: true });
 })();
