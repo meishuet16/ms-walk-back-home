@@ -1,0 +1,249 @@
+/* Spin Wheel component finishing rules.
+   This file owns result-card hierarchy, preset/editor finishing, and final mobile constraints. */
+
+.spin-wheel-tool .spin-main-redundant-edit { display: none !important; }
+.spin-wheel-tool .spin-preset-native-label { display: none !important; }
+
+.spin-wheel-tool .spin-main-preset-display {
+  width: 100%;
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "kicker mark" "value mark";
+  align-items: center;
+  gap: 2px 12px;
+  padding: 9px 14px;
+  border: 1px solid rgba(205,153,82,.42);
+  border-radius: 4px;
+  background: linear-gradient(180deg, #493325, #302720);
+  box-shadow: inset 0 1px rgba(255,255,255,.045), 0 2px 0 rgba(0,0,0,.24);
+  color: #f1d9ad;
+}
+.spin-main-preset-kicker {
+  grid-area: kicker;
+  color: #bd8246;
+  font: 800 9px/1 ui-monospace, "Courier New", monospace;
+  letter-spacing: .16em;
+}
+.spin-main-preset-value {
+  grid-area: value;
+  overflow: hidden;
+  font-size: 17px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.spin-main-preset-chevron {
+  grid-area: mark;
+  color: #b9854b;
+  font-size: 18px;
+}
+.spin-wheel-tool .spin-preset-bar { grid-template-columns: 1fr !important; }
+
+.spin-wheel-tool .spin-choice-summary b {
+  min-width: max-content;
+  color: #d9a85f;
+  font-size: 12px;
+}
+
+.spin-choice-sheet .spin-editor-preset-row {
+  align-items: stretch !important;
+}
+.spin-choice-sheet .spin-manage-presets {
+  min-width: 86px;
+  min-height: 52px;
+  border-color: rgba(206,158,88,.36) !important;
+  background: linear-gradient(180deg, #342d27, #25231f) !important;
+  color: #dcc49b !important;
+  font-size: 13px !important;
+}
+.spin-choice-sheet .spin-editor-section-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.spin-choice-sheet .spin-editor-section-title span {
+  color: #c28d50;
+  font: 800 10px/1 ui-monospace, "Courier New", monospace;
+  letter-spacing: .16em;
+}
+.spin-choice-sheet .spin-editor-section-title small {
+  color: #9d927d;
+  font-size: 11px;
+}
+
+/* Preset management stays inline inside Edit wheel. */
+.spin-choice-sheet .spin-preset-inline-slot,
+.spin-choice-sheet .spin-preset-inline-slot .spin-preset-menu {
+  position: static !important;
+  inset: auto !important;
+  width: auto !important;
+  max-width: none !important;
+  max-height: none !important;
+  transform: none !important;
+  backdrop-filter: none !important;
+}
+
+.spin-choice-sheet .spin-preset-inline-slot .spin-preset-menu {
+  margin-top: 10px !important;
+  padding: 11px !important;
+  border: 1px solid rgba(205, 157, 86, .22) !important;
+  border-radius: 5px !important;
+  background: linear-gradient(180deg, rgba(27, 38, 34, .96), rgba(17, 26, 23, .98)) !important;
+  box-shadow: inset 0 1px rgba(255,255,255,.018) !important;
+}
+
+.spin-choice-sheet .spin-editor-preset-hub.is-managing {
+  border-color: rgba(209, 160, 87, .42);
+}
+
+/* Result is a compact checkpoint over the wheel. */
+.spin-wheel-tool .spin-wheel-stage > .spin-winner-card {
+  inset: 12px !important;
+  top: 12px !important;
+  right: 12px !important;
+  bottom: 12px !important;
+  left: 12px !important;
+  width: auto !important;
+  max-width: none !important;
+  height: auto !important;
+  max-height: none !important;
+  transform: none !important;
+  place-content: center !important;
+  justify-items: stretch !important;
+  align-content: center !important;
+  gap: 7px !important;
+  padding: 15px 15px 14px !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  animation: none !important;
+  box-sizing: border-box !important;
+}
+
+.spin-wheel-tool .spin-wheel-stage > .spin-winner-card > .spin-result-back-clean {
+  position: static !important;
+  justify-self: end;
+  min-height: 30px !important;
+  padding: 5px 8px !important;
+  margin: -3px -3px 0 0 !important;
+  font-size: 10px !important;
+}
+
+.spin-wheel-tool .spin-wheel-stage > .spin-winner-card > small:first-of-type {
+  margin-top: 0 !important;
+  text-align: center;
+  font-size: 9px !important;
+  letter-spacing: .13em;
+}
+
+.spin-wheel-tool .spin-wheel-stage > .spin-winner-card strong {
+  display: flex !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  margin: 1px 0 0 !important;
+  font-size: clamp(22px, 7vw, 30px) !important;
+  line-height: 1.08 !important;
+  text-align: center;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+}
+
+.spin-wheel-tool .spin-wheel-stage > .spin-winner-card .spin-winner-emoji {
+  flex: none !important;
+  font-size: 30px !important;
+  line-height: 1 !important;
+}
+
+.spin-wheel-tool .spin-wheel-stage > .spin-winner-card > span:not(.spin-winner-emoji) {
+  width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 0 2px !important;
+  font-size: 12px !important;
+  line-height: 1.25 !important;
+  text-align: center;
+  overflow-wrap: anywhere !important;
+}
+
+.spin-wheel-tool .spin-result-actions-clean {
+  width: 100% !important;
+  min-width: 0 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0,1fr) minmax(0,1fr) !important;
+  gap: 7px !important;
+  margin-top: 3px !important;
+}
+
+.spin-wheel-tool .spin-result-actions-clean button {
+  min-width: 0 !important;
+  min-height: 44px !important;
+  padding: 8px 9px !important;
+  font-size: 13px !important;
+  white-space: normal !important;
+}
+
+.spin-wheel-tool .spin-result-secondary {
+  border-color: rgba(207,158,87,.38) !important;
+  background: linear-gradient(180deg, #26332f, #1b2522) !important;
+  color: #e1cfaa !important;
+}
+.spin-wheel-tool .spin-result-primary {
+  border-color: #e3ae5c !important;
+  background: linear-gradient(180deg, #e4ad4f, #bc742e) !important;
+  color: #23170f !important;
+  font-weight: 800 !important;
+}
+
+.spin-wheel-tool .spin-result-remove-clean {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 38px !important;
+  margin-top: 0 !important;
+  padding: 7px 10px !important;
+  border: 1px solid rgba(171,91,64,.5);
+  border-radius: 4px;
+  background: linear-gradient(180deg, #3a2a25, #271f1c);
+  color: #d9ad99;
+  font: 700 11px/1.15 ui-monospace, "Courier New", monospace;
+  white-space: normal !important;
+}
+
+.spin-wheel-tool .spin-result-choice-hint {
+  max-width: none !important;
+  margin-top: 0 !important;
+  color: #968a75 !important;
+  font-size: 9px !important;
+  line-height: 1.25 !important;
+  text-align: center;
+}
+
+@media (max-width: 700px) {
+  .spin-wheel-tool .spin-wheel-stage > .spin-winner-card {
+    inset: 9px !important;
+    top: 9px !important;
+    right: 9px !important;
+    bottom: 9px !important;
+    left: 9px !important;
+    padding: 12px 12px 11px !important;
+  }
+  .spin-wheel-tool .spin-wheel-stage > .spin-winner-card strong {
+    font-size: clamp(21px, 7vw, 27px) !important;
+  }
+  .spin-wheel-tool .spin-result-actions-clean {
+    grid-template-columns: minmax(0,1fr) minmax(0,1fr) !important;
+  }
+  .spin-wheel-tool .spin-result-choice-hint {
+    display: none !important;
+  }
+  .spin-choice-sheet .spin-editor-section-title {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 360px) {
+  .spin-wheel-tool .spin-result-actions-clean { grid-template-columns: 1fr !important; }
+  .spin-choice-sheet .spin-editor-section-title { display: grid; gap: 4px; }
+}

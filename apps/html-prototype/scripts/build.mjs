@@ -13,6 +13,17 @@ await writeFile(resolve(root, "dist/assets/audio-manifest.json"), JSON.stringify
 await writeFile(resolve(root, "dist/public/assets/audio-manifest.json"), JSON.stringify({ files: audioFiles }, null, 2));
 await copyFile(resolve(root, "src/index.html"), resolve(root, "dist/index.html"));
 await copyFile(resolve(root, "src/styles.css"), resolve(root, "dist/styles.css"));
+for (const file of [
+  "spin-wheel-world.css",
+  "spin-wheel-choice-sheet.css",
+  "spin-wheel-preset-ui.css",
+  "spin-wheel-components.css",
+  "spin-wheel-world.js",
+  "spin-wheel-preset-ui.js",
+  "spin-wheel-result-ui.js"
+]) {
+  await copyFile(resolve(root, `src/${file}`), resolve(root, `dist/${file}`));
+}
 await mkdir(resolve(root, "dist/browser/ffmpeg"), { recursive: true });
 await copyFile(resolve(root, "../../node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.js"), resolve(root, "dist/browser/ffmpeg/ffmpeg-core.js"));
 await copyFile(resolve(root, "../../node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.wasm"), resolve(root, "dist/browser/ffmpeg/ffmpeg-core.wasm"));

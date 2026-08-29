@@ -1,0 +1,128 @@
+/* Spin Wheel editor — one focused in-world sheet for presets and choices. */
+.spin-wheel-tool.choice-sheet-open { position: relative; }
+.spin-wheel-tool.choice-sheet-open > :not(.spin-choice-sheet) { filter: brightness(.58) saturate(.72); pointer-events: none; user-select: none; }
+
+.spin-choice-sheet {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid rgba(211,158,79,.56);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 86% 8%, rgba(164,122,58,.09), transparent 28%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0 1px, transparent 1px 4px),
+    linear-gradient(180deg, #1c2925 0%, #12201d 100%);
+  box-shadow: 0 20px 50px rgba(0,0,0,.58), 0 0 0 1px rgba(22,16,11,.96), inset 0 1px rgba(255,238,203,.05);
+  animation: spin-choice-sheet-in .2s cubic-bezier(.2,.8,.2,1) both;
+}
+
+.spin-choice-sheet-header {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 44px;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 16px 13px;
+  border-bottom: 1px solid rgba(207,159,88,.24);
+  background: linear-gradient(180deg, rgba(50,43,32,.88), rgba(25,35,31,.78));
+}
+.spin-choice-sheet-header > div { display: grid; gap: 3px; min-width: 0; }
+.spin-choice-sheet-header small,
+.spin-editor-section-title > span,
+.spin-preset-new-title {
+  color: #b98243;
+  font-family: ui-monospace, "Courier New", monospace;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .16em;
+}
+.spin-choice-sheet-header strong { color: #f0dcb6; font-family: ui-monospace, "Courier New", monospace; font-size: 21px; letter-spacing: -.02em; }
+.spin-choice-sheet-header button {
+  width: 44px; min-width: 44px; min-height: 44px; padding: 0; display: grid; place-items: center;
+  border: 1px solid rgba(213,164,91,.5); border-radius: 50%;
+  background: linear-gradient(180deg, #3d3b2b, #24332e); color: #efd39f; font-size: 20px;
+  box-shadow: inset 0 1px rgba(255,255,255,.05), 0 3px 8px rgba(0,0,0,.28);
+}
+.spin-choice-sheet-hint { margin: 0; padding: 10px 16px 4px; color: #a89a7f; font-size: 11px; line-height: 1.45; }
+
+.spin-editor-preset-hub { margin: 8px 14px 0; padding: 12px; border: 1px solid rgba(205,156,84,.25); border-radius: 6px; background: linear-gradient(180deg, rgba(33,45,40,.95), rgba(22,31,28,.96)); box-shadow: inset 0 1px rgba(255,255,255,.018); }
+.spin-editor-section-title { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 9px; }
+.spin-editor-section-title small { color: #827a69; font-size: 10px; }
+.spin-editor-preset-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; }
+.spin-editor-preset-row label { min-width: 0; }
+.spin-editor-preset-row select {
+  width: 100%; min-height: 46px; padding: 8px 34px 8px 11px;
+  border: 1px solid rgba(201,151,80,.38); border-radius: 5px;
+  background: #111c19; color: #ead8b6; font-size: 15px; outline: none;
+}
+.spin-manage-presets { min-width: 88px; min-height: 46px; border: 1px solid rgba(199,147,75,.4); border-radius: 5px; background: linear-gradient(180deg,#40382d,#2a302b); color: #d9c29b; font-weight: 700; }
+.spin-editor-preset-hub.is-managing .spin-manage-presets { border-color: #bd8847; color: #f0d39e; }
+.spin-preset-inline-slot:empty { display: none; }
+.spin-preset-inline-slot:not(:empty) { margin-top: 11px; padding-top: 11px; border-top: 1px solid rgba(205,157,86,.18); }
+
+.spin-preset-inline-slot .spin-preset-menu { display: grid !important; gap: 10px; margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; }
+.spin-preset-inline-slot .spin-preset-menu > label { display: grid; gap: 7px; color: transparent; font-size: 0; }
+.spin-preset-inline-slot .spin-preset-menu input { width: 100%; min-height: 46px; padding: 9px 11px; border: 1px solid rgba(209,160,89,.38); border-radius: 5px; outline: none; background: #0e1816; color: #f0dfbf; font-size: 15px; }
+.spin-preset-inline-slot .spin-preset-menu > div { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.spin-preset-inline-slot .spin-preset-menu button { min-height: 44px; border-radius: 5px; }
+.spin-preset-inline-slot [data-action="toolbox-preset-create"] { grid-column: 1 / -1; order: -1; border-color: #ca954d; background: linear-gradient(180deg,#c99b4d,#9c692f); color: #21170f; font-weight: 800; }
+.spin-preset-inline-slot [data-action="toolbox-preset-rename"] { background: linear-gradient(180deg,#3c443a,#29322d); color: #e1cfaa; }
+.spin-preset-inline-slot [data-action="toolbox-preset-delete"] { border-color: rgba(156,79,62,.5); background: linear-gradient(180deg,#3a2925,#29211f); color: #d7a091; }
+
+.spin-choice-sheet .spin-choice-editor.open { display: flex !important; flex: 1; min-height: 0; flex-direction: column; gap: 9px; margin: 0; padding: 12px 14px 14px; border: 0; background: transparent; box-shadow: none; }
+.spin-editor-choices-title { margin: 0 1px 1px; }
+.spin-choice-sheet .spin-choice-list { flex: 1; min-height: 108px; max-height: none; display: grid; align-content: start; gap: 7px; margin: 0; padding: 0 2px 2px 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.spin-choice-sheet .spin-choice-list li { min-height: 48px; padding: 7px 8px 7px 10px; gap: 10px; border: 1px solid rgba(203,153,82,.18); border-radius: 5px; background: linear-gradient(180deg,#202b27,#17201d); box-shadow: inset 0 1px rgba(255,255,255,.018); }
+.spin-choice-sheet .spin-choice-list li > span:first-child { min-width: 0; flex: 1; color: #eadbbf; font-size: 14px; overflow-wrap: anywhere; }
+.spin-choice-sheet .spin-choice-list li > button { width: 40px; min-width: 40px; min-height: 40px; padding: 0; border: 1px solid rgba(174,109,70,.36); border-radius: 5px; background: #332922; color: #d8b38c; font-size: 17px; }
+.spin-choice-sheet .spin-choice-list li.empty { display: grid; place-items: center; min-height: 100px; color: #8f846f; border-style: dashed; text-align: center; }
+.spin-choice-sheet .spin-choice-add { position: sticky; bottom: 0; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; padding-top: 10px; border-top: 1px solid rgba(205,157,86,.18); background: linear-gradient(180deg,rgba(18,32,29,0),#12201d 24%); }
+.spin-choice-sheet .spin-choice-add input { width: 100%; min-width: 0; min-height: 48px; padding: 10px 12px; border: 1px solid rgba(209,160,89,.4); border-radius: 5px; outline: none; background: #0e1816; color: #f0dfbf; font-size: 16px; box-shadow: inset 0 1px 4px rgba(0,0,0,.32); }
+.spin-choice-sheet .spin-choice-add input::placeholder { color: #746c5e; }
+.spin-choice-sheet .spin-choice-add input:focus,
+.spin-editor-preset-row select:focus,
+.spin-preset-inline-slot input:focus { border-color: #ca954d; box-shadow: 0 0 0 2px rgba(202,149,77,.13); }
+.spin-choice-sheet .spin-choice-add button { min-width: 78px; min-height: 48px; padding: 8px 14px; border: 1px solid #c9964e; border-radius: 5px; background: linear-gradient(180deg,#c99b4d,#9c692f); color: #21170f; font-family: ui-monospace,"Courier New",monospace; font-size: 14px; font-weight: 800; box-shadow: inset 0 1px rgba(255,245,218,.15),0 3px 0 #4c331e; }
+
+/* The main screen only previews the current preset; switching lives in Edit wheel. */
+.spin-wheel-tool:not(.choice-sheet-open) .spin-main-preset-label select { pointer-events: none; appearance: none; background-image: none !important; }
+.spin-wheel-tool:not(.choice-sheet-open) .spin-main-preset-label select::-ms-expand { display: none; }
+
+/* Result checkpoint: one clear decision, with remove explicitly optional. */
+.spin-winner-card > div { display: grid !important; grid-template-columns: 1fr 1fr; gap: 7px !important; }
+.spin-winner-card .spin-result-back { grid-column: 1 / -1; order: -2; background: transparent !important; border-color: transparent !important; color: #b6a98e !important; box-shadow: none !important; min-height: 34px !important; }
+.spin-winner-card [data-action="toolbox-spin"] { order: -1; }
+.spin-winner-card .spin-use-result { border-color: #c99a51 !important; background: linear-gradient(180deg,#c89a4c,#98662e) !important; color: #21170f !important; font-weight: 800; }
+.spin-winner-card .spin-use-remove { border-color: rgba(176,101,66,.55) !important; background: linear-gradient(180deg,#62392b,#432b25) !important; color: #f0c4a6 !important; }
+.spin-round-note { width: min(100%,330px); margin: 0 auto; padding: 8px 10px; border: 1px solid rgba(205,156,84,.28); border-radius: 5px; background: linear-gradient(180deg,#222a27,#181e1c); color: #dcc99f; font-size: 12px; text-align: center; }
+.sr-only { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0,0,0,0) !important; white-space: nowrap !important; border: 0 !important; }
+
+@keyframes spin-choice-sheet-in { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: none; } }
+
+@media (max-width: 700px) {
+  .spin-choice-sheet { position: fixed; inset: max(10px,env(safe-area-inset-top)) 10px max(10px,env(safe-area-inset-bottom)); max-width: 470px; margin-inline: auto; border-radius: 10px; }
+  .spin-choice-sheet-header { padding: 13px 13px 11px; }
+  .spin-choice-sheet-hint { padding: 9px 13px 3px; }
+  .spin-editor-preset-hub { margin: 8px 12px 0; }
+  .spin-choice-sheet .spin-choice-editor.open { padding: 11px 12px 12px; }
+  .spin-choice-sheet .spin-choice-list li { min-height: 50px; }
+  .spin-choice-sheet .spin-choice-list li > button { width: 44px; min-width: 44px; min-height: 44px; }
+  .spin-choice-sheet .spin-choice-add { grid-template-columns: minmax(0,1fr) 76px; }
+  .spin-choice-sheet .spin-choice-add input,
+  .spin-choice-sheet .spin-choice-add button { min-height: 50px; }
+}
+
+@media (max-width: 360px) {
+  .spin-editor-preset-row,
+  .spin-choice-sheet .spin-choice-add,
+  .spin-preset-inline-slot .spin-preset-menu > div,
+  .spin-winner-card > div { grid-template-columns: 1fr; }
+  .spin-choice-sheet .spin-choice-add button { width: 100%; }
+  .spin-preset-inline-slot [data-action="toolbox-preset-create"],
+  .spin-winner-card .spin-result-back { grid-column: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) { .spin-choice-sheet { animation: none; } }
