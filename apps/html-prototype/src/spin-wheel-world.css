@@ -1,0 +1,229 @@
+/* In-world visual pass for the Spin Wheel. This sits on top of spin-wheel-refine.css. */
+
+.toolbox-panel:has(.spin-wheel-tool) {
+  background:
+    radial-gradient(circle at 14% 6%, rgba(232, 177, 91, .08), transparent 26rem),
+    linear-gradient(180deg, rgba(44, 28, 23, .98), rgba(24, 23, 22, .985));
+  border-color: #b77b3f;
+  box-shadow:
+    0 0 0 3px rgba(33, 20, 15, .75),
+    0 0 0 5px rgba(181, 119, 56, .2),
+    0 28px 70px rgba(0,0,0,.58),
+    inset 0 1px rgba(255, 230, 183, .08);
+}
+
+.toolbox-panel:has(.spin-wheel-tool)::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border: 1px solid rgba(228, 177, 96, .12);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.toolbox-panel:has(.spin-wheel-tool) .toolbox-kicker {
+  color: #e3b263;
+  font-size: 11px;
+  letter-spacing: .2em;
+}
+
+.toolbox-panel:has(.spin-wheel-tool) .toolbox-header h2 {
+  text-shadow: 0 2px 0 rgba(0,0,0,.45), 0 0 20px rgba(229, 174, 87, .12);
+}
+
+.spin-wheel-tool .spin-wheel-stage {
+  isolation: isolate;
+  border-color: rgba(208, 158, 87, .34);
+  background:
+    radial-gradient(circle at 50% 45%, rgba(219, 165, 89, .1), transparent 48%),
+    linear-gradient(180deg, rgba(15, 25, 25, .94), rgba(16, 24, 23, .88));
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.025),
+    inset 0 -24px 52px rgba(0,0,0,.16),
+    0 12px 30px rgba(0,0,0,.2);
+}
+
+.spin-wheel-tool .spin-wheel-stage::before,
+.spin-wheel-tool .spin-wheel-stage::after {
+  position: absolute;
+  z-index: -1;
+  color: rgba(222, 174, 98, .22);
+  pointer-events: none;
+}
+
+.spin-wheel-tool .spin-wheel-stage::before {
+  content: "✦";
+  left: 18px;
+  bottom: 16px;
+  font-size: 15px;
+  text-shadow: 18px -8px 0 rgba(222, 174, 98, .08);
+}
+
+.spin-wheel-tool .spin-wheel-stage::after {
+  content: "✦";
+  right: 20px;
+  top: 28px;
+  font-size: 12px;
+  text-shadow: -13px 19px 0 rgba(222, 174, 98, .08);
+}
+
+.spin-wheel-tool .spin-wheel-canvas {
+  filter: saturate(.9) sepia(.06) drop-shadow(0 7px 12px rgba(0,0,0,.28));
+}
+
+.spin-wheel-tool .spin-pointer {
+  color: #e8b968;
+  text-shadow: 0 1px 0 #2a1a12, 0 0 10px rgba(232, 185, 104, .2);
+}
+
+.spin-wheel-tool .spin-wheel-result {
+  color: #e9d39c;
+  font-size: 13px;
+}
+
+.spin-wheel-tool .spin-wheel-result::before,
+.spin-wheel-tool .spin-wheel-result::after {
+  content: "✦";
+  margin: 0 7px;
+  color: #b97b3f;
+  font-size: 9px;
+  vertical-align: .12em;
+}
+
+.spin-wheel-tool .spin-primary-action {
+  position: relative;
+  overflow: hidden;
+  border-color: #e2b15d;
+  background: linear-gradient(180deg, #e1b05b, #c68b3f);
+  color: #2b1c14;
+  text-shadow: 0 1px rgba(255,255,255,.18);
+}
+
+.spin-wheel-tool .spin-primary-action::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border: 1px solid rgba(255, 237, 196, .26);
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.spin-wheel-tool .spin-choice-summary {
+  border-color: rgba(211, 165, 91, .28);
+  background: linear-gradient(180deg, rgba(31, 38, 35, .9), rgba(22, 29, 27, .9));
+}
+
+.spin-wheel-tool .spin-choice-summary strong {
+  color: #f0ddba;
+}
+
+.spin-choice-emoji {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  margin-right: 8px;
+  place-items: center;
+  border: 1px solid rgba(224, 177, 101, .2);
+  border-radius: 6px;
+  background: rgba(10, 16, 16, .32);
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  font-size: 18px;
+  vertical-align: middle;
+}
+
+.spin-wheel-tool .spin-choice-list li > span:first-child {
+  display: flex;
+  align-items: center;
+}
+
+.spin-wheel-tool .spin-winner-card {
+  inset: 26px;
+  border-color: rgba(220, 174, 95, .54);
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 50% 36%, rgba(218, 164, 84, .12), transparent 45%),
+    rgba(18, 27, 26, .965);
+  box-shadow:
+    0 16px 34px rgba(0,0,0,.46),
+    0 0 26px rgba(217, 162, 76, .08),
+    inset 0 0 0 1px rgba(255,255,255,.025);
+}
+
+.spin-wheel-tool .spin-winner-card::before,
+.spin-wheel-tool .spin-winner-card::after {
+  content: "✦";
+  position: absolute;
+  color: #c68f4e;
+  animation: spin-world-twinkle 1.4s ease-in-out infinite alternate;
+}
+
+.spin-wheel-tool .spin-winner-card::before { left: 18px; top: 18px; }
+.spin-wheel-tool .spin-winner-card::after { right: 18px; bottom: 18px; animation-delay: .35s; }
+
+.spin-wheel-tool .spin-winner-card strong {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  color: #f2c96f;
+}
+
+.spin-winner-emoji {
+  display: block;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  font-size: 38px;
+  line-height: 1;
+  filter: drop-shadow(0 5px 5px rgba(0,0,0,.28));
+}
+
+.spin-wheel-tool .spin-winner-card > div button:first-child {
+  border-color: rgba(225, 176, 93, .42);
+}
+
+.spin-wheel-tool .spin-winner-card > div button:last-child {
+  color: #2b1c14;
+  border-color: #e0ac5d;
+  background: linear-gradient(#e4b96b, #c88c42);
+  font-weight: 700;
+}
+
+.spin-wheel-tool .spin-preset-menu,
+.spin-wheel-tool .spin-choice-editor {
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.018), 0 10px 24px rgba(0,0,0,.13);
+}
+
+@keyframes spin-world-twinkle {
+  from { opacity: .35; transform: scale(.85) rotate(-8deg); }
+  to { opacity: .95; transform: scale(1.08) rotate(7deg); }
+}
+
+@media (max-width: 700px) {
+  .toolbox-panel:has(.spin-wheel-tool) {
+    border-width: 2px;
+    border-radius: 9px;
+  }
+
+  .spin-wheel-tool .spin-wheel-stage {
+    padding-top: 20px;
+  }
+
+  .spin-wheel-tool .spin-winner-card {
+    inset: 20px 14px 18px;
+    padding: 16px 12px;
+  }
+
+  .spin-wheel-tool .spin-winner-card > div {
+    width: 100%;
+  }
+
+  .spin-wheel-tool .spin-winner-card > div button {
+    min-height: 48px;
+    flex: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin-wheel-tool .spin-winner-card::before,
+  .spin-wheel-tool .spin-winner-card::after {
+    animation: none;
+  }
+}
