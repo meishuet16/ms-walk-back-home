@@ -1,8 +1,11 @@
 /* Spin Wheel choice editor — focused in-world sheet instead of an inline accordion. */
-.spin-wheel-tool.choice-sheet-open { position: relative; }
-.spin-wheel-tool.choice-sheet-open > :not(.spin-choice-sheet) { filter: brightness(.62) saturate(.78); pointer-events: none; user-select: none; }
+.spin-wheel-tool.choice-sheet-open,
+.spin-wheel-tool.preset-sheet-open { position: relative; }
+.spin-wheel-tool.choice-sheet-open > :not(.spin-choice-sheet),
+.spin-wheel-tool.preset-sheet-open > :not(.spin-preset-sheet) { filter: brightness(.62) saturate(.78); pointer-events: none; user-select: none; }
 
-.spin-choice-sheet {
+.spin-choice-sheet,
+.spin-preset-sheet {
   position: absolute;
   inset: 0;
   z-index: 30;
@@ -174,13 +177,115 @@
 }
 .spin-choice-sheet .spin-choice-add button:active { transform: translateY(2px); box-shadow: inset 0 1px rgba(255,245,218,.18), 0 1px 0 #55371f; }
 
+/* Preset management follows the same focused sheet pattern. */
+.spin-preset-sheet .spin-preset-current {
+  display: grid;
+  gap: 4px;
+  margin: 12px 13px 0;
+  padding: 12px;
+  border: 1px solid rgba(205,156,84,.24);
+  border-radius: 4px;
+  background: linear-gradient(180deg, #202724, #181d1c);
+}
+.spin-preset-current small,
+.spin-preset-new-title {
+  color: #aa7840;
+  font-family: ui-monospace, "Courier New", monospace;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .14em;
+}
+.spin-preset-current strong { color: #f0dfbd; font-size: 16px; }
+.spin-preset-sheet .spin-preset-menu {
+  display: flex !important;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 12px 13px 13px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.spin-preset-sheet .spin-preset-menu > label {
+  display: grid;
+  gap: 7px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid rgba(205,157,86,.18);
+  color: transparent;
+  font-size: 0;
+}
+.spin-preset-sheet .spin-preset-menu input {
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid rgba(209,160,89,.4);
+  border-radius: 4px;
+  outline: none;
+  background: #101716;
+  color: #f0dfbf;
+  font-size: 16px;
+}
+.spin-preset-sheet .spin-preset-menu > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.spin-preset-sheet .spin-preset-menu button {
+  min-height: 46px;
+  border-radius: 4px;
+}
+.spin-preset-sheet [data-action="toolbox-preset-create"] {
+  grid-column: 1 / -1;
+  order: -1;
+  border-color: #d0a05c;
+  background: linear-gradient(180deg, #d8ac67, #b97937);
+  color: #261b14;
+  font-weight: 800;
+}
+.spin-preset-sheet [data-action="toolbox-preset-rename"] {
+  background: linear-gradient(180deg, #44362b, #2c2823);
+  color: #ead5ae;
+}
+.spin-preset-sheet [data-action="toolbox-preset-delete"] {
+  border-color: rgba(169,87,67,.52);
+  background: linear-gradient(180deg, #3b2b27, #292220);
+  color: #d6a394;
+}
+
+.spin-keep-hint {
+  display: block;
+  margin-top: 2px;
+  color: #a99674;
+  font-size: 10px;
+  letter-spacing: .02em;
+}
+.spin-round-note {
+  width: min(100%, 330px);
+  margin: 0 auto;
+  padding: 8px 10px;
+  border: 1px solid rgba(205,156,84,.28);
+  border-radius: 4px;
+  background: linear-gradient(180deg, #222a27, #181e1c);
+  color: #dcc99f;
+  font-size: 12px;
+  text-align: center;
+  animation: spin-round-note-in .2s cubic-bezier(.2,.8,.2,1) both;
+}
+
 @keyframes spin-choice-sheet-in {
   from { opacity: 0; transform: translateY(8px) scale(.985); }
   to { opacity: 1; transform: none; }
 }
+@keyframes spin-round-note-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
 
 @media (max-width: 700px) {
-  .spin-choice-sheet {
+  .spin-choice-sheet,
+  .spin-preset-sheet {
     position: fixed;
     inset: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom));
     max-width: 470px;
@@ -188,19 +293,26 @@
   }
   .spin-choice-sheet-header { padding: 11px 11px 10px; }
   .spin-choice-sheet-hint { padding: 9px 11px 0; }
-  .spin-choice-sheet .spin-choice-editor.open { padding: 10px 11px 11px; }
+  .spin-choice-sheet .spin-choice-editor.open,
+  .spin-preset-sheet .spin-preset-menu { padding: 10px 11px 11px; }
   .spin-choice-sheet .spin-choice-list li { min-height: 52px; }
   .spin-choice-sheet .spin-choice-list li > button { width: 44px; min-width: 44px; min-height: 44px; }
   .spin-choice-sheet .spin-choice-add { grid-template-columns: minmax(0,1fr) 76px; }
   .spin-choice-sheet .spin-choice-add input,
-  .spin-choice-sheet .spin-choice-add button { min-height: 50px; }
+  .spin-choice-sheet .spin-choice-add button,
+  .spin-preset-sheet .spin-preset-menu input { min-height: 50px; }
+  .spin-preset-sheet .spin-preset-current { margin: 10px 11px 0; }
 }
 
 @media (max-width: 360px) {
-  .spin-choice-sheet .spin-choice-add { grid-template-columns: 1fr; }
+  .spin-choice-sheet .spin-choice-add,
+  .spin-preset-sheet .spin-preset-menu > div { grid-template-columns: 1fr; }
   .spin-choice-sheet .spin-choice-add button { width: 100%; }
+  .spin-preset-sheet [data-action="toolbox-preset-create"] { grid-column: auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .spin-choice-sheet { animation: none; }
+  .spin-choice-sheet,
+  .spin-preset-sheet,
+  .spin-round-note { animation: none; }
 }
