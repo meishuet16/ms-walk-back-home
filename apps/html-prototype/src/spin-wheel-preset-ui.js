@@ -1,6 +1,4 @@
 (() => {
-  const toolSelector = ".spin-wheel-tool";
-
   const optionSignature = (select) => [...select.options]
     .map((option) => `${option.value}:${option.textContent ?? ""}:${option.selected}`)
     .join("|");
@@ -13,21 +11,23 @@
 
     label.classList.add("spin-preset-native-label");
     select.classList.add("spin-preset-native-source");
+    const nativeAction = bar.querySelector(":scope > [data-action]");
+    if (nativeAction instanceof HTMLElement) nativeAction.classList.add("spin-main-redundant-edit");
 
     let display = bar.querySelector(".spin-main-preset-display");
-    if (!(display instanceof HTMLButtonElement)) {
-      display = document.createElement("button");
-      display.type = "button";
+    if (!(display instanceof HTMLElement)) {
+      display = document.createElement("div");
       display.className = "spin-main-preset-display";
-      display.dataset.action = "toolbox-spin-edit";
-      display.setAttribute("aria-label", "Edit wheel and switch preset");
-      display.innerHTML = `<span class="spin-main-preset-kicker">PRESET</span><span class="spin-main-preset-value"></span><span class="spin-main-preset-chevron" aria-hidden="true">›</span>`;
+      display.setAttribute("aria-label", "Current preset");
+      display.innerHTML = `<span class="spin-main-preset-kicker">PRESET</span><span class="spin-main-preset-value"></span><span class="spin-main-preset-chevron" aria-hidden="true">•</span>`;
       label.after(display);
     }
-
     const selected = select.selectedOptions[0]?.textContent?.trim() || "Preset";
     const value = display.querySelector(".spin-main-preset-value");
     if (value && value.textContent !== selected) value.textContent = selected;
+
+    const summary = tool.querySelector(".spin-choice-summary b");
+    if (summary) summary.textContent = "Edit wheel →";
   };
 
   const closeSwitcher = (root) => {
@@ -42,8 +42,7 @@
     if (!(row instanceof HTMLElement) || !(select instanceof HTMLSelectElement)) return;
 
     select.classList.add("spin-editor-preset-native");
-    const nativeLabel = select.closest("label");
-    if (nativeLabel instanceof HTMLElement) nativeLabel.classList.add("spin-editor-preset-native-label");
+    select.closest("label")?.classList.add("spin-editor-preset-native-label");
 
     let root = row.querySelector(".spin-preset-switcher");
     if (!(root instanceof HTMLElement)) {
@@ -51,7 +50,6 @@
       root.className = "spin-preset-switcher";
       root.innerHTML = `<button type="button" class="spin-preset-switch-trigger" aria-haspopup="listbox" aria-expanded="false"><span><small>CURRENT PRESET</small><strong></strong></span><b aria-hidden="true">⌄</b></button><div class="spin-preset-switch-menu" role="listbox" aria-label="Choose preset"></div>`;
       row.prepend(root);
-
       const trigger = root.querySelector(".spin-preset-switch-trigger");
       trigger?.addEventListener("click", (event) => {
         event.preventDefault();
@@ -79,25 +77,23 @@
           button.addEventListener("click", (event) => {
             event.preventDefault();
             event.stopPropagation();
-            const liveTool = document.querySelector(toolSelector);
-            const liveEditorSelect = liveTool?.querySelector("[data-spin-editor-preset]");
-            if (!(liveEditorSelect instanceof HTMLSelectElement)) return;
-            liveEditorSelect.value = button.dataset.value ?? "";
-            liveEditorSelect.dispatchEvent(new Event("change", { bubbles: true }));
+            const live = document.querySelector(".spin-wheel-tool [data-spin-editor-preset]");
+            if (!(live instanceof HTMLSelectElement)) return;
+            live.value = button.dataset.value ?? "";
+            live.dispatchEvent(new Event("change", { bubbles: true }));
             closeSwitcher(root);
           });
           menu.append(button);
         });
       }
     }
-
     const current = select.selectedOptions[0]?.textContent?.trim() || "Preset";
     const strong = root.querySelector(".spin-preset-switch-trigger strong");
     if (strong && strong.textContent !== current) strong.textContent = current;
   };
 
   const decorate = () => {
-    const tool = document.querySelector(toolSelector);
+    const tool = document.querySelector(".spin-wheel-tool");
     if (!(tool instanceof HTMLElement)) return;
     syncMainPresetDisplay(tool);
     syncEditorSwitcher(tool);
@@ -106,11 +102,9 @@
   document.addEventListener("click", (event) => {
     const target = event.target instanceof Element ? event.target : null;
     document.querySelectorAll(".spin-preset-switcher.open").forEach((root) => {
-      if (!(root instanceof HTMLElement) || root.contains(target)) return;
-      closeSwitcher(root);
+      if (root instanceof HTMLElement && !root.contains(target)) closeSwitcher(root);
     });
   });
-
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
     document.querySelectorAll(".spin-preset-switcher.open").forEach((root) => {
@@ -126,11 +120,7 @@
       decorate();
     });
   };
-
   new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true });
-  document.addEventListener("change", (event) => {
-    const target = event.target;
-    if (target instanceof HTMLSelectElement && (target.matches("[data-toolbox-field='spin-preset']") || target.matches("[data-spin-editor-preset]"))) schedule();
-  });
+  document.addEventListener("change", schedule);
   window.addEventListener("DOMContentLoaded", schedule, { once: true });
 })();
