@@ -18,6 +18,7 @@ await copyFile(resolve(root, "src/spin-wheel-world.css"), resolve(root, "dist/sp
 await copyFile(resolve(root, "src/spin-wheel-choice-sheet.css"), resolve(root, "dist/spin-wheel-choice-sheet.css"));
 await copyFile(resolve(root, "src/spin-wheel-preset-ui.css"), resolve(root, "dist/spin-wheel-preset-ui.css"));
 await copyFile(resolve(root, "src/spin-wheel-cleanup.css"), resolve(root, "dist/spin-wheel-cleanup.css"));
+await copyFile(resolve(root, "src/spin-wheel-final-fix.css"), resolve(root, "dist/spin-wheel-final-fix.css"));
 await copyFile(resolve(root, "src/spin-wheel-world.js"), resolve(root, "dist/spin-wheel-world.js"));
 await copyFile(resolve(root, "src/spin-wheel-preset-ui.js"), resolve(root, "dist/spin-wheel-preset-ui.js"));
 await copyFile(resolve(root, "src/spin-wheel-cleanup.js"), resolve(root, "dist/spin-wheel-cleanup.js"));
