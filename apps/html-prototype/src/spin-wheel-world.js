@@ -117,6 +117,46 @@
     }
   };
 
+  const decorateChoiceEditor = (tool) => {
+    const editor = tool.querySelector(".spin-choice-editor.open");
+    if (!editor) {
+      tool.querySelector(".spin-choice-sheet")?.remove();
+      tool.classList.remove("choice-sheet-open");
+      return;
+    }
+
+    let sheet = tool.querySelector(".spin-choice-sheet");
+    if (!sheet) {
+      sheet = document.createElement("section");
+      sheet.className = "spin-choice-sheet";
+      sheet.setAttribute("role", "dialog");
+      sheet.setAttribute("aria-modal", "true");
+      sheet.setAttribute("aria-label", "Edit Spin Wheel choices");
+      sheet.innerHTML = `<header class="spin-choice-sheet-header"><div><small>SPIN WHEEL</small><strong>Edit choices</strong></div><button type="button" data-action="toolbox-spin-edit" aria-label="Done editing choices">×</button></header><p class="spin-choice-sheet-hint">Add, remove, and review the choices on this wheel.</p>`;
+      tool.append(sheet);
+    }
+
+    if (editor.parentElement !== sheet) sheet.append(editor);
+    tool.classList.add("choice-sheet-open");
+
+    const list = editor.querySelector(".spin-choice-list");
+    if (list && !list.dataset.choiceSheetPrepared) {
+      list.dataset.choiceSheetPrepared = "true";
+      requestAnimationFrame(() => { list.scrollTop = list.scrollHeight; });
+    }
+
+    const input = editor.querySelector("#toolbox-spin-choice");
+    if (input && !input.dataset.choiceSheetFocused) {
+      input.dataset.choiceSheetFocused = "true";
+      input.setAttribute("enterkeyhint", "done");
+      input.setAttribute("autocomplete", "off");
+      input.setAttribute("aria-label", "New Spin Wheel choice");
+      requestAnimationFrame(() => {
+        try { input.focus({ preventScroll: true }); } catch { input.focus(); }
+      });
+    }
+  };
+
   const decorate = () => {
     const tool = document.querySelector(".spin-wheel-tool");
     if (!tool) return;
@@ -153,6 +193,7 @@
     tool.classList.toggle("is-spinning", primary?.textContent?.includes("Spinning") ?? false);
 
     decorateChoiceIcons(tool);
+    decorateChoiceEditor(tool);
 
     const winnerLabel = tool.querySelector(".spin-winner-card strong");
     if (winnerLabel) {
@@ -167,6 +208,17 @@
       icon.textContent = emojiFor(raw);
     }
   };
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" || event.isComposing) return;
+    const input = event.target instanceof HTMLInputElement ? event.target : null;
+    if (!input?.matches("#toolbox-spin-choice")) return;
+    const editor = input.closest(".spin-choice-editor.open");
+    const add = editor?.querySelector("[data-action='toolbox-spin-add']");
+    if (!add || !input.value.trim()) return;
+    event.preventDefault();
+    add.click();
+  });
 
   const observer = new MutationObserver(() => requestAnimationFrame(decorate));
   observer.observe(document.documentElement, { subtree: true, childList: true });
