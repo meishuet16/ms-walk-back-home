@@ -1,0 +1,206 @@
+/* Spin Wheel choice editor — focused in-world sheet instead of an inline accordion. */
+.spin-wheel-tool.choice-sheet-open { position: relative; }
+.spin-wheel-tool.choice-sheet-open > :not(.spin-choice-sheet) { filter: brightness(.62) saturate(.78); pointer-events: none; user-select: none; }
+
+.spin-choice-sheet {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid rgba(220, 170, 91, .52);
+  border-radius: 5px;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0 1px, transparent 1px 4px),
+    linear-gradient(180deg, #1f2623 0%, #151a18 100%);
+  box-shadow:
+    0 18px 42px rgba(0,0,0,.5),
+    0 0 0 1px rgba(27,19,14,.96),
+    inset 0 1px rgba(255,238,203,.04);
+  animation: spin-choice-sheet-in .22s cubic-bezier(.2,.8,.2,1) both;
+}
+
+.spin-choice-sheet-header {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 42px;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 13px 11px;
+  border-bottom: 1px solid rgba(207,159,88,.22);
+  background: linear-gradient(180deg, rgba(52,42,34,.82), rgba(29,31,28,.72));
+}
+.spin-choice-sheet-header > div { display: grid; gap: 2px; min-width: 0; }
+.spin-choice-sheet-header small {
+  color: #ba8448;
+  font-family: ui-monospace, "Courier New", monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .16em;
+}
+.spin-choice-sheet-header strong {
+  color: #f2dfbc;
+  font-family: ui-monospace, "Courier New", monospace;
+  font-size: 20px;
+  letter-spacing: -.02em;
+}
+.spin-choice-sheet-header button {
+  width: 42px;
+  min-width: 42px;
+  min-height: 42px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(213,164,91,.48);
+  border-radius: 4px;
+  background: linear-gradient(180deg, #4a3729, #2f2822);
+  color: #f1d8ac;
+  font-size: 20px;
+  box-shadow: inset 0 1px rgba(255,255,255,.06), 0 2px 0 rgba(0,0,0,.25);
+}
+
+.spin-choice-sheet-hint {
+  margin: 0;
+  padding: 10px 13px 0;
+  color: #9f927a;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.spin-choice-sheet .spin-choice-editor.open {
+  display: flex !important;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 11px 13px 13px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.spin-choice-sheet .spin-choice-list {
+  flex: 1;
+  min-height: 118px;
+  max-height: none;
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  margin: 0;
+  padding: 0 2px 2px 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.spin-choice-sheet .spin-choice-list li {
+  min-height: 48px;
+  padding: 7px 8px 7px 9px;
+  gap: 10px;
+  border: 1px solid rgba(203,153,82,.18);
+  border-radius: 4px;
+  background: linear-gradient(180deg, #202724, #181d1c);
+  box-shadow: inset 0 1px rgba(255,255,255,.018);
+}
+.spin-choice-sheet .spin-choice-list li > span:first-child {
+  min-width: 0;
+  flex: 1;
+  color: #eadbbf;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.spin-choice-sheet .spin-choice-list li > button {
+  width: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border: 1px solid rgba(193,139,70,.34);
+  border-radius: 4px;
+  background: #302922;
+  color: #d9bd91;
+  font-size: 17px;
+}
+.spin-choice-sheet .spin-choice-list li > button:active { transform: translateY(1px); }
+.spin-choice-sheet .spin-choice-list li.empty {
+  display: grid;
+  place-items: center;
+  min-height: 112px;
+  color: #8f846f;
+  border-style: dashed;
+  text-align: center;
+}
+
+.spin-choice-sheet .spin-choice-add {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(205,157,86,.18);
+  background: linear-gradient(180deg, rgba(21,26,24,0), #151a18 24%);
+}
+.spin-choice-sheet .spin-choice-add input {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid rgba(209,160,89,.4);
+  border-radius: 4px;
+  outline: none;
+  background: #101716;
+  color: #f0dfbf;
+  font-size: 16px;
+  box-shadow: inset 0 1px 4px rgba(0,0,0,.32);
+}
+.spin-choice-sheet .spin-choice-add input::placeholder { color: #746c5e; }
+.spin-choice-sheet .spin-choice-add input:focus {
+  border-color: #d3a05b;
+  box-shadow: 0 0 0 2px rgba(211,160,91,.14), inset 0 1px 4px rgba(0,0,0,.32);
+}
+.spin-choice-sheet .spin-choice-add button {
+  min-width: 78px;
+  min-height: 48px;
+  padding: 8px 14px;
+  border: 1px solid #d0a05c;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #d8ac67, #b97937);
+  color: #261b14;
+  font-family: ui-monospace, "Courier New", monospace;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: inset 0 1px rgba(255,245,218,.2), 0 3px 0 #55371f;
+}
+.spin-choice-sheet .spin-choice-add button:active { transform: translateY(2px); box-shadow: inset 0 1px rgba(255,245,218,.18), 0 1px 0 #55371f; }
+
+@keyframes spin-choice-sheet-in {
+  from { opacity: 0; transform: translateY(8px) scale(.985); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 700px) {
+  .spin-choice-sheet {
+    position: fixed;
+    inset: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom));
+    max-width: 470px;
+    margin-inline: auto;
+  }
+  .spin-choice-sheet-header { padding: 11px 11px 10px; }
+  .spin-choice-sheet-hint { padding: 9px 11px 0; }
+  .spin-choice-sheet .spin-choice-editor.open { padding: 10px 11px 11px; }
+  .spin-choice-sheet .spin-choice-list li { min-height: 52px; }
+  .spin-choice-sheet .spin-choice-list li > button { width: 44px; min-width: 44px; min-height: 44px; }
+  .spin-choice-sheet .spin-choice-add { grid-template-columns: minmax(0,1fr) 76px; }
+  .spin-choice-sheet .spin-choice-add input,
+  .spin-choice-sheet .spin-choice-add button { min-height: 50px; }
+}
+
+@media (max-width: 360px) {
+  .spin-choice-sheet .spin-choice-add { grid-template-columns: 1fr; }
+  .spin-choice-sheet .spin-choice-add button { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin-choice-sheet { animation: none; }
+}
