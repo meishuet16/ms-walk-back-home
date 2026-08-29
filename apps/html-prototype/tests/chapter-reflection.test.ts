@@ -29,7 +29,7 @@ test("only authored chapter entries route to their implementation", () => {
   assert.ok(march30);
   const march30Route = routeForestEntry(march30);
   assert.equal(march30Route.kind, "implemented-chapter");
-  if (march30Route.kind === "implemented-chapter") assert.equal(march30Route.chapter.runtimeScene, "330-corridor");
+  if (march30Route.kind === "implemented-chapter") assert.equal(march30Route.chapter.runtimeScene, "330");
 });
 
 test("chapter reflection choices select different quotes without changing the historical event", () => {
