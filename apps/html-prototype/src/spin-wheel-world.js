@@ -44,13 +44,14 @@
     .map((node) => rawLabelText(node))
     .filter(Boolean);
 
-  const basePalette = ["#536f5e", "#c16e4d", "#c9a66d", "#d8b26f", "#445c78", "#9b604b", "#6f8c80", "#8b7058"];
-  const highlightPalette = ["#73977d", "#e08a5c", "#e0bd79", "#efc879", "#5f7fa6", "#b9785d", "#8cab9e", "#a58a6d"];
+  /* Muted enamel colours sampled toward the approved reference: antique mustard,
+     oxidised teal, brick red, moss and weathered blue rather than bright pie-chart colours. */
+  const basePalette = ["#9b7936", "#315d56", "#7b3f31", "#52664c", "#3f5563", "#8b643d", "#48665f", "#6d4b3c"];
+  const highlightPalette = ["#c49a46", "#42786e", "#9b503d", "#6e825f", "#536f7e", "#aa7a49", "#5d8077", "#875f4b"];
   const originalFillText = CanvasRenderingContext2D.prototype.fillText;
   const originalClearRect = CanvasRenderingContext2D.prototype.clearRect;
   const originalFill = CanvasRenderingContext2D.prototype.fill;
   const segmentState = new WeakMap();
-
   const isWheelContext = (ctx) => ctx.canvas instanceof HTMLCanvasElement && ctx.canvas.classList.contains("spin-wheel-canvas");
 
   CanvasRenderingContext2D.prototype.clearRect = function(...args) {
@@ -63,7 +64,6 @@
     const style = typeof this.fillStyle === "string" ? this.fillStyle.toLowerCase() : "";
     const nativePalette = ["#d7ad70", "#8f7154", "#b7c7b0", "#a98968", "#d5c69a", "#6f887e"];
     if (!nativePalette.includes(style)) return originalFill.apply(this, args);
-
     const state = segmentState.get(this) ?? { index: 0 };
     const index = state.index++;
     segmentState.set(this, state);
@@ -75,8 +75,8 @@
     const previousShadowBlur = this.shadowBlur;
     this.fillStyle = (selected ? highlightPalette : basePalette)[index % basePalette.length];
     if (selected) {
-      this.shadowColor = "rgba(255, 207, 106, .95)";
-      this.shadowBlur = 17;
+      this.shadowColor = "rgba(210, 160, 74, .78)";
+      this.shadowBlur = 14;
     }
     const result = originalFill.apply(this, args);
     this.fillStyle = previous;
@@ -90,29 +90,25 @@
       if (maxWidth === undefined) return originalFillText.call(this, text, x, y);
       return originalFillText.call(this, text, x, y, maxWidth);
     }
-
     const label = text.trim();
     if (!label) return;
     const matrix = this.getTransform();
     const px = matrix.e;
     const py = matrix.f;
-    const emoji = emojiFor(label);
-    const winner = winnerRawText();
-    const selected = winner === label;
-
+    const selected = winnerRawText() === label;
     this.save();
     this.resetTransform();
     this.textAlign = "center";
     this.textBaseline = "middle";
-    this.shadowColor = selected ? "rgba(255, 218, 132, .9)" : "rgba(0,0,0,.48)";
-    this.shadowBlur = selected ? 8 : 2;
-    this.fillStyle = selected ? "#fff0bd" : "#f1dfbc";
+    this.shadowColor = "rgba(0,0,0,.5)";
+    this.shadowBlur = selected ? 5 : 2;
+    this.fillStyle = selected ? "#fff0bd" : "#ead8ae";
     this.font = "700 16px Georgia, 'Times New Roman', serif";
     const display = label.length > 8 ? label.slice(0, 7) + "…" : label;
     originalFillText.call(this, display, px, py - 10, 100);
-    this.shadowBlur = selected ? 9 : 0;
+    this.shadowBlur = 0;
     this.font = "24px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif";
-    originalFillText.call(this, emoji, px, py + 17);
+    originalFillText.call(this, emojiFor(label), px, py + 17);
     this.restore();
   };
 
@@ -133,13 +129,44 @@
       if (icon.textContent !== nextIcon) icon.textContent = nextIcon;
       label.dataset.spinRawLabel = raw;
     });
-
     const summary = tool.querySelector(".spin-choice-summary small");
     if (summary) {
       const labels = currentChoices().slice(0, 3);
       const nextSummary = labels.length ? labels.map((value) => `${emojiFor(value)} ${value}`).join("  ·  ") : "Add a choice to begin.";
       if (summary.textContent !== nextSummary) summary.textContent = nextSummary;
     }
+  };
+
+  const buildPresetHub = (tool, sheet) => {
+    let hub = sheet.querySelector(".spin-editor-preset-hub");
+    const sourceSelect = tool.querySelector(".spin-preset-bar [data-toolbox-field='spin-preset']");
+    if (!hub) {
+      hub = document.createElement("section");
+      hub.className = "spin-editor-preset-hub";
+      hub.innerHTML = `<div class="spin-editor-section-title"><span>PRESET</span><small>Switch or manage a saved wheel</small></div><div class="spin-editor-preset-row"><label><span class="sr-only">Preset</span><select data-spin-editor-preset></select></label><button type="button" data-action="toolbox-preset-menu" class="spin-manage-presets">Manage</button></div><div class="spin-preset-inline-slot"></div>`;
+      const editor = sheet.querySelector(".spin-choice-editor");
+      if (editor) sheet.insertBefore(hub, editor);
+      else sheet.append(hub);
+    }
+    const clone = hub.querySelector("[data-spin-editor-preset]");
+    if (clone instanceof HTMLSelectElement && sourceSelect instanceof HTMLSelectElement) {
+      const signature = [...sourceSelect.options].map((option) => `${option.value}:${option.text}:${option.selected}`).join("|");
+      if (clone.dataset.signature !== signature) {
+        clone.innerHTML = sourceSelect.innerHTML;
+        clone.value = sourceSelect.value;
+        clone.dataset.signature = signature;
+      }
+      if (!clone.dataset.bound) {
+        clone.dataset.bound = "true";
+        clone.addEventListener("change", () => {
+          const liveSelect = document.querySelector(".spin-wheel-tool .spin-preset-bar [data-toolbox-field='spin-preset']");
+          if (!(liveSelect instanceof HTMLSelectElement)) return;
+          liveSelect.value = clone.value;
+          liveSelect.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+      }
+    }
+    return hub;
   };
 
   const decorateChoiceEditor = (tool) => {
@@ -149,66 +176,51 @@
       tool.classList.remove("choice-sheet-open");
       return;
     }
-
     let sheet = tool.querySelector(".spin-choice-sheet");
     if (!sheet) {
       sheet = document.createElement("section");
       sheet.className = "spin-choice-sheet";
       sheet.setAttribute("role", "dialog");
       sheet.setAttribute("aria-modal", "true");
-      sheet.setAttribute("aria-label", "Edit Spin Wheel choices");
-      sheet.innerHTML = `<header class="spin-choice-sheet-header"><div><small>SPIN WHEEL</small><strong>Edit choices</strong></div><button type="button" data-action="toolbox-spin-edit" aria-label="Done editing choices">×</button></header><p class="spin-choice-sheet-hint">Each result stays in the wheel until you keep it. Keeping a result removes that choice from the next round.</p>`;
+      sheet.setAttribute("aria-label", "Edit Spin Wheel");
+      sheet.innerHTML = `<header class="spin-choice-sheet-header"><div><small>SPIN WHEEL</small><strong>Edit wheel</strong></div><button type="button" data-action="toolbox-spin-edit" aria-label="Done editing Spin Wheel">×</button></header><p class="spin-choice-sheet-hint">Choose a preset, edit its choices, or create another wheel — all in one place.</p>`;
       tool.append(sheet);
     }
-
     if (editor.parentElement !== sheet) sheet.append(editor);
     tool.classList.add("choice-sheet-open");
+    const hub = buildPresetHub(tool, sheet);
+    const menu = tool.querySelector(".spin-preset-menu");
+    const slot = hub.querySelector(".spin-preset-inline-slot");
+    if (menu && slot && menu.parentElement !== slot) slot.append(menu);
+    hub.classList.toggle("is-managing", Boolean(menu));
+
+    let choicesTitle = sheet.querySelector(".spin-editor-choices-title");
+    if (!choicesTitle) {
+      choicesTitle = document.createElement("div");
+      choicesTitle.className = "spin-editor-section-title spin-editor-choices-title";
+      choicesTitle.innerHTML = `<span>CHOICES</span><small>Edit what can be picked</small>`;
+      editor.prepend(choicesTitle);
+    }
 
     const list = editor.querySelector(".spin-choice-list");
     if (list && !list.dataset.choiceSheetPrepared) {
       list.dataset.choiceSheetPrepared = "true";
       requestAnimationFrame(() => { list.scrollTop = list.scrollHeight; });
     }
-
     const input = editor.querySelector("#toolbox-spin-choice");
-    if (input && !input.dataset.choiceSheetFocused) {
-      input.dataset.choiceSheetFocused = "true";
+    if (input instanceof HTMLInputElement) {
       input.setAttribute("enterkeyhint", "done");
       input.setAttribute("autocomplete", "off");
       input.setAttribute("aria-label", "New Spin Wheel choice");
-      requestAnimationFrame(() => {
-        try { input.focus({ preventScroll: true }); } catch { input.focus(); }
-      });
     }
   };
 
   const decoratePresetMenu = (tool) => {
     const menu = tool.querySelector(".spin-preset-menu");
-    if (!menu) {
-      tool.querySelector(".spin-preset-sheet")?.remove();
-      tool.classList.remove("preset-sheet-open");
-      return;
-    }
-
-    let sheet = tool.querySelector(".spin-preset-sheet");
-    if (!sheet) {
-      sheet = document.createElement("section");
-      sheet.className = "spin-preset-sheet";
-      sheet.setAttribute("role", "dialog");
-      sheet.setAttribute("aria-modal", "true");
-      sheet.setAttribute("aria-label", "Spin Wheel preset settings");
-      sheet.innerHTML = `<header class="spin-choice-sheet-header"><div><small>SPIN WHEEL</small><strong>Preset settings</strong></div><button type="button" data-action="toolbox-preset-menu" aria-label="Close preset settings">×</button></header><p class="spin-choice-sheet-hint">Keep presets for different situations, then switch between them from the wheel.</p><div class="spin-preset-current"><small>CURRENT PRESET</small><strong></strong></div>`;
-      tool.append(sheet);
-    }
-
-    if (menu.parentElement !== sheet) sheet.append(menu);
-    tool.classList.add("preset-sheet-open");
-
-    const select = tool.querySelector("[data-toolbox-field='spin-preset']");
-    const currentName = select instanceof HTMLSelectElement ? select.selectedOptions[0]?.textContent?.trim() ?? "Current preset" : "Current preset";
-    const current = sheet.querySelector(".spin-preset-current strong");
-    if (current && current.textContent !== currentName) current.textContent = currentName;
-
+    if (!menu) return;
+    const sheet = tool.querySelector(".spin-choice-sheet");
+    const slot = sheet?.querySelector(".spin-preset-inline-slot");
+    if (slot && menu.parentElement !== slot) slot.append(menu);
     const input = menu.querySelector("[data-toolbox-field='spin-preset-name']");
     if (input instanceof HTMLInputElement) {
       input.placeholder = "New preset name…";
@@ -222,7 +234,6 @@
         label.prepend(title);
       }
     }
-
     const create = menu.querySelector("[data-action='toolbox-preset-create']");
     const rename = menu.querySelector("[data-action='toolbox-preset-rename']");
     const remove = menu.querySelector("[data-action='toolbox-preset-delete']");
@@ -232,9 +243,11 @@
   };
 
   const decorateWinner = (tool) => {
-    const winnerLabel = tool.querySelector(".spin-winner-card strong");
-    if (winnerLabel instanceof HTMLElement) {
-      const raw = winnerRawText();
+    const card = tool.querySelector(".spin-winner-card");
+    if (!card) return;
+    const winnerLabel = card.querySelector("strong");
+    const raw = winnerRawText();
+    if (winnerLabel instanceof HTMLElement && raw) {
       let icon = winnerLabel.querySelector(".spin-winner-emoji");
       if (!icon) {
         icon = document.createElement("span");
@@ -242,22 +255,39 @@
         icon.setAttribute("aria-hidden", "true");
         winnerLabel.prepend(icon);
       }
-      const nextIcon = emojiFor(raw);
-      if (icon.textContent !== nextIcon) icon.textContent = nextIcon;
+      if (icon.textContent !== emojiFor(raw)) icon.textContent = emojiFor(raw);
     }
+    const nativeKeep = card.querySelector("[data-action='toolbox-spin-keep']");
+    const actions = nativeKeep?.parentElement;
+    if (!(nativeKeep instanceof HTMLButtonElement) || !actions) return;
+    nativeKeep.textContent = "Use result";
+    nativeKeep.classList.add("spin-use-result");
+    nativeKeep.title = "Accept this result and keep it in the wheel";
+    nativeKeep.setAttribute("aria-label", "Use result and keep it in the wheel");
 
-    const keep = tool.querySelector("[data-action='toolbox-spin-keep']");
-    if (keep instanceof HTMLButtonElement) {
-      keep.title = "Use this result and remove it from the next round";
-      keep.setAttribute("aria-label", "Keep result and remove it from the next round");
-      const actions = keep.parentElement;
-      if (actions && !actions.parentElement?.querySelector(".spin-keep-hint")) {
-        const hint = document.createElement("small");
-        hint.className = "spin-keep-hint";
-        hint.textContent = "Keep = remove from next round";
-        actions.after(hint);
+    if (!actions.querySelector(".spin-use-remove")) {
+      const winnerIndex = currentChoices().findIndex((choice) => choice === raw);
+      if (winnerIndex >= 0) {
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "spin-use-remove";
+        remove.dataset.action = "toolbox-spin-remove";
+        remove.dataset.index = String(winnerIndex);
+        remove.textContent = "Use & remove";
+        remove.title = "Accept this result and remove it from the next round";
+        actions.append(remove);
       }
     }
+    if (!actions.querySelector(".spin-result-back")) {
+      const back = document.createElement("button");
+      back.type = "button";
+      back.className = "spin-result-back";
+      back.dataset.action = "toolbox-spin-keep";
+      back.textContent = "← Back to wheel";
+      back.title = "Close this result without changing the wheel";
+      actions.prepend(back);
+    }
+    card.querySelector(".spin-keep-hint")?.remove();
   };
 
   const decorate = () => {
@@ -274,14 +304,19 @@
       header.prepend(back);
     }
 
-    const more = tool.querySelector("[data-action='toolbox-preset-menu']");
-    if (more && !more.closest(".spin-preset-sheet") && more.textContent !== "Edit") more.textContent = "Edit";
+    const topEdit = tool.querySelector(".spin-preset-bar > [data-action='toolbox-preset-menu']");
+    if (topEdit) {
+      topEdit.setAttribute("data-action", "toolbox-spin-edit");
+      topEdit.textContent = "Edit";
+      topEdit.setAttribute("aria-label", "Edit wheel, preset and choices");
+    }
+    const presetLabel = tool.querySelector(".spin-preset-bar label");
+    if (presetLabel) presetLabel.classList.add("spin-main-preset-label");
 
     const stage = tool.querySelector(".spin-wheel-stage");
     const primary = tool.querySelector(".spin-primary-action");
     const summary = tool.querySelector(".spin-choice-summary");
     if (stage && primary && summary && primary.previousElementSibling !== stage) stage.after(primary);
-
     const canvas = stage?.querySelector(".spin-wheel-canvas");
     if (canvas && !canvas.closest(".spin-wheel-frame")) {
       const frame = document.createElement("div");
@@ -289,7 +324,6 @@
       canvas.before(frame);
       frame.append(canvas);
     }
-
     const winner = tool.querySelector(".spin-winner-card");
     if (winner && stage && winner.parentElement !== stage) stage.append(winner);
     tool.classList.toggle("has-winner", Boolean(winner));
@@ -300,38 +334,6 @@
     decoratePresetMenu(tool);
     decorateWinner(tool);
   };
-
-  const removeKeptResultFromNextRound = (winner) => {
-    const tool = document.querySelector(".spin-wheel-tool");
-    if (!tool || !winner) return;
-    const rows = [...tool.querySelectorAll(".spin-choice-list li:not(.empty)")];
-    const row = rows.find((item) => rawLabelText(item.querySelector("span")) === winner);
-    const remove = row?.querySelector("[data-action='toolbox-spin-remove']");
-    if (!(remove instanceof HTMLButtonElement)) return;
-    remove.click();
-    setTimeout(() => {
-      const nextTool = document.querySelector(".spin-wheel-tool");
-      if (!nextTool) return;
-      const remaining = currentChoices().length;
-      nextTool.querySelector(".spin-round-note")?.remove();
-      const note = document.createElement("div");
-      note.className = "spin-round-note";
-      note.setAttribute("role", "status");
-      note.textContent = `${emojiFor(winner)} ${winner} is out · ${remaining} left`;
-      const stage = nextTool.querySelector(".spin-wheel-stage");
-      if (stage) stage.after(note);
-      setTimeout(() => note.remove(), 2400);
-    }, 0);
-  };
-
-  document.addEventListener("click", (event) => {
-    const target = event.target instanceof Element ? event.target.closest("[data-action]") : null;
-    if (!target) return;
-    if (target.getAttribute("data-action") === "toolbox-spin-keep") {
-      const winner = winnerRawText();
-      setTimeout(() => removeKeptResultFromNextRound(winner), 0);
-    }
-  });
 
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" || event.isComposing) return;
@@ -361,7 +363,6 @@
       decorate();
     });
   };
-
   const observer = new MutationObserver((mutations) => {
     if (!mutations.some((mutation) => mutation.type === "childList" && (mutation.addedNodes.length || mutation.removedNodes.length))) return;
     scheduleDecorate();
