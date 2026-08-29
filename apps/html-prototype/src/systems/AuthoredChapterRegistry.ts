@@ -2,6 +2,7 @@ import type { ChapterDefinition, ReflectionChoice } from "../types.js";
 import { april05Assets, april05Chapter, april05EchoActions, april05EchoAnchors, april05MainMemoryActions, april05ReflectionChoices, resolveApril05Actions, type April05EchoId } from "../fixtures/april05Chapter.js";
 import { april06Assets, april06Chapter, april06EchoActions, april06MainMemoryActions, april06ReflectionChoices, resolveApril06Actions } from "../fixtures/april06Chapter.js";
 import { april25Assets, april25Chapter, april25EchoAnchors, april25EchoAvailability, april25EchoPortraitSequenceIds, april25PortraitSequences, april25ReflectionChoices, resolveApril25Actions } from "../fixtures/april25Chapter.js";
+import { march30EchoAnchors, march30EchoAvailability, march30EchoPortraitSequenceIds, march30PortraitSequences, march30RefinedAssets, march30RefinedChapter, march30RefinedReflectionChoices, resolveMarch30RefinedActions } from "../fixtures/march30RefinedChapter.js";
 import { may23Assets, may23Chapter, may23EchoAnchors, may23ReflectionChoices, resolveMay23Actions } from "../fixtures/may23Chapter.js";
 import { june24Assets, june24Chapter, june24EchoDialogues, june24ReflectionChoices, resolveJune24Actions } from "../fixtures/june24Chapter.js";
 import { june25Assets, june25Chapter, june25EchoAnchors, june25EchoAvailability, june25EchoPortraitSequenceIds, june25PortraitSequences, june25ReflectionChoices, resolveJune25Actions } from "../fixtures/june25Chapter.js";
@@ -46,6 +47,19 @@ export function authoredEchoIsAvailable(
 }
 
 export const authoredRuntimeByScene: Record<string, AuthoredRuntimeDefinition> = {
+  "330": {
+    chapter: march30RefinedChapter,
+    assets: march30RefinedAssets,
+    resolveActions: (layout, mode) => resolveMarch30RefinedActions(layout, mode),
+    reflectionChoices: march30RefinedReflectionChoices,
+    echoAnchors: march30EchoAnchors,
+    mainInteractionId: "march30-bench-memory",
+    triggerId: "main-memory",
+    portraitSequences: march30PortraitSequences,
+    echoPortraitSequenceIds: march30EchoPortraitSequenceIds,
+    echoAvailability: march30EchoAvailability,
+    reflectionAfterEchoId: "elevator"
+  },
   "405": {
     chapter: april05Chapter,
     assets: april05Assets,
