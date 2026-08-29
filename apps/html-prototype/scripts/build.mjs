@@ -26,6 +26,6 @@ await writeFile(resolve(root, "dist/config.js"), `window.WALK_BACK_HOME_CONFIG =
   authProvider: process.env.WALK_BACK_HOME_AUTH_PROVIDER ?? "local",
   supabaseUrl: process.env.SUPABASE_URL ?? "",
   supabaseAnonKey: process.env.SUPABASE_ANON_KEY ?? "",
-  privateMediaBucket: process.env.PRIVATE_MEDIA_BUCKET ?? "walk-private-media"
+  privateMediaBucket: process.env.SUPABASE_PRIVATE_MEDIA_BUCKET ?? "walk-private-media"
 }, null, 2)};\n`);
 console.log("Built isolated HTML prototype to apps/html-prototype/dist");
