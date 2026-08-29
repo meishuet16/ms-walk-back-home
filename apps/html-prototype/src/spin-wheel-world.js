@@ -21,31 +21,27 @@
 
   const rawLabelText = (node) => {
     if (!(node instanceof HTMLElement)) return "";
-    let text = "";
-    for (const child of node.childNodes) {
-      if (child instanceof HTMLElement && child.classList.contains("spin-choice-emoji")) continue;
-      text += child.textContent ?? "";
-    }
-    return text.trim();
+    return [...node.childNodes]
+      .filter((child) => !(child instanceof HTMLElement && child.classList.contains("spin-choice-emoji")))
+      .map((child) => child.textContent ?? "")
+      .join("")
+      .trim();
   };
 
   const winnerRawText = () => {
     const node = document.querySelector(".spin-wheel-tool .spin-winner-card strong");
     if (!(node instanceof HTMLElement)) return "";
-    let text = "";
-    for (const child of node.childNodes) {
-      if (child instanceof HTMLElement && child.classList.contains("spin-winner-emoji")) continue;
-      text += child.textContent ?? "";
-    }
-    return text.trim();
+    return [...node.childNodes]
+      .filter((child) => !(child instanceof HTMLElement && child.classList.contains("spin-winner-emoji")))
+      .map((child) => child.textContent ?? "")
+      .join("")
+      .trim();
   };
 
   const currentChoices = () => [...document.querySelectorAll(".spin-wheel-tool .spin-choice-list li:not(.empty) > span")]
     .map((node) => rawLabelText(node))
     .filter(Boolean);
 
-  /* Muted enamel colours sampled toward the approved reference: antique mustard,
-     oxidised teal, brick red, moss and weathered blue rather than bright pie-chart colours. */
   const basePalette = ["#9b7936", "#315d56", "#7b3f31", "#52664c", "#3f5563", "#8b643d", "#48665f", "#6d4b3c"];
   const highlightPalette = ["#c49a46", "#42786e", "#9b503d", "#6e825f", "#536f7e", "#aa7a49", "#5d8077", "#875f4b"];
   const originalFillText = CanvasRenderingContext2D.prototype.fillText;
@@ -75,7 +71,7 @@
     const previousShadowBlur = this.shadowBlur;
     this.fillStyle = (selected ? highlightPalette : basePalette)[index % basePalette.length];
     if (selected) {
-      this.shadowColor = "rgba(210, 160, 74, .78)";
+      this.shadowColor = "rgba(210,160,74,.78)";
       this.shadowBlur = 14;
     }
     const result = originalFill.apply(this, args);
@@ -87,14 +83,15 @@
 
   CanvasRenderingContext2D.prototype.fillText = function(text, x, y, maxWidth) {
     if (!isWheelContext(this) || typeof text !== "string") {
-      if (maxWidth === undefined) return originalFillText.call(this, text, x, y);
-      return originalFillText.call(this, text, x, y, maxWidth);
+      return maxWidth === undefined
+        ? originalFillText.call(this, text, x, y)
+        : originalFillText.call(this, text, x, y, maxWidth);
     }
     const label = text.trim();
     if (!label) return;
     const matrix = this.getTransform();
-    const px = matrix.e;
-    const py = matrix.f;
+    const px = matrix.a * x + matrix.c * y + matrix.e;
+    const py = matrix.b * x + matrix.d * y + matrix.f;
     const selected = winnerRawText() === label;
     this.save();
     this.resetTransform();
@@ -103,11 +100,11 @@
     this.shadowColor = "rgba(0,0,0,.5)";
     this.shadowBlur = selected ? 5 : 2;
     this.fillStyle = selected ? "#fff0bd" : "#ead8ae";
-    this.font = "700 16px Georgia, 'Times New Roman', serif";
-    const display = label.length > 8 ? label.slice(0, 7) + "…" : label;
-    originalFillText.call(this, display, px, py - 10, 100);
+    this.font = "700 15px Georgia, 'Times New Roman', serif";
+    const display = label.length > 9 ? `${label.slice(0, 8)}…` : label;
+    originalFillText.call(this, display, px, py - 10, 112);
     this.shadowBlur = 0;
-    this.font = "24px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif";
+    this.font = "23px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif";
     originalFillText.call(this, emojiFor(label), px, py + 17);
     this.restore();
   };
@@ -127,13 +124,12 @@
       }
       const nextIcon = emojiFor(raw);
       if (icon.textContent !== nextIcon) icon.textContent = nextIcon;
-      label.dataset.spinRawLabel = raw;
     });
     const summary = tool.querySelector(".spin-choice-summary small");
     if (summary) {
       const labels = currentChoices().slice(0, 3);
-      const nextSummary = labels.length ? labels.map((value) => `${emojiFor(value)} ${value}`).join("  ·  ") : "Add a choice to begin.";
-      if (summary.textContent !== nextSummary) summary.textContent = nextSummary;
+      const text = labels.length ? labels.map((value) => `${emojiFor(value)} ${value}`).join(" · ") : "Add a choice to begin.";
+      if (summary.textContent !== text) summary.textContent = text;
     }
   };
 
@@ -169,7 +165,7 @@
     return hub;
   };
 
-  const decorateChoiceEditor = (tool) => {
+  const decorateEditor = (tool) => {
     const editor = tool.querySelector(".spin-choice-editor.open");
     if (!editor) {
       tool.querySelector(".spin-choice-sheet")?.remove();
@@ -183,7 +179,7 @@
       sheet.setAttribute("role", "dialog");
       sheet.setAttribute("aria-modal", "true");
       sheet.setAttribute("aria-label", "Edit Spin Wheel");
-      sheet.innerHTML = `<header class="spin-choice-sheet-header"><div><small>SPIN WHEEL</small><strong>Edit wheel</strong></div><button type="button" data-action="toolbox-spin-edit" aria-label="Done editing Spin Wheel">×</button></header><p class="spin-choice-sheet-hint">Choose a preset, edit its choices, or create another wheel — all in one place.</p>`;
+      sheet.innerHTML = `<header class="spin-choice-sheet-header"><div><small>SPIN WHEEL</small><strong>Edit wheel</strong></div><button type="button" class="spin-editor-close" data-action="toolbox-spin-edit" aria-label="Done editing Spin Wheel">×</button></header><p class="spin-choice-sheet-hint">Switch presets, manage saved wheels, and edit choices here.</p>`;
       tool.append(sheet);
     }
     if (editor.parentElement !== sheet) sheet.append(editor);
@@ -193,106 +189,25 @@
     const slot = hub.querySelector(".spin-preset-inline-slot");
     if (menu && slot && menu.parentElement !== slot) slot.append(menu);
     hub.classList.toggle("is-managing", Boolean(menu));
+    const manage = hub.querySelector(".spin-manage-presets");
+    if (manage) manage.textContent = menu ? "Done" : "Manage";
 
-    let choicesTitle = sheet.querySelector(".spin-editor-choices-title");
-    if (!choicesTitle) {
-      choicesTitle = document.createElement("div");
-      choicesTitle.className = "spin-editor-section-title spin-editor-choices-title";
-      choicesTitle.innerHTML = `<span>CHOICES</span><small>Edit what can be picked</small>`;
-      editor.prepend(choicesTitle);
-    }
-
-    const list = editor.querySelector(".spin-choice-list");
-    if (list && !list.dataset.choiceSheetPrepared) {
-      list.dataset.choiceSheetPrepared = "true";
-      requestAnimationFrame(() => { list.scrollTop = list.scrollHeight; });
+    if (!editor.querySelector(".spin-editor-choices-title")) {
+      const title = document.createElement("div");
+      title.className = "spin-editor-section-title spin-editor-choices-title";
+      title.innerHTML = `<span>CHOICES</span><small>Edit what can be picked</small>`;
+      editor.prepend(title);
     }
     const input = editor.querySelector("#toolbox-spin-choice");
     if (input instanceof HTMLInputElement) {
       input.setAttribute("enterkeyhint", "done");
       input.setAttribute("autocomplete", "off");
-      input.setAttribute("aria-label", "New Spin Wheel choice");
     }
-  };
-
-  const decoratePresetMenu = (tool) => {
-    const menu = tool.querySelector(".spin-preset-menu");
-    if (!menu) return;
-    const sheet = tool.querySelector(".spin-choice-sheet");
-    const slot = sheet?.querySelector(".spin-preset-inline-slot");
-    if (slot && menu.parentElement !== slot) slot.append(menu);
-    const input = menu.querySelector("[data-toolbox-field='spin-preset-name']");
-    if (input instanceof HTMLInputElement) {
-      input.placeholder = "New preset name…";
-      input.setAttribute("autocomplete", "off");
-      input.setAttribute("enterkeyhint", "done");
-      const label = input.closest("label");
-      if (label && !label.querySelector(".spin-preset-new-title")) {
-        const title = document.createElement("span");
-        title.className = "spin-preset-new-title";
-        title.textContent = "CREATE NEW PRESET";
-        label.prepend(title);
-      }
-    }
-    const create = menu.querySelector("[data-action='toolbox-preset-create']");
-    const rename = menu.querySelector("[data-action='toolbox-preset-rename']");
-    const remove = menu.querySelector("[data-action='toolbox-preset-delete']");
-    if (create) create.textContent = "+ Create preset";
-    if (rename) rename.textContent = "Rename current";
-    if (remove) remove.textContent = "Delete current";
-  };
-
-  const decorateWinner = (tool) => {
-    const card = tool.querySelector(".spin-winner-card");
-    if (!card) return;
-    const winnerLabel = card.querySelector("strong");
-    const raw = winnerRawText();
-    if (winnerLabel instanceof HTMLElement && raw) {
-      let icon = winnerLabel.querySelector(".spin-winner-emoji");
-      if (!icon) {
-        icon = document.createElement("span");
-        icon.className = "spin-winner-emoji";
-        icon.setAttribute("aria-hidden", "true");
-        winnerLabel.prepend(icon);
-      }
-      if (icon.textContent !== emojiFor(raw)) icon.textContent = emojiFor(raw);
-    }
-    const nativeKeep = card.querySelector("[data-action='toolbox-spin-keep']");
-    const actions = nativeKeep?.parentElement;
-    if (!(nativeKeep instanceof HTMLButtonElement) || !actions) return;
-    nativeKeep.textContent = "Use result";
-    nativeKeep.classList.add("spin-use-result");
-    nativeKeep.title = "Accept this result and keep it in the wheel";
-    nativeKeep.setAttribute("aria-label", "Use result and keep it in the wheel");
-
-    if (!actions.querySelector(".spin-use-remove")) {
-      const winnerIndex = currentChoices().findIndex((choice) => choice === raw);
-      if (winnerIndex >= 0) {
-        const remove = document.createElement("button");
-        remove.type = "button";
-        remove.className = "spin-use-remove";
-        remove.dataset.action = "toolbox-spin-remove";
-        remove.dataset.index = String(winnerIndex);
-        remove.textContent = "Use & remove";
-        remove.title = "Accept this result and remove it from the next round";
-        actions.append(remove);
-      }
-    }
-    if (!actions.querySelector(".spin-result-back")) {
-      const back = document.createElement("button");
-      back.type = "button";
-      back.className = "spin-result-back";
-      back.dataset.action = "toolbox-spin-keep";
-      back.textContent = "← Back to wheel";
-      back.title = "Close this result without changing the wheel";
-      actions.prepend(back);
-    }
-    card.querySelector(".spin-keep-hint")?.remove();
   };
 
   const decorate = () => {
     const tool = document.querySelector(".spin-wheel-tool");
-    if (!tool) return;
+    if (!(tool instanceof HTMLElement)) return;
     const panel = tool.closest(".toolbox-panel");
     const toolbar = panel?.querySelector(".toolbox-toolbar");
     const header = panel?.querySelector(".toolbox-header");
@@ -303,16 +218,6 @@
       back.setAttribute("aria-label", "Back to Toolbox");
       header.prepend(back);
     }
-
-    const topEdit = tool.querySelector(".spin-preset-bar > [data-action='toolbox-preset-menu']");
-    if (topEdit) {
-      topEdit.setAttribute("data-action", "toolbox-spin-edit");
-      topEdit.textContent = "Edit";
-      topEdit.setAttribute("aria-label", "Edit wheel, preset and choices");
-    }
-    const presetLabel = tool.querySelector(".spin-preset-bar label");
-    if (presetLabel) presetLabel.classList.add("spin-main-preset-label");
-
     const stage = tool.querySelector(".spin-wheel-stage");
     const primary = tool.querySelector(".spin-primary-action");
     const summary = tool.querySelector(".spin-choice-summary");
@@ -324,49 +229,20 @@
       canvas.before(frame);
       frame.append(canvas);
     }
-    const winner = tool.querySelector(".spin-winner-card");
-    if (winner && stage && winner.parentElement !== stage) stage.append(winner);
-    tool.classList.toggle("has-winner", Boolean(winner));
+    tool.classList.toggle("has-winner", Boolean(tool.querySelector(".spin-winner-card")));
     tool.classList.toggle("is-spinning", primary?.textContent?.includes("Spinning") ?? false);
-
     decorateChoiceIcons(tool);
-    decorateChoiceEditor(tool);
-    decoratePresetMenu(tool);
-    decorateWinner(tool);
+    decorateEditor(tool);
   };
 
-  document.addEventListener("keydown", (event) => {
-    if (event.key !== "Enter" || event.isComposing) return;
-    const input = event.target instanceof HTMLInputElement ? event.target : null;
-    if (input?.matches("#toolbox-spin-choice")) {
-      const editor = input.closest(".spin-choice-editor.open");
-      const add = editor?.querySelector("[data-action='toolbox-spin-add']");
-      if (!add || !input.value.trim()) return;
-      event.preventDefault();
-      add.click();
-      return;
-    }
-    if (input?.matches("[data-toolbox-field='spin-preset-name']")) {
-      const menu = input.closest(".spin-preset-menu");
-      const create = menu?.querySelector("[data-action='toolbox-preset-create']");
-      if (!create || !input.value.trim()) return;
-      event.preventDefault();
-      create.click();
-    }
-  });
-
-  let decorateFrame = 0;
-  const scheduleDecorate = () => {
-    if (decorateFrame) return;
-    decorateFrame = requestAnimationFrame(() => {
-      decorateFrame = 0;
+  let frame = 0;
+  const schedule = () => {
+    if (frame) return;
+    frame = requestAnimationFrame(() => {
+      frame = 0;
       decorate();
     });
   };
-  const observer = new MutationObserver((mutations) => {
-    if (!mutations.some((mutation) => mutation.type === "childList" && (mutation.addedNodes.length || mutation.removedNodes.length))) return;
-    scheduleDecorate();
-  });
-  observer.observe(document.documentElement, { subtree: true, childList: true });
-  window.addEventListener("DOMContentLoaded", scheduleDecorate, { once: true });
+  new MutationObserver(schedule).observe(document.documentElement, { subtree: true, childList: true });
+  window.addEventListener("DOMContentLoaded", schedule, { once: true });
 })();
