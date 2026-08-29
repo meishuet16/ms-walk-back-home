@@ -1,0 +1,104 @@
+/* Final Spin Wheel runtime corrections: keep wheel labels readable and result actions singular. */
+.spin-wheel-tool .spin-wheel-stage > .spin-winner-card {
+  inset: 18px !important;
+  place-content: center !important;
+  gap: 10px !important;
+  padding: 22px 20px 20px !important;
+  background:
+    radial-gradient(circle at 50% 28%, rgba(210,155,72,.10), transparent 35%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.01) 0 1px, transparent 1px 4px),
+    linear-gradient(180deg, rgba(20,40,35,.985), rgba(13,27,24,.995)) !important;
+}
+
+.spin-wheel-tool .spin-wheel-stage > .spin-winner-card strong {
+  margin-top: 2px;
+  color: #f2d681 !important;
+  font-size: clamp(30px, 8vw, 42px) !important;
+}
+
+.spin-wheel-tool .spin-wheel-stage > .spin-winner-card > span:not(.spin-winner-emoji) {
+  margin-bottom: 4px;
+  color: #c8d1bd !important;
+}
+
+.spin-wheel-tool .spin-winner-actions {
+  width: min(100%, 320px) !important;
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 9px !important;
+  margin-top: 6px !important;
+}
+
+.spin-wheel-tool .spin-winner-actions button {
+  min-height: 48px !important;
+  padding: 9px 11px !important;
+  border-radius: 4px !important;
+  font-size: 14px !important;
+  line-height: 1.15 !important;
+}
+
+.spin-wheel-tool .spin-winner-actions .spin-result-back {
+  grid-column: 1 / -1;
+  min-height: 36px !important;
+  padding: 4px 2px !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #b9a889 !important;
+  text-align: left;
+  justify-self: start;
+  font-family: ui-monospace, "Courier New", monospace;
+  font-size: 11px !important;
+  letter-spacing: .03em;
+}
+
+.spin-wheel-tool .spin-winner-actions > button[data-action='toolbox-spin'] {
+  border-color: rgba(199,146,72,.48) !important;
+  background: linear-gradient(180deg, #263a34, #1b2c27) !important;
+  color: #ead8b4 !important;
+}
+
+.spin-wheel-tool .spin-winner-actions .spin-use-result {
+  border-color: #dfad5f !important;
+  background: linear-gradient(180deg, #e5b55f, #c68635) !important;
+  color: #281b12 !important;
+  font-weight: 800 !important;
+}
+
+.spin-wheel-tool .spin-winner-actions .spin-use-remove {
+  grid-column: 1 / -1;
+  border-color: rgba(171,99,72,.55) !important;
+  background: linear-gradient(180deg, #49342c, #352620) !important;
+  color: #e3c3aa !important;
+  font-weight: 700 !important;
+}
+
+.spin-wheel-tool .spin-winner-actions .spin-use-remove:disabled {
+  opacity: .45;
+}
+
+/* Old enhancement classes must never surface as free-floating result controls. */
+.spin-wheel-tool .spin-winner-card > .spin-use-result,
+.spin-wheel-tool .spin-winner-card > .spin-use-remove,
+.spin-wheel-tool .spin-winner-card > .spin-result-back {
+  display: none !important;
+}
+
+@media (max-width: 390px) {
+  .spin-wheel-tool .spin-wheel-stage > .spin-winner-card {
+    inset: 12px !important;
+    padding: 18px 14px 16px !important;
+  }
+  .spin-wheel-tool .spin-winner-actions {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+  .spin-wheel-tool .spin-winner-actions button {
+    min-height: 46px !important;
+    font-size: 13px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin-wheel-tool .spin-wheel-stage > .spin-winner-card { animation: none !important; }
+}
