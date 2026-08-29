@@ -16,8 +16,10 @@ await copyFile(resolve(root, "src/styles.css"), resolve(root, "dist/styles.css")
 await copyFile(resolve(root, "src/spin-wheel-refine.css"), resolve(root, "dist/spin-wheel-refine.css"));
 await copyFile(resolve(root, "src/spin-wheel-world.css"), resolve(root, "dist/spin-wheel-world.css"));
 await copyFile(resolve(root, "src/spin-wheel-choice-sheet.css"), resolve(root, "dist/spin-wheel-choice-sheet.css"));
+await copyFile(resolve(root, "src/spin-wheel-preset-ui.css"), resolve(root, "dist/spin-wheel-preset-ui.css"));
 await copyFile(resolve(root, "src/spin-wheel-flow.css"), resolve(root, "dist/spin-wheel-flow.css"));
 await copyFile(resolve(root, "src/spin-wheel-world.js"), resolve(root, "dist/spin-wheel-world.js"));
+await copyFile(resolve(root, "src/spin-wheel-preset-ui.js"), resolve(root, "dist/spin-wheel-preset-ui.js"));
 await copyFile(resolve(root, "src/spin-wheel-flow.js"), resolve(root, "dist/spin-wheel-flow.js"));
 await mkdir(resolve(root, "dist/browser/ffmpeg"), { recursive: true });
 await copyFile(resolve(root, "../../node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.js"), resolve(root, "dist/browser/ffmpeg/ffmpeg-core.js"));
