@@ -37,6 +37,7 @@ import { LrclibLyricsProvider } from "./systems/LrclibLyrics.js";
 import { floatingLyricsPresentationMode, isFloatingLyricsDrag, resizeFloatingLyricsOverlay } from "./systems/FloatingLyrics.js";
 import { buildLyricsViewerLines, createLyricsViewerState, markLyricsManuallyScrolled, returnToCurrentLyric, seekTargetForLyricLine, type LyricsViewerState } from "./systems/LyricsViewer.js";
 import { activeLyricIndexAt, adjacentTrackIdForControl, applyBatchMusicMetadata, clampLyricsOverlay, createDefaultPersonalPlayerState, filterAndSortMusic, isBuiltInTrackId, lyricWindowForTime, nextTrackIdForPlayback, normalizePlaybackMode, parseLrc, personalMusicShouldPlayInScene, removeSelectedMusicTracks, removeUserMusicTrack, selectAllMusicTrackIds, type BatchMusicMetadata } from "./systems/PersonalMusic.js";
+import { createRecordsMobileState, transitionRecordsMobile, type RecordsMobileState } from "./systems/RecordsMobile.js";
 import { changeReflectionPaper, createChapterReflectionNote, createReflectionNote, createReflectionWallState, deleteReflectionNote, migrateLegacyReflectionWall, reflectionPaperStyles, toggleReflectionNoteFlag, updateReflectionNote, visibleReflectionNotes } from "./systems/ReflectionWall.js";
 import { drawSceneActor, drawSceneSpriteAsset, type SceneSpriteAsset } from "./systems/SceneActorRenderer.js";
 import { getSceneLayout, loadSceneLayoutOverrides, resolveForestDynamicPlacements, resolveSceneAssetPath, resolveSceneEchoAnchor, sceneLayoutManifest, selectSceneOrientation, type SceneInteraction, type SceneLayout, type SceneLayoutId, type SceneOrientation } from "./systems/SceneLayouts.js";
@@ -237,8 +238,7 @@ export class WalkBackHomeApp {
   private musicBlobStore = new MusicBlobStore();
   private journalMediaBlobStore = new JournalMediaBlobStore();
   private recordsPanelOpen = false;
-  private recordsSongSheetOpen = false;
-  private recordsMoreMenuOpen = false;
+  private recordsMobile: RecordsMobileState = createRecordsMobileState();
   private recordsScrollTop = 0;
   private recordsSheetScrollTop = 0;
   private recordsRenderToken = 0;
@@ -451,8 +451,14 @@ export class WalkBackHomeApp {
       if (action && !this.resumeAfterRecordsClose(action)) return;
       void this.audio.ensurePlaying();
     }, { passive: true });
-    root.addEventListener("keydown", (event) => { void this.audio.ensurePlaying(); this.handleToolboxInputKeydown(event); });
-    window.addEventListener("keydown", (event) => this.handleToolboxKeydown(event));
+    root.addEventListener("keydown", (event) => {
+      if (!this.recordsPanelOpen) void this.audio.ensurePlaying();
+      this.handleToolboxInputKeydown(event);
+    });
+    window.addEventListener("keydown", (event) => {
+      this.handleToolboxKeydown(event);
+      this.handleRecordsKeydown(event);
+    });
     this.applyAccountSession(this.account.current());
     this.bootstrapDiaryLibrary();
     void this.hydrateCloudAccount();
@@ -717,24 +723,71 @@ export class WalkBackHomeApp {
     if (action === "music-repeat-one") this.toggleMusicRepeatOne();
     if (action === "music-visual") this.setMusicVisualMode(target.dataset.mode === "cover" ? "cover" : "vinyl");
     if (action === "toggle-record-artwork") this.toggleMusicVisualMode();
-    if (action === "toggle-records-more-menu") {
+    if (action === "toggle-records-global-menu") {
       this.preserveRecordsScroll();
-      this.recordsMoreMenuOpen = !this.recordsMoreMenuOpen;
       this.activeRecordMenuTrackId = "";
-      void this.showRecords();
+      this.recordsMobile = this.recordsMobile.layer === "global-menu"
+        ? transitionRecordsMobile(this.recordsMobile, { type: "close-layer" })
+        : transitionRecordsMobile(this.recordsMobile, { type: "open-global-menu" });
+      const focusTarget = this.recordsMobile.layer === "global-menu" ? ".records-mobile-more.open" : ".records-mobile-more-button";
+      void this.showRecords().then(() => this.focusRecordsMobileSurface(focusTarget));
     }
-    if (action === "toggle-records-song-sheet") {
+    if (action === "open-record-crate") {
       this.preserveRecordsScroll();
-      this.recordsSongSheetOpen = !this.recordsSongSheetOpen;
-      this.recordsMoreMenuOpen = false;
+      this.recordsMobile = transitionRecordsMobile(this.recordsMobile, { type: "open-crate" });
       this.activeRecordMenuTrackId = "";
+      void this.showRecords().then(() => this.focusRecordsMobileSurface(".records-song-sheet.open"));
+    }
+    if (action === "close-record-crate") {
+      this.recordsMobile = transitionRecordsMobile(this.recordsMobile, { type: "close-crate" });
+      this.selectedRecordIds.clear();
+      this.pendingBatchDelete = false;
+      void this.showRecords().then(() => this.focusRecordsMobileSurface(".records-open-crate"));
+    }
+    if (action === "open-record-track-menu") {
+      this.preserveRecordsScroll();
+      this.recordsMobile = transitionRecordsMobile(this.recordsMobile, {
+        type: "open-track-menu",
+        trackId: target.dataset.track ?? ""
+      });
+      void this.showRecords().then(() => this.focusRecordsMobileSurface(".records-track-action-sheet.open"));
+    }
+    if (action === "close-records-mobile-layer") {
+      this.recordsMobile = transitionRecordsMobile(this.recordsMobile, { type: "close-layer" });
+      const focusTarget = this.recordsMobile.crateOpen ? ".records-song-sheet.open" : ".records-mobile-more-button";
+      void this.showRecords().then(() => this.focusRecordsMobileSurface(focusTarget));
+    }
+    if (action === "open-record-track-editor") {
+      this.recordsMobile = transitionRecordsMobile(this.recordsMobile, { type: "open-track-editor" });
+      void this.showRecords().then(() => this.focusRecordsMobileSurface(".records-track-editor-sheet.open"));
+    }
+    if (action === "open-current-track-editor") {
+      const trackId = this.personalPlayer.selectedTrackId ?? this.currentPersonalTrack()?.id ?? "";
+      this.recordsMobile = transitionRecordsMobile(this.recordsMobile, { type: "open-track-editor-for", trackId });
+      void this.showRecords().then(() => this.focusRecordsMobileSurface(".records-track-editor-sheet.open"));
+    }
+    if (action === "save-record-track-editor") this.saveRecordTrackEditor();
+    if (action === "enter-record-organize") {
+      this.selectedRecordIds.clear();
+      this.pendingBatchDelete = false;
+      this.recordsMobile = transitionRecordsMobile(this.recordsMobile, { type: "enter-organize" });
+      void this.showRecords().then(() => this.focusRecordsMobileSurface(".records-song-sheet.open"));
+    }
+    if (action === "leave-record-organize") {
+      this.selectedRecordIds.clear();
+      this.pendingBatchDelete = false;
+      this.recordsMobile = transitionRecordsMobile(this.recordsMobile, { type: "leave-organize" });
+      void this.showRecords().then(() => this.focusRecordsMobileSurface(".records-song-sheet.open"));
+    }
+    if (action === "clear-record-search") {
+      this.personalPlayer.librarySearch = "";
+      this.save.savePersonalPlayer(this.personalPlayer);
       void this.showRecords();
     }
     if (action === "toggle-record-song-menu") {
       this.preserveRecordsScroll();
       const trackId = target.dataset.track ?? "";
       this.activeRecordMenuTrackId = this.activeRecordMenuTrackId === trackId ? "" : trackId;
-      this.recordsMoreMenuOpen = false;
       void this.showRecords();
     }
     if (action === "request-delete-user-track") this.requestDeleteUserTrack(target.dataset.track ?? "");
@@ -786,8 +839,7 @@ export class WalkBackHomeApp {
       this.overlay.classList.remove("dialogue-open");
       this.overlay.innerHTML = "";
       this.recordsPanelOpen = false;
-      this.recordsSongSheetOpen = false;
-      this.recordsMoreMenuOpen = false;
+      this.recordsMobile = createRecordsMobileState();
       this.activeRecordMenuTrackId = "";
       this.pendingDeleteTrackId = "";
       this.labisLessonChoiceIndex = -1;
@@ -2058,7 +2110,52 @@ export class WalkBackHomeApp {
   }
 
   private resumeAfterRecordsClose(action: string): boolean {
-    return !["close-records", "close", "vinyl-pause", "toggle-records-more-menu", "toggle-records-song-sheet"].includes(action);
+    return ![
+      "close-records", "close", "vinyl-pause", "toggle-records-global-menu", "open-record-crate", "close-record-crate",
+      "open-record-track-menu", "close-records-mobile-layer", "open-record-track-editor", "open-current-track-editor",
+      "save-record-track-editor", "enter-record-organize", "leave-record-organize", "clear-record-search", "records-secondary-control"
+    ].includes(action);
+  }
+
+  private focusRecordsMobileSurface(selector: string): void {
+    requestAnimationFrame(() => {
+      const target = this.overlay.querySelector<HTMLElement>(selector);
+      if (!target || target.getClientRects().length === 0) return;
+      const focusTarget = target.matches("button, input, select, summary")
+        ? target
+        : target.querySelector<HTMLElement>("button:not([disabled]), input:not([disabled]), select:not([disabled]), summary");
+      focusTarget?.focus({ preventScroll: true });
+    });
+  }
+
+  private handleRecordsKeydown(event: KeyboardEvent): void {
+    if (!this.recordsPanelOpen || event.key !== "Escape") return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.pendingDeleteTrackId) {
+      this.pendingDeleteTrackId = "";
+      void this.showRecords();
+      return;
+    }
+    if (this.recordsMobile.layer !== "none") {
+      this.recordsMobile = transitionRecordsMobile(this.recordsMobile, { type: "close-layer" });
+      const focusTarget = this.recordsMobile.crateOpen ? ".records-song-sheet.open" : ".records-mobile-more-button";
+      void this.showRecords().then(() => this.focusRecordsMobileSurface(focusTarget));
+      return;
+    }
+    if (this.recordsMobile.organizeMode) {
+      this.selectedRecordIds.clear();
+      this.pendingBatchDelete = false;
+      this.recordsMobile = transitionRecordsMobile(this.recordsMobile, { type: "leave-organize" });
+      void this.showRecords().then(() => this.focusRecordsMobileSurface(".records-song-sheet.open"));
+      return;
+    }
+    if (this.recordsMobile.crateOpen) {
+      this.recordsMobile = transitionRecordsMobile(this.recordsMobile, { type: "close-crate" });
+      void this.showRecords().then(() => this.focusRecordsMobileSurface(".records-open-crate"));
+      return;
+    }
+    this.closeRecords();
   }
 
   private handleCanvasClick(event: MouseEvent): void {
@@ -6603,7 +6700,7 @@ export class WalkBackHomeApp {
       this.setMonthlyCoverCrop(input.value as JournalBookCoverCrop);
       return;
     }
-    if (input.id === "music-sort") {
+    if (input.id === "music-sort" || input.id === "music-sort-mobile") {
       this.personalPlayer.librarySort = input.value as MusicSort;
       void this.showRecords();
       this.autosave();
@@ -6792,7 +6889,7 @@ export class WalkBackHomeApp {
 
   private async handlePersonalCoverInput(input: HTMLInputElement): Promise<void> {
     const file = input.files?.[0];
-    const trackId = this.personalPlayer.selectedTrackId ?? this.currentPersonalTrack()?.id;
+    const trackId = input.dataset.track || this.personalPlayer.selectedTrackId || this.currentPersonalTrack()?.id;
     if (!file || !trackId || !file.type.startsWith("image/")) return;
     const current = this.allPersonalTracks().find((track) => track.id === trackId);
     const key = `music/cover/${trackId}-${Date.now()}`;
@@ -6813,7 +6910,7 @@ export class WalkBackHomeApp {
 
   private async handlePersonalLyricsInput(input: HTMLInputElement): Promise<void> {
     const file = input.files?.[0];
-    const trackId = this.personalPlayer.selectedTrackId;
+    const trackId = input.dataset.track || this.personalPlayer.selectedTrackId;
     if (!file || !trackId) {
       this.showToast("Choose a song first.");
       return;
@@ -6871,7 +6968,13 @@ export class WalkBackHomeApp {
     if (!trackId) return;
     const title = Array.from(this.overlay.querySelectorAll<HTMLInputElement>('[data-music-field="title"]')).find((input) => input.matches(":focus") || input.offsetParent !== null)?.value.trim() || "Untitled Song";
     const artist = Array.from(this.overlay.querySelectorAll<HTMLInputElement>('[data-music-field="artist"]')).find((input) => input.matches(":focus") || input.offsetParent !== null)?.value.trim() || "My Music";
-    if (this.currentPersonalTrack()?.source === "user") {
+    this.updateTrackMetadata(trackId, title, artist);
+  }
+
+  private updateTrackMetadata(trackId: string, title: string, artist: string): void {
+    const track = this.allPersonalTracks().find((item) => item.id === trackId);
+    if (!track) return;
+    if (track.source === "user") {
       this.musicLibrary = {
         ...this.musicLibrary,
         tracks: this.musicLibrary.tracks.map((track) => track.id === trackId ? { ...track, title, artist } : track)
@@ -6884,8 +6987,19 @@ export class WalkBackHomeApp {
       };
     }
     this.invalidateBundledLyricsForTrack(trackId);
-    void this.loadBundledLyricsForSelectedTrack();
+    if (trackId === this.personalPlayer.selectedTrackId) void this.loadBundledLyricsForSelectedTrack();
     this.autosave();
+  }
+
+  private saveRecordTrackEditor(): void {
+    const trackId = this.recordsMobile.actionTrackId;
+    if (!trackId) return;
+    const title = this.overlay.querySelector<HTMLInputElement>("[data-record-editor-title]")?.value.trim() || "Untitled Song";
+    const artist = this.overlay.querySelector<HTMLInputElement>("[data-record-editor-artist]")?.value.trim() || "My Music";
+    this.updateTrackMetadata(trackId, title, artist);
+    this.recordsMobile = transitionRecordsMobile(this.recordsMobile, { type: "close-layer" });
+    void this.showRecords();
+    this.showToast("Record info updated");
   }
 
   private requestDeleteUserTrack(trackId: string): void {
@@ -6893,7 +7007,7 @@ export class WalkBackHomeApp {
     if (!track) return;
     this.pendingDeleteTrackId = track.id;
     this.activeRecordMenuTrackId = "";
-    this.recordsMoreMenuOpen = false;
+    this.recordsMobile = transitionRecordsMobile(this.recordsMobile, { type: "close-layer" });
     void this.showRecords();
   }
 
@@ -7557,8 +7671,7 @@ export class WalkBackHomeApp {
     this.fullLyricsOpen = false;
     this.fullLyricsState = null;
     this.fullLyricsFollowedIndex = -2;
-    this.recordsSongSheetOpen = false;
-    this.recordsMoreMenuOpen = false;
+    this.recordsMobile = createRecordsMobileState();
     this.activeRecordMenuTrackId = "";
     this.pendingDeleteTrackId = "";
     this.selectedRecordIds.clear();
@@ -7585,8 +7698,13 @@ export class WalkBackHomeApp {
     const mobileLyricRows = lyrics.length
       ? lyricWindowForTime(lyrics, currentTime).map((item) => `<p data-lyric-index="${item.sourceIndex}" class="${item.state}">${this.escapeHtml(item.line?.text ?? "")}</p>`).join("")
       : `<p class="empty-lyrics">Add lyrics from the More menu.</p>`;
+    const visibleTracks = this.visibleMusicTracks();
+    const mobileCoverEntries = await Promise.all(visibleTracks.map(async (track) => [track.id, await this.coverUrlForTrack(track.id)] as const));
+    if (renderToken !== this.recordsRenderToken) return;
+    const mobileCovers = new Map(mobileCoverEntries);
     const libraryRows = this.renderRecordsLibraryRows(current?.id);
-    const batchToolbar = this.renderRecordsBatchToolbar();
+    const mobileLibraryRows = this.renderMobileRecordRows(current?.id, mobileCovers, this.recordsMobile.organizeMode);
+    const mobileBatchToolbar = this.renderRecordsBatchToolbar(true);
     const desktopBatchToolbar = this.renderRecordsBatchToolbar();
     const visualStyle = cover ? `--cover:url('${this.escapeHtml(cover)}')` : "";
     const bgStyle = background ? `style="--player-bg:url('${this.escapeHtml(background)}')"` : "";
@@ -7600,40 +7718,85 @@ export class WalkBackHomeApp {
     const searchSortControls = `
       <input data-music-search id="music-search" type="search" placeholder="Search songs..." value="${this.escapeHtml(this.personalPlayer.librarySearch)}" aria-label="Search songs">
       <label>Sort<select id="music-sort" aria-label="Sort music"><option value="recently-added" ${this.personalPlayer.librarySort === "recently-added" ? "selected" : ""}>Recently Added</option><option value="recently-played" ${this.personalPlayer.librarySort === "recently-played" ? "selected" : ""}>Recently Played</option><option value="title" ${this.personalPlayer.librarySort === "title" ? "selected" : ""}>Title A-Z</option><option value="artist" ${this.personalPlayer.librarySort === "artist" ? "selected" : ""}>Artist A-Z</option></select></label>`;
+    const mobileSortLabel = ({
+      "recently-added": "Recently added",
+      "recently-played": "Recently played",
+      title: "Title A-Z",
+      artist: "Artist A-Z"
+    } as const)[this.personalPlayer.librarySort];
+    const mobileSearchSortControls = `
+      <div class="records-crate-search">
+        <input data-music-search id="music-search-mobile" type="search" placeholder="Search records..." value="${this.escapeHtml(this.personalPlayer.librarySearch)}" aria-label="Search records">
+        ${this.personalPlayer.librarySearch ? `<button data-action="clear-record-search" aria-label="Clear record search">×</button>` : ""}
+      </div>
+      <details class="records-sort-popover">
+        <summary>Sort: ${mobileSortLabel}</summary>
+        <label><span>Sort records</span><select id="music-sort-mobile" aria-label="Sort records"><option value="recently-added" ${this.personalPlayer.librarySort === "recently-added" ? "selected" : ""}>Recently Added</option><option value="recently-played" ${this.personalPlayer.librarySort === "recently-played" ? "selected" : ""}>Recently Played</option><option value="title" ${this.personalPlayer.librarySort === "title" ? "selected" : ""}>Title A-Z</option><option value="artist" ${this.personalPlayer.librarySort === "artist" ? "selected" : ""}>Artist A-Z</option></select></label>
+      </details>`;
+    const actionTrack = this.recordsMobile.actionTrackId
+      ? this.allPersonalTracks().find((track) => track.id === this.recordsMobile.actionTrackId)
+      : undefined;
     const deleteTrack = this.pendingDeleteTrackId ? this.musicLibrary.tracks.find((track) => track.id === this.pendingDeleteTrackId) : undefined;
     this.overlay.innerHTML = `
       <div class="modal game-panel records-panel personal-records ${background ? "has-bg" : ""}" ${bgStyle}>
         <div class="records-scroll-content">
-        <header class="records-header"><div><h2>My Records</h2><p>Personal songs for the room and forest.</p></div><div class="records-header-actions"><button class="records-mobile-more-button" data-action="toggle-records-more-menu" aria-label="More Records actions">⋮</button><button class="records-mobile-close-button" data-action="close-records" aria-label="Close Records">×</button><button data-action="close" aria-label="Close Records">Close</button></div></header>
-        <section class="records-mobile-player" aria-label="Mobile Records player">
+        <header class="records-header">
+          <div class="records-desktop-heading"><h2>My Records</h2><p>Personal songs for the room and forest.</p></div>
+          <div class="records-mobile-heading"><small>Muji Room</small><h2>Record Corner</h2></div>
+          <div class="records-header-actions"><button class="records-mobile-more-button" data-action="toggle-records-global-menu" aria-label="Open Records menu">•••</button><button class="records-mobile-close-button" data-action="close-records" aria-label="Close Records">×</button><button data-action="close" aria-label="Close Records">Close</button></div>
+        </header>
+        <section class="records-mobile-player" aria-label="Record Corner now playing">
+          <div class="records-mobile-environment" aria-hidden="true"><span class="records-room-lamp"></span><span class="records-room-window"></span><span class="records-room-shelf"></span></div>
+          <button class="records-mobile-record-player ${this.personalPlayer.visualMode} ${this.personalPlayer.playing ? "is-playing" : "is-paused"}" data-action="toggle-record-artwork" aria-label="Switch to ${isCoverMode ? "vinyl" : "cover"} view">
+            <span class="records-turntable-lid"></span>
+            <span class="records-turntable-plinth">
+              <span class="records-turntable-disc ${cover ? "has-cover" : ""} ${this.personalPlayer.playing && !this.settings.reducedMotion ? "is-playing" : ""}" style="${visualStyle}"><span>${this.escapeHtml(this.trackInitials(current?.title ?? "Music"))}</span></span>
+              <span class="records-turntable-sleeve ${cover ? "has-cover" : ""}" style="${visualStyle}">${coverInitials}</span>
+              <span class="records-turntable-tone-arm"></span>
+              <span class="records-turntable-control"></span>
+            </span>
+          </button>
+          <div class="records-visual-switch" aria-label="Record player view">
+            <button data-action="music-visual" data-mode="vinyl" aria-pressed="${!isCoverMode}">Vinyl</button>
+            <button data-action="music-visual" data-mode="cover" aria-pressed="${isCoverMode}">Cover</button>
+          </div>
           <div class="records-mobile-title">
             <small>${current?.source === "user" ? "My Music" : "Walk Back Home"}</small>
             <h3>${this.escapeHtml(current?.title ?? "Choose a record")}</h3>
             <p>${this.escapeHtml(current?.artist ?? "No artist set")}</p>
           </div>
-          <button class="records-mobile-artwork ${this.personalPlayer.visualMode}" data-action="toggle-record-artwork" aria-label="Toggle vinyl or cover artwork">
-            ${artworkHtml}
-          </button>
-          <div class="records-mobile-lyrics" data-action="open-full-lyrics" role="button" tabindex="0" aria-label="Open full lyrics" aria-live="off">${mobileLyricRows}</div>
-          <div class="time-row records-mobile-progress"><span data-music-current>${this.formatTime(currentTime)}</span><input data-music-seek id="music-seek" type="range" min="0" max="${maxTime}" step="0.1" value="${Math.min(currentTime, maxTime)}" aria-label="Seek"><span data-music-duration>${this.formatTime(duration || current?.duration || 0)}</span></div>
+          <button class="records-mobile-lyrics" data-action="open-full-lyrics" aria-label="Open full lyrics" aria-live="off">${mobileLyricRows}</button>
+          <div class="time-row records-mobile-progress"><span data-music-current>${this.formatTime(currentTime)}</span><input data-music-seek id="music-seek-mobile" type="range" min="0" max="${maxTime}" step="0.1" value="${Math.min(currentTime, maxTime)}" aria-label="Seek"><span data-music-duration>${this.formatTime(duration || current?.duration || 0)}</span></div>
           <div class="records-mobile-controls">
-            <button class="icon-button ${this.personalPlayer.shuffleEnabled ? "selected" : ""}" data-action="music-shuffle" aria-label="Shuffle" title="Shuffle">⤨</button>
+            <button class="icon-button ${this.personalPlayer.shuffleEnabled ? "selected" : ""}" data-action="music-shuffle" aria-pressed="${this.personalPlayer.shuffleEnabled}" aria-label="Shuffle" title="Shuffle">⤨</button>
             <button class="icon-button" data-action="music-prev" aria-label="Previous" title="Previous">⏮</button>
             <button class="icon-button primary" data-action="vinyl-pause" aria-label="${this.personalPlayer.playing ? "Pause" : "Play"}" title="${this.personalPlayer.playing ? "Pause" : "Play"}">${this.personalPlayer.playing ? "⏸" : "▶"}</button>
             <button class="icon-button" data-action="music-next" aria-label="Next" title="Next">⏭</button>
-            <button class="icon-button ${this.personalPlayer.repeatOne ? "selected" : ""}" data-action="music-repeat-one" aria-label="Repeat one" title="Repeat one">↻</button>
-            <button class="icon-button" data-action="toggle-records-song-sheet" aria-label="Open Records song list" title="Song list">☰</button>
+            <button class="icon-button ${this.personalPlayer.repeatOne ? "selected" : ""}" data-action="music-repeat-one" aria-pressed="${this.personalPlayer.repeatOne}" aria-label="Repeat one" title="Repeat one">↻</button>
           </div>
+          <button class="records-open-crate" data-action="open-record-crate"><span aria-hidden="true">▤</span><span><strong>My Record Crate</strong><small>Browse ${this.allPersonalTracks().length} records</small></span><span aria-hidden="true">›</span></button>
         </section>
-        <div class="records-mobile-more ${this.recordsMoreMenuOpen ? "open" : ""}" role="menu" aria-label="Records customization actions">
-          <label class="file-control">Change Cover<input id="vinyl-cover-input" type="file" accept="image/*" aria-label="Change cover"></label>
-          <label class="file-control">Change Background<input id="music-background-input" type="file" accept="image/*" aria-label="Change player background"></label>
-          ${background ? `<button data-action="remove-player-background">Remove Background</button>` : ""}
-          <label class="file-control">Import / Change Lyrics<input id="music-lyrics-input" type="file" accept=".lrc,text/plain" aria-label="Add lyrics"></label>
-          <button data-action="toggle-floating-lyrics">${this.personalPlayer.lyricsVisible ? "Hide Floating Lyrics" : "Show Floating Lyrics"}</button>
-          <label class="metadata-edit">Floating Lyrics Size<input data-floating-lyrics-width id="floating-lyrics-width" type="range" min="96" max="520" step="10" value="${lyricWidth}" aria-label="Floating lyrics width"></label>
-          <label class="metadata-edit">Song Title<input data-music-title data-music-field="title" id="music-title" value="${this.escapeHtml(current?.title ?? "")}" aria-label="Edit song title"></label>
-          <label class="metadata-edit">Artist<input data-music-artist data-music-field="artist" id="music-artist" value="${this.escapeHtml(current?.artist ?? "")}" aria-label="Edit artist"></label>
+        <div class="records-mobile-more ${this.recordsMobile.layer === "global-menu" ? "open" : ""}" role="dialog" aria-modal="true" aria-labelledby="records-global-menu-title">
+          <div class="sheet-handle"></div>
+          <div class="records-mobile-menu-head"><div><small>Close</small><h3 id="records-global-menu-title">More</h3></div><button data-action="close-records-mobile-layer" aria-label="Close Records menu">×</button></div>
+          <section class="records-menu-section"><h4>Song</h4>
+            <button data-action="open-current-track-editor"><span>Edit Info</span><span aria-hidden="true">›</span></button>
+            <label class="file-control" data-action="records-secondary-control"><span>Change Record Cover</span><span aria-hidden="true">•••</span><input id="vinyl-cover-input" data-track="${this.escapeHtml(current?.id ?? "")}" type="file" accept="image/*" aria-label="Change record cover"></label>
+            <label class="file-control" data-action="records-secondary-control"><span>Lyrics</span><span aria-hidden="true">•••</span><input id="music-lyrics-input" data-track="${this.escapeHtml(current?.id ?? "")}" type="file" accept=".lrc,text/plain" aria-label="Import or change lyrics"></label>
+            <button data-action="open-full-lyrics"><span>Open Full Lyrics</span><span aria-hidden="true">›</span></button>
+            ${current?.source === "user" ? `<button class="danger" data-action="request-delete-user-track" data-track="${this.escapeHtml(current.id)}"><span>Delete Song</span><span aria-hidden="true">›</span></button>` : ""}
+          </section>
+          <section class="records-menu-section"><h4>Player</h4>
+            <button data-action="music-visual" data-mode="${isCoverMode ? "vinyl" : "cover"}"><span>${isCoverMode ? "Vinyl" : "Cover"} View</span><span aria-hidden="true">›</span></button>
+            <label class="file-control" data-action="records-secondary-control"><span>Change Background</span><span aria-hidden="true">•••</span><input id="music-background-input" type="file" accept="image/*" aria-label="Change player background"></label>
+            ${background ? `<button class="danger" data-action="remove-player-background"><span>Remove Background</span><span aria-hidden="true">›</span></button>` : ""}
+            <button data-action="toggle-floating-lyrics"><span>Floating Lyrics</span><span class="records-menu-value">${this.personalPlayer.lyricsVisible ? "On" : "Off"}</span></button>
+            <label class="metadata-edit records-menu-slider"><span>Floating Lyrics Size</span><input data-floating-lyrics-width id="floating-lyrics-width" type="range" min="96" max="520" step="10" value="${lyricWidth}" aria-label="Floating lyrics width"></label>
+          </section>
+          <section class="records-menu-section"><h4>Library</h4>
+            <label class="file-control" data-action="records-secondary-control"><span>Add Music</span><span aria-hidden="true">›</span><input id="music-audio-input" type="file" accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/mp4,audio/aac,.mp3,.wav,.ogg,.m4a,.aac" aria-label="Add music"></label>
+            <button data-action="enter-record-organize"><span>Organize Records</span><span aria-hidden="true">›</span></button>
+          </section>
         </div>
         <div class="records-grid">
           <section class="record-visual ${this.personalPlayer.visualMode}">
@@ -7665,15 +7828,38 @@ export class WalkBackHomeApp {
           <div class="time-row"><span data-music-current>${this.formatTime(currentTime)}</span><input data-music-seek id="music-seek" type="range" min="0" max="${maxTime}" step="0.1" value="${Math.min(currentTime, maxTime)}" aria-label="Seek"><span data-music-duration>${this.formatTime(duration || current?.duration || 0)}</span></div>
           <div class="transport-controls"><div class="vinyl-controls"><button class="icon-button" data-action="music-prev" aria-label="Previous" title="Previous">⏮</button><button class="icon-button primary" data-action="vinyl-pause" aria-label="${this.personalPlayer.playing ? "Pause" : "Play"}" title="${this.personalPlayer.playing ? "Pause" : "Play"}">${this.personalPlayer.playing ? "⏸" : "▶"}</button><button class="icon-button" data-action="music-next" aria-label="Next" title="Next">⏭</button></div><div class="playback-modes" aria-label="Playback toggles"><button class="icon-button ${this.personalPlayer.repeatOne ? "selected" : ""}" data-action="music-repeat-one" aria-label="Repeat one" title="Repeat one">↻1</button><button class="icon-button ${this.personalPlayer.shuffleEnabled ? "selected" : ""}" data-action="music-shuffle" aria-label="Shuffle" title="Shuffle">⤨</button></div></div>
         </footer>
-        <section class="records-song-sheet ${this.recordsSongSheetOpen ? "open" : ""}" aria-label="Records song list">
+        <section class="records-song-sheet ${this.recordsMobile.crateOpen ? "open" : ""} ${this.recordsMobile.organizeMode ? "organize-mode" : ""}" role="dialog" aria-modal="true" aria-labelledby="record-crate-title">
           <div class="sheet-handle"></div>
-          <div class="records-song-sheet-head"><h3>My Records</h3><button data-action="toggle-records-song-sheet" aria-label="Close Records song list">Close</button></div>
-          ${batchToolbar}
-          ${this.pendingBatchDelete ? this.renderBatchDeleteConfirmation("mobile") : ""}
-          <div class="records-song-tools">${searchSortControls}</div>
-          <label class="file-control add-record">+ Add My Record<input id="music-audio-input" type="file" accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/mp4,audio/aac,.mp3,.wav,.ogg,.m4a,.aac" aria-label="Add my record"></label>
-          <div class="record-list personal-list">${libraryRows || `<p>Add your own song.</p>`}</div>
+          <div class="records-song-sheet-head">
+            <div><h3 id="record-crate-title">My Record Crate</h3><small>${this.allPersonalTracks().length} records</small></div>
+            <button data-action="close-record-crate" aria-label="Close My Record Crate">×</button>
+          </div>
+          <div class="records-crate-mode-row"><span>${this.recordsMobile.organizeMode ? "Choose records to manage" : "Browse your collection"}</span><button data-action="${this.recordsMobile.organizeMode ? "leave-record-organize" : "enter-record-organize"}">${this.recordsMobile.organizeMode ? "Done" : "Organize"}</button></div>
+          <div class="records-song-tools">${mobileSearchSortControls}</div>
+          ${this.recordsMobile.organizeMode ? mobileBatchToolbar : ""}
+          ${this.recordsMobile.organizeMode && this.pendingBatchDelete ? this.renderBatchDeleteConfirmation("mobile") : ""}
+          <div class="record-list personal-list records-mobile-crate-list">${mobileLibraryRows || `<p class="records-empty-crate">${this.personalPlayer.librarySearch ? `No records found for “${this.escapeHtml(this.personalPlayer.librarySearch)}”.` : "Add your own music to begin a record crate."}</p>`}</div>
+          <footer class="records-crate-footer"><label class="file-control add-record" data-action="records-secondary-control"><span aria-hidden="true">＋</span> Add Music<input id="music-audio-input" type="file" accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/mp4,audio/aac,.mp3,.wav,.ogg,.m4a,.aac" aria-label="Add music"></label>${this.recordsMobile.organizeMode ? `<button data-action="leave-record-organize">Finish Organizing</button>` : `<button data-action="enter-record-organize">Organize</button>`}</footer>
         </section>
+        ${actionTrack ? `<section class="records-track-action-sheet ${this.recordsMobile.layer === "track-menu" ? "open" : ""}" role="dialog" aria-modal="true" aria-labelledby="record-track-menu-title">
+          <div class="sheet-handle"></div>
+          <div class="records-track-sheet-title"><div class="records-track-thumb ${mobileCovers.get(actionTrack.id) ? "has-cover" : ""}" style="${mobileCovers.get(actionTrack.id) ? `--record-cover:url('${this.escapeHtml(mobileCovers.get(actionTrack.id) ?? "")}')` : ""}">${mobileCovers.get(actionTrack.id) ? "" : this.escapeHtml(this.trackInitials(actionTrack.title))}</div><div><h3 id="record-track-menu-title">${this.escapeHtml(actionTrack.title)}</h3><p>${this.escapeHtml(actionTrack.artist || (actionTrack.source === "user" ? "My Music" : "Walk Back Home"))}</p></div><button data-action="close-records-mobile-layer" aria-label="Close song menu">×</button></div>
+          <div class="records-track-actions">
+            <button data-action="select-vinyl" data-record="${this.escapeHtml(actionTrack.id)}"><span>Play This Record</span><span aria-hidden="true">▶</span></button>
+            <button data-action="open-record-track-editor"><span>Edit Info</span><span aria-hidden="true">›</span></button>
+            <label class="file-control" data-action="records-secondary-control"><span>Change Record Cover</span><span aria-hidden="true">•••</span><input id="vinyl-cover-input" data-track="${this.escapeHtml(actionTrack.id)}" type="file" accept="image/*" aria-label="Change cover for ${this.escapeHtml(actionTrack.title)}"></label>
+            <label class="file-control" data-action="records-secondary-control"><span>Lyrics</span><span aria-hidden="true">•••</span><input id="music-lyrics-input" data-track="${this.escapeHtml(actionTrack.id)}" type="file" accept=".lrc,text/plain" aria-label="Change lyrics for ${this.escapeHtml(actionTrack.title)}"></label>
+            ${actionTrack.id === current?.id ? `<button data-action="open-full-lyrics"><span>Open Full Lyrics</span><span aria-hidden="true">›</span></button>` : ""}
+            ${actionTrack.source === "user" ? `<button class="danger" data-action="request-delete-user-track" data-track="${this.escapeHtml(actionTrack.id)}"><span>Delete Song</span><span aria-hidden="true">›</span></button>` : ""}
+          </div>
+        </section>` : ""}
+        ${actionTrack ? `<section class="records-track-editor-sheet ${this.recordsMobile.layer === "track-editor" ? "open" : ""}" role="dialog" aria-modal="true" aria-labelledby="record-editor-title">
+          <div class="sheet-handle"></div>
+          <header><div><small>Edit record</small><h3 id="record-editor-title">Song Info</h3></div><button data-action="close-records-mobile-layer" aria-label="Close song editor">×</button></header>
+          <label>Title<input data-record-editor-title value="${this.escapeHtml(actionTrack.title)}" aria-label="Song title"></label>
+          <label>Artist<input data-record-editor-artist value="${this.escapeHtml(actionTrack.artist ?? "")}" aria-label="Song artist"></label>
+          <div class="records-editor-actions"><button data-action="close-records-mobile-layer">Cancel</button><button class="primary" data-action="save-record-track-editor">Save Changes</button></div>
+        </section>` : ""}
         </div>
         ${this.pendingBatchDelete ? this.renderBatchDeleteConfirmation("desktop") : ""}
         ${deleteTrack ? `<div class="records-delete-confirmation" role="dialog" aria-modal="true" aria-label="Delete from My Records">
@@ -7893,16 +8079,35 @@ export class WalkBackHomeApp {
     }).join("");
   }
 
-  private renderRecordsBatchToolbar(): string {
-    if (!this.selectedRecordIds.size) return "";
+  private renderMobileRecordRows(currentId: string | undefined, covers: Map<string, string>, organizeMode: boolean): string {
+    return this.visibleMusicTracks().map((track) => {
+      const selected = track.id === currentId;
+      const source = track.source === "user" ? "My Music" : "Walk Back Home";
+      const cover = covers.get(track.id) ?? "";
+      const coverStyle = cover ? `--record-cover:url('${this.escapeHtml(cover)}')` : "";
+      const duration = track.duration ? this.formatTime(track.duration) : "";
+      return `<article class="record-list-row records-mobile-crate-row ${selected ? "selected" : ""}">
+        ${organizeMode ? `<label class="record-selection" aria-label="Select ${this.escapeHtml(track.title)}"><input type="checkbox" data-record-select="${this.escapeHtml(track.id)}" ${this.selectedRecordIds.has(track.id) ? "checked" : ""}></label>` : ""}
+        <button class="record-select" data-action="select-vinyl" data-record="${this.escapeHtml(track.id)}">
+          <span class="records-track-thumb ${cover ? "has-cover" : ""}" style="${coverStyle}">${cover ? "" : this.escapeHtml(this.trackInitials(track.title))}</span>
+          <span class="records-track-copy"><strong>${this.escapeHtml(track.title)}</strong><small>${this.escapeHtml(track.artist || source)}${selected ? `<span class="records-now-playing">${this.personalPlayer.playing ? "♪ Now playing" : "Selected"}</span>` : ""}</small></span>
+          ${duration ? `<span class="records-track-duration">${duration}</span>` : ""}
+        </button>
+        <button class="record-row-menu-button" data-action="open-record-track-menu" data-track="${this.escapeHtml(track.id)}" aria-label="More actions for ${this.escapeHtml(track.title)}">•••</button>
+      </article>`;
+    }).join("");
+  }
+
+  private renderRecordsBatchToolbar(alwaysVisible = false): string {
+    if (!this.selectedRecordIds.size && !alwaysVisible) return "";
     const visibleIds = this.visibleMusicTracks().map((track) => track.id);
     const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => this.selectedRecordIds.has(id));
     return `<section class="records-batch-toolbar" aria-label="Batch Records actions">
       <div><strong>${this.selectedRecordIds.size} selected</strong><span>${allVisibleSelected ? "All filtered records selected" : "Choose records to edit"}</span></div>
-      <div class="records-batch-actions"><button data-action="${allVisibleSelected ? "records-clear-selection" : "records-select-all"}">${allVisibleSelected ? "Clear All" : "Select All"}</button><button data-action="records-request-batch-delete" data-batch-action="records-batch-delete" class="danger">Delete Selected</button></div>
+      <div class="records-batch-actions"><button data-action="${allVisibleSelected ? "records-clear-selection" : "records-select-all"}">${allVisibleSelected ? "Clear All" : "Select All"}</button><button data-action="records-request-batch-delete" data-batch-action="records-batch-delete" class="danger" ${this.selectedRecordIds.size ? "" : "disabled"}>Delete Selected</button></div>
       <label>Artist<input data-record-batch-field="artist" data-batch-field="records-batch-artist" placeholder="Leave blank to keep" aria-label="Batch Artist"></label>
       <label>Album<input data-record-batch-field="album" data-batch-field="records-batch-album" placeholder="Leave blank to keep" aria-label="Batch Album"></label>
-      <button data-action="records-apply-batch-edit">Apply Artist / Album</button>
+      <button data-action="records-apply-batch-edit" ${this.selectedRecordIds.size ? "" : "disabled"}>Apply Artist / Album</button>
     </section>`;
   }
 
@@ -7924,7 +8129,7 @@ export class WalkBackHomeApp {
     this.personalPlayer.playbackPosition = startPosition;
     void this.loadBundledLyricsForSelectedTrack();
     this.preserveRecordsScroll();
-    this.recordsMoreMenuOpen = false;
+    this.recordsMobile = transitionRecordsMobile(this.recordsMobile, { type: "close-layer" });
     this.activeRecordMenuTrackId = "";
     this.pendingPersonalSeek = null;
     this.pendingPersonalSeekRequestId = null;

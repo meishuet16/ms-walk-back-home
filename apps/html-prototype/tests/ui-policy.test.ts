@@ -129,12 +129,52 @@ test("floating records transport is clickable and not part of the lyric drag tar
 
 test("records keeps desktop composition while adding a dedicated mobile player", () => {
   assert.match(appSource, /records-mobile-player/);
-  assert.match(appSource, /records-mobile-artwork/);
+  assert.match(appSource, /records-mobile-record-player/);
   assert.match(appSource, /data-action="toggle-record-artwork"/);
-  assert.match(appSource, /data-action="toggle-records-song-sheet"/);
+  assert.match(appSource, /data-action="open-record-crate"/);
   assert.match(stylesSource, /\.records-grid[\s\S]*grid-template-columns:\s*minmax\(220px,\s*280px\)\s*minmax\(260px,\s*1fr\)\s*minmax\(240px,\s*310px\)/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.records-mobile-player[\s\S]*display:\s*grid/);
   assert.match(stylesSource, /@media\s*\(max-width:\s*700px\)[\s\S]*\.records-grid[\s\S]*display:\s*none/);
+});
+
+test("mobile Records exposes explicit Cover and Vinyl controls around a physical player", () => {
+  assert.match(appSource, /records-mobile-record-player/);
+  assert.match(appSource, /records-turntable-plinth/);
+  assert.match(appSource, /data-action="music-visual" data-mode="vinyl" aria-pressed=/);
+  assert.match(appSource, /data-action="music-visual" data-mode="cover" aria-pressed=/);
+  assert.match(appSource, /data-action="open-record-crate"/);
+});
+
+test("normal My Record Crate progressively discloses management", () => {
+  assert.match(appSource, /My Record Crate/);
+  assert.match(appSource, /data-action="enter-record-organize"/);
+  assert.match(appSource, /recordsMobile\.organizeMode/);
+  assert.match(appSource, /organizeMode[\s\S]*record-selection/);
+});
+
+test("mobile Records separates global groups from contextual song actions", () => {
+  assert.match(appSource, /records-menu-section[\s\S]*<h4>Song<\/h4>/);
+  assert.match(appSource, /records-menu-section[\s\S]*<h4>Player<\/h4>/);
+  assert.match(appSource, /records-menu-section[\s\S]*<h4>Library<\/h4>/);
+  assert.match(appSource, /data-action="open-record-track-menu"/);
+  assert.match(appSource, /recordsMobile\.actionTrackId/);
+});
+
+test("contextual Records actions target without selecting or playing", () => {
+  const handler = appSource.match(/if \(action === "open-record-track-menu"\) \{[\s\S]*?\n    \}/)?.[0] ?? "";
+  assert.match(handler, /transitionRecordsMobile/);
+  assert.doesNotMatch(handler, /selectVinyl|playPersonalMusic|selectedTrackId\s*=/);
+  assert.match(appSource, /private resumeAfterRecordsClose[\s\S]*open-record-track-menu/);
+});
+
+test("mobile Records sheets receive focus and Escape unwinds presentation state", () => {
+  assert.match(appSource, /focusRecordsMobileSurface/);
+  const focusHelper = appSource.match(/private focusRecordsMobileSurface[\s\S]*?\n  \}/)?.[0] ?? "";
+  assert.match(focusHelper, /getClientRects\(\)\.length/);
+  assert.doesNotMatch(focusHelper, /offsetParent/);
+  assert.match(appSource, /open-record-crate[\s\S]*showRecords\(\)\.then\(\(\) => this\.focusRecordsMobileSurface\("\.records-song-sheet\.open"\)\)/);
+  assert.match(appSource, /handleRecordsKeydown[\s\S]*event\.key !== "Escape"[\s\S]*transitionRecordsMobile/);
+  assert.match(appSource, /root\.addEventListener\("keydown"[\s\S]*!this\.recordsPanelOpen[\s\S]*audio\.ensurePlaying/);
 });
 
 test("records mobile menus expose customization drawer and per-song deletion", () => {
@@ -293,7 +333,7 @@ test("Journal editor back restores the originating timeline scroll position", ()
 
 test("Records batch actions stay inside the song sheet and preserve sheet scroll when switching tracks", () => {
   const sheetStart = appSource.indexOf('<section class="records-song-sheet');
-  const batchToolbar = appSource.indexOf('${batchToolbar}', sheetStart);
+  const batchToolbar = appSource.indexOf('mobileBatchToolbar', sheetStart);
   assert.ok(sheetStart >= 0 && batchToolbar > sheetStart);
   assert.match(appSource, /recordsSheetScrollTop/);
   assert.match(appSource, /querySelector<HTMLElement>\("\.records-song-sheet"\)/);

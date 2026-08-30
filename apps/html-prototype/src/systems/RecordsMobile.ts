@@ -14,6 +14,7 @@ export type RecordsMobileAction =
   | { type: "close-layer" }
   | { type: "open-track-menu"; trackId: string }
   | { type: "open-track-editor" }
+  | { type: "open-track-editor-for"; trackId: string }
   | { type: "enter-organize" }
   | { type: "leave-organize" };
 
@@ -28,6 +29,7 @@ export function transitionRecordsMobile(state: RecordsMobileState, action: Recor
   if (action.type === "close-layer") return { crateOpen: state.crateOpen, layer: "none", organizeMode: state.organizeMode };
   if (action.type === "open-track-menu") return { crateOpen: true, layer: "track-menu", organizeMode: false, actionTrackId: action.trackId };
   if (action.type === "open-track-editor") return state.actionTrackId ? { ...state, layer: "track-editor" } : state;
+  if (action.type === "open-track-editor-for") return { crateOpen: state.crateOpen, layer: "track-editor", organizeMode: false, actionTrackId: action.trackId };
   if (action.type === "enter-organize") return { crateOpen: true, layer: "none", organizeMode: true };
   return { crateOpen: true, layer: "none", organizeMode: false };
 }

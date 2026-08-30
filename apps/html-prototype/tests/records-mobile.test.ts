@@ -34,6 +34,15 @@ test("editing keeps the contextual track without opening playback", () => {
   assert.deepEqual(editor, { crateOpen: true, layer: "track-editor", organizeMode: false, actionTrackId: "built-in-a" });
 });
 
+test("editing from the global menu returns to the player instead of opening the crate", () => {
+  const globalMenu = transitionRecordsMobile(createRecordsMobileState(), { type: "open-global-menu" });
+  const editor = transitionRecordsMobile(globalMenu, { type: "open-track-editor-for", trackId: "built-in-a" });
+  const closed = transitionRecordsMobile(editor, { type: "close-layer" });
+
+  assert.deepEqual(editor, { crateOpen: false, layer: "track-editor", organizeMode: false, actionTrackId: "built-in-a" });
+  assert.deepEqual(closed, createRecordsMobileState());
+});
+
 test("closing a contextual layer forgets its song target but keeps the crate", () => {
   const menu = transitionRecordsMobile(createRecordsMobileState(), { type: "open-track-menu", trackId: "user-2" });
   const closed = transitionRecordsMobile(menu, { type: "close-layer" });
