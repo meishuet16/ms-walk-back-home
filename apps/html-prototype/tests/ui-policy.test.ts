@@ -150,6 +150,17 @@ test("normal My Record Crate progressively discloses management", () => {
   assert.match(appSource, /data-action="enter-record-organize"/);
   assert.match(appSource, /recordsMobile\.organizeMode/);
   assert.match(appSource, /organizeMode[\s\S]*record-selection/);
+  assert.match(appSource, /data-action="open-record-batch-editor"/);
+  assert.match(appSource, /recordsMobile\.batchEditorOpen/);
+  assert.match(appSource, /records-batch-editor/);
+});
+
+test("mobile Records distinguishes compact empty lyrics from the lyric stage", () => {
+  assert.match(appSource, /records-mobile-lyrics \$\{lyrics\.length \? "has-lyrics" : "is-empty"\}/);
+  assert.match(appSource, /mobile\.classList\.toggle\("has-lyrics",\s*lyrics\.length > 0\)/);
+  assert.match(appSource, /mobile\.classList\.toggle\("is-empty",\s*!lyrics\.length\)/);
+  assert.match(stylesSource, /\.records-mobile-lyrics\.is-empty[\s\S]*min-height:\s*0/);
+  assert.match(stylesSource, /\.records-mobile-lyrics\.has-lyrics[\s\S]*min-height:/);
 });
 
 test("mobile Records separates global groups from contextual song actions", () => {

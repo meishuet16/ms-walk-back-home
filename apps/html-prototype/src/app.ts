@@ -779,6 +779,19 @@ export class WalkBackHomeApp {
       this.recordsMobile = transitionRecordsMobile(this.recordsMobile, { type: "leave-organize" });
       void this.showRecords().then(() => this.focusRecordsMobileSurface(".records-song-sheet.open"));
     }
+    if (action === "open-record-batch-editor") {
+      if (!this.selectedRecordIds.size) {
+        this.showToast("Select at least one record first");
+      } else {
+        this.preserveRecordsScroll();
+        this.recordsMobile = transitionRecordsMobile(this.recordsMobile, { type: "open-batch-editor" });
+        void this.showRecords().then(() => this.focusRecordsMobileSurface(".records-batch-editor input"));
+      }
+    }
+    if (action === "close-record-batch-editor") {
+      this.recordsMobile = transitionRecordsMobile(this.recordsMobile, { type: "close-batch-editor" });
+      void this.showRecords().then(() => this.focusRecordsMobileSurface(".records-batch-toolbar-progressive"));
+    }
     if (action === "clear-record-search") {
       this.personalPlayer.librarySearch = "";
       this.save.savePersonalPlayer(this.personalPlayer);
@@ -2113,7 +2126,8 @@ export class WalkBackHomeApp {
     return ![
       "close-records", "close", "vinyl-pause", "toggle-records-global-menu", "open-record-crate", "close-record-crate",
       "open-record-track-menu", "close-records-mobile-layer", "open-record-track-editor", "open-current-track-editor",
-      "save-record-track-editor", "enter-record-organize", "leave-record-organize", "clear-record-search", "records-secondary-control"
+      "save-record-track-editor", "enter-record-organize", "leave-record-organize", "open-record-batch-editor",
+      "close-record-batch-editor", "clear-record-search", "records-secondary-control"
     ].includes(action);
   }
 
@@ -2141,6 +2155,11 @@ export class WalkBackHomeApp {
       this.recordsMobile = transitionRecordsMobile(this.recordsMobile, { type: "close-layer" });
       const focusTarget = this.recordsMobile.crateOpen ? ".records-song-sheet.open" : ".records-mobile-more-button";
       void this.showRecords().then(() => this.focusRecordsMobileSurface(focusTarget));
+      return;
+    }
+    if (this.recordsMobile.batchEditorOpen) {
+      this.recordsMobile = transitionRecordsMobile(this.recordsMobile, { type: "close-batch-editor" });
+      void this.showRecords().then(() => this.focusRecordsMobileSurface(".records-batch-toolbar-progressive"));
       return;
     }
     if (this.recordsMobile.organizeMode) {
@@ -6653,6 +6672,9 @@ export class WalkBackHomeApp {
     if (recordSelectId) {
       if (input.checked) this.selectedRecordIds.add(recordSelectId);
       else this.selectedRecordIds.delete(recordSelectId);
+      if (!this.selectedRecordIds.size && this.recordsMobile.batchEditorOpen) {
+        this.recordsMobile = transitionRecordsMobile(this.recordsMobile, { type: "close-batch-editor" });
+      }
       this.preserveRecordsScroll();
       void this.showRecords();
       return;
@@ -7704,7 +7726,7 @@ export class WalkBackHomeApp {
     const mobileCovers = new Map(mobileCoverEntries);
     const libraryRows = this.renderRecordsLibraryRows(current?.id);
     const mobileLibraryRows = this.renderMobileRecordRows(current?.id, mobileCovers, this.recordsMobile.organizeMode);
-    const mobileBatchToolbar = this.renderRecordsBatchToolbar(true);
+    const mobileBatchToolbar = this.renderRecordsBatchToolbar(true, true, this.recordsMobile.batchEditorOpen);
     const desktopBatchToolbar = this.renderRecordsBatchToolbar();
     const visualStyle = cover ? `--cover:url('${this.escapeHtml(cover)}')` : "";
     const bgStyle = background ? `style="--player-bg:url('${this.escapeHtml(background)}')"` : "";
@@ -7765,7 +7787,7 @@ export class WalkBackHomeApp {
             <h3>${this.escapeHtml(current?.title ?? "Choose a record")}</h3>
             <p>${this.escapeHtml(current?.artist ?? "No artist set")}</p>
           </div>
-          <button class="records-mobile-lyrics" data-action="open-full-lyrics" aria-label="Open full lyrics" aria-live="off">${mobileLyricRows}</button>
+          <button class="records-mobile-lyrics ${lyrics.length ? "has-lyrics" : "is-empty"}" data-action="open-full-lyrics" aria-label="Open full lyrics" aria-live="off">${mobileLyricRows}</button>
           <div class="time-row records-mobile-progress"><span data-music-current>${this.formatTime(currentTime)}</span><input data-music-seek id="music-seek-mobile" type="range" min="0" max="${maxTime}" step="0.1" value="${Math.min(currentTime, maxTime)}" aria-label="Seek"><span data-music-duration>${this.formatTime(duration || current?.duration || 0)}</span></div>
           <div class="records-mobile-controls">
             <button class="icon-button ${this.personalPlayer.shuffleEnabled ? "selected" : ""}" data-action="music-shuffle" aria-pressed="${this.personalPlayer.shuffleEnabled}" aria-label="Shuffle" title="Shuffle">⤨</button>
@@ -7997,6 +8019,7 @@ export class WalkBackHomeApp {
   private clearRecordSelection(): void {
     this.selectedRecordIds.clear();
     this.pendingBatchDelete = false;
+    this.recordsMobile = transitionRecordsMobile(this.recordsMobile, { type: "close-batch-editor" });
     this.preserveRecordsScroll();
     void this.showRecords();
   }
@@ -8034,6 +8057,7 @@ export class WalkBackHomeApp {
       this.invalidateBundledLyricsForTrack(this.personalPlayer.selectedTrackId);
       void this.loadBundledLyricsForSelectedTrack();
     }
+    this.recordsMobile = transitionRecordsMobile(this.recordsMobile, { type: "close-batch-editor" });
     this.preserveRecordsScroll();
     void this.showRecords();
     this.showToast("Records updated");
@@ -8048,6 +8072,7 @@ export class WalkBackHomeApp {
     const currentWasRemoved = Boolean(currentId && result.removed.some((track) => track.id === currentId));
     this.pendingBatchDelete = false;
     this.selectedRecordIds.clear();
+    this.recordsMobile = transitionRecordsMobile(this.recordsMobile, { type: "close-batch-editor" });
     if (currentWasRemoved) {
       const nextId = result.nextTrackId ?? this.availableVinylRecords[0]?.id;
       if (nextId) await this.selectVinyl(nextId, false);
@@ -8098,10 +8123,18 @@ export class WalkBackHomeApp {
     }).join("");
   }
 
-  private renderRecordsBatchToolbar(alwaysVisible = false): string {
+  private renderRecordsBatchToolbar(alwaysVisible = false, progressive = false, editorOpen = false): string {
     if (!this.selectedRecordIds.size && !alwaysVisible) return "";
     const visibleIds = this.visibleMusicTracks().map((track) => track.id);
     const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => this.selectedRecordIds.has(id));
+    if (progressive) return `<section class="records-batch-toolbar records-batch-toolbar-progressive ${editorOpen ? "editor-open" : ""}" aria-label="Batch Records actions">
+      <div><strong>${this.selectedRecordIds.size} selected</strong><span>${allVisibleSelected ? "All filtered records selected" : "Choose records to edit"}</span></div>
+      <div class="records-batch-actions"><button data-action="${allVisibleSelected ? "records-clear-selection" : "records-select-all"}">${allVisibleSelected ? "Clear All" : "Select All"}</button><button data-action="open-record-batch-editor" ${this.selectedRecordIds.size ? "" : "disabled"}>Edit metadata</button><button data-action="records-request-batch-delete" data-batch-action="records-batch-delete" class="danger" ${this.selectedRecordIds.size ? "" : "disabled"}>Delete</button></div>
+      ${editorOpen ? `<div class="records-batch-editor"><div class="records-batch-editor-head"><strong>Edit metadata</strong><button data-action="close-record-batch-editor" aria-label="Close batch metadata editor">×</button></div>
+        <label>Artist<input data-record-batch-field="artist" data-batch-field="records-batch-artist" placeholder="Leave blank to keep" aria-label="Batch Artist"></label>
+        <label>Album<input data-record-batch-field="album" data-batch-field="records-batch-album" placeholder="Leave blank to keep" aria-label="Batch Album"></label>
+        <button data-action="records-apply-batch-edit">Apply Artist / Album</button></div>` : ""}
+    </section>`;
     return `<section class="records-batch-toolbar" aria-label="Batch Records actions">
       <div><strong>${this.selectedRecordIds.size} selected</strong><span>${allVisibleSelected ? "All filtered records selected" : "Choose records to edit"}</span></div>
       <div class="records-batch-actions"><button data-action="${allVisibleSelected ? "records-clear-selection" : "records-select-all"}">${allVisibleSelected ? "Clear All" : "Select All"}</button><button data-action="records-request-batch-delete" data-batch-action="records-batch-delete" class="danger" ${this.selectedRecordIds.size ? "" : "disabled"}>Delete Selected</button></div>
@@ -8548,10 +8581,14 @@ export class WalkBackHomeApp {
     const lyrics = this.currentPersonalTrack()?.syncedLyrics ?? [];
     const active = activeLyricIndexAt(lyrics, currentTime);
     const rows = Array.from(this.overlay.querySelectorAll<HTMLElement>(".lyrics-pane p"));
+    const mobile = this.overlay.querySelector<HTMLElement>(".records-mobile-lyrics");
+    if (mobile) {
+      mobile.classList.toggle("has-lyrics", lyrics.length > 0);
+      mobile.classList.toggle("is-empty", !lyrics.length);
+    }
     if (!lyrics.length) {
       const pane = this.overlay.querySelector<HTMLElement>(".lyrics-pane");
       if (pane) pane.innerHTML = `<p class="empty-lyrics">Add .lrc lyrics to let words drift with the room.</p>`;
-      const mobile = this.overlay.querySelector<HTMLElement>(".records-mobile-lyrics");
       if (mobile) mobile.innerHTML = `<p class="empty-lyrics">Add lyrics from the More menu.</p>`;
       return;
     }
@@ -8565,7 +8602,6 @@ export class WalkBackHomeApp {
     if (activeRow && shouldScroll) {
       activeRow.scrollIntoView({ block: "center", behavior: this.settings.reducedMotion ? "auto" : "smooth" });
     }
-    const mobile = this.overlay.querySelector<HTMLElement>(".records-mobile-lyrics");
     if (!mobile) return;
     const mobileWindow = lyricWindowForTime(lyrics, currentTime);
     const mobileRows = Array.from(this.overlay.querySelectorAll<HTMLElement>(".records-mobile-lyrics p"));
