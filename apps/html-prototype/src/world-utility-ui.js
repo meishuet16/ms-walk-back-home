@@ -11,7 +11,49 @@
     "mini-games": "Pocket console"
   };
 
+  const WEATHER_MEMOS = {
+    storm: [
+      "雷声靠近的时候，就晚一点再出门。",
+      "今天的云有点凶。伞要带，脚步也慢一点。",
+      "如果外面开始轰隆隆，就先陪我待一会儿。",
+      "会打雷。不要为了赶路把自己淋湿。"
+    ],
+    rain: [
+      "出门记得带伞。",
+      "今天适合把伞塞进包里。",
+      "路会湿。走慢一点，不用赶。",
+      "雨大概会来。鞋子别挑太容易进水的。",
+      "回来以后，记得把伞晾开。"
+    ],
+    clear: [
+      "今天的光很好。",
+      "太阳出来了。窗边应该会暖暖的。",
+      "天气很好，适合绕一点远路回家。",
+      "今天应该晒得干衣服。",
+      "外面很亮。记得喝水。"
+    ],
+    fog: [
+      "外面有点朦朦的。",
+      "今天看不太远，走路慢一点。",
+      "雾把远处藏起来了。等它散一点也没关系。",
+      "空气白白的。过马路要看清楚一点。"
+    ],
+    snow: [
+      "外面很冷。把自己包暖一点。",
+      "今天地上可能会滑，慢慢走。",
+      "如果真的下雪了，回来告诉我是什么样子。"
+    ],
+    cloud: [
+      "今天的天有点安静。",
+      "云很多，不过也不一定是坏天气。",
+      "今天没有很晒，走出去应该刚刚好。",
+      "天空灰灰的。带件薄外套也不错。",
+      "这种天气，很适合慢慢走回家。"
+    ]
+  };
+
   let weatherView = "today";
+  const lastMemoByCondition = new Map();
 
   function decorateToolbox(panel) {
     if (!(panel instanceof HTMLElement)) return;
@@ -81,7 +123,12 @@
         reading.append(controls);
       }
       const text = reading.textContent?.toLowerCase() || "";
-      const condition = text.includes("storm") ? "storm" : text.includes("rain") || text.includes("drizzle") ? "rain" : text.includes("clear") || text.includes("sun") ? "clear" : text.includes("fog") ? "fog" : "cloud";
+      const condition = text.includes("storm") || text.includes("thunder") ? "storm"
+        : text.includes("snow") ? "snow"
+          : text.includes("rain") || text.includes("drizzle") || text.includes("shower") ? "rain"
+            : text.includes("clear") || text.includes("sun") ? "clear"
+              : text.includes("fog") || text.includes("mist") ? "fog"
+                : "cloud";
       panel.dataset.weatherCondition = condition;
     }
 
@@ -106,21 +153,28 @@
       main.prepend(tabs);
     }
 
-    if (!main.querySelector(".world-weather-note")) {
-      const note = document.createElement("aside");
+    const memoCondition = panel.dataset.weatherCondition || "cloud";
+    let note = main.querySelector(".world-weather-note");
+    if (!(note instanceof HTMLElement)) {
+      note = document.createElement("aside");
       note.className = "world-weather-note";
-      note.innerHTML = `<strong>${weatherMemo(panel.dataset.weatherCondition || "cloud")}</strong><span>— Muji</span>`;
       main.append(note);
+    }
+    if (note.dataset.weatherCondition !== memoCondition || !note.querySelector("strong")) {
+      note.dataset.weatherCondition = memoCondition;
+      note.innerHTML = `<strong>${escapeHtml(weatherMemo(memoCondition))}</strong><span>— Muji</span>`;
     }
 
     applyWeatherView(panel);
   }
 
   function weatherMemo(condition) {
-    if (condition === "rain" || condition === "storm") return "出门记得带伞。";
-    if (condition === "clear") return "今天的光很好。";
-    if (condition === "fog") return "外面有点朦朦的。";
-    return "今天看起来会凉一点。";
+    const options = WEATHER_MEMOS[condition] || WEATHER_MEMOS.cloud;
+    const previous = lastMemoByCondition.get(condition);
+    const candidates = options.length > 1 ? options.filter((memo) => memo !== previous) : options;
+    const memo = candidates[Math.floor(Math.random() * candidates.length)] || options[0];
+    lastMemoByCondition.set(condition, memo);
+    return memo;
   }
 
   function applyWeatherView(panel) {
