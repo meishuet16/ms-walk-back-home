@@ -1,0 +1,269 @@
+/* Date / Converter / Currency — stronger physical-tool identity, existing behavior untouched. */
+.world-toolbox-tool[data-world-tool="date"] .world-tool-workbench-label,
+.world-toolbox-tool[data-world-tool="converter"] .world-tool-workbench-label,
+.world-toolbox-tool[data-world-tool="currency"] .world-tool-workbench-label { color:#d8b074; }
+
+/* ---------- Date: a flip desk calendar with stamped date windows ---------- */
+.world-toolbox-tool[data-world-tool="date"] .date-tool {
+  position:relative;
+  width:min(560px,100%);
+  padding:28px 22px 22px;
+  border:3px solid #8b684b;
+  border-radius:7px 7px 13px 13px;
+  background:
+    repeating-linear-gradient(0deg,rgba(102,70,39,.035) 0 1px,transparent 1px 27px),
+    linear-gradient(#ead7aa,#d8bd88);
+  color:#493421;
+  box-shadow:0 15px 30px rgba(0,0,0,.28),inset 0 1px rgba(255,255,255,.42);
+}
+.world-toolbox-tool[data-world-tool="date"] .date-tool::before {
+  content:"●   ●   ●   ●   ●";
+  position:absolute;
+  top:-10px;
+  left:0;
+  right:0;
+  color:#3d3830;
+  font:700 15px/1 monospace;
+  letter-spacing:.35em;
+  text-align:center;
+  text-shadow:0 2px #9f805f;
+}
+.world-toolbox-tool[data-world-tool="date"] .date-tool::after {
+  content:"DATE NOTES";
+  position:absolute;
+  right:18px;
+  top:10px;
+  color:#9d6749;
+  font:700 9px/1 "Courier New",monospace;
+  letter-spacing:.15em;
+}
+.world-toolbox-tool[data-world-tool="date"] .date-tool label {
+  display:grid;
+  gap:6px;
+  color:#65482f;
+  font:700 11px/1.25 "Courier New",monospace;
+  letter-spacing:.04em;
+}
+.world-toolbox-tool[data-world-tool="date"] .date-tool input,
+.world-toolbox-tool[data-world-tool="date"] .date-tool select {
+  min-height:46px;
+  border:1px solid #987651;
+  border-radius:3px;
+  background:#f3e2bd;
+  color:#3f2d20;
+  box-shadow:inset 0 2px 5px rgba(92,65,39,.10);
+  font:700 13px/1.2 "Courier New",monospace;
+}
+.world-toolbox-tool[data-world-tool="date"] .date-tool > label:first-child select {
+  border-color:#aa7657;
+  background:#e8cda0;
+  color:#6b3f31;
+}
+.world-toolbox-tool[data-world-tool="date"] .date-tool .toolbox-result {
+  min-height:66px;
+  margin-top:14px;
+  display:grid;
+  place-items:center;
+  border:1px dashed #98714a;
+  border-radius:2px;
+  background:#f0ddb2;
+  color:#70432f;
+  box-shadow:none;
+  font:800 clamp(15px,4vw,20px)/1.35 Georgia,serif;
+  text-align:center;
+}
+.world-toolbox-tool[data-world-tool="date"] .date-tool button.primary {
+  min-height:46px;
+  border-color:#8b5b3f;
+  background:linear-gradient(#b97859,#8c5944);
+  color:#fff0d0;
+}
+
+/* ---------- Converter: ruler-and-tape measuring bench ---------- */
+.world-toolbox-tool[data-world-tool="converter"] .toolbox-utility {
+  position:relative;
+  width:min(590px,100%);
+  padding:30px 20px 22px;
+  overflow:hidden;
+  border:3px solid #82683a;
+  border-radius:9px;
+  background:
+    linear-gradient(90deg,rgba(255,255,255,.025),transparent 30%),
+    linear-gradient(#5d5033,#373329 74%);
+  box-shadow:0 16px 30px rgba(0,0,0,.30),inset 0 0 0 3px rgba(208,175,96,.08);
+}
+.world-toolbox-tool[data-world-tool="converter"] .toolbox-utility::before {
+  content:"0    1    2    3    4    5    6    7    8    9";
+  position:absolute;
+  top:0;
+  left:0;
+  right:0;
+  height:20px;
+  padding-top:5px;
+  overflow:hidden;
+  border-bottom:1px solid #7d6030;
+  background:repeating-linear-gradient(90deg,#d5b45f 0 1px,transparent 1px 12px),#b9954b;
+  color:#59451f;
+  font:700 8px/1 "Courier New",monospace;
+  white-space:nowrap;
+}
+.world-toolbox-tool[data-world-tool="converter"] .toolbox-utility label {
+  display:grid;
+  gap:6px;
+  color:#d8c092;
+  font:700 11px/1.2 "Courier New",monospace;
+}
+.world-toolbox-tool[data-world-tool="converter"] .toolbox-utility input,
+.world-toolbox-tool[data-world-tool="converter"] .toolbox-utility select {
+  min-height:46px;
+  border:1px solid #8e7447;
+  border-radius:4px;
+  background:#202823;
+  color:#f0dfba;
+  box-shadow:inset 0 2px 6px rgba(0,0,0,.24);
+}
+.world-toolbox-tool[data-world-tool="converter"] .toolbox-two-col {
+  position:relative;
+  gap:12px;
+  margin:10px 0;
+  padding:12px;
+  border:1px solid rgba(211,176,106,.22);
+  border-radius:7px;
+  background:rgba(22,26,23,.32);
+}
+.world-toolbox-tool[data-world-tool="converter"] [data-action="converter-swap"] {
+  display:grid;
+  width:58px;
+  min-height:44px;
+  margin:4px auto 10px;
+  place-items:center;
+  border:2px solid #8d6a35;
+  border-radius:50%;
+  background:linear-gradient(#caa258,#8c6a34);
+  color:#2d2418;
+  box-shadow:inset 0 1px #e8ca83,0 4px 0 #4d3c25;
+  font-size:18px;
+}
+.world-toolbox-tool[data-world-tool="converter"] .toolbox-result {
+  min-height:70px;
+  display:grid;
+  place-items:center;
+  border:1px solid #817152;
+  border-radius:3px;
+  background:#c9c09b;
+  color:#29332a;
+  box-shadow:inset 0 3px 9px rgba(42,51,42,.20);
+  font:800 clamp(16px,4vw,22px)/1.3 "Courier New",monospace;
+  text-align:center;
+}
+
+/* ---------- Currency: a worn travel wallet + exchange receipt ---------- */
+.world-toolbox-tool[data-world-tool="currency"] .currency-tool {
+  position:relative;
+  width:min(570px,100%);
+  padding:24px 22px 22px;
+  border:4px solid #5c3d30;
+  border-radius:16px 16px 22px 22px;
+  background:
+    radial-gradient(circle at 85% 12%,rgba(255,211,153,.08),transparent 9rem),
+    linear-gradient(145deg,#8b5a43,#624233 72%);
+  color:#f0d8b1;
+  box-shadow:0 17px 34px rgba(0,0,0,.32),inset 0 0 0 3px rgba(232,177,119,.12);
+}
+.world-toolbox-tool[data-world-tool="currency"] .currency-tool::before {
+  content:"TRAVEL WALLET";
+  display:block;
+  margin:-2px 0 15px;
+  color:#d8ad79;
+  font:700 9px/1 "Courier New",monospace;
+  letter-spacing:.18em;
+  text-align:center;
+}
+.world-toolbox-tool[data-world-tool="currency"] .currency-tool label {
+  display:grid;
+  gap:6px;
+  color:#edcfaa;
+  font:700 11px/1.2 "Courier New",monospace;
+}
+.world-toolbox-tool[data-world-tool="currency"] .currency-tool input,
+.world-toolbox-tool[data-world-tool="currency"] .currency-tool select {
+  min-height:47px;
+  border:1px solid #9f795d;
+  border-radius:5px;
+  background:#30251f;
+  color:#f4dfba;
+  box-shadow:inset 0 2px 7px rgba(0,0,0,.30);
+  font:700 14px/1.2 "Courier New",monospace;
+}
+.world-toolbox-tool[data-world-tool="currency"] .currency-pair {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 48px minmax(0,1fr);
+  align-items:center;
+  gap:8px;
+  margin:12px 0;
+  padding:12px;
+  border:1px dashed rgba(225,183,126,.28);
+  border-radius:8px;
+  background:rgba(40,26,21,.22);
+}
+.world-toolbox-tool[data-world-tool="currency"] .currency-pair button {
+  width:48px;
+  min-height:48px;
+  padding:0;
+  border:2px solid #a87c54;
+  border-radius:50%;
+  background:linear-gradient(#c29463,#805d45);
+  color:#261b16;
+  box-shadow:inset 0 1px #e1bb89,0 3px 0 #4c3428;
+  font-size:18px;
+}
+.world-toolbox-tool[data-world-tool="currency"] .currency-result {
+  position:relative;
+  min-height:84px;
+  margin-top:8px;
+  display:grid;
+  place-items:center;
+  padding:18px 14px 12px;
+  border:0;
+  border-radius:2px;
+  background:
+    repeating-linear-gradient(0deg,rgba(93,65,35,.035) 0 1px,transparent 1px 22px),
+    #ead4a6;
+  color:#513823;
+  box-shadow:0 6px 12px rgba(0,0,0,.20);
+  font:800 clamp(18px,5vw,25px)/1.2 "Courier New",monospace;
+  text-align:center;
+}
+.world-toolbox-tool[data-world-tool="currency"] .currency-result::before {
+  content:"EXCHANGE RECEIPT";
+  position:absolute;
+  top:7px;
+  left:0;
+  right:0;
+  color:#8b6847;
+  font:700 8px/1 "Courier New",monospace;
+  letter-spacing:.15em;
+}
+.world-toolbox-tool[data-world-tool="currency"] .toolbox-status {
+  margin:8px 2px 0;
+  color:#d6b890;
+  font:600 10px/1.35 "Courier New",monospace;
+  text-align:center;
+}
+.world-toolbox-tool[data-world-tool="currency"] .toolbox-sub-actions { display:flex; justify-content:center; margin-top:8px; }
+.world-toolbox-tool[data-world-tool="currency"] .toolbox-sub-actions button {
+  min-height:42px;
+  border-color:#9c7659;
+  background:linear-gradient(#765140,#52392f);
+  color:#f0d5ad;
+}
+
+@media (max-width:700px) {
+  .world-toolbox-tool[data-world-tool="date"] .date-tool,
+  .world-toolbox-tool[data-world-tool="converter"] .toolbox-utility,
+  .world-toolbox-tool[data-world-tool="currency"] .currency-tool { padding-inline:14px; }
+  .world-toolbox-tool[data-world-tool="currency"] .currency-pair { grid-template-columns:minmax(0,1fr) 44px minmax(0,1fr); padding:9px; gap:6px; }
+  .world-toolbox-tool[data-world-tool="currency"] .currency-pair button { width:44px; min-height:44px; }
+  .world-toolbox-tool[data-world-tool="converter"] .toolbox-two-col { grid-template-columns:1fr; }
+  .world-toolbox-tool[data-world-tool="converter"] [data-action="converter-swap"] { margin-block:2px 8px; }
+}

@@ -1,0 +1,195 @@
+/* Extra pocket games: original rules, in-world handheld presentation. */
+.world-toolbox-tool[data-world-tool="mini-games"] .extra-mini-game-card .mini-game-card-icon {
+  color:#e6cc8d;
+  background:linear-gradient(#7f8e75,#687866);
+}
+.world-toolbox-tool[data-world-tool="mini-games"] .extra-game-top {
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;
+  gap:10px;
+  margin-bottom:10px;
+}
+.world-toolbox-tool[data-world-tool="mini-games"] .extra-game-top::after { content:""; width:72px; }
+.world-toolbox-tool[data-world-tool="mini-games"] .extra-game-top strong {
+  color:#333a32;
+  font:800 13px/1.2 "Courier New",monospace;
+  text-align:center;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.world-toolbox-tool[data-world-tool="mini-games"] .extra-game-top button,
+.world-toolbox-tool[data-world-tool="mini-games"] .extra-restart,
+.world-toolbox-tool[data-world-tool="mini-games"] .extra-dpad button,
+.world-toolbox-tool[data-world-tool="mini-games"] .catch-controls button {
+  min-height:40px;
+  border:1px solid #444941;
+  border-radius:7px;
+  background:linear-gradient(#5d6359,#414741);
+  color:#f0dfbd;
+  box-shadow:inset 0 1px rgba(255,255,255,.1),0 3px 0 #2e322e;
+  font:700 11px/1 "Courier New",monospace;
+}
+.world-toolbox-tool[data-world-tool="mini-games"] .extra-game-top button { min-width:72px; }
+.world-toolbox-tool[data-world-tool="mini-games"] .extra-game-stats {
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  margin:0 auto 10px;
+  padding:8px 10px;
+  border:2px solid #465046;
+  border-radius:7px;
+  background:#a8b08f;
+  color:#293329;
+  box-shadow:inset 0 3px 10px rgba(32,47,34,.18);
+  font:700 11px/1.2 "Courier New",monospace;
+}
+.world-toolbox-tool[data-world-tool="mini-games"] .extra-game-note {
+  min-height:30px;
+  margin:9px 4px;
+  color:#343b33;
+  font:700 11px/1.4 "Courier New",monospace;
+  text-align:center;
+}
+.world-toolbox-tool[data-world-tool="mini-games"] .extra-restart { display:block; margin:8px auto 0; }
+.world-toolbox-tool[data-world-tool="mini-games"] .extra-muji-sprite { display:block; object-fit:contain; image-rendering:pixelated; }
+
+/* Snake — green LCD maze */
+.world-toolbox-tool[data-world-tool="mini-games"] .snake-board {
+  display:grid;
+  grid-template-columns:repeat(12,1fr);
+  width:min(390px,100%);
+  aspect-ratio:1;
+  margin:0 auto;
+  padding:8px;
+  gap:2px;
+  border:3px solid #434c43;
+  border-radius:9px;
+  background:#89987b;
+  box-shadow:inset 0 0 18px rgba(30,43,31,.28);
+  outline:none;
+}
+.snake-board i { border-radius:2px; background:rgba(47,62,49,.07); }
+.snake-board i.snake-body { background:#364a39; }
+.snake-board i.snake-head { background:#263b2d; box-shadow:0 0 0 1px #c7d29e inset; }
+.snake-board i.snake-food { background:#b46c49; border-radius:50%; box-shadow:0 0 8px rgba(153,81,48,.28); }
+.extra-dpad { display:grid; grid-template-columns:repeat(3,48px); justify-content:center; gap:5px; margin:8px auto; }
+.extra-dpad button { width:48px; padding:0; }
+.block-controls { grid-template-columns:repeat(4,48px); }
+.block-controls button { width:48px; }
+
+/* Tetris-style Block Drop — amber/olive LCD */
+.world-toolbox-tool[data-world-tool="mini-games"] .tetris-board {
+  display:grid;
+  grid-template-columns:repeat(10,1fr);
+  grid-template-rows:repeat(20,1fr);
+  width:min(260px,74vw);
+  aspect-ratio:1/2;
+  margin:0 auto;
+  padding:6px;
+  gap:1px;
+  border:3px solid #474b41;
+  border-radius:7px;
+  background:#929b7d;
+  box-shadow:inset 0 0 18px rgba(37,43,35,.23);
+  outline:none;
+}
+.tetris-board i { background:rgba(46,55,44,.06); }
+.tetris-board i.filled { background:#56624f; box-shadow:inset 0 0 0 1px #76826d; }
+.tetris-board i.active { background:#c0954e; box-shadow:inset 0 0 0 1px #e0bb70; }
+
+/* Whack-a-Muji — little cardboard pop-up holes */
+.world-toolbox-tool[data-world-tool="mini-games"] .whack-board {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+  width:min(420px,100%);
+  margin:0 auto;
+  padding:14px;
+  border:3px solid #6d5b45;
+  border-radius:10px;
+  background:linear-gradient(#b89d73,#92785a);
+  box-shadow:inset 0 0 16px rgba(68,47,29,.22);
+}
+.muji-hole {
+  position:relative;
+  aspect-ratio:1.2;
+  overflow:hidden;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  background:radial-gradient(ellipse at center,#2c261f 0 46%,#65513c 47% 54%,#8e7456 55%);
+  box-shadow:inset 0 8px 12px rgba(0,0,0,.35);
+}
+.muji-hole span { position:absolute; left:50%; bottom:-95%; width:74%; transform:translateX(-50%); transition:bottom .12s cubic-bezier(.2,.8,.2,1); }
+.muji-hole.up span { bottom:-5%; }
+.muji-hole .extra-muji-sprite { width:100%; height:auto; }
+
+/* Catch the Stars — Muji pushes a tiny wooden box */
+.world-toolbox-tool[data-world-tool="mini-games"] .catch-board {
+  position:relative;
+  width:min(460px,100%);
+  aspect-ratio:4/3;
+  margin:0 auto;
+  overflow:hidden;
+  border:3px solid #404943;
+  border-radius:10px;
+  background:
+    radial-gradient(circle at 18% 16%,rgba(239,211,147,.45) 0 1px,transparent 2px),
+    radial-gradient(circle at 72% 21%,rgba(239,211,147,.32) 0 1px,transparent 2px),
+    linear-gradient(#26312f,#18211f 70%,#5d614f 71%);
+  box-shadow:inset 0 0 22px rgba(0,0,0,.25);
+  outline:none;
+}
+.catch-muji { position:absolute; left:50%; bottom:5%; display:flex; align-items:flex-end; transform:translateX(-50%); transition:left .08s linear; }
+.catch-muji-img { width:44px; height:52px; }
+.catch-box { display:grid; width:38px; height:30px; margin-left:-7px; place-items:center; border:3px solid #6a4c2f; background:#b38755; color:#6a4c2f; font-size:0; box-shadow:inset 0 0 0 2px #d4ad76; }
+.falling-star { position:absolute; top:-5%; transform:translateX(-50%); color:#f0c96c; font-style:normal; font-size:20px; text-shadow:0 0 10px rgba(240,201,108,.45); }
+.catch-controls { display:flex; justify-content:center; gap:10px; margin:8px auto; }
+.catch-controls button { width:72px; }
+
+/* Tic-Tac-Toe — paper/grid board beside Muji */
+.world-toolbox-tool[data-world-tool="mini-games"] .ttt-players {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  margin:0 0 8px;
+  color:#3d453d;
+  font:700 10px/1 "Courier New",monospace;
+}
+.ttt-muji { width:34px; height:40px; }
+.world-toolbox-tool[data-world-tool="mini-games"] .ttt-board {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  width:min(330px,88vw);
+  aspect-ratio:1;
+  margin:0 auto;
+  padding:10px;
+  gap:5px;
+  border:3px solid #65523d;
+  border-radius:8px;
+  background:
+    repeating-linear-gradient(0deg,rgba(92,67,41,.035) 0 1px,transparent 1px 24px),
+    #d8bd86;
+  box-shadow:inset 0 0 13px rgba(70,52,32,.12);
+}
+.ttt-board button { min-width:0; min-height:0; padding:0; border:1px solid rgba(87,64,40,.35); border-radius:4px; background:rgba(239,220,181,.45); color:#52604e; box-shadow:none; font:800 clamp(28px,12vw,54px)/1 Georgia,serif; }
+.ttt-board button.mark-X { color:#9b7044; }
+.ttt-board button.mark-O { color:#52604e; }
+
+@media (max-width:700px) {
+  .world-toolbox-tool[data-world-tool="mini-games"] .mini-games-grid { gap:9px; padding:9px; }
+  .world-toolbox-tool[data-world-tool="mini-games"] .mini-game-card { min-height:150px; grid-template-rows:80px auto auto; padding-inline:7px; }
+  .world-toolbox-tool[data-world-tool="mini-games"] .extra-mini-game-screen { padding:14px 10px 16px; }
+  .world-toolbox-tool[data-world-tool="mini-games"] .extra-game-top::after { width:54px; }
+  .world-toolbox-tool[data-world-tool="mini-games"] .extra-game-top button { min-width:54px; padding-inline:6px; }
+  .extra-dpad { grid-template-columns:repeat(3,44px); }
+  .extra-dpad button { width:44px; min-height:44px; }
+  .block-controls { grid-template-columns:repeat(4,44px); }
+  .block-controls button { width:44px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .muji-hole span, .catch-muji { transition:none !important; }
+}

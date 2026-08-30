@@ -20,7 +20,18 @@ for (const file of [
   "spin-wheel-components.css",
   "spin-wheel-world.js",
   "spin-wheel-preset-ui.js",
-  "spin-wheel-result-ui.js"
+  "spin-wheel-result-ui.js",
+  "world-utility-ui.css",
+  "world-utility-ui.js",
+  "world-utility-ui-refine.css",
+  "world-utility-ui-refine.js",
+  "world-tool-transition.css",
+  "world-mini-games.css",
+  "world-mini-games-extra.css",
+  "world-mini-games-extra.js",
+  "world-mini-games-refine.css",
+  "world-mini-games-refine.js",
+  "world-utility-tools-polish.css"
 ]) {
   await copyFile(resolve(root, `src/${file}`), resolve(root, `dist/${file}`));
 }
