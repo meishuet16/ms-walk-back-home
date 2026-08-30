@@ -22,7 +22,9 @@ for (const file of [
   "spin-wheel-preset-ui.js",
   "spin-wheel-result-ui.js",
   "world-utility-ui.css",
-  "world-utility-ui.js"
+  "world-utility-ui.js",
+  "world-utility-ui-refine.css",
+  "world-utility-ui-refine.js"
 ]) {
   await copyFile(resolve(root, `src/${file}`), resolve(root, `dist/${file}`));
 }
