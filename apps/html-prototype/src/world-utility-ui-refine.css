@@ -1,0 +1,451 @@
+/* Second-pass UX refinement for the in-world Toolbox + Living Window presentation.
+   This layer intentionally overrides presentation only; tool/weather state stays in the existing systems. */
+
+/* ---------- Toolbox: a tool card is the entry point, not a two-step selector ---------- */
+.world-toolbox-root .toolbox-slot {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.world-toolbox-root .toolbox-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 4px 4px;
+  background: linear-gradient(180deg, rgba(23,25,25,0), #171919 24%);
+}
+
+.world-toolbox-root .toolbox-footer > div {
+  min-width: 0;
+}
+
+.world-toolbox-root .toolbox-footer > div strong,
+.world-toolbox-root .toolbox-footer > div span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Living Window: make the three tabs genuinely different views ---------- */
+.world-weather-display .window-panel-header {
+  position: relative;
+  align-items: flex-start;
+}
+
+.world-weather-display .window-panel-actions {
+  flex-wrap: nowrap;
+}
+
+.world-weather-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.world-weather-tabs button {
+  width: 100%;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+/* Today = the actual weather instrument + a short glance ahead + moon/note. */
+.world-weather-display[data-weather-view="today"] .window-forecast-heading,
+.world-weather-display[data-weather-view="today"] .window-forecast {
+  display: none !important;
+}
+
+.world-weather-display[data-weather-view="today"] .window-hourly-card {
+  opacity: 1;
+}
+
+/* Hourly = a clean timetable. Current station and unrelated cards step away. */
+.world-weather-display[data-weather-view="hourly"] .window-weather-primary,
+.world-weather-display[data-weather-view="hourly"] .window-moon-card,
+.world-weather-display[data-weather-view="hourly"] .window-forecast-heading,
+.world-weather-display[data-weather-view="hourly"] .window-forecast,
+.world-weather-display[data-weather-view="hourly"] .world-weather-note {
+  display: none !important;
+}
+
+.world-weather-display[data-weather-view="hourly"] .window-hourly-card {
+  grid-column: 1 / -1;
+  grid-row: auto;
+  width: 100%;
+  transform: none;
+  opacity: 1;
+}
+
+/* This week = forecast board only. No repeated giant current-condition device. */
+.world-weather-display[data-weather-view="weekly"] .window-weather-primary,
+.world-weather-display[data-weather-view="weekly"] .window-hourly-card,
+.world-weather-display[data-weather-view="weekly"] .window-moon-card,
+.world-weather-display[data-weather-view="weekly"] .world-weather-note {
+  display: none !important;
+}
+
+.world-weather-display[data-weather-view="weekly"] .window-forecast-heading,
+.world-weather-display[data-weather-view="weekly"] .window-forecast {
+  opacity: 1;
+}
+
+/* ---------- Weather station readability ---------- */
+.world-weather-station .window-temperature {
+  position: relative;
+  padding-left: 12px;
+}
+
+.world-weather-display[data-weather-condition="rain"] .world-weather-station::after,
+.world-weather-display[data-weather-condition="storm"] .world-weather-station::after,
+.world-weather-display[data-weather-condition="clear"] .world-weather-station::after,
+.world-weather-display[data-weather-condition="cloud"] .world-weather-station::after,
+.world-weather-display[data-weather-condition="fog"] .world-weather-station::after {
+  left: auto;
+  right: 34px;
+  top: 18px;
+  font-size: 22px;
+  opacity: .55;
+}
+
+.world-weather-station .window-temperature span {
+  max-width: 52%;
+  padding-left: 0;
+}
+
+/* ---------- Next hours: notebook rows instead of a crushed data table ---------- */
+.world-weather-display .window-hourly-card {
+  padding: 15px 16px 12px;
+  border: 0;
+  border-radius: 3px;
+  background:
+    linear-gradient(90deg, rgba(121,84,45,.08) 1px, transparent 1px) 0 0 / 100% 100%,
+    repeating-linear-gradient(0deg, transparent 0 34px, rgba(100,69,37,.12) 35px),
+    #dfc38f;
+  box-shadow: 0 7px 15px rgba(0,0,0,.27), inset 0 1px rgba(255,255,255,.34);
+}
+
+.world-weather-display .window-hourly-card h3 {
+  margin-bottom: 9px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(82,55,30,.24);
+  font-size: 12px;
+  letter-spacing: .12em;
+}
+
+.world-weather-display .window-hourly-strip {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  max-height: none;
+  overflow: visible;
+}
+
+.world-weather-display .window-hourly-point {
+  display: grid;
+  grid-template-columns: minmax(62px,.8fr) minmax(0,1.5fr) auto;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  row-gap: 2px;
+  align-items: center;
+  min-height: 50px;
+  padding: 7px 3px;
+  border-bottom: 1px dashed rgba(79,55,32,.23);
+  line-height: 1.15;
+}
+
+.world-weather-display .window-hourly-point:last-child {
+  border-bottom: 0;
+}
+
+.world-weather-display .window-hourly-point > * {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.world-weather-display .window-hourly-point strong {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  font-size: 12px;
+}
+
+.world-weather-display .window-hourly-point span {
+  grid-column: 2;
+  grid-row: 1;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.world-weather-display .window-hourly-point small {
+  grid-column: 2;
+  grid-row: 2;
+  font-size: 10px;
+  opacity: .72;
+}
+
+.world-weather-display .window-hourly-point > :last-child {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  justify-self: end;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Today is a glance, not another full forecast list. */
+.world-weather-display[data-weather-view="today"] .window-hourly-point:nth-child(n+6) {
+  display: none;
+}
+
+/* ---------- Moon: a quiet observation slip, not a dashboard card ---------- */
+.world-weather-display .window-moon-card {
+  position: relative;
+  padding: 16px 18px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 2px;
+  background:
+    repeating-linear-gradient(0deg, rgba(87,61,35,.035) 0 1px, transparent 1px 26px),
+    #e5cf9f;
+  color: #493522;
+  box-shadow: 0 6px 13px rgba(0,0,0,.24);
+  transform: rotate(-.35deg);
+}
+
+.world-weather-display .window-moon-card::before {
+  content: "tonight";
+  display: block;
+  margin-bottom: 10px;
+  color: #8d6040;
+  font: 700 10px/1.2 Georgia, serif;
+  letter-spacing: .13em;
+  text-transform: lowercase;
+}
+
+.world-weather-display .window-moon-layout {
+  gap: 14px;
+  color: #493522;
+}
+
+.world-weather-display .window-moon-layout span,
+.world-weather-display .window-moon-layout small {
+  color: #6b4e32;
+}
+
+/* ---------- Muji memo: scrapbook note instead of a metallic SaaS panel ---------- */
+.world-weather-note {
+  position: relative;
+  padding: 18px 18px 14px;
+  border: 0;
+  border-radius: 2px;
+  background:
+    repeating-linear-gradient(0deg, rgba(102,74,40,.04) 0 1px, transparent 1px 24px),
+    #ead19a;
+  color: #49321f;
+  box-shadow: 0 6px 14px rgba(0,0,0,.23);
+  transform: rotate(-.7deg);
+}
+
+.world-weather-note::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  width: 54px;
+  height: 15px;
+  transform: translateX(-50%) rotate(1deg);
+  background: rgba(199,181,139,.72);
+  box-shadow: 0 1px 2px rgba(0,0,0,.08);
+}
+
+.world-weather-note strong {
+  font-family: Georgia, "Noto Serif CJK SC", serif;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.world-weather-note span {
+  margin-top: 8px;
+  color: #76583a;
+  font-style: italic;
+}
+
+/* ---------- Weekly board: readable little forecast slips ---------- */
+.world-weather-display .window-forecast {
+  gap: 8px;
+  padding: 10px;
+  border: 0;
+  background: #d8bd87;
+  box-shadow: 0 7px 16px rgba(0,0,0,.27);
+}
+
+.world-weather-display .window-forecast > * {
+  padding: 11px 10px;
+  border: 0 !important;
+  border-radius: 2px;
+  background: rgba(239,220,179,.56);
+  color: #4b3623;
+}
+
+.world-weather-display .window-forecast > * strong,
+.world-weather-display .window-forecast > * span,
+.world-weather-display .window-forecast > * small {
+  color: inherit;
+}
+
+@media (max-width:700px) {
+  .toolbox-panel.world-toolbox-root {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .world-toolbox-root .toolbox-grid {
+    margin-bottom: 6px;
+  }
+
+  .world-toolbox-root .toolbox-footer {
+    min-height: 48px;
+    margin-top: 2px;
+    padding: 9px 3px 3px;
+  }
+
+  .world-toolbox-root .toolbox-footer > div span,
+  .world-toolbox-root .toolbox-confirm {
+    display: none;
+  }
+
+  .world-toolbox-root .toolbox-footer > div strong::after {
+    content: " · tap a tool to open";
+    color: #8f8476;
+    font-size: 10px;
+    font-weight: 500;
+  }
+
+  .world-weather-display .window-panel-header {
+    min-height: 108px;
+    padding-right: 150px;
+  }
+
+  .world-weather-display .window-panel-header h2 {
+    max-width: 100%;
+    font-size: clamp(23px, 7vw, 33px);
+    line-height: 1.05;
+  }
+
+  .world-weather-display .window-panel-actions {
+    position: absolute;
+    top: 4px;
+    right: 2px;
+    gap: 5px;
+  }
+
+  .world-weather-display .window-panel-actions button {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+  }
+
+  .world-weather-display .window-main-view {
+    display: grid;
+    grid-template-columns: minmax(0,1fr);
+    gap: 12px;
+    padding-top: 58px;
+  }
+
+  .world-weather-tabs {
+    gap: 6px;
+    overflow: visible;
+    padding: 0;
+  }
+
+  .world-weather-tabs button {
+    min-height: 44px;
+    padding: 8px 6px;
+    font-size: 14px;
+  }
+
+  .world-weather-station {
+    min-height: 286px;
+    padding: 48px 22px 63px;
+    border-radius: 22px;
+  }
+
+  .world-weather-station::before {
+    top: 45px;
+    bottom: 58px;
+  }
+
+  .world-weather-station .window-local-time {
+    padding-top: 5px;
+  }
+
+  .world-weather-station .window-temperature {
+    min-height: 92px;
+    gap: 8px;
+    padding: 10px 8px;
+  }
+
+  .world-weather-station .window-temperature strong {
+    font-size: clamp(38px, 12vw, 54px);
+  }
+
+  .world-weather-station .window-temperature span {
+    max-width: 48%;
+    font-size: 11px;
+  }
+
+  .world-weather-display .window-hourly-card,
+  .world-weather-display[data-weather-view="hourly"] .window-hourly-card {
+    width: 100%;
+    min-width: 0;
+    grid-column: 1;
+    grid-row: auto;
+    order: initial;
+  }
+
+  .world-weather-display .window-hourly-point {
+    grid-template-columns: 58px minmax(0,1fr) auto;
+    column-gap: 8px;
+    min-height: 48px;
+  }
+
+  .world-weather-display .window-forecast {
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 7px;
+  }
+
+  .world-weather-display .window-moon-card,
+  .world-weather-note {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+
+@media (max-width:420px) {
+  .world-weather-display .window-panel-header {
+    padding-right: 0;
+    padding-top: 58px;
+    min-height: 142px;
+  }
+
+  .world-weather-display .window-panel-actions {
+    top: 4px;
+    left: 2px;
+    right: auto;
+  }
+
+  .world-weather-display .window-panel-header h2 {
+    font-size: 25px;
+  }
+
+  .world-weather-tabs button {
+    font-size: 13px;
+  }
+
+  .world-weather-display .window-hourly-point {
+    grid-template-columns: 54px minmax(0,1fr) auto;
+  }
+}
