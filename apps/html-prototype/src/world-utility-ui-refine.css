@@ -48,7 +48,7 @@
 }
 .world-toolbox-tool .toolbox-tool-body { min-width:0; overflow-x:hidden; }
 .world-toolbox-tool .toolbox-utility { min-width:0; max-width:100%; }
-.world-toolbox-tool[data-world-tool="spin-wheel"] .toolbox-tool-body { padding-inline:10px; }
+.world-toolbox-tool[data-world-tool="spin-wheel"] .toolbox-tool-body { padding-inline:8px; }
 .world-toolbox-tool[data-world-tool="spin-wheel"] .spin-wheel-tool,
 .world-toolbox-tool[data-world-tool="spin-wheel"] .spin-wheel-stage,
 .world-toolbox-tool[data-world-tool="spin-wheel"] .spin-choice-summary,
@@ -59,13 +59,22 @@
   min-width:0 !important;
   box-sizing:border-box;
 }
+/* The visible bezel, not only the canvas, controls the real footprint. */
+.world-toolbox-tool[data-world-tool="spin-wheel"] .spin-wheel-frame {
+  width:min(100%,372px) !important;
+  max-width:calc(100% - 18px) !important;
+  min-width:0 !important;
+  box-sizing:border-box !important;
+  margin-inline:auto !important;
+}
 .world-toolbox-tool[data-world-tool="spin-wheel"] .spin-wheel-canvas {
   display:block;
-  width:min(100%,440px) !important;
+  width:100% !important;
   max-width:100% !important;
-  height:auto !important;
-  aspect-ratio:1;
-  margin-inline:auto;
+  height:100% !important;
+  aspect-ratio:1 / 1 !important;
+  margin:0 !important;
+  box-sizing:border-box !important;
 }
 
 /* ---------- Living Window: two useful views only ---------- */
@@ -79,26 +88,20 @@
 .world-weather-tabs button { width:100%; min-width:0; white-space:nowrap; }
 .world-weather-tabs button[data-weather-view="hourly"] { display:none !important; }
 
-/* Today = instrument + short next-hours glance + moon + Muji note. */
 .world-weather-display[data-weather-view="today"] .window-forecast-heading,
 .world-weather-display[data-weather-view="today"] .window-forecast { display:none !important; }
 .world-weather-display[data-weather-view="today"] .window-hourly-card { opacity:1 !important; }
-
-/* This week = forecast board only. */
 .world-weather-display[data-weather-view="weekly"] .window-weather-primary,
 .world-weather-display[data-weather-view="weekly"] .window-hourly-card,
 .world-weather-display[data-weather-view="weekly"] .window-moon-card,
 .world-weather-display[data-weather-view="weekly"] .world-weather-note { display:none !important; }
 .world-weather-display[data-weather-view="weekly"] .window-forecast-heading,
 .world-weather-display[data-weather-view="weekly"] .window-forecast { opacity:1 !important; }
-
-/* Legacy hourly state cannot be selected anymore; if encountered, show Today content. */
 .world-weather-display[data-weather-view="hourly"] .window-weather-primary,
 .world-weather-display[data-weather-view="hourly"] .window-hourly-card,
 .world-weather-display[data-weather-view="hourly"] .window-moon-card,
 .world-weather-display[data-weather-view="hourly"] .world-weather-note { display:initial; }
 
-/* Weather device icon sits in the bezel, never over the reading. */
 .world-weather-display[data-weather-condition="rain"] .world-weather-station::after,
 .world-weather-display[data-weather-condition="storm"] .world-weather-station::after,
 .world-weather-display[data-weather-condition="clear"] .world-weather-station::after,
@@ -111,28 +114,41 @@
   opacity:.48 !important;
 }
 
-/* ---------- Next hours: vertical receipt rows, never a horizontal crush ---------- */
+/* ---------- Next hours: a small weather receipt pinned beside the station ---------- */
 .world-weather-display .window-hourly-card {
+  position:relative;
   width:100%;
   min-width:0;
-  padding:14px 16px 12px;
+  padding:18px 16px 13px;
   overflow:hidden;
   border:0;
-  border-radius:3px;
+  border-radius:2px;
   background:
-    repeating-linear-gradient(0deg,transparent 0 38px,rgba(92,63,34,.10) 39px),
-    #dfc38f;
+    linear-gradient(90deg,rgba(164,111,60,.16),rgba(164,111,60,.16)) 26px 0 / 1px 100% no-repeat,
+    repeating-linear-gradient(0deg,transparent 0 36px,rgba(93,63,34,.10) 37px),
+    linear-gradient(180deg,#ead29f,#ddbf84);
   color:#46311e;
-  box-shadow:0 7px 15px rgba(0,0,0,.27),inset 0 1px rgba(255,255,255,.34);
-  transform:none;
+  box-shadow:0 8px 17px rgba(0,0,0,.25),inset 0 1px rgba(255,255,255,.38);
+  transform:rotate(.18deg);
+}
+.world-weather-display .window-hourly-card::before {
+  content:"";
+  position:absolute;
+  top:-4px;
+  left:50%;
+  width:58px;
+  height:12px;
+  transform:translateX(-50%) rotate(-1deg);
+  background:rgba(202,184,143,.72);
+  box-shadow:0 1px 2px rgba(0,0,0,.08);
 }
 .world-weather-display .window-hourly-card h3 {
-  margin:0 0 8px;
+  margin:0 0 8px 20px;
   padding:0 0 9px;
-  border-bottom:1px solid rgba(82,55,30,.24);
-  color:#5b3e25;
-  font-size:12px;
-  letter-spacing:.12em;
+  border-bottom:1px solid rgba(82,55,30,.22);
+  color:#69472b;
+  font:700 12px/1 Georgia,serif;
+  letter-spacing:.16em;
 }
 .world-weather-display .window-hourly-strip {
   display:block !important;
@@ -147,136 +163,126 @@
   width:100% !important;
   max-width:100% !important;
   min-width:0 !important;
-  grid-template-columns:72px minmax(0,1fr) 54px !important;
+  grid-template-columns:64px minmax(0,1fr) 48px !important;
   grid-template-rows:auto auto !important;
   align-items:center !important;
   gap:2px 10px !important;
-  min-height:52px !important;
-  padding:7px 2px !important;
+  min-height:50px !important;
+  padding:6px 2px 6px 20px !important;
   border:0 !important;
-  border-bottom:1px dashed rgba(79,55,32,.22) !important;
   box-sizing:border-box !important;
   float:none !important;
   white-space:normal !important;
 }
-.world-weather-display .window-hourly-point:last-child { border-bottom:0 !important; }
 .world-weather-display .window-hourly-point > * {
   min-width:0 !important;
   margin:0 !important;
   overflow:hidden !important;
-  color:#493523 !important;
+  color:#4b3724 !important;
   text-overflow:ellipsis !important;
   white-space:nowrap !important;
 }
-.world-weather-display .window-hourly-point strong {
-  grid-column:1 !important;
-  grid-row:1 / span 2 !important;
-  font-size:12px !important;
-}
-.world-weather-display .window-hourly-point span {
-  grid-column:2 !important;
-  grid-row:1 !important;
-  font-size:11px !important;
-  font-weight:700 !important;
-}
-.world-weather-display .window-hourly-point small {
-  grid-column:2 !important;
-  grid-row:2 !important;
-  font-size:10px !important;
-  opacity:.72 !important;
-}
-.world-weather-display .window-hourly-point > :last-child {
-  grid-column:3 !important;
-  grid-row:1 / span 2 !important;
-  justify-self:end !important;
-  font-size:12px !important;
-  font-weight:800 !important;
-}
+.world-weather-display .window-hourly-point strong { grid-column:1 !important; grid-row:1 / span 2 !important; font-size:12px !important; }
+.world-weather-display .window-hourly-point span { grid-column:2 !important; grid-row:1 !important; font-size:11px !important; font-weight:700 !important; }
+.world-weather-display .window-hourly-point small { grid-column:2 !important; grid-row:2 !important; font-size:10px !important; opacity:.7 !important; }
+.world-weather-display .window-hourly-point > :last-child { grid-column:3 !important; grid-row:1 / span 2 !important; justify-self:end !important; font-size:12px !important; font-weight:800 !important; }
 .world-weather-display[data-weather-view="today"] .window-hourly-point:nth-child(n+5) { display:none !important; }
 
-/* ---------- Moon + Muji note: quiet paper objects ---------- */
+/* ---------- Moon: night-sky observation card, still tactile and in-world ---------- */
 .world-weather-display .window-moon-card {
   position:relative;
-  padding:16px 18px;
+  padding:18px 18px 17px;
   overflow:hidden;
-  border:0;
-  border-radius:2px;
-  background:repeating-linear-gradient(0deg,rgba(87,61,35,.035) 0 1px,transparent 1px 26px),#e5cf9f;
-  color:#493522;
-  box-shadow:0 6px 13px rgba(0,0,0,.22);
+  border:1px solid rgba(128,99,63,.35);
+  border-radius:3px;
+  background:
+    radial-gradient(circle at 17% 45%,rgba(248,223,166,.16),transparent 90px),
+    repeating-linear-gradient(0deg,rgba(255,255,255,.018) 0 1px,transparent 1px 24px),
+    linear-gradient(145deg,#27302d,#1c2422 72%);
+  color:#ead8b4;
+  box-shadow:0 8px 18px rgba(0,0,0,.28),inset 0 1px rgba(255,255,255,.04);
   transform:rotate(-.25deg);
 }
 .world-weather-display .window-moon-card::before {
-  content:"tonight";
+  content:"TONIGHT'S SKY";
   display:block;
-  margin-bottom:9px;
-  color:#8d6040;
-  font:700 10px/1.2 Georgia,serif;
-  letter-spacing:.13em;
+  margin-bottom:11px;
+  color:#c99d61;
+  font:700 10px/1.2 "Courier New",monospace;
+  letter-spacing:.14em;
 }
+.world-weather-display .window-moon-card::after {
+  content:"✦  ·  ✦";
+  position:absolute;
+  top:15px;
+  right:16px;
+  color:rgba(222,181,111,.42);
+  font-size:9px;
+  letter-spacing:.28em;
+}
+.world-weather-display .window-moon-layout { gap:15px; color:#ead8b4; }
+.world-weather-display .window-moon-layout strong { color:#f1ddb8; font-weight:700; }
+.world-weather-display .window-moon-layout span,
+.world-weather-display .window-moon-layout small { color:#bea985; }
+.world-weather-display .window-moon-visual {
+  filter:drop-shadow(0 0 12px rgba(237,209,149,.16));
+}
+
+/* Muji memo = loose handwritten note, separate from the weather instrument. */
 .world-weather-note {
   position:relative;
-  padding:18px 18px 14px;
+  padding:20px 20px 15px;
   border:0;
   border-radius:2px;
-  background:repeating-linear-gradient(0deg,rgba(102,74,40,.04) 0 1px,transparent 1px 24px),#ead19a;
+  background:
+    repeating-linear-gradient(0deg,rgba(102,74,40,.04) 0 1px,transparent 1px 24px),
+    linear-gradient(180deg,#efd9a6,#e5c991);
   color:#49321f;
-  box-shadow:0 6px 14px rgba(0,0,0,.21);
-  transform:rotate(-.45deg);
+  box-shadow:0 7px 15px rgba(0,0,0,.20);
+  transform:rotate(-.65deg);
 }
 .world-weather-note::before {
   content:"";
   position:absolute;
   top:-7px;
   left:50%;
-  width:54px;
+  width:58px;
   height:15px;
   transform:translateX(-50%) rotate(1deg);
-  background:rgba(199,181,139,.72);
+  background:rgba(196,181,144,.75);
+  box-shadow:0 1px 2px rgba(0,0,0,.08);
 }
-.world-weather-note strong { font-family:Georgia,"Noto Serif CJK SC",serif; font-size:14px; font-weight:600; line-height:1.55; }
-.world-weather-note span { margin-top:8px; color:#76583a; font-style:italic; }
+.world-weather-note strong { font-family:Georgia,"Noto Serif CJK SC",serif; font-size:14px; font-weight:600; line-height:1.62; }
+.world-weather-note span { margin-top:9px; color:#76583a; font-style:italic; }
 
-/* Weekly cards as paper forecast slips. */
-.world-weather-display .window-forecast {
-  gap:8px;
-  padding:10px;
-  border:0;
-  background:#d8bd87;
-  box-shadow:0 7px 16px rgba(0,0,0,.25);
-}
-.world-weather-display .window-forecast > * {
-  padding:11px 10px;
-  border:0 !important;
-  border-radius:2px;
-  background:rgba(239,220,179,.58);
-  color:#4b3623;
-}
+.world-weather-display .window-forecast { gap:8px; padding:10px; border:0; background:#d8bd87; box-shadow:0 7px 16px rgba(0,0,0,.25); }
+.world-weather-display .window-forecast > * { padding:11px 10px; border:0 !important; border-radius:2px; background:rgba(239,220,179,.58); color:#4b3623; }
 .world-weather-display .window-forecast > * strong,
 .world-weather-display .window-forecast > * span,
 .world-weather-display .window-forecast > * small { color:inherit; }
 
 @media (max-width:700px) {
   .toolbox-panel.world-toolbox-root,
-  .toolbox-panel.world-toolbox-tool { overflow-y:auto; overscroll-behavior:contain; }
+  .toolbox-panel.world-toolbox-tool { overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; }
   .world-toolbox-root .toolbox-grid { margin-bottom:5px; }
   .world-toolbox-root .toolbox-footer { min-height:64px; padding:10px 3px 3px; }
   .world-toolbox-root .toolbox-footer > div span { font-size:10px; }
   .world-toolbox-root .toolbox-confirm { display:inline-grid !important; min-width:82px; min-height:44px; }
 
-  .world-toolbox-tool .toolbox-tool-body { padding:10px; }
-  .world-toolbox-tool[data-world-tool="spin-wheel"] .spin-wheel-stage { overflow:hidden; }
+  .world-toolbox-tool .toolbox-tool-body { padding:8px; }
+  .world-toolbox-tool[data-world-tool="spin-wheel"] .spin-wheel-stage { overflow:hidden; padding-inline:6px !important; }
+  .world-toolbox-tool[data-world-tool="spin-wheel"] .spin-wheel-frame { max-width:calc(100% - 26px) !important; }
 
   .world-weather-display .window-panel-header { min-height:108px; padding-right:150px; }
   .world-weather-display .window-panel-header h2 { max-width:100%; font-size:clamp(23px,7vw,33px); line-height:1.05; }
   .world-weather-display .window-panel-actions { position:absolute; top:4px; right:2px; gap:5px; }
   .world-weather-display .window-panel-actions button { width:44px; min-width:44px; height:44px; }
-  .world-weather-display .window-main-view { display:grid; grid-template-columns:minmax(0,1fr); gap:12px; padding-top:58px; }
+  .world-weather-display .window-main-view { display:grid; grid-template-columns:minmax(0,1fr); gap:13px; padding-top:58px; }
   .world-weather-tabs { gap:7px; overflow:visible; padding:0; }
   .world-weather-tabs button { min-height:44px; padding:8px 8px; font-size:14px; }
 
   .world-weather-display .window-hourly-card { grid-column:1 !important; grid-row:auto !important; width:100% !important; order:initial !important; }
-  .world-weather-display .window-hourly-point { grid-template-columns:66px minmax(0,1fr) 48px !important; gap:2px 8px !important; }
+  .world-weather-display .window-hourly-point { grid-template-columns:58px minmax(0,1fr) 44px !important; gap:2px 7px !important; padding-left:18px !important; }
   .world-weather-display .window-forecast { grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
   .world-weather-display .window-moon-card,
   .world-weather-note { grid-column:1; grid-row:auto; }
@@ -286,6 +292,7 @@
   .world-weather-display .window-panel-header { padding-right:0; padding-top:58px; min-height:142px; }
   .world-weather-display .window-panel-actions { top:4px; left:2px; right:auto; }
   .world-weather-display .window-panel-header h2 { font-size:25px; }
-  .world-weather-display .window-hourly-point { grid-template-columns:60px minmax(0,1fr) 44px !important; }
-  .world-weather-display .window-hourly-card { padding-inline:12px; }
+  .world-weather-display .window-hourly-point { grid-template-columns:54px minmax(0,1fr) 42px !important; }
+  .world-weather-display .window-hourly-card { padding-inline:11px; }
+  .world-toolbox-tool[data-world-tool="spin-wheel"] .spin-wheel-frame { max-width:calc(100% - 32px) !important; }
 }
