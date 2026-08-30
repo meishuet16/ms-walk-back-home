@@ -1,0 +1,61 @@
+/* Shared Toolbox object transition. Visual only; existing Toolbox actions remain authoritative. */
+.world-tool-transition-ghost {
+  position: fixed;
+  z-index: 10050;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  border-radius: 12px;
+  background: radial-gradient(circle at 50% 45%, rgba(238,184,94,.14), transparent 62%);
+  box-shadow: 0 0 0 1px rgba(231,179,92,.12), 0 0 24px rgba(234,171,74,.18);
+  will-change: transform, opacity, filter;
+}
+.world-tool-transition-ghost .world-tool-object {
+  margin: 0;
+  transform: none;
+}
+
+.world-toolbox-root.world-tool-transition-depart {
+  animation: toolbox-case-depart .22s cubic-bezier(.3,.7,.2,1) both;
+}
+.world-toolbox-tool.world-tool-transition-enter {
+  transform-origin: 50% 38%;
+  animation: toolbox-tool-arrive .38s cubic-bezier(.18,.82,.22,1) both;
+}
+.world-toolbox-tool.world-tool-transition-depart {
+  animation: toolbox-tool-depart .18s ease-out both;
+}
+.world-toolbox-root.world-tool-transition-return {
+  transform-origin: 50% 42%;
+  animation: toolbox-case-return .34s cubic-bezier(.2,.78,.22,1) both;
+}
+
+@keyframes toolbox-case-depart {
+  from { opacity: 1; transform: scale(1); filter: brightness(1); }
+  to { opacity: .78; transform: scale(.985); filter: brightness(.84) blur(.35px); }
+}
+@keyframes toolbox-tool-arrive {
+  0% { opacity: 0; transform: translateY(8px) scale(.965); filter: brightness(.82) blur(1px); }
+  54% { opacity: 1; transform: translateY(-1px) scale(1.008); filter: brightness(1.05) blur(0); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: brightness(1) blur(0); }
+}
+@keyframes toolbox-tool-depart {
+  from { opacity: 1; transform: scale(1); filter: brightness(1); }
+  to { opacity: .72; transform: scale(.982); filter: brightness(.86); }
+}
+@keyframes toolbox-case-return {
+  0% { opacity: 0; transform: scale(.982); filter: brightness(.82); }
+  58% { opacity: 1; transform: scale(1.006); filter: brightness(1.04); }
+  100% { opacity: 1; transform: scale(1); filter: brightness(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .world-toolbox-root.world-tool-transition-depart,
+  .world-toolbox-tool.world-tool-transition-enter,
+  .world-toolbox-tool.world-tool-transition-depart,
+  .world-toolbox-root.world-tool-transition-return {
+    animation: none !important;
+  }
+  .world-tool-transition-ghost { display: none !important; }
+}
