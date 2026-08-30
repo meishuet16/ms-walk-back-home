@@ -130,8 +130,6 @@
     inspectResult();
   }
 
-  // Window capture runs before the older extra-game document listener, so all nine
-  // cartridges reliably pass through the same Start gate.
   window.addEventListener('click', (event) => {
     if (bypassLaunchGate || !(event.target instanceof Element)) return;
     const extra = event.target.closest('.mini-games-home [data-extra-mini-game]');
@@ -164,7 +162,13 @@
     if (event.target.closest('.snake-board, .catch-board, .tetris-board')) event.preventDefault();
   }, { passive:false, capture:true });
 
+  // Never observe class attributes here: decorateActiveGame itself toggles classes.
+  // Watching them creates a self-triggering MutationObserver loop and freezes the UI.
   const observer = new MutationObserver(() => queueMicrotask(decorateActiveGame));
-  const start = () => { observer.observe(document.body, {childList:true, subtree:true, characterData:true, attributes:true, attributeFilter:['class']}); decorateActiveGame(); };
+  const start = () => {
+    observer.observe(document.body, { childList:true, subtree:true, characterData:true });
+    decorateActiveGame();
+    window.setInterval(inspectResult, 300);
+  };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once:true}); else start();
 })();
