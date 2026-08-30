@@ -9,27 +9,29 @@
     const body = panel?.querySelector('.toolbox-tool-body');
     if (body instanceof HTMLElement && body.querySelector('.mini-games-home')) homeSnapshot = body.innerHTML;
   }
-  function showLaunchGate(panel, source, id) {
+  function restoreHome(panel) {
+    const body = panel?.querySelector('.toolbox-tool-body');
+    if (!(body instanceof HTMLElement) || !homeSnapshot) return false;
+    body.innerHTML = homeSnapshot;
+    panel.classList.remove('mini-game-playing', 'mini-game-at-gate');
+    return true;
+  }
+  function showLaunchGate(panel, id, isExtra) {
     const body = panel.querySelector('.toolbox-tool-body');
     if (!(body instanceof HTMLElement)) return;
     rememberHome(panel);
     const name = GAME_NAMES[id] || id;
     body.innerHTML = `<section class="mini-game-launch-card" data-launch-game="${id}"><button type="button" class="mini-game-only-back" data-refine-games-home>← Games</button><div class="mini-game-launch-screen"><small>MUJI POCKET GAME</small><strong>${name}</strong><span>Ready when you are.</span><button type="button" class="mini-game-start-button" data-refine-start>Start</button></div></section>`;
     panel.classList.add('mini-game-playing', 'mini-game-at-gate');
-    const start = body.querySelector('[data-refine-start]');
-    start?.addEventListener('click', () => {
+    body.querySelector('[data-refine-start]')?.addEventListener('click', () => {
+      if (!restoreHome(panel)) return;
+      const selector = isExtra ? `[data-extra-mini-game="${CSS.escape(id)}"]` : `[data-action="mini-game-select"][data-game="${CSS.escape(id)}"]`;
+      const liveSource = panel.querySelector(selector);
+      if (!(liveSource instanceof HTMLButtonElement)) return;
       bypassLaunchGate = true;
-      panel.classList.remove('mini-game-at-gate');
-      source.click();
+      liveSource.click();
       queueMicrotask(() => { bypassLaunchGate = false; decorateActiveGame(); });
     }, { once:true });
-  }
-  function restoreHome(panel) {
-    const body = panel?.querySelector('.toolbox-tool-body');
-    if (!(body instanceof HTMLElement) || !homeSnapshot) return;
-    body.innerHTML = homeSnapshot;
-    panel.classList.remove('mini-game-playing', 'mini-game-at-gate');
-    queueMicrotask(() => document.dispatchEvent(new CustomEvent('world-mini-games-home-restored')));
   }
   function decorateActiveGame() {
     const panel = miniPanel();
@@ -67,7 +69,7 @@
     const panel = source.closest('.toolbox-panel.world-toolbox-tool');
     if (!(panel instanceof HTMLElement)) return;
     event.preventDefault(); event.stopImmediatePropagation();
-    showLaunchGate(panel, source, id);
+    showLaunchGate(panel, id, Boolean(extra));
   }, true);
 
   // Game surfaces own their gestures. Swiping Snake/Catch/Block Drop must never
