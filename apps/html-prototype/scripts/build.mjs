@@ -24,7 +24,8 @@ for (const file of [
   "world-utility-ui.css",
   "world-utility-ui.js",
   "world-utility-ui-refine.css",
-  "world-utility-ui-refine.js"
+  "world-utility-ui-refine.js",
+  "world-tool-transition.css"
 ]) {
   await copyFile(resolve(root, `src/${file}`), resolve(root, `dist/${file}`));
 }
