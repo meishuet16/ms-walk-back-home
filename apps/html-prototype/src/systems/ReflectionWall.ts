@@ -8,7 +8,15 @@ export const reflectionPaperStyles = [
   { id: "tracing-paper", label: "Tracing Paper" },
   { id: "blue-clipped", label: "Blue Clipped" },
   { id: "taped-card", label: "Taped Card" },
-  { id: "soft-square", label: "Soft Square" }
+  { id: "soft-square", label: "Soft Square" },
+  { id: "kraft-note", label: "Kraft Note" },
+  { id: "receipt-slip", label: "Receipt Slip" },
+  { id: "night-card", label: "Night Card" },
+  { id: "lavender-fold", label: "Lavender Fold" },
+  { id: "photo-back", label: "Photo Back" },
+  { id: "pressed-leaf", label: "Pressed Leaf" },
+  { id: "notebook-rip", label: "Notebook Rip" },
+  { id: "ticket-stub", label: "Ticket Stub" }
 ] as const;
 
 export const defaultReflectionStyleId = "paper-mix";
@@ -27,7 +35,6 @@ type VisibleOptions = {
   filter?: ReflectionWallFilter;
   now?: Date;
 };
-
 
 export function createReflectionWallState(now = new Date()): ReflectionWallState {
   return {
@@ -83,6 +90,31 @@ export function updateReflectionNote(state: ReflectionWallState, id: string, tex
   }, now);
 }
 
+export function moveReflectionNote(state: ReflectionWallState, id: string, position: { x: number; y: number }, now = new Date()): ReflectionWallState {
+  const current = state.notes.find((note) => note.id === id);
+  if (!current) return state;
+  const moved: ReflectionNote = {
+    ...current,
+    x: clampPercent(position.x),
+    y: clampPercent(position.y),
+    updatedAt: now.toISOString()
+  };
+  return saveWall({
+    ...state,
+    notes: [...state.notes.filter((note) => note.id !== id), moved]
+  }, now);
+}
+
+export function rotateReflectionNote(state: ReflectionWallState, id: string, delta: number, now = new Date()): ReflectionWallState {
+  const current = state.notes.find((note) => note.id === id);
+  if (!current || !Number.isFinite(delta)) return state;
+  return saveWall({
+    ...state,
+    notes: state.notes.map((note) => note.id === id
+      ? { ...note, rotation: clampRotation(note.rotation + delta), updatedAt: now.toISOString() }
+      : note)
+  }, now);
+}
 
 export function changeReflectionPaper(state: ReflectionWallState, id: string, styleId: string, now = new Date()): ReflectionWallState {
   const nextStyle = validStyleId(styleId) ? styleId : selectPaperStyle(id);
@@ -177,7 +209,7 @@ function clampPercent(value: number): number {
 }
 
 function clampRotation(value: number): number {
-  return Math.max(-2.5, Math.min(2.5, Number.isFinite(value) ? Math.round(value * 10) / 10 : 0));
+  return Math.max(-5, Math.min(5, Number.isFinite(value) ? Math.round(value * 10) / 10 : 0));
 }
 
 function nextReflectionPosition(notes: ReflectionNote[]): { x: number; y: number } {
