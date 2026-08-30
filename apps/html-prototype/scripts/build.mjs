@@ -20,7 +20,9 @@ for (const file of [
   "spin-wheel-components.css",
   "spin-wheel-world.js",
   "spin-wheel-preset-ui.js",
-  "spin-wheel-result-ui.js"
+  "spin-wheel-result-ui.js",
+  "world-utility-ui.css",
+  "world-utility-ui.js"
 ]) {
   await copyFile(resolve(root, `src/${file}`), resolve(root, `dist/${file}`));
 }
