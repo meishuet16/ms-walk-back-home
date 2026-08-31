@@ -1,0 +1,6 @@
+.capsule-page--opened .capsule-note-card {
+  /* Keep the paper warmth without the repeating 1px rule pattern that Android
+     can promote into wide grey bands while scrolling beneath fixed actions. */
+  background: linear-gradient(180deg, #fffdf7 0%, #fffdf8 100%);
+  background-attachment: scroll;
+}

@@ -1,0 +1,378 @@
+.capsule-page--kept {
+  padding-bottom: 108px;
+}
+
+.capsule-kept-organizer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 0 16px;
+  padding: 9px 11px;
+  border: 1px solid rgba(77, 128, 162, .14);
+  border-radius: 16px;
+  background: rgba(248, 252, 252, .82);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
+}
+
+.capsule-kept-organizer > span {
+  color: #7790a2;
+  font-size: 11px;
+  letter-spacing: .02em;
+}
+
+.capsule-kept-organizer > div {
+  display: flex;
+  gap: 7px;
+}
+
+.capsule-kept-organizer button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(74, 129, 166, .2);
+  border-radius: 999px;
+  background: rgba(255,255,255,.9);
+  color: #426985;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.capsule-kept-organizer button:focus-visible,
+.capsule-kept-selector:focus-visible,
+.capsule-kept-bulk-bar button:focus-visible,
+.capsule-remove-dialog button:focus-visible {
+  outline: 2px solid rgba(68, 145, 190, .55);
+  outline-offset: 2px;
+}
+
+.capsule-kept-card--preview {
+  position: relative;
+}
+
+.capsule-kept-card--preview.is-selecting {
+  padding-left: 56px;
+}
+
+.capsule-kept-card--preview.is-selecting .capsule-kept-card-actions {
+  opacity: .36;
+  pointer-events: none;
+}
+
+.capsule-kept-card--preview.is-selected {
+  border-color: rgba(67, 151, 189, .46);
+  background: linear-gradient(145deg, rgba(236, 249, 252, .96), rgba(248, 252, 250, .96));
+  box-shadow: 0 9px 24px rgba(68, 117, 147, .09), inset 0 0 0 1px rgba(97, 171, 196, .08);
+}
+
+.capsule-kept-selector {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  width: 28px;
+  height: 28px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(75, 132, 166, .32);
+  border-radius: 50%;
+  background: rgba(255,255,255,.94);
+  color: transparent;
+  cursor: pointer;
+  box-shadow: 0 3px 9px rgba(58, 99, 124, .08);
+}
+
+.capsule-kept-selector[hidden] {
+  display: none !important;
+}
+
+.capsule-kept-selector[aria-pressed="true"] {
+  border-color: #5ea9c5;
+  background: #6eb7cf;
+  color: white;
+}
+
+.capsule-kept-selector span {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.capsule-kept-bulk-bar {
+  position: fixed;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 35;
+  width: min(500px, calc(100vw - 34px));
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid rgba(73, 120, 150, .16);
+  border-radius: 22px;
+  background: rgba(255, 253, 249, .94);
+  box-shadow: 0 15px 36px rgba(37, 58, 72, .18), inset 0 1px 0 rgba(255,255,255,.95);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.capsule-kept-bulk-bar > span {
+  padding-left: 8px;
+  color: #6f8595;
+  font-size: 10px;
+}
+
+.capsule-kept-bulk-bar > span strong {
+  color: #315a78;
+  font-size: 13px;
+}
+
+.capsule-kept-bulk-bar button {
+  min-height: 42px;
+  padding: 0 13px;
+  border: 1px solid rgba(74, 129, 166, .2);
+  border-radius: 14px;
+  background: white;
+  color: #416b88;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.capsule-kept-bulk-bar button span {
+  margin-right: 5px;
+}
+
+.capsule-kept-bulk-bar button.is-danger {
+  border-color: rgba(220, 117, 132, .24);
+  background: #fff3f4;
+  color: #b05f6d;
+}
+
+.capsule-remove-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(27, 37, 44, .58);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  animation: capsuleRemoveBackdropIn .18s ease-out both;
+}
+
+.capsule-remove-dialog {
+  width: min(470px, 100%);
+  max-height: calc(100dvh - 44px);
+  overflow: auto;
+  padding: 26px 22px 20px;
+  border: 1px solid rgba(224, 157, 160, .22);
+  border-radius: 32px;
+  background: linear-gradient(180deg, #fffdfc 0%, #fffaf8 100%);
+  box-shadow: 0 28px 70px rgba(28, 37, 44, .28), inset 0 1px 0 rgba(255,255,255,.96);
+  text-align: center;
+  animation: capsuleRemoveDialogIn .24s cubic-bezier(.2,.78,.25,1) both;
+}
+
+.capsule-remove-dialog__illustration {
+  position: relative;
+  width: 74px;
+  height: 70px;
+  margin: 0 auto 13px;
+  border: 3px solid #c86f7b;
+  border-radius: 18px 18px 21px 21px;
+  background: linear-gradient(180deg, #f6a1a9, #ee8793);
+  box-shadow: 0 10px 18px rgba(204, 111, 123, .17);
+}
+
+.capsule-remove-dialog__illustration::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  right: 7px;
+  top: -11px;
+  height: 15px;
+  border: 3px solid #c86f7b;
+  border-radius: 11px 11px 6px 6px;
+  background: #f7a9b0;
+}
+
+.capsule-remove-dialog__illustration::after {
+  content: "";
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  width: 20px;
+  height: 10px;
+  transform: translateX(-50%);
+  border: 3px solid #c86f7b;
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+}
+
+.capsule-remove-dialog__illustration span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: white;
+  font-size: 26px;
+}
+
+.capsule-remove-dialog h3 {
+  margin: 0;
+  color: #244d69;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(25px, 7vw, 34px);
+  line-height: 1.08;
+}
+
+.capsule-remove-dialog > p {
+  margin: 12px auto 18px;
+  color: #667d8f;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.capsule-remove-dialog__selection {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 13px 14px;
+  border: 1px solid rgba(222, 164, 137, .28);
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgba(255,248,244,.94), rgba(255,253,250,.95));
+  text-align: left;
+}
+
+.capsule-remove-dialog__heart,
+.capsule-remove-dialog__count {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #ffb3b7, #f47e8a);
+  color: white;
+  font-size: 23px;
+  font-weight: 800;
+  box-shadow: 0 7px 14px rgba(217, 111, 126, .15);
+}
+
+.capsule-remove-dialog__selection strong,
+.capsule-remove-dialog__selection small {
+  display: block;
+}
+
+.capsule-remove-dialog__selection strong {
+  overflow: hidden;
+  color: #2f5875;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.capsule-remove-dialog__selection small {
+  margin-top: 3px;
+  color: #8293a0;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.capsule-remove-dialog__selection .capsule-remove-dialog__meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.capsule-remove-dialog__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.capsule-remove-dialog__actions button {
+  min-height: 52px;
+  border: 1px solid rgba(77, 126, 158, .2);
+  border-radius: 18px;
+  background: rgba(255,255,255,.95);
+  color: #49667d;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.capsule-remove-dialog__actions button span {
+  margin-right: 6px;
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.capsule-remove-dialog__actions button.is-danger {
+  border-color: transparent;
+  background: linear-gradient(145deg, #f7838d, #ef6676);
+  color: white;
+  box-shadow: 0 10px 20px rgba(230, 102, 120, .2);
+}
+
+.capsule-remove-dialog__safe {
+  display: block;
+  margin-top: 16px;
+  color: #8493a0;
+  font-size: 10px;
+}
+
+.capsule-remove-dialog__safe span {
+  margin-right: 5px;
+  color: #d8a64c;
+}
+
+@keyframes capsuleRemoveBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes capsuleRemoveDialogIn {
+  from { opacity: 0; transform: translateY(14px) scale(.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 520px) {
+  .capsule-remove-dialog-backdrop {
+    align-items: end;
+    padding: 12px;
+  }
+
+  .capsule-remove-dialog {
+    width: 100%;
+    padding: 23px 18px 18px;
+    border-radius: 28px;
+  }
+
+  .capsule-remove-dialog__actions {
+    grid-template-columns: 1fr;
+  }
+
+  .capsule-remove-dialog__actions button.is-danger {
+    order: -1;
+  }
+
+  .capsule-kept-bulk-bar {
+    width: calc(100vw - 22px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .capsule-remove-dialog-backdrop,
+  .capsule-remove-dialog {
+    animation: none;
+  }
+}
