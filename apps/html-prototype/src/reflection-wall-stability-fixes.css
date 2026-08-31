@@ -1,0 +1,208 @@
+/* Reflection Wall stability fixes — loaded last. */
+
+/* A custom photo is the actual wall surface. The legacy pseudo background must not cover it. */
+.reflection-wall-canvas.has-custom-background::before {
+  display: none !important;
+}
+.reflection-wall-canvas.has-custom-background::after {
+  position: absolute !important;
+  inset: 0 !important;
+  background: linear-gradient(180deg, rgba(12, 35, 49, .06), rgba(10, 27, 38, .2)) !important;
+}
+
+/* The wall is one continuous scroll surface; sections are invisible placement bands only. */
+.reflection-wall-canvas {
+  scroll-snap-type: none !important;
+  scroll-behavior: auto !important;
+}
+.reflection-wall-stack {
+  background: transparent !important;
+}
+.reflection-wall-section {
+  min-height: 0 !important;
+  height: clamp(430px, 54dvh, 560px) !important;
+  scroll-snap-align: none !important;
+}
+.reflection-wall-stack .reflection-wall-section + .reflection-wall-section {
+  margin-top: 0 !important;
+}
+.reflection-wall-section + .reflection-wall-section::after {
+  content: "";
+  position: absolute;
+  inset-inline: 10%;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.08), transparent);
+  pointer-events: none;
+}
+
+/* Show-more is a small continuation cue, never a new panel or a full-width obstacle. */
+.reflection-wall-more {
+  min-height: 58px !important;
+  margin: 0 !important;
+  padding: 4px 12px 10px !important;
+  background: transparent !important;
+  scroll-snap-align: none !important;
+}
+.reflection-wall-more button {
+  min-width: 0 !important;
+  width: auto !important;
+  min-height: 44px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 0 14px !important;
+  border-radius: 999px !important;
+  text-align: center !important;
+}
+.reflection-wall-more button > span { grid-row: auto !important; }
+.reflection-wall-more button small { display: none !important; }
+
+/* Arrange is direct manipulation. The old floating dock duplicated drag and obscured notes. */
+.reflection-arrange-dock {
+  display: none !important;
+}
+
+/* Background customization belongs to Find/settings, not on top of the wall. */
+.reflection-wall-look-controls {
+  position: static !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 10px 14px !important;
+  margin: 18px 0 4px !important;
+  padding: 16px 0 0 !important;
+  border-top: 1px solid rgba(82, 63, 49, .1) !important;
+  pointer-events: auto !important;
+}
+.reflection-wall-look-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.reflection-wall-look-copy > span {
+  color: #4b4039;
+  font-size: 13px;
+  font-weight: 600;
+}
+.reflection-wall-look-copy > small {
+  color: #8c8178;
+  font-size: 11px;
+}
+.reflection-wall-look-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+.reflection-wall-photo-input {
+  position: fixed !important;
+  inline-size: 1px !important;
+  block-size: 1px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+.reflection-wall-photo-button,
+.reflection-wall-photo-reset {
+  min-height: 40px !important;
+  padding: 0 12px !important;
+  border-radius: 10px !important;
+  border: 1px solid rgba(82,63,49,.14) !important;
+  background: #fffaf2 !important;
+  color: #51463f !important;
+  box-shadow: none !important;
+  font-size: 12px !important;
+}
+.reflection-wall-photo-button {
+  display: inline-flex !important;
+}
+.reflection-wall-photo-reset {
+  color: #776d65 !important;
+}
+
+/* Every list row gets the same compact thumbnail footprint regardless of paper geometry. */
+.reflection-kept-list-row .reflection-list-paper,
+.reflection-kept-list-row [class*="paper-"] {
+  inline-size: 42px !important;
+  block-size: 50px !important;
+  width: 42px !important;
+  height: 50px !important;
+  min-width: 42px !important;
+  max-width: 42px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
+  flex: 0 0 42px !important;
+  aspect-ratio: auto !important;
+  border-radius: 5px !important;
+  transform: none !important;
+  overflow: hidden !important;
+}
+.reflection-kept-list-row {
+  grid-template-columns: 42px minmax(0, 1fr) auto auto !important;
+}
+.reflection-list-copy {
+  min-width: 0 !important;
+}
+.reflection-list-copy strong,
+.reflection-list-copy small {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+/* Round paper is genuinely round, not a tall oval in the composer/detail views. */
+.reflection-compose-paper.paper-pink-round,
+.reflection-detail-note.paper-pink-round {
+  inline-size: min(72vw, 280px) !important;
+  block-size: auto !important;
+  min-height: 0 !important;
+  aspect-ratio: 1 / 1 !important;
+  margin-inline: auto !important;
+  padding: 42px 34px 28px !important;
+  border-radius: 50% !important;
+}
+.reflection-compose-paper.paper-pink-round textarea {
+  min-height: 0 !important;
+  height: 100% !important;
+  text-align: center;
+  line-height: 1.45;
+}
+.reflection-detail-note.paper-pink-round {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+.paper-pink-round .reflection-wall-note {
+  aspect-ratio: 1 / 1 !important;
+  min-height: 0 !important;
+  border-radius: 50% !important;
+}
+
+/* Keep paper readable over busy user photos without making the photo muddy. */
+.reflection-wall-paper .reflection-wall-note {
+  filter: drop-shadow(0 7px 12px rgba(18, 35, 43, .16));
+}
+
+@media (max-width: 760px) {
+  .reflection-wall-section {
+    height: clamp(420px, 52dvh, 500px) !important;
+  }
+  .reflection-wall-look-controls {
+    grid-template-columns: 1fr !important;
+    gap: 9px !important;
+  }
+  .reflection-wall-look-actions {
+    justify-content: flex-start;
+  }
+  .reflection-wall-photo-button,
+  .reflection-wall-photo-reset {
+    min-height: 44px !important;
+  }
+  .reflection-kept-list-row {
+    min-height: 76px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reflection-wall-canvas { scroll-snap-type: none !important; }
+}
