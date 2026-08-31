@@ -33,34 +33,34 @@
 .reflection-wall-photo-button { display:inline-flex !important; }
 .reflection-wall-photo-reset { color:#776d65 !important; }
 
-/* Status belongs in its own header strip. It must never sit on top of note copy. */
-.reflection-continuum-paper .reflection-wall-note { position: relative !important; padding-top: 58px !important; }
+/* Status is a tiny corner annotation, not a second content row. */
+.reflection-continuum-paper .reflection-wall-note { position: relative !important; padding-top: 30px !important; }
 .reflection-continuum-paper .reflection-note-statuses {
-  position: absolute !important; top: 12px !important; left: 14px !important; right: 14px !important;
-  display: flex !important; flex-wrap: wrap !important; align-items: center !important; gap: 6px !important;
-  max-width: calc(100% - 28px) !important; z-index: 3 !important; pointer-events: none !important;
+  position: absolute !important; top: 10px !important; right: 10px !important; left: auto !important;
+  display: flex !important; flex-wrap: nowrap !important; justify-content: flex-end !important; align-items: center !important; gap: 4px !important;
+  max-width: calc(100% - 20px) !important; z-index: 3 !important; pointer-events: none !important;
 }
 .reflection-continuum-paper .reflection-status-badge {
-  display: inline-flex !important; align-items: center !important; gap: 4px !important; min-height: 26px !important;
-  padding: 3px 9px !important; border-radius: 999px !important; white-space: nowrap !important;
-  background: rgba(255,250,239,.88) !important; color: rgba(76,91,68,.88) !important;
-  box-shadow: 0 1px 4px rgba(27,39,40,.08) !important; font-size: 11px !important; line-height: 1 !important;
-  backdrop-filter: blur(5px);
+  display: inline-flex !important; align-items: center !important; gap: 3px !important;
+  min-height: 20px !important; padding: 2px 6px !important; border-radius: 999px !important; white-space: nowrap !important;
+  background: rgba(255,250,239,.72) !important; color: rgba(76,91,68,.82) !important;
+  box-shadow: 0 1px 3px rgba(27,39,40,.06) !important; font-size: 9px !important; line-height: 1 !important;
+  backdrop-filter: blur(4px);
 }
-.reflection-continuum-paper:not(.pinned) .reflection-wall-note { padding-top: 30px !important; }
+.reflection-continuum-paper .reflection-note-copy { padding-top: 8px !important; }
 
-/* List: translucent paper sheet over the chosen wall photo, while each row stays readable. */
+/* List: translucent frosted paper over the chosen wall photo. */
 .reflection-kept-list {
-  background: rgba(255,248,235,.76) !important;
-  backdrop-filter: blur(8px) saturate(.88) !important;
-  -webkit-backdrop-filter: blur(8px) saturate(.88) !important;
+  background: rgba(255,248,235,.58) !important;
+  backdrop-filter: blur(6px) saturate(.9) !important;
+  -webkit-backdrop-filter: blur(6px) saturate(.9) !important;
 }
 .reflection-kept-list-row {
   grid-template-columns: 42px minmax(0,1fr) auto auto !important;
-  background: rgba(255,252,245,.34) !important;
-  border-color: rgba(95,75,59,.12) !important;
+  background: rgba(255,252,245,.24) !important;
+  border-color: rgba(95,75,59,.14) !important;
 }
-.reflection-kept-list-row:hover,.reflection-kept-list-row:focus-within { background: rgba(255,252,245,.52) !important; }
+.reflection-kept-list-row:hover,.reflection-kept-list-row:focus-within { background: rgba(255,252,245,.4) !important; }
 .reflection-kept-list-row .reflection-list-paper,.reflection-kept-list-row [class*="paper-"] { inline-size:42px !important; block-size:50px !important; width:42px !important; height:50px !important; min-width:42px !important; max-width:42px !important; min-height:50px !important; max-height:50px !important; flex:0 0 42px !important; aspect-ratio:auto !important; border-radius:5px !important; transform:none !important; overflow:hidden !important; }
 .reflection-list-copy { min-width:0 !important; }
 .reflection-list-copy strong,.reflection-list-copy small { max-width:100%; overflow-wrap:anywhere; }
@@ -77,8 +77,11 @@
   .reflection-wall-look-actions { justify-content:flex-start; }
   .reflection-wall-photo-button,.reflection-wall-photo-reset { min-height:44px !important; }
   .reflection-kept-list-row { min-height:76px; }
-  .reflection-continuum-paper .reflection-wall-note { padding-top:54px !important; }
-  .reflection-continuum-paper .reflection-note-statuses { top:10px !important; left:11px !important; right:11px !important; gap:4px !important; }
-  .reflection-continuum-paper .reflection-status-badge { min-height:24px !important; padding:3px 7px !important; font-size:10px !important; }
+  .reflection-continuum-paper .reflection-wall-note { padding-top:28px !important; }
+  .reflection-continuum-paper .reflection-note-statuses { top:8px !important; right:8px !important; left:auto !important; gap:3px !important; }
+  .reflection-continuum-paper .reflection-status-badge { min-height:19px !important; padding:2px 5px !important; font-size:8px !important; }
+  .reflection-continuum-paper .reflection-note-copy { padding-top:7px !important; }
+  .reflection-kept-list { background:rgba(255,248,235,.56) !important; }
+  .reflection-kept-list-row { background:rgba(255,252,245,.22) !important; }
 }
 @media (prefers-reduced-motion:reduce) { .reflection-wall-canvas { scroll-snap-type:none !important; } }
