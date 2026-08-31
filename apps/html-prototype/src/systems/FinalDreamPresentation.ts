@@ -1,4 +1,4 @@
-import { finalDreamCredits, finalDreamEndingLines, finalDreamFrames, finalDreamMusic, type FinalDreamFrame } from "../fixtures/finalDreamChapter.js";
+import { finalDreamCredits, finalDreamEndingLines, finalDreamFrames, finalDreamMorningImage, finalDreamMusic, type FinalDreamFrame } from "../fixtures/finalDreamChapter.js";
 
 type FinalDreamHost = {
   root: HTMLElement;
@@ -22,6 +22,8 @@ export class FinalDreamPresentation {
   private audio: HTMLAudioElement | null = null;
   private destroyed = false;
   private transitionTimer = 0;
+  private endingTimer = 0;
+  private readonly reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
   private readonly keydown = (event: KeyboardEvent) => {
     if (event.key === "Enter" || event.key === " " || event.key === "ArrowRight") {
       event.preventDefault();
@@ -49,17 +51,11 @@ export class FinalDreamPresentation {
       } else {
         this.phase = "ending";
         this.endingIndex = 0;
-        this.renderEnding();
+        this.renderEnding(true);
       }
       return;
     }
-    if (this.phase === "ending") {
-      if (this.endingIndex < finalDreamEndingLines.length - 1) {
-        this.endingIndex += 1;
-        this.renderEnding();
-      } else this.beginTitle();
-      return;
-    }
+    if (this.phase === "ending") return;
     if (this.phase === "title") return this.beginCredits();
     this.finish();
   }
@@ -68,6 +64,7 @@ export class FinalDreamPresentation {
     if (this.destroyed) return;
     this.destroyed = true;
     window.clearTimeout(this.transitionTimer);
+    window.clearTimeout(this.endingTimer);
     document.removeEventListener("keydown", this.keydown);
     this.audio?.pause();
     this.audio = null;
@@ -115,19 +112,31 @@ export class FinalDreamPresentation {
     </section>`;
   }
 
-  private renderEnding(): void {
+  private renderEnding(scheduleNext = false): void {
     this.fadeMusic();
     const visible = finalDreamEndingLines.slice(0, this.endingIndex + 1);
     this.host.overlay.innerHTML = `<section class="final-dream-frame final-dream-ending" data-final-dream-frame="morning-road">
-      <div class="final-dream-image-wrap"><img class="final-dream-image" src="assets/final-dream/fd-11-morning-empty-road.webp" alt=""></div>
+      <div class="final-dream-image-wrap"><img class="final-dream-image" src="${escapeHtml(finalDreamMorningImage)}" alt=""></div>
       <div class="final-dream-morning-haze" aria-hidden="true"></div>
       <div class="final-dream-ending-copy" aria-live="polite">${visible.map((line, index) => `<p class="ending-line ending-line-${index + 1}">${escapeHtml(line)}</p>`).join("")}</div>
-      <button class="final-dream-hit-target" type="button" data-final-dream-next aria-label="Continue"></button>
     </section>`;
-    this.bindAdvance();
+
+    if (!scheduleNext) return;
+    const lineDelay = this.reducedMotion ? 120 : 1450;
+    const finalHold = this.reducedMotion ? 250 : 3800;
+    this.endingTimer = window.setTimeout(() => {
+      if (this.destroyed || this.phase !== "ending") return;
+      if (this.endingIndex < finalDreamEndingLines.length - 1) {
+        this.endingIndex += 1;
+        this.renderEnding(true);
+      } else {
+        this.transitionTimer = window.setTimeout(() => this.beginTitle(), finalHold);
+      }
+    }, lineDelay);
   }
 
   private beginTitle(): void {
+    if (this.destroyed) return;
     this.phase = "title";
     this.audio?.pause();
     this.host.overlay.innerHTML = `<section class="final-dream-black final-dream-title-card" aria-label="Walk Back Home">
@@ -141,7 +150,7 @@ export class FinalDreamPresentation {
     this.phase = "credits";
     this.host.overlay.innerHTML = `<section class="final-dream-black final-dream-credits">
       <div>${finalDreamCredits.map((line) => `<p>${escapeHtml(line)}</p>`).join("")}</div>
-      <button type="button" class="final-dream-return" data-final-dream-next>Return to the forest</button>
+      <button type="button" class="final-dream-return" data-final-dream-next>Return to title</button>
     </section>`;
     this.bindAdvance();
   }
@@ -155,7 +164,11 @@ export class FinalDreamPresentation {
     if (!audio || audio.paused) return;
     const start = audio.volume;
     const started = performance.now();
-    const duration = 4800;
+    const duration = this.reducedMotion ? 0 : 4800;
+    if (duration === 0) {
+      audio.pause();
+      return;
+    }
     const step = (now: number) => {
       if (this.destroyed || !this.audio) return;
       const progress = Math.min(1, (now - started) / duration);
