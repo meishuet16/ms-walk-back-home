@@ -6,12 +6,22 @@ type ReflectionVisualHost = {
 };
 
 export const REFLECTION_WALL_BACKGROUND_KEY = "walk-back-home:reflection-wall-background:v1";
+const REFLECTION_WALL_UNITS_KEY = "walk-back-home:reflection-wall-units:v1";
 
 function readBackground(): string {
   try {
     return window.localStorage.getItem(REFLECTION_WALL_BACKGROUND_KEY) ?? "";
   } catch {
     return "";
+  }
+}
+
+function readWallHeight(): number {
+  try {
+    const units = Math.max(1, Math.min(12, Math.round(Number(window.localStorage.getItem(REFLECTION_WALL_UNITS_KEY)) || 2)));
+    return 520 + Math.max(0, units - 1) * 420;
+  } catch {
+    return 940;
   }
 }
 
@@ -54,27 +64,60 @@ async function compressBackground(file: File): Promise<string> {
   }
 }
 
+function clearBackground(target: HTMLElement): void {
+  target.classList.remove("has-custom-background");
+  target.style.removeProperty("background-image");
+  target.style.removeProperty("background-size");
+  target.style.removeProperty("background-position");
+  target.style.removeProperty("background-repeat");
+}
+
+function applySurfaceBackground(target: HTMLElement, background: string): void {
+  target.classList.add("has-custom-background");
+  target.style.setProperty(
+    "background-image",
+    `linear-gradient(180deg, rgba(17,45,61,.10), rgba(10,29,41,.22)), url(${JSON.stringify(background)})`,
+    "important"
+  );
+  target.style.setProperty("background-size", "cover", "important");
+  target.style.setProperty("background-position", "center top", "important");
+  target.style.setProperty("background-repeat", "no-repeat", "important");
+}
+
 function applyBackground(app: ReflectionVisualHost): void {
   const canvas = app.overlay.querySelector<HTMLElement>("[data-reflection-canvas]");
+  const list = app.overlay.querySelector<HTMLElement>(".reflection-kept-list");
   const wall = app.overlay.querySelector<HTMLElement>(".reflection-kept-wall");
   const background = readBackground();
 
+  /* Keep the outer shell out of the photo crop calculation. The pre-14:43 Wall framing
+     came from the Wall canvas itself using cover + center top; restore that exact geometry. */
   if (wall) {
     wall.classList.toggle("has-custom-background", Boolean(background));
     if (background) wall.style.setProperty("--rw-custom-background", `url(${JSON.stringify(background)})`);
     else wall.style.removeProperty("--rw-custom-background");
+    wall.style.removeProperty("background-image");
+    wall.style.removeProperty("background-size");
+    wall.style.removeProperty("background-position");
+    wall.style.removeProperty("background-repeat");
   }
 
-  /* The custom photo belongs to the Reflection root, never the current child view.
-     Leaving an inline `cover` background on the Wall canvas made Wall and List use two
-     different crop/zoom calculations. Clear every legacy child-level background here so
-     Wall/List share the exact same root-level image geometry. */
-  if (!canvas) return;
-  canvas.classList.toggle("has-custom-background", Boolean(background));
-  canvas.style.removeProperty("background-image");
-  canvas.style.removeProperty("background-size");
-  canvas.style.removeProperty("background-position");
-  canvas.style.removeProperty("background-repeat");
+  if (!background) {
+    if (canvas) clearBackground(canvas);
+    if (list) {
+      clearBackground(list);
+      list.style.removeProperty("min-height");
+    }
+    return;
+  }
+
+  if (canvas) applySurfaceBackground(canvas, background);
+  if (list) {
+    /* List must use the same physical surface dimensions as Wall before applying `cover`.
+       Otherwise a short one-row list computes a tighter crop and looks zoomed. */
+    list.style.setProperty("min-height", `${readWallHeight()}px`, "important");
+    applySurfaceBackground(list, background);
+  }
 }
 
 function installWallLookControls(app: ReflectionVisualHost): void {
