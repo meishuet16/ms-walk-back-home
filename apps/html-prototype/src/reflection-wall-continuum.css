@@ -1,0 +1,283 @@
+/* Continuous Reflection Wall: one growing surface, bounded note previews, no page/section seams. */
+
+.reflection-continuum-wall {
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scroll-behavior: auto;
+  scroll-snap-type: none !important;
+}
+
+.reflection-continuum-surface {
+  position: relative;
+  min-height: var(--reflection-continuum-height, 940px);
+  isolation: isolate;
+}
+
+.reflection-continuum-surface::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(9,26,36,.11)),
+    radial-gradient(circle at 50% 24%, rgba(255,255,255,.05), transparent 44%);
+}
+
+.reflection-continuum-surface > .reflection-wall-grain { z-index: 1; }
+
+.reflection-continuum-paper {
+  position: absolute;
+  z-index: 10;
+  max-width: min(44vw, 235px);
+}
+
+.reflection-continuum-paper .reflection-wall-note {
+  min-height: 150px;
+  max-height: 210px;
+  overflow: hidden;
+}
+
+.reflection-continuum-paper .reflection-note-preview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 7;
+  overflow: hidden;
+  max-height: 9.4em;
+}
+
+.reflection-continuum-paper .reflection-note-preview::after { content: ""; }
+
+/* Status belongs to the paper margin, never on top of the written note. */
+.reflection-note-statuses {
+  position: absolute;
+  inset-inline: 10px;
+  inset-block-start: 9px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.reflection-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 18px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(255,250,241,.86);
+  color: rgba(58,49,44,.76);
+  box-shadow: 0 1px 0 rgba(255,255,255,.55), 0 3px 8px rgba(31,28,24,.07);
+  font: 600 8px/1.1 system-ui, sans-serif;
+  letter-spacing: .01em;
+}
+
+.reflection-status-badge.pinned { color: #8a5c35; }
+.reflection-status-badge.favourite { color: #8a6e2d; }
+
+/* Reserve a quiet header strip only when status badges exist. */
+.reflection-continuum-paper:has(.reflection-note-statuses) .reflection-note-preview {
+  margin-top: 29px !important;
+  max-height: 7.5em;
+  -webkit-line-clamp: 5;
+}
+
+.reflection-continuum-paper.pinned .reflection-wall-note {
+  box-shadow: 0 11px 26px rgba(15,34,42,.24), 0 0 0 1px rgba(181,129,70,.18) !important;
+}
+
+.reflection-wall-extend {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 18px;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.reflection-wall-extend button {
+  pointer-events: auto;
+  min-height: 48px;
+  padding: 8px 15px !important;
+  display: grid !important;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 9px;
+  border-radius: 999px !important;
+  border: 1px solid rgba(255,255,255,.58) !important;
+  background: rgba(249,239,221,.91) !important;
+  color: #44382f !important;
+  box-shadow: 0 8px 22px rgba(7,26,38,.18) !important;
+}
+
+.reflection-wall-extend button > span { grid-row: 1 / span 2; font-size: 18px; color: #73856b; }
+.reflection-wall-extend button strong { font-size: 11px; font-weight: 600; }
+.reflection-wall-extend button small { font-size: 8px; color: #7e746b; }
+
+.reflection-find-sheet-head {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+.reflection-find-sheet-head > span,
+.reflection-find-sheet-head > strong { grid-column: 1; }
+.reflection-find-close {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  border-radius: 50% !important;
+  border: 1px solid rgba(82,63,49,.14) !important;
+  background: #fffaf1 !important;
+  color: #443832 !important;
+  font-size: 22px;
+}
+
+/* List mode is a translucent sheet: readable rows, but the chosen wall photo still belongs to the scene. */
+.reflection-continuum-list {
+  background: rgba(248,241,229,.72) !important;
+  backdrop-filter: blur(7px) saturate(.88);
+  -webkit-backdrop-filter: blur(7px) saturate(.88);
+  border: 1px solid rgba(255,255,255,.38);
+  box-shadow: 0 20px 48px rgba(10,29,40,.14);
+}
+
+.reflection-continuum-list .reflection-kept-list-row {
+  background: rgba(255,250,241,.18) !important;
+}
+
+.reflection-kept-list-row .reflection-kept-marks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.reflection-kept-list-row .reflection-kept-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  width: auto;
+  height: 20px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(127,146,112,.14);
+  color: #617257;
+  font-size: 9px;
+}
+.reflection-kept-list-row .reflection-kept-mark::after { content: attr(data-label); }
+
+.reflection-list-paper {
+  width: 42px !important;
+  min-width: 42px !important;
+  max-width: 42px !important;
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
+  aspect-ratio: auto !important;
+  border-radius: 4px !important;
+  transform: none !important;
+}
+
+.reflection-continuum-paper.paper-pink-round { width: clamp(126px, 32vw, 168px) !important; max-width: 168px !important; }
+.reflection-continuum-paper.paper-pink-round .reflection-wall-note {
+  aspect-ratio: 1 !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  border-radius: 50% !important;
+}
+.reflection-compose-paper.paper-pink-round,
+.reflection-detail-note.paper-pink-round {
+  width: min(240px, 72vw) !important;
+  height: min(240px, 72vw) !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  aspect-ratio: 1 !important;
+  border-radius: 50% !important;
+  margin-inline: auto;
+}
+
+.reflection-continuum-paper.paper-receipt-slip,
+.reflection-continuum-paper.paper-mint-list,
+.reflection-continuum-paper.paper-notebook-rip { width: clamp(150px, 39vw, 210px) !important; }
+.reflection-continuum-paper.paper-receipt-slip .reflection-wall-note,
+.reflection-continuum-paper.paper-mint-list .reflection-wall-note,
+.reflection-continuum-paper.paper-notebook-rip .reflection-wall-note { min-height: 166px; max-height: 206px; }
+
+.reflection-find-panel .reflection-wall-look-controls {
+  position: static !important;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  margin: 15px 0 0 !important;
+  padding: 14px 0 0 !important;
+  border-top: 1px solid rgba(82,63,49,.09);
+  pointer-events: auto;
+}
+.reflection-find-panel .reflection-wall-look-controls::before {
+  content: "Wall background";
+  flex-basis: 100%;
+  color: #766b64;
+  font: 600 10px/1.2 system-ui, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.reflection-find-panel .reflection-wall-photo-button,
+.reflection-find-panel .reflection-wall-photo-reset {
+  min-height: 42px;
+  border-radius: 12px !important;
+  background: #fffaf2 !important;
+  border-color: rgba(82,63,49,.13) !important;
+  color: #5e554f !important;
+  box-shadow: none !important;
+}
+
+.reflection-kept-wall.has-custom-background {
+  background-image:
+    linear-gradient(rgba(8,26,37,.25), rgba(8,26,37,.34)),
+    var(--rw-custom-background) !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-attachment: local !important;
+}
+
+.reflection-wall-section,
+.reflection-wall-more,
+.reflection-arrange-dock { scroll-snap-align: none !important; }
+.reflection-arrange-dock { display: none !important; }
+
+@media (max-width: 760px) {
+  .reflection-continuum-surface { min-height: var(--reflection-continuum-height, 940px); }
+  .reflection-continuum-paper { width: clamp(145px, 43vw, 205px); max-width: 205px; }
+  .reflection-continuum-paper .reflection-wall-note { min-height: 142px; max-height: 194px; }
+  .reflection-continuum-paper .reflection-note-preview { -webkit-line-clamp: 6; max-height: 8em; }
+  .reflection-continuum-paper:has(.reflection-note-statuses) .reflection-note-preview { margin-top: 27px !important; -webkit-line-clamp: 4; max-height: 5.4em; }
+  .reflection-wall-extend { inset-block-end: 14px; }
+  .reflection-wall-extend button { min-height: 46px; }
+  .reflection-find-panel { overscroll-behavior: contain; }
+  .reflection-continuum-list { background: rgba(248,241,229,.69) !important; }
+}
+
+@media (max-width: 380px) {
+  .reflection-continuum-paper { width: clamp(136px, 44vw, 184px); }
+  .reflection-status-badge { font-size: 7.5px; padding-inline: 5px; }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .reflection-wall-extend button:hover,
+  .reflection-find-close:hover { filter: brightness(1.025); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reflection-continuum-paper,
+  .reflection-continuum-paper .reflection-wall-note,
+  .reflection-wall-extend button { transition: none !important; }
+}
