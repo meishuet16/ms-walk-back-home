@@ -56,13 +56,21 @@ async function compressBackground(file: File): Promise<string> {
 
 function applyBackground(app: ReflectionVisualHost): void {
   const canvas = app.overlay.querySelector<HTMLElement>("[data-reflection-canvas]");
-  if (!canvas) return;
+  const wall = app.overlay.querySelector<HTMLElement>(".reflection-kept-wall");
   const background = readBackground();
+
+  if (wall) {
+    wall.classList.toggle("has-custom-background", Boolean(background));
+    if (background) wall.style.setProperty("--rw-custom-background", `url(${JSON.stringify(background)})`);
+    else wall.style.removeProperty("--rw-custom-background");
+  }
+
+  if (!canvas) return;
   canvas.classList.toggle("has-custom-background", Boolean(background));
   if (background) {
     canvas.style.setProperty(
       "background-image",
-      `linear-gradient(180deg, rgba(17,45,61,.12), rgba(10,29,41,.24)), url(${JSON.stringify(background)})`,
+      `linear-gradient(180deg, rgba(17,45,61,.10), rgba(10,29,41,.22)), url(${JSON.stringify(background)})`,
       "important"
     );
     canvas.style.setProperty("background-size", "cover", "important");
@@ -118,25 +126,9 @@ function installWallLookControls(app: ReflectionVisualHost): void {
   });
 }
 
-function suppressShowMoreJump(app: ReflectionVisualHost): void {
-  const canvas = app.overlay.querySelector<HTMLElement>("[data-reflection-canvas]");
-  if (!canvas || canvas.dataset.stableShowMore === "true") return;
-  canvas.dataset.stableShowMore = "true";
-  canvas.addEventListener("click", (event) => {
-    const target = event.target instanceof Element ? event.target.closest("[data-reflection-show-more]") : null;
-    if (!target) return;
-    const restore = Element.prototype.scrollIntoView;
-    Element.prototype.scrollIntoView = function (): void { /* keep the Reflection canvas anchored */ };
-    requestAnimationFrame(() => {
-      Element.prototype.scrollIntoView = restore;
-    });
-  }, true);
-}
-
 function decorateWall(app: ReflectionVisualHost, scrollTop: number): void {
   applyBackground(app);
   installWallLookControls(app);
-  suppressShowMoreJump(app);
   const canvas = app.overlay.querySelector<HTMLElement>("[data-reflection-canvas]");
   if (canvas) {
     const maxScroll = Math.max(0, canvas.scrollHeight - canvas.clientHeight);
