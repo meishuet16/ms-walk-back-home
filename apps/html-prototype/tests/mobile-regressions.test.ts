@@ -122,13 +122,35 @@ test("330 corridor runtime path loads its authored portrait and landscape layout
   }
 });
 
-test("journal entries remain date-sortable after mobile layout changes", () => {
-  const entries = [
-    makeDiaryEntry("2026-08-01", "older"),
-    makeDiaryEntry("2026-08-03", "newer")
-  ];
-  const month = makeTimelineMonthView(entries, "2026-08");
-  assert.deepEqual(month.entries.map((entry) => entry.date), ["2026-08-03", "2026-08-01"]);
-  assert.equal(selectedOrLatestMonth(entries, ""), "2026-08");
-  assert.deepEqual(selectAllTimelineEntryIds(entries), entries.map((entry) => entry.id));
+test("Select All selects every entry in the filtered result, not only the first page", () => {
+  const entries = Array.from({ length: 8 }, (_, index) => makeDiaryEntry(
+    "2026-07-" + String(index + 1).padStart(2, "0"),
+    "Entry " + (index + 1),
+    index % 2 === 0 ? "keep" : "skip",
+    "entry-" + (index + 1)
+  ));
+  const month = selectedOrLatestMonth(entries, "2026-07");
+  const filtered = makeTimelineMonthView(month, "date-desc", "keep");
+  assert.deepEqual(selectAllTimelineEntryIds(filtered), filtered.entries.map((entry) => entry.id));
+  assert.equal(selectAllTimelineEntryIds(filtered).length, 4);
+});
+
+test("journal exit and async journal surfaces have explicit immediate-state handling", () => {
+  assert.match(appSource, /journal-discard-confirm/);
+  assert.match(appSource, /journalEditorSnapshot/);
+  assert.match(appSource, /if \(this\.recordsPanelOpen\) this\.refreshRecordsPlaybackUI\(\)/);
+  assert.match(appSource, /this\.openMonthlyBook\(monthKey\)/);
+  assert.match(appSource, /updateDiaryEditorImmediately/);
+  assert.match(appSource, /clearDiaryAutosaveTimer/);
+  assert.match(appSource, /this\.showDiaryEditorPreservingScroll\(entry\.id\)/);
+});
+
+test("authored chapters use a generic SceneLayout runtime path and remain replayable", () => {
+  assert.match(appSource, /private updateAuthoredScene/);
+  assert.match(appSource, /private drawAuthoredScene/);
+  assert.match(appSource, /chapter\.runtimeScene/);
+  assert.doesNotMatch(appSource, /This authored scene is not playable yet/);
+  assert.match(appSource, /private drawApril06Scene/);
+  assert.match(appSource, /if \(action === "forest"\)/);
+  assert.doesNotMatch(appSource, /const action = state === "walkedThrough" \? "Remember"/);
 });
