@@ -40,7 +40,7 @@ for (const file of [
 }
 await mkdir(resolve(root, "dist/browser/ffmpeg"), { recursive: true });
 await copyFile(resolve(root, "../../node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.js"), resolve(root, "dist/browser/ffmpeg/ffmpeg-core.js"));
-await copyFile(resolve(root, "../../node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.wasm"), resolve(root, "dist/browser/ffmpeg-core.wasm"));
+await copyFile(resolve(root, "../../node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.wasm"), resolve(root, "dist/browser/ffmpeg/ffmpeg-core.wasm"));
 for (const file of ["worker.js", "const.js", "errors.js"]) {
   await copyFile(resolve(root, `../../node_modules/@ffmpeg/ffmpeg/dist/esm/${file}`), resolve(root, `dist/browser/${file}`));
 }
@@ -50,6 +50,6 @@ await writeFile(resolve(root, "dist/config.js"), `window.WALK_BACK_HOME_CONFIG =
   authProvider: process.env.WALK_BACK_HOME_AUTH_PROVIDER ?? "local",
   supabaseUrl: process.env.SUPABASE_URL ?? "",
   supabaseAnonKey: process.env.SUPABASE_ANON_KEY ?? "",
-  privateMediaBucket: process.env.SUPABASE_PRIVATE_MEDIA_BUCKET ?? "walk-private-media"
+  privateMediaBucket: process.env.PRIVATE_MEDIA_BUCKET ?? "walk-private-media"
 }, null, 2)};\n`);
 console.log("Built isolated HTML prototype to apps/html-prototype/dist");
