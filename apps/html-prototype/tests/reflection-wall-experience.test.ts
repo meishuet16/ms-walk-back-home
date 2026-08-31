@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createReflectionNote, createReflectionWallState, moveReflectionNote, reflectionPaperStyles, rotateReflectionNote } from "../src/systems/ReflectionWall.js";
 import { reflectionDragIntent, reflectionSafePosition, reflectionWallPositionStyle } from "../src/systems/ReflectionWallExperienceBridge.js";
+import { installReflectionWallOverlayCleanupBridge } from "../src/systems/ReflectionWallOverlayCleanupBridge.js";
 
 const now = new Date("2026-08-31T00:00:00.000Z");
 
@@ -60,4 +61,37 @@ test("wall position style clamps legacy edge coordinates before rendering", () =
     reflectionWallPositionStyle({ x: 4, y: 96, rotation: 0 }, 5),
     "left:12%;top:88%;transform:translate(-50%, -50%) rotate(0deg);z-index:5;"
   );
+});
+
+test("closing the last Reflection surface restores room chrome immediately", () => {
+  let surfacePresent = true;
+  let ambiencePresent = true;
+  let syncCount = 0;
+  const prototype = {
+    handleClick(): void {
+      surfacePresent = false;
+    }
+  } as unknown as object;
+  installReflectionWallOverlayCleanupBridge(prototype);
+  const app = Object.create(prototype) as {
+    overlay: {
+      classList: { contains: (name: string) => boolean; remove: (name: string) => void };
+      querySelector: (selector: string) => object | null;
+    };
+    syncGameplayChromeVisibility: () => void;
+    handleClick: (event: Event) => void;
+  };
+  app.overlay = {
+    classList: {
+      contains: () => ambiencePresent,
+      remove: () => { ambiencePresent = false; }
+    },
+    querySelector: () => surfacePresent ? {} : null
+  };
+  app.syncGameplayChromeVisibility = () => { syncCount += 1; };
+
+  app.handleClick({} as Event);
+
+  assert.equal(ambiencePresent, false);
+  assert.equal(syncCount, 1);
 });
