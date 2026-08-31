@@ -9,7 +9,6 @@ type AppLike = {
   overlay: HTMLElement;
   stage?: HTMLElement;
   scene: string;
-  currentDoor?: { chapterId?: string } | null;
   returnToForest?: () => void;
   autosave?: () => void;
   showToast?: (message: string) => void;
@@ -25,9 +24,7 @@ export function installFinalDreamBridge(prototype: AppPrototype): void {
 
   prototype.enterCurrentMemory = async function(this: AppLike): Promise<void> {
     const door = this.currentDoor ?? this.activeDoor;
-    if (door?.chapterId !== FINAL_DREAM_CHAPTER_ID) {
-      return originalEnter.call(this);
-    }
+    if (door?.chapterId !== FINAL_DREAM_CHAPTER_ID) return originalEnter.call(this);
 
     this.currentDoor = door;
     this.scene = "final-dream";
