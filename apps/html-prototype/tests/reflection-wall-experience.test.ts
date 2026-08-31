@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createReflectionNote, createReflectionWallState, moveReflectionNote, reflectionPaperStyles, rotateReflectionNote } from "../src/systems/ReflectionWall.js";
+import { createReflectionNote, createReflectionWallState, moveReflectionNote, reflectionPaperStyles, rotateReflectionNote, updateReflectionNote } from "../src/systems/ReflectionWall.js";
 import { reflectionDragIntent, reflectionSafePosition, reflectionWallPositionStyle } from "../src/systems/ReflectionWallExperienceBridge.js";
 import { installReflectionWallOverlayCleanupBridge } from "../src/systems/ReflectionWallOverlayCleanupBridge.js";
 
@@ -12,6 +12,18 @@ test("reflection wall exposes a varied paper collection without external image a
   assert.equal(reflectionPaperStyles.some((style) => style.id === "receipt-slip"), true);
   assert.equal(reflectionPaperStyles.some((style) => style.id === "pressed-leaf"), true);
   assert.equal(reflectionPaperStyles.some((style) => style.id === "night-card"), true);
+});
+
+test("reflection notes preserve long-form text instead of silently truncating it", () => {
+  const longText = `start-${"长文".repeat(400)}-end`;
+  const created = createReflectionNote(createReflectionWallState(), longText, { now });
+  assert.equal(created.notes[0].text, longText);
+  assert.equal(created.notes[0].text.endsWith("-end"), true);
+
+  const editedText = `edited-${"reflection ".repeat(120)}-finish`;
+  const updated = updateReflectionNote(created, created.notes[0].id, editedText, new Date("2026-08-31T00:00:30.000Z"));
+  assert.equal(updated.notes[0].text, editedText);
+  assert.equal(updated.notes[0].text.endsWith("-finish"), true);
 });
 
 test("moving a note clamps normalized coordinates and brings the touched note to the front of manual order", () => {
