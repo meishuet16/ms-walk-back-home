@@ -3,7 +3,6 @@ import { installReflectionWallExperienceBridge } from "./ReflectionWallExperienc
 import { installReflectionWallOverlayCleanupBridge } from "./ReflectionWallOverlayCleanupBridge.js";
 import { installReflectionWallPaperBoundsBridge } from "./ReflectionWallPaperBoundsBridge.js";
 import { installReflectionWallPaperCatalog } from "./ReflectionWallPaperCatalogBridge.js";
-import { installReflectionWallUnlimitedTextBridge } from "./ReflectionWallUnlimitedTextBridge.js";
 import { installReflectionWallVisualPolishBridge } from "./ReflectionWallVisualPolishBridge.js";
 
 /**
@@ -16,7 +15,6 @@ import { installReflectionWallVisualPolishBridge } from "./ReflectionWallVisualP
 export function installReflectionWallUi(prototype: object): void {
   installReflectionWallPaperCatalog();
   installReflectionWallExperienceBridge(prototype);
-  installReflectionWallUnlimitedTextBridge(prototype);
   installReflectionWallPaperBoundsBridge(prototype);
   installReflectionWallVisualPolishBridge(prototype);
   installReflectionWallContinuumBridge(prototype);
