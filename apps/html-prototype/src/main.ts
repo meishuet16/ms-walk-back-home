@@ -1,3 +1,4 @@
+import "./final-dream.css";
 import { WalkBackHomeApp } from "./app.js";
 import { installAuthoredCutsceneLifecycleBridge } from "./systems/AuthoredCutsceneLifecycleBridge.js";
 import { installLabisLifecycleBridge } from "./systems/LabisLifecycleBridge.js";
@@ -8,6 +9,7 @@ import { installCapsuleMenuBridge } from "./systems/CapsuleMenuBridge.js";
 import { installCapsuleAudioCaptureBridge } from "./systems/CapsuleAudioCaptureBridge.js";
 import { installCapsuleKeptOrganizerBridge } from "./systems/CapsuleKeptOrganizerBridge.js";
 import { installLocalBackupSupplementBridge } from "./systems/LocalBackupSupplementBridge.js";
+import { installFinalDreamBridge } from "./systems/FinalDreamBridge.js";
 import { SceneDebugEditor } from "./systems/SceneDebugEditor.js";
 
 installAuthoredCutsceneLifecycleBridge(WalkBackHomeApp.prototype);
@@ -19,6 +21,7 @@ installCapsuleMenuBridge(WalkBackHomeApp.prototype);
 installCapsuleAudioCaptureBridge();
 installCapsuleKeptOrganizerBridge();
 installLocalBackupSupplementBridge(WalkBackHomeApp.prototype);
+installFinalDreamBridge(WalkBackHomeApp.prototype as unknown as { enterCurrentMemory?: () => Promise<void> });
 
 const root = document.querySelector<HTMLElement>("#app")!;
 if (new URLSearchParams(window.location.search).get("debug") === "scene") {
