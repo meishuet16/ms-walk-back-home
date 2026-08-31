@@ -22,6 +22,15 @@
   background: rgba(255, 249, 238, .68) !important;
 }
 
+/* Custom wall photos keep one stable visual scale across Wall and List views.
+   Width is the shared reference, so switching views never re-crops/zooms the photo. */
+.reflection-kept-wall.has-custom-background {
+  background-size: 100% auto !important;
+  background-position: center top !important;
+  background-repeat: no-repeat !important;
+  background-attachment: local !important;
+}
+
 /* The header is room chrome, not a detached opaque card. Keep it close to the wall. */
 .reflection-kept-wall { row-gap: 0 !important; }
 .reflection-wall-header {
