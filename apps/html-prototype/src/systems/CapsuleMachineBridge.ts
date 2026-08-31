@@ -6,6 +6,7 @@ import {
   keptCapsules,
   loadCapsuleMachineState,
   machineCapsules,
+  removeCapsuleThought,
   saveCapsuleMachineState,
   setCapsuleStatus,
   type CapsuleAttachment,
@@ -115,10 +116,10 @@ function mainMarkup(state: CapsuleMachineState, draft: string, staged: CapsuleAt
           <button type="button" data-capsule-action="add" aria-label="Put thought in a capsule">→</button>
         </div>
         <div class="capsule-compose-meta"><span data-capsule-count>${draft.length} characters</span><small>No word limit. Leave as much or as little as you want.</small></div>
-        <div class="capsule-media-tools">
+        <div class="capsule-media-tools" aria-label="Add something to this capsule">
           <input type="file" data-capsule-file accept="image/*,video/*" multiple hidden>
-          <button type="button" data-capsule-action="pick-media"><span>▧</span> Photo / video</button>
-          <button type="button" data-capsule-action="record" class="${recording ? "is-recording" : ""}"><span>${recording ? "■" : "●"}</span> ${recording ? "Stop recording" : "Record a thought"}</button>
+          <button type="button" data-capsule-action="pick-media" class="capsule-media-tool capsule-media-tool--gallery"><span class="capsule-media-tool__icon">▧</span><span><strong>Photo / video</strong><small>Add a little scene</small></span></button>
+          <button type="button" data-capsule-action="record" class="capsule-media-tool capsule-media-tool--voice ${recording ? "is-recording" : ""}"><span class="capsule-media-tool__icon">${recording ? "■" : "●"}</span><span><strong>${recording ? "Stop recording" : "Voice note"}</strong><small>${recording ? "Tap when you're done" : "Leave your voice here"}</small></span></button>
         </div>
         ${staged.length ? `<div class="capsule-media-staged">${staged.map((item) => attachmentChip(item, true)).join("")}</div>` : ""}
       </section>
@@ -197,6 +198,7 @@ function keptMarkup(state: CapsuleMachineState): string {
             <div class="capsule-kept-card-actions">
               <span class="capsule-kept-open">Open ›</span>
               <button type="button" data-capsule-action="return" data-capsule-id="${escapeHtml(thought.id)}">Return</button>
+              <button type="button" class="capsule-kept-remove" data-capsule-action="remove-kept" data-capsule-id="${escapeHtml(thought.id)}">Remove</button>
             </div>
           </article>`).join("") : `
           <div class="capsule-empty-kept"><div>◒</div><strong>Nothing kept yet.</strong><p>When a capsule comes back at the right time, you can keep it here.</p></div>`}
@@ -213,6 +215,11 @@ function mediaKindFor(file: File): "image" | "video" | null {
 function makeAttachment(blob: Blob, kind: "image" | "video" | "audio", name: string): CapsuleAttachment {
   const id = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `capsule-media-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   return { id, kind, name, mimeType: blob.type || "application/octet-stream", size: blob.size };
+}
+
+function preferredAudioMimeType(): string | undefined {
+  if (typeof MediaRecorder === "undefined" || typeof MediaRecorder.isTypeSupported !== "function") return undefined;
+  return ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"].find((type) => MediaRecorder.isTypeSupported(type));
 }
 
 function openCapsuleMachine(): void {
@@ -357,15 +364,28 @@ function openCapsuleMachine(): void {
       }
       void (async () => {
         try {
-          recordingStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          recordingStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              channelCount: { ideal: 1 },
+              sampleRate: { ideal: 48000 },
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            }
+          });
           recordingChunks = [];
-          recorder = new MediaRecorder(recordingStream);
+          const mimeType = preferredAudioMimeType();
+          recorder = new MediaRecorder(recordingStream, {
+            ...(mimeType ? { mimeType } : {}),
+            audioBitsPerSecond: 128000
+          });
           recorder.addEventListener("dataavailable", (chunk) => {
             if (chunk.data.size) recordingChunks.push(chunk.data);
           });
           recorder.addEventListener("stop", () => {
             void (async () => {
-              const blob = new Blob(recordingChunks, { type: recorder?.mimeType || "audio/webm" });
+              const recordedMimeType = recorder?.mimeType || mimeType || "audio/webm";
+              const blob = new Blob(recordingChunks, { type: recordedMimeType });
               const attachment = makeAttachment(blob, "audio", `Voice note ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`);
               await mediaStore.put(attachment.id, blob);
               staged = [...staged, attachment];
@@ -449,6 +469,19 @@ function openCapsuleMachine(): void {
       if (!id) return;
       state = setCapsuleStatus(state, id, "machine");
       persist();
+      render();
+      return;
+    }
+    if (action === "remove-kept") {
+      event.stopPropagation();
+      const id = target.dataset.capsuleId;
+      if (!id) return;
+      const thought = state.thoughts.find((item) => item.id === id && item.status === "kept");
+      if (!thought) return;
+      if (!window.confirm("Remove this kept capsule permanently?")) return;
+      state = removeCapsuleThought(state, id);
+      persist();
+      void Promise.all((thought.attachments ?? []).map((item) => mediaStore.delete(item.id).catch(() => undefined)));
       render();
     }
   });
