@@ -1,9 +1,8 @@
 /* Final Reflection Wall polish — loaded last. */
 
-/* List view keeps the photo as the scene. Only rows carry a readable glass-paper surface. */
 .reflection-kept-list,
 .reflection-continuum-list {
-  background: transparent !important;
+  background-color: transparent !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   border: 0 !important;
@@ -18,31 +17,16 @@
   -webkit-backdrop-filter: blur(4px) saturate(.92) !important;
 }
 .reflection-kept-list-row:hover,
-.reflection-kept-list-row:focus-within {
-  background: rgba(255, 249, 238, .68) !important;
-}
+.reflection-kept-list-row:focus-within { background: rgba(255, 249, 238, .68) !important; }
 
-/* One shared custom-photo layer for Wall + List.
-   IMPORTANT: preserve the original Wall framing (cover/center). The List must match the Wall,
-   never the other way around. Children stay transparent so switching views cannot recrop it. */
+/* The image crop belongs to the actual Wall/List surface. The outer shared layer widened the photo
+   and changed the Wall framing; do not let the outer shell render the custom image. */
 .reflection-kept-wall.has-custom-background {
   position: relative !important;
   isolation: isolate;
-  background-image: none !important;
+  background: none !important;
 }
-.reflection-kept-wall.has-custom-background::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(8,26,37,.25), rgba(8,26,37,.34)),
-    var(--rw-custom-background);
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-}
+.reflection-kept-wall.has-custom-background::before { display: none !important; }
 .reflection-kept-wall.has-custom-background > .reflection-continuum-wall,
 .reflection-kept-wall.has-custom-background > .reflection-wall-canvas,
 .reflection-kept-wall.has-custom-background > .reflection-continuum-list,
@@ -50,20 +34,11 @@
   position: relative;
   z-index: 1;
 }
-/* The header owns the Find drawer. Keep its stacking context above the wall/list layers;
-   otherwise a custom-photo content layer can paint over the fixed drawer. */
 .reflection-kept-wall.has-custom-background > .reflection-wall-header {
   position: relative;
   z-index: 4000;
 }
-.reflection-kept-wall.has-custom-background .reflection-continuum-wall,
-.reflection-kept-wall.has-custom-background .reflection-wall-canvas,
-.reflection-kept-wall.has-custom-background .reflection-continuum-list,
-.reflection-kept-wall.has-custom-background .reflection-kept-list {
-  background: transparent !important;
-}
 
-/* The header is room chrome, not a detached opaque card. Keep it close to the wall. */
 .reflection-kept-wall { row-gap: 0 !important; }
 .reflection-wall-header {
   margin: 0 !important;
@@ -74,12 +49,8 @@
   -webkit-backdrop-filter: blur(7px) saturate(.92);
 }
 .reflection-wall-canvas,
-.reflection-continuum-wall {
-  margin-top: 0 !important;
-  border-top: 0 !important;
-}
+.reflection-continuum-wall { margin-top: 0 !important; border-top: 0 !important; }
 
-/* Primary composer action must look actionable and give tactile feedback. */
 .reflection-compose-footer .reflection-primary-action:not(:disabled) {
   background: linear-gradient(180deg, #829577, #6f8367) !important;
   border-color: rgba(89, 111, 80, .55) !important;
@@ -105,9 +76,6 @@
 @media (max-width: 760px) {
   .reflection-wall-header {
     padding-bottom: 10px !important;
-    /* A backdrop-filter establishes a containing block for fixed descendants on mobile browsers.
-       Find lives inside the header DOM, so remove that containing block and let the sheet anchor
-       to the real viewport instead. */
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
     transform: none !important;
@@ -122,16 +90,11 @@
     perspective: none !important;
     contain: none !important;
   }
-
   .reflection-kept-list,
   .reflection-continuum-list { padding-inline: 8px !important; }
   .reflection-kept-list-row,
-  .reflection-continuum-list .reflection-kept-list-row {
-    background: rgba(255, 249, 238, .54) !important;
-  }
+  .reflection-continuum-list .reflection-kept-list-row { background: rgba(255, 249, 238, .54) !important; }
 
-  /* Find is a true viewport sheet on mobile. It must not participate in header layout
-     or get stranded above/below the wall when the wall itself has been scrolled. */
   .reflection-find-drawer[open] .reflection-find-panel {
     position: fixed !important;
     inset: auto max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)) !important;
@@ -149,7 +112,6 @@
     border-radius: 18px !important;
     box-shadow: 0 18px 46px rgba(4, 20, 30, .28) !important;
   }
-
   .reflection-find-drawer[open] .reflection-find-panel::before {
     content: "";
     position: sticky;
@@ -164,11 +126,8 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .reflection-compose-footer .reflection-primary-action:not(:disabled):hover {
-    filter: brightness(1.035);
-  }
+  .reflection-compose-footer .reflection-primary-action:not(:disabled):hover { filter: brightness(1.035); }
 }
-
 @media (prefers-reduced-motion: reduce) {
   .reflection-compose-footer .reflection-primary-action { transition: none !important; }
 }
