@@ -5,10 +5,8 @@ type RecordsScrollHost = {
 };
 
 /**
- * Keep a mobile Record Crate browsing position stable across player re-renders.
- * The core Records renderer already preserves its own scroll values; this bridge
- * additionally snapshots the live crate/panel positions immediately before a
- * render so selecting another song cannot snap an open crate back to its top.
+ * Keep the mobile Record Crate browsing position stable across player re-renders.
+ * The scrollable element is the crate list itself, not the fixed sheet shell.
  */
 export function installRecordsScrollStabilityBridge(prototype: object): void {
   const appPrototype = prototype as RecordsScrollHost;
@@ -16,18 +14,20 @@ export function installRecordsScrollStabilityBridge(prototype: object): void {
 
   appPrototype.showRecords = async function (): Promise<void> {
     const panel = this.overlay.querySelector<HTMLElement>(".records-panel");
-    const crate = this.overlay.querySelector<HTMLElement>(".records-song-sheet.open");
+    const list = this.overlay.querySelector<HTMLElement>(".records-mobile-crate-list");
     const panelScrollTop = panel?.scrollTop;
-    const crateScrollTop = crate?.scrollTop;
+    const listScrollTop = list?.scrollTop;
 
     await showRecords.call(this);
 
     if (!this.recordsPanelOpen) return;
     requestAnimationFrame(() => {
-      const nextPanel = this.overlay.querySelector<HTMLElement>(".records-panel");
-      const nextCrate = this.overlay.querySelector<HTMLElement>(".records-song-sheet.open");
-      if (nextPanel && panelScrollTop !== undefined) nextPanel.scrollTop = panelScrollTop;
-      if (nextCrate && crateScrollTop !== undefined) nextCrate.scrollTop = crateScrollTop;
+      requestAnimationFrame(() => {
+        const nextPanel = this.overlay.querySelector<HTMLElement>(".records-panel");
+        const nextList = this.overlay.querySelector<HTMLElement>(".records-mobile-crate-list");
+        if (nextPanel && panelScrollTop !== undefined) nextPanel.scrollTop = panelScrollTop;
+        if (nextList && listScrollTop !== undefined) nextList.scrollTop = listScrollTop;
+      });
     });
   };
 }
