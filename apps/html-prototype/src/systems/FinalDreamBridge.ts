@@ -18,14 +18,11 @@ type AppLike = {
   overlay: HTMLElement;
   stage?: HTMLElement;
   audio?: FinalDreamAudio;
-  returnToForest?: () => void;
   autosave?: () => void;
 };
 
 type AppPrototype = {
   enterCurrentMemory?: () => Promise<void>;
-  returnToForest?: () => void;
-  interact?: () => void;
 };
 
 let activePresentation: FinalDreamPresentation | null = null;
@@ -36,12 +33,13 @@ function isFinalDreamDoor(door: { chapterId?: string } | null | undefined): bool
 
 export function installFinalDreamBridge(prototype: AppPrototype): void {
   const originalEnter = prototype.enterCurrentMemory;
-  const originalReturnToForest = prototype.returnToForest;
-  const originalInteract = prototype.interact;
   if (!originalEnter) return;
 
-  const beginFinalDream = function(this: AppLike, door: { chapterId?: string; id?: string }): void {
+  prototype.enterCurrentMemory = async function(this: AppLike): Promise<void> {
+    const door = this.currentDoor ?? this.activeDoor;
+    if (!isFinalDreamDoor(door)) return originalEnter.call(this);
     if (activePresentation) return;
+
     this.currentDoor = door;
     this.overlay.innerHTML = "";
     this.overlay.classList.remove("dialogue-open", "lightweight-presentation");
@@ -62,47 +60,14 @@ export function installFinalDreamBridge(prototype: AppPrototype): void {
         } catch {
           // localStorage can be unavailable in privacy modes; replay still works.
         }
-        this.autosave?.();
-        originalReturnToForest?.call(this);
+        this.audio?.stop?.();
         this.audio?.setScene?.("forest");
         this.audio?.setLoop?.(true);
         void this.audio?.ensurePlaying?.();
+        this.autosave?.();
       }
     });
     activePresentation = presentation;
     presentation.start();
   };
-
-  prototype.enterCurrentMemory = async function(this: AppLike): Promise<void> {
-    const door = this.currentDoor ?? this.activeDoor;
-    if (!isFinalDreamDoor(door)) return originalEnter.call(this);
-    beginFinalDream.call(this, door!);
-  };
-
-  if (originalInteract) {
-    prototype.interact = function(this: AppLike): void {
-      if (activePresentation) return;
-      if (isFinalDreamDoor(this.activeDoor)) {
-        beginFinalDream.call(this, this.activeDoor!);
-        return;
-      }
-      originalInteract.call(this);
-    };
-  }
-
-  if (originalReturnToForest) {
-    prototype.returnToForest = function(this: AppLike): void {
-      if (activePresentation) {
-        activePresentation.destroy();
-        activePresentation = null;
-        this.audio?.stop?.();
-        originalReturnToForest.call(this);
-        this.audio?.setScene?.("forest");
-        this.audio?.setLoop?.(true);
-        void this.audio?.ensurePlaying?.();
-        return;
-      }
-      originalReturnToForest.call(this);
-    };
-  }
 }
