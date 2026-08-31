@@ -22,8 +22,9 @@
   background: rgba(255, 249, 238, .68) !important;
 }
 
-/* Custom wall photos are rendered by ONE root-level background layer.
-   Wall/List children never own or re-size the image, so switching views cannot zoom it. */
+/* One shared custom-photo layer for Wall + List.
+   IMPORTANT: preserve the original Wall framing (cover/center). The List must match the Wall,
+   never the other way around. Children stay transparent so switching views cannot recrop it. */
 .reflection-kept-wall.has-custom-background {
   position: relative !important;
   isolation: isolate;
@@ -38,8 +39,8 @@
   background-image:
     linear-gradient(rgba(8,26,37,.25), rgba(8,26,37,.34)),
     var(--rw-custom-background);
-  background-size: 100% auto;
-  background-position: center top;
+  background-size: cover;
+  background-position: center;
   background-repeat: no-repeat;
 }
 .reflection-kept-wall.has-custom-background > .reflection-continuum-wall,
