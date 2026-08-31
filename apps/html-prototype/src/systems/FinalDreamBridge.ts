@@ -8,15 +8,12 @@ type AppLike = {
   root: HTMLElement;
   overlay: HTMLElement;
   stage?: HTMLElement;
-  scene: string;
   returnToForest?: () => void;
   autosave?: () => void;
   showToast?: (message: string) => void;
 };
 
-type AppPrototype = {
-  enterCurrentMemory?: () => Promise<void>;
-};
+type AppPrototype = { enterCurrentMemory?: () => Promise<void> };
 
 export function installFinalDreamBridge(prototype: AppPrototype): void {
   const originalEnter = prototype.enterCurrentMemory;
@@ -27,9 +24,10 @@ export function installFinalDreamBridge(prototype: AppPrototype): void {
     if (door?.chapterId !== FINAL_DREAM_CHAPTER_ID) return originalEnter.call(this);
 
     this.currentDoor = door;
-    this.scene = "final-dream";
     this.showToast?.("A dream returns without a date.");
 
+    // Final Dream is deliberately not a world-space SceneLayout. Keep the underlying
+    // forest scene alive and present the chapter as a full-screen linear memory layer.
     const presentation = new FinalDreamPresentation({
       root: this.root,
       overlay: this.overlay,
