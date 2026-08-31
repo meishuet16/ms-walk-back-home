@@ -1,0 +1,7 @@
+.capsule-page--opened .capsule-note-card {
+  /* Keep the paper warmth without the repeating 1px rule pattern. On some
+     Android compositors those rules were promoted into wide grey bands while
+     scrolling beneath the fixed action tray. */
+  background: linear-gradient(180deg, #fffdf7 0%, #fffdf8 100%);
+  background-attachment: scroll;
+}
