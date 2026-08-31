@@ -10,6 +10,8 @@ let selectionMode = false;
 let selectedIds = new Set<string>();
 let allowNativeRemoval = false;
 let pendingRemovalIds: string[] = [];
+let organizerObserver: MutationObserver | null = null;
+let enhancing = false;
 
 function keptPage(): HTMLElement | null {
   return document.querySelector<HTMLElement>(".capsule-experience .capsule-page--kept");
@@ -55,7 +57,7 @@ function modalMarkup(items: KeptCardSnapshot[]): string {
 }
 
 function escapeHtml(value: string): string {
-  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
 function showRemoveModal(ids: string[]): void {
@@ -106,44 +108,61 @@ function bulkBarMarkup(): string {
   </div>`;
 }
 
+function observeOrganizer(): void {
+  organizerObserver?.observe(document.body, { childList: true, subtree: true });
+}
+
 function enhanceKeptPage(): void {
+  if (enhancing) return;
   const page = keptPage();
   if (!page) return;
-  const cards = keptCards(page);
-  const validIds = new Set(cards.map((card) => card.dataset.capsuleId).filter((id): id is string => Boolean(id)));
-  selectedIds = new Set([...selectedIds].filter((id) => validIds.has(id)));
 
-  const intro = page.querySelector(".capsule-kept-intro");
-  let organizer = page.querySelector<HTMLElement>(".capsule-kept-organizer");
-  if (!organizer) {
-    organizer = document.createElement("div");
-    intro?.insertAdjacentElement("afterend", organizer);
-  }
-  organizer.outerHTML = toolbarMarkup(cards.length);
+  enhancing = true;
+  organizerObserver?.disconnect();
+  try {
+    const cards = keptCards(page);
+    const validIds = new Set(cards.map((card) => card.dataset.capsuleId).filter((id): id is string => Boolean(id)));
+    selectedIds = new Set([...selectedIds].filter((id) => validIds.has(id)));
 
-  cards.forEach((card) => {
-    const id = card.dataset.capsuleId;
-    if (!id) return;
-    card.classList.toggle("is-selecting", selectionMode);
-    card.classList.toggle("is-selected", selectedIds.has(id));
-    card.setAttribute("aria-selected", selectedIds.has(id) ? "true" : "false");
-    let selector = card.querySelector<HTMLButtonElement>(".capsule-kept-selector");
-    if (!selector) {
-      selector = document.createElement("button");
-      selector.type = "button";
-      selector.className = "capsule-kept-selector";
-      selector.dataset.capsuleOrganizerAction = "toggle-item";
-      selector.dataset.capsuleId = id;
-      selector.innerHTML = '<span aria-hidden="true">✓</span>';
-      card.prepend(selector);
+    const intro = page.querySelector(".capsule-kept-intro");
+    let organizer = page.querySelector<HTMLElement>(".capsule-kept-organizer");
+    if (!organizer) {
+      organizer = document.createElement("div");
+      intro?.insertAdjacentElement("afterend", organizer);
     }
-    selector.hidden = !selectionMode;
-    selector.setAttribute("aria-label", selectedIds.has(id) ? "Deselect capsule" : "Select capsule");
-    selector.setAttribute("aria-pressed", selectedIds.has(id) ? "true" : "false");
-  });
+    const nextToolbar = toolbarMarkup(cards.length);
+    if (organizer.outerHTML !== nextToolbar) organizer.outerHTML = nextToolbar;
 
-  page.querySelector(".capsule-kept-bulk-bar")?.remove();
-  if (selectionMode && selectedIds.size) page.insertAdjacentHTML("beforeend", bulkBarMarkup());
+    cards.forEach((card) => {
+      const id = card.dataset.capsuleId;
+      if (!id) return;
+      card.classList.toggle("is-selecting", selectionMode);
+      card.classList.toggle("is-selected", selectedIds.has(id));
+      card.setAttribute("aria-selected", selectedIds.has(id) ? "true" : "false");
+      let selector = card.querySelector<HTMLButtonElement>(".capsule-kept-selector");
+      if (!selector) {
+        selector = document.createElement("button");
+        selector.type = "button";
+        selector.className = "capsule-kept-selector";
+        selector.dataset.capsuleOrganizerAction = "toggle-item";
+        selector.dataset.capsuleId = id;
+        selector.innerHTML = '<span aria-hidden="true">✓</span>';
+        card.prepend(selector);
+      }
+      selector.hidden = !selectionMode;
+      selector.setAttribute("aria-label", selectedIds.has(id) ? "Deselect capsule" : "Select capsule");
+      selector.setAttribute("aria-pressed", selectedIds.has(id) ? "true" : "false");
+    });
+
+    const currentBulkBar = page.querySelector<HTMLElement>(".capsule-kept-bulk-bar");
+    const nextBulkBar = bulkBarMarkup();
+    if (!nextBulkBar) currentBulkBar?.remove();
+    else if (!currentBulkBar) page.insertAdjacentHTML("beforeend", nextBulkBar);
+    else if (currentBulkBar.outerHTML !== nextBulkBar) currentBulkBar.outerHTML = nextBulkBar;
+  } finally {
+    observeOrganizer();
+    enhancing = false;
+  }
 }
 
 function clickExistingAction(id: string, action: "return" | "remove-kept"): void {
@@ -253,7 +272,9 @@ export function installCapsuleKeptOrganizerBridge(): void {
   installed = true;
   document.addEventListener("click", handleCaptureClick, true);
   window.addEventListener("keydown", handleKeydown, true);
-  const observer = new MutationObserver(() => queueMicrotask(enhanceKeptPage));
-  observer.observe(document.body, { childList: true, subtree: true });
+  organizerObserver = new MutationObserver(() => {
+    if (!enhancing && keptPage()) queueMicrotask(enhanceKeptPage);
+  });
+  observeOrganizer();
   enhanceKeptPage();
 }
