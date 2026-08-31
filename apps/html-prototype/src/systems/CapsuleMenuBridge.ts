@@ -5,8 +5,12 @@ type CapsuleMenuHost = {
 };
 
 function addCapsuleToCurrentTopNav(): void {
-  const reflection = document.querySelector<HTMLElement>('.top-nav [data-action="reflection-wall"]');
-  if (!reflection || document.querySelector('.top-nav [data-action="room-capsule"]')) return;
+  // The hamburger menu is rendered into the app's top-nav host, but that host
+  // does not carry a `.top-nav` class. Target the canonical Reflection Wall
+  // action itself so Capsule is inserted into the exact same menu surface.
+  const reflection = document.querySelector<HTMLButtonElement>('button[data-action="reflection-wall"]');
+  if (!reflection || document.querySelector('button[data-action="room-capsule"]')) return;
+
   const button = document.createElement("button");
   button.type = "button";
   button.dataset.action = "room-capsule";
