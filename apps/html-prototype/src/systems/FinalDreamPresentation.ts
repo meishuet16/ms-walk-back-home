@@ -23,20 +23,25 @@ export class FinalDreamPresentation {
   private currentText = "";
   private currentTypedCount = 0;
   private endingLineTypedCount = 0;
+  private lastTouchAt = 0;
   private readonly reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
   private readonly keydown = (event: KeyboardEvent) => {
     if (event.key === "Enter" || event.key === " " || event.key === "ArrowRight") {
       event.preventDefault();
-      this.advance();
+      this.tryAdvance();
     }
   };
   private readonly pointerUp = (event: PointerEvent) => {
-    if (this.destroyed || this.phase === "ending" || this.phase === "credits") return;
-    if (this.phase === "dream" && this.typing) return;
-    const target = event.target as HTMLElement | null;
-    if (target?.closest("[data-final-dream-return]")) return;
-    event.preventDefault();
-    this.advance();
+    if (event.pointerType === "touch") this.lastTouchAt = Date.now();
+    this.handleSurfaceAdvance(event.target, event);
+  };
+  private readonly touchEnd = (event: TouchEvent) => {
+    this.lastTouchAt = Date.now();
+    this.handleSurfaceAdvance(event.target, event);
+  };
+  private readonly click = (event: MouseEvent) => {
+    if (Date.now() - this.lastTouchAt < 700) return;
+    this.handleSurfaceAdvance(event.target, event);
   };
 
   constructor(private readonly host: FinalDreamHost) {}
@@ -46,7 +51,9 @@ export class FinalDreamPresentation {
     this.host.root.classList.add("final-dream-active");
     this.host.overlay.classList.add("final-dream-overlay");
     document.addEventListener("keydown", this.keydown);
-    this.host.overlay.addEventListener("pointerup", this.pointerUp);
+    this.host.overlay.addEventListener("pointerup", this.pointerUp, { passive: false });
+    this.host.overlay.addEventListener("touchend", this.touchEnd, { passive: false });
+    this.host.overlay.addEventListener("click", this.click);
     this.renderDream();
   }
 
@@ -78,9 +85,26 @@ export class FinalDreamPresentation {
     window.clearTimeout(this.typeTimer);
     document.removeEventListener("keydown", this.keydown);
     this.host.overlay.removeEventListener("pointerup", this.pointerUp);
+    this.host.overlay.removeEventListener("touchend", this.touchEnd);
+    this.host.overlay.removeEventListener("click", this.click);
     this.host.root.classList.remove("final-dream-active");
     this.host.overlay.classList.remove("final-dream-overlay");
     this.host.overlay.innerHTML = "";
+  }
+
+  private tryAdvance(): void {
+    if (this.destroyed || this.phase === "ending" || this.phase === "credits") return;
+    if (this.phase === "dream" && this.typing) return;
+    this.advance();
+  }
+
+  private handleSurfaceAdvance(target: EventTarget | null, event: Event): void {
+    const element = target instanceof Element ? target : null;
+    if (element?.closest("[data-final-dream-return]")) return;
+    if (this.destroyed || this.phase === "ending" || this.phase === "credits") return;
+    if (this.phase === "dream" && this.typing) return;
+    event.preventDefault();
+    this.advance();
   }
 
   private renderDream(): void {
