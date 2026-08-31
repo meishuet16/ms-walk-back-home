@@ -23,7 +23,7 @@ export class FinalDreamPresentation {
   private currentText = "";
   private currentTypedCount = 0;
   private endingLineTypedCount = 0;
-  private lastTouchAt = 0;
+  private lastPointerAdvanceAt = 0;
   private readonly reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
   private readonly keydown = (event: KeyboardEvent) => {
     if (event.key !== "Enter" && event.key !== " " && event.key !== "ArrowRight") return;
@@ -34,15 +34,14 @@ export class FinalDreamPresentation {
     this.tryAdvance();
   };
   private readonly pointerUp = (event: PointerEvent) => {
-    if (event.pointerType === "touch") this.lastTouchAt = Date.now();
-    this.handleSurfaceAdvance(event.target, event);
-  };
-  private readonly touchEnd = (event: TouchEvent) => {
-    this.lastTouchAt = Date.now();
+    if (!event.isPrimary) return;
+    this.lastPointerAdvanceAt = Date.now();
     this.handleSurfaceAdvance(event.target, event);
   };
   private readonly click = (event: MouseEvent) => {
-    if (Date.now() - this.lastTouchAt < 700) return;
+    // Pointer-capable browsers already delivered this interaction through pointerup.
+    // Keep click only as a compatibility/keyboard-generated fallback without double-advancing.
+    if (Date.now() - this.lastPointerAdvanceAt < 700) return;
     this.handleSurfaceAdvance(event.target, event);
   };
 
@@ -54,7 +53,6 @@ export class FinalDreamPresentation {
     this.host.overlay.classList.add("final-dream-overlay");
     document.addEventListener("keydown", this.keydown, true);
     this.host.overlay.addEventListener("pointerup", this.pointerUp, { passive: false });
-    this.host.overlay.addEventListener("touchend", this.touchEnd, { passive: false });
     this.host.overlay.addEventListener("click", this.click);
     this.renderDream();
   }
@@ -86,7 +84,6 @@ export class FinalDreamPresentation {
     window.clearTimeout(this.typeTimer);
     document.removeEventListener("keydown", this.keydown, true);
     this.host.overlay.removeEventListener("pointerup", this.pointerUp);
-    this.host.overlay.removeEventListener("touchend", this.touchEnd);
     this.host.overlay.removeEventListener("click", this.click);
     this.host.root.classList.remove("final-dream-active");
     this.host.overlay.classList.remove("final-dream-overlay");
@@ -105,6 +102,7 @@ export class FinalDreamPresentation {
     if (this.destroyed || this.phase === "ending" || this.phase === "credits") return;
     if (this.phase === "dream" && this.typing) return;
     event.preventDefault();
+    event.stopPropagation();
     this.advance();
   }
 
