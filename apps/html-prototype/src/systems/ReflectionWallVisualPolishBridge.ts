@@ -70,7 +70,7 @@ function installWallLookControls(app: ReflectionVisualHost): void {
   const controls = document.createElement("div");
   controls.className = "reflection-wall-look-controls";
   controls.setAttribute("data-reflection-wall-look", "");
-  controls.innerHTML = `<input class="reflection-wall-photo-input" type="file" accept="image/*" aria-label="Choose Reflection Wall background image"><button type="button" class="reflection-wall-photo-button" aria-label="Choose wall background"><span aria-hidden="true">▧</span><span>Wall photo</span></button>${hasBackground ? `<button type="button" class="reflection-wall-photo-reset">Use room wall</button>` : ""}`;
+  controls.innerHTML = `<input class="reflection-wall-photo-input" type="file" accept="image/*" aria-label="Choose Reflection Wall background image"><button type="button" class="reflection-wall-photo-button" aria-label="Choose wall background"><span aria-hidden="true">▧</span><span>Wall photo</span></button>${hasBackground ? `<button type="button" class="reflection-wall-photo-reset" style="display:inline-flex" aria-label="Restore the room wall">Use room wall</button>` : ""}`;
   canvas.append(controls);
 
   const input = controls.querySelector<HTMLInputElement>(".reflection-wall-photo-input");
