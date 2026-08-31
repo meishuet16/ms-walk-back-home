@@ -17,6 +17,13 @@ test("Reflection Wall uses one JavaScript feature installer from main", async ()
   assert.doesNotMatch(source, /installReflectionWallVisualPolishBridge/);
 });
 
+test("Reflection composer has no presentation-level text length cap", async () => {
+  const source = await read("src/systems/ReflectionWallExperienceBridge.ts");
+  assert.match(source, /id=\"reflection-note-text\"/);
+  assert.doesNotMatch(source, /maxlength=/);
+  assert.doesNotMatch(source, /ReflectionWallUnlimitedTextBridge/);
+});
+
 test("Reflection Wall uses one public stylesheet entrypoint", async () => {
   const html = await read("src/index.html");
   const reflectionLinks = [...html.matchAll(/href="\.\/(reflection-wall[^\"]*\.css)"/g)].map((match) => match[1]);
