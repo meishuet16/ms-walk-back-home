@@ -34,13 +34,14 @@ for (const file of [
   "world-utility-tools-polish.css",
   "reflection-wall-experience.css",
   "reflection-wall-mobile-polish.css",
-  "reflection-wall-reference-polish.css"
+  "reflection-wall-reference-polish.css",
+  "reflection-wall-stability-fixes.css"
 ]) {
   await copyFile(resolve(root, `src/${file}`), resolve(root, `dist/${file}`));
 }
 await mkdir(resolve(root, "dist/browser/ffmpeg"), { recursive: true });
 await copyFile(resolve(root, "../../node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.js"), resolve(root, "dist/browser/ffmpeg/ffmpeg-core.js"));
-await copyFile(resolve(root, "../../node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.wasm"), resolve(root, "dist/browser/ffmpeg/ffmpeg-core.wasm"));
+await copyFile(resolve(root, "../../node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.wasm"), resolve(root, "dist/browser/ffmpeg-core.wasm"));
 for (const file of ["worker.js", "const.js", "errors.js"]) {
   await copyFile(resolve(root, `../../node_modules/@ffmpeg/ffmpeg/dist/esm/${file}`), resolve(root, `dist/browser/${file}`));
 }
