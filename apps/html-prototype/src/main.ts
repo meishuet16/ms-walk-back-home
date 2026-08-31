@@ -6,6 +6,7 @@ import { installReflectionWallOverlayCleanupBridge } from "./systems/ReflectionW
 import { installReflectionWallPaperBoundsBridge } from "./systems/ReflectionWallPaperBoundsBridge.js";
 import { installReflectionWallPaperCatalog } from "./systems/ReflectionWallPaperCatalogBridge.js";
 import { installReflectionWallVisualPolishBridge } from "./systems/ReflectionWallVisualPolishBridge.js";
+import { installReflectionWallContinuumBridge } from "./systems/ReflectionWallContinuumBridge.js";
 import { SceneDebugEditor } from "./systems/SceneDebugEditor.js";
 
 installAuthoredCutsceneLifecycleBridge(WalkBackHomeApp.prototype);
@@ -14,6 +15,7 @@ installReflectionWallPaperCatalog();
 installReflectionWallExperienceBridge(WalkBackHomeApp.prototype);
 installReflectionWallPaperBoundsBridge(WalkBackHomeApp.prototype);
 installReflectionWallVisualPolishBridge(WalkBackHomeApp.prototype);
+installReflectionWallContinuumBridge(WalkBackHomeApp.prototype);
 installReflectionWallOverlayCleanupBridge(WalkBackHomeApp.prototype);
 
 const root = document.querySelector<HTMLElement>("#app")!;
