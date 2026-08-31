@@ -3,11 +3,13 @@ import { installAuthoredCutsceneLifecycleBridge } from "./systems/AuthoredCutsce
 import { installLabisLifecycleBridge } from "./systems/LabisLifecycleBridge.js";
 import { installReflectionWallExperienceBridge } from "./systems/ReflectionWallExperienceBridge.js";
 import { installReflectionWallOverlayCleanupBridge } from "./systems/ReflectionWallOverlayCleanupBridge.js";
+import { installReflectionWallPaperBoundsBridge } from "./systems/ReflectionWallPaperBoundsBridge.js";
 import { SceneDebugEditor } from "./systems/SceneDebugEditor.js";
 
 installAuthoredCutsceneLifecycleBridge(WalkBackHomeApp.prototype);
 installLabisLifecycleBridge(WalkBackHomeApp.prototype);
 installReflectionWallExperienceBridge(WalkBackHomeApp.prototype);
+installReflectionWallPaperBoundsBridge(WalkBackHomeApp.prototype);
 installReflectionWallOverlayCleanupBridge(WalkBackHomeApp.prototype);
 
 const root = document.querySelector<HTMLElement>("#app")!;
