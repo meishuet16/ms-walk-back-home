@@ -42,13 +42,18 @@
   background-position: center top;
   background-repeat: no-repeat;
 }
-.reflection-kept-wall.has-custom-background > .reflection-wall-header,
 .reflection-kept-wall.has-custom-background > .reflection-continuum-wall,
 .reflection-kept-wall.has-custom-background > .reflection-wall-canvas,
 .reflection-kept-wall.has-custom-background > .reflection-continuum-list,
 .reflection-kept-wall.has-custom-background > .reflection-kept-list {
   position: relative;
   z-index: 1;
+}
+/* The header owns the Find drawer. Keep its stacking context above the wall/list layers;
+   otherwise a custom-photo content layer can paint over the fixed drawer. */
+.reflection-kept-wall.has-custom-background > .reflection-wall-header {
+  position: relative;
+  z-index: 4000;
 }
 .reflection-kept-wall.has-custom-background .reflection-continuum-wall,
 .reflection-kept-wall.has-custom-background .reflection-wall-canvas,
