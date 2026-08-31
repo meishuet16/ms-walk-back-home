@@ -1,0 +1,371 @@
+/* Reflection Wall reference polish: warm, scenic, tactile — never a generic dark dashboard. */
+
+.reflection-kept-wall {
+  --rw-scene-navy: #16304a;
+  --rw-scene-navy-deep: #10263b;
+  --rw-paper-ui: #f7efe1;
+  --rw-paper-ui-2: #efe3cf;
+  --rw-ink-ui: #352e2c;
+  --rw-muted-ui: #756b65;
+  --rw-sage: #7f9270;
+  --rw-sage-deep: #687b5d;
+  --rw-warm: #d8a36c;
+}
+
+/* Header belongs to the room, but lets the blue daytime wall be the visual hero. */
+.reflection-wall-header {
+  background: linear-gradient(180deg, rgba(20, 45, 69, .96), rgba(17, 38, 58, .94));
+  border-bottom-color: rgba(246, 231, 205, .16);
+  box-shadow: 0 12px 34px rgba(7, 22, 34, .18);
+}
+.reflection-wall-title > span { color: #e4bc84; }
+.reflection-wall-title h2 { color: #fff4e2; }
+.reflection-wall-title p { color: #c3cfcc; }
+.reflection-wall-title p b { color: #f0c78e; }
+
+.reflection-wall-actions .reflection-header-control,
+.reflection-find-drawer > summary,
+.reflection-wall-heading-row > .reflection-wall-close-button {
+  background: rgba(247, 239, 225, .1) !important;
+  border-color: rgba(247, 239, 225, .22) !important;
+  color: #fff3df !important;
+  box-shadow: 0 8px 18px rgba(4, 18, 29, .12);
+}
+.reflection-wall-actions .reflection-primary-action {
+  background: #f5e6ce !important;
+  border-color: rgba(255,255,255,.55) !important;
+  color: #553d31 !important;
+  box-shadow: 0 7px 18px rgba(25, 18, 15, .18);
+}
+
+/* One continuous scenic wall. Sections are placement zones only, never separate worlds. */
+.reflection-wall-canvas {
+  position: relative;
+  background: #6ab0c9 !important;
+  scrollbar-width: none;
+}
+.reflection-wall-canvas::-webkit-scrollbar { display: none; }
+.reflection-wall-canvas::before,
+.reflection-wall-canvas::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.reflection-wall-canvas::before {
+  z-index: 0;
+  position: fixed;
+  inset: auto;
+  top: var(--reflection-wall-header-height, 0px);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(ellipse at 73% 12%, rgba(255,255,255,.8) 0 4%, transparent 9%),
+    radial-gradient(ellipse at 20% 18%, rgba(255,249,224,.72) 0 5%, transparent 11%),
+    linear-gradient(180deg, #85cde2 0 32%, #58b5d0 33% 55%, #2f83aa 56% 67%, #456f7e 68% 73%, #b37b58 74% 100%);
+  background-size: cover;
+  background-position: center;
+}
+.reflection-wall-canvas.has-custom-background::before {
+  background-image: var(--rw-custom-background);
+  background-size: cover;
+  background-position: center;
+}
+.reflection-wall-canvas::after {
+  z-index: 1;
+  position: fixed;
+  inset: auto;
+  top: var(--reflection-wall-header-height, 0px);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    linear-gradient(180deg, rgba(19,48,67,.07), rgba(10,38,55,.2) 64%, rgba(21,35,43,.32)),
+    radial-gradient(circle at 50% 36%, transparent 0 34%, rgba(14,32,43,.12) 78%, rgba(9,24,35,.22) 100%);
+}
+.reflection-wall-canvas.has-custom-background::after {
+  background:
+    linear-gradient(180deg, rgba(14,32,44,.12), rgba(13,29,40,.3)),
+    radial-gradient(circle at 50% 42%, rgba(255,255,255,.02) 0 35%, rgba(10,24,34,.2) 86%);
+}
+.reflection-wall-stack,
+.reflection-wall-section,
+.reflection-wall-more { position: relative; z-index: 2; }
+.reflection-wall-section {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+}
+.reflection-wall-section::before { display: none !important; }
+.reflection-wall-grain { opacity: .08; }
+.reflection-wall-stack .reflection-wall-section + .reflection-wall-section { margin-top: 0; }
+
+/* Show more is a continuation affordance, not a new panel. */
+.reflection-wall-more {
+  min-height: 96px;
+  margin-top: -24px;
+  padding: 32px 16px 18px;
+  background: linear-gradient(180deg, transparent, rgba(14, 40, 56, .16)) !important;
+}
+.reflection-wall-more button {
+  min-width: min(270px, 82vw);
+  min-height: 50px;
+  background: rgba(249, 239, 221, .9) !important;
+  border: 1px solid rgba(255,255,255,.55) !important;
+  color: #413631 !important;
+  box-shadow: 0 9px 22px rgba(8, 27, 38, .2);
+}
+.reflection-wall-more button strong { color: #413631; }
+.reflection-wall-more button small { color: #776d65; }
+.reflection-wall-more button > span { color: #6d8569; }
+
+/* Papers float above the photo wash. */
+.reflection-wall-paper { z-index: 10; }
+.reflection-wall-note {
+  box-shadow: 0 10px 24px rgba(16, 35, 42, .22), inset 0 0 0 1px rgba(75, 56, 45, .07) !important;
+}
+.reflection-wall-paper.lifting .reflection-wall-note { transform: scale(.96); }
+
+/* Custom wall background lives inside Arrange/Wall, not as a separate settings app. */
+.reflection-wall-look-controls {
+  position: sticky;
+  z-index: 1850;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+  margin-top: -62px;
+  padding: 0 12px 10px;
+  pointer-events: none;
+}
+.reflection-wall-look-controls button { pointer-events: auto; }
+.reflection-wall-photo-input {
+  position: fixed;
+  inline-size: 1px;
+  block-size: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.reflection-wall-photo-button,
+.reflection-wall-photo-reset {
+  min-height: 44px;
+  border-radius: 999px !important;
+  border: 1px solid rgba(255,255,255,.58) !important;
+  background: rgba(249,239,221,.92) !important;
+  color: #42372f !important;
+  padding: 0 13px !important;
+  box-shadow: 0 8px 22px rgba(7, 26, 38, .2) !important;
+}
+.reflection-wall-photo-button { display: inline-flex !important; align-items: center; gap: 7px; }
+.reflection-wall-photo-reset { color: #675d55 !important; }
+
+/* Find/compose/detail use paper-light surfaces. The wall is the only dark/scenic surface. */
+.reflection-find-panel,
+.reflection-kept-compose,
+.reflection-kept-detail {
+  background: #f8f1e5 !important;
+  color: var(--rw-ink-ui) !important;
+}
+.reflection-find-panel {
+  border-color: rgba(75, 61, 50, .12);
+  box-shadow: 0 22px 55px rgba(18, 43, 55, .24);
+}
+.reflection-find-sheet-head > span,
+.reflection-compose-header span,
+.reflection-detail-header span { color: #7e8f6e; }
+.reflection-find-sheet-head strong,
+.reflection-compose-header h2,
+.reflection-detail-header h2 { color: #382f2b; }
+.reflection-compose-header p { color: #7a7069; }
+.reflection-compose-header,
+.reflection-detail-header,
+.reflection-compose-footer,
+.reflection-detail-footer {
+  background: rgba(248, 241, 229, .98) !important;
+  border-color: rgba(78, 61, 48, .1) !important;
+}
+.reflection-compose-footer,
+.reflection-detail-footer { box-shadow: 0 -12px 30px rgba(70, 54, 41, .06); }
+.reflection-compose-footer button,
+.reflection-detail-footer button,
+.reflection-detail-actions button {
+  background: #fffaf1 !important;
+  border-color: rgba(82, 63, 49, .14) !important;
+  color: #443832 !important;
+}
+.reflection-compose-footer .reflection-primary-action,
+.reflection-detail-footer .reflection-primary-action {
+  background: var(--rw-sage) !important;
+  border-color: var(--rw-sage) !important;
+  color: white !important;
+}
+.reflection-round-close {
+  background: #fffaf1 !important;
+  border-color: rgba(82,63,49,.14) !important;
+  color: #443832 !important;
+}
+.reflection-paper-tray-title span { color: #42372f; }
+.reflection-paper-tray-title p { color: #887d73; }
+.reflection-paper-choice {
+  background: rgba(255,250,241,.82) !important;
+  border-color: rgba(82,63,49,.12) !important;
+  color: #70665e !important;
+}
+.reflection-paper-choice.selected {
+  border-color: #809272 !important;
+  box-shadow: 0 0 0 2px rgba(127,146,112,.18) !important;
+  color: #3f4939 !important;
+}
+.reflection-search-field { color: #72675f; }
+.reflection-search-field input {
+  background: #fffaf2;
+  color: #342d2b;
+  border-color: rgba(82,63,49,.16);
+  font-size: 16px;
+}
+.reflection-search-field input::placeholder { color: #aaa096; }
+.reflection-find-group > span,
+.reflection-detail-papers > span { color: #766b64; }
+.reflection-chip-row button {
+  background: #fffaf2 !important;
+  color: #665c55 !important;
+  border-color: rgba(82,63,49,.13) !important;
+}
+.reflection-chip-row button.selected {
+  background: #dfe8d7 !important;
+  color: #415039 !important;
+  border-color: #879a78 !important;
+}
+.reflection-find-hint { color: #94897f; }
+.reflection-kept-list { background: #f8f1e5 !important; }
+.reflection-kept-list-row { color: #443832 !important; border-color: rgba(82,63,49,.09) !important; }
+.reflection-list-copy small { color: #847970; }
+
+/* Cute stationery variants inspired by the supplied note references. */
+.paper-pink-round { width: clamp(128px, 17vw, 190px); }
+.paper-pink-round .reflection-wall-note,
+.reflection-compose-paper.paper-pink-round,
+.reflection-detail-note.paper-pink-round {
+  aspect-ratio: 1;
+  border-radius: 50% !important;
+  background: radial-gradient(circle at 38% 28%, #ffd9dc, #efb8bb 78%);
+}
+.paper-pink-round .reflection-wall-note { justify-content: center; text-align: center; padding-inline: 18px !important; }
+
+.paper-cat-pocket .reflection-wall-note,
+.reflection-compose-paper.paper-cat-pocket,
+.reflection-detail-note.paper-cat-pocket {
+  background: linear-gradient(180deg, #ffe4a9, #f2c983);
+}
+.paper-cat-pocket .reflection-wall-note::after,
+.reflection-compose-paper.paper-cat-pocket::after,
+.reflection-detail-note.paper-cat-pocket::after {
+  content: "• ᴗ •";
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  color: rgba(79,58,45,.68);
+  font: 700 13px/1 system-ui, sans-serif;
+}
+
+.paper-meadow-note .reflection-wall-note,
+.reflection-compose-paper.paper-meadow-note,
+.reflection-detail-note.paper-meadow-note {
+  background:
+    radial-gradient(circle at 86% 82%, #d87d5c 0 4px, transparent 5px),
+    radial-gradient(circle at 91% 86%, #c45a50 0 3px, transparent 4px),
+    linear-gradient(180deg, #f2f3d9 0 78%, #9bc890 79% 84%, #6ea274 85% 100%);
+}
+
+.paper-cloud-note .reflection-wall-note,
+.reflection-compose-paper.paper-cloud-note,
+.reflection-detail-note.paper-cloud-note {
+  background:
+    radial-gradient(ellipse at 20% 18%, rgba(255,255,255,.8) 0 10%, transparent 11%),
+    radial-gradient(ellipse at 32% 22%, rgba(255,255,255,.75) 0 8%, transparent 9%),
+    linear-gradient(180deg, #bce5ef, #92cedd);
+}
+
+.paper-yellow-check .reflection-wall-note,
+.reflection-compose-paper.paper-yellow-check,
+.reflection-detail-note.paper-yellow-check {
+  background-color: #f5dda0;
+  background-image: linear-gradient(rgba(143,113,72,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(143,113,72,.12) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+.paper-botanical-tape .reflection-wall-note,
+.reflection-compose-paper.paper-botanical-tape,
+.reflection-detail-note.paper-botanical-tape {
+  background: linear-gradient(150deg, #f1e0bd, #e4c997);
+}
+.paper-botanical-tape .reflection-wall-note::after,
+.reflection-compose-paper.paper-botanical-tape::after,
+.reflection-detail-note.paper-botanical-tape::after {
+  content: "❧";
+  position: absolute;
+  right: 12px;
+  bottom: 13px;
+  color: #7f8b5c;
+  font-size: 28px;
+  transform: rotate(-18deg);
+}
+
+.paper-sky-postcard .reflection-wall-note,
+.reflection-compose-paper.paper-sky-postcard,
+.reflection-detail-note.paper-sky-postcard {
+  color: #233942 !important;
+  background: linear-gradient(180deg, #bfe8ef 0 58%, #6fb7c9 59% 68%, #d9aa75 69% 100%);
+}
+
+.paper-mint-list .reflection-wall-note,
+.reflection-compose-paper.paper-mint-list,
+.reflection-detail-note.paper-mint-list {
+  background: repeating-linear-gradient(180deg, #dbe8c9 0 27px, rgba(91,113,77,.15) 28px 29px);
+}
+
+.reflection-paper-choice.paper-pink-round > span,
+.reflection-detail-paper.paper-pink-round > span { border-radius: 50%; background:#efbec0; }
+.reflection-paper-choice.paper-cat-pocket > span,
+.reflection-detail-paper.paper-cat-pocket > span { background:#f4cf8d; }
+.reflection-paper-choice.paper-meadow-note > span,
+.reflection-detail-paper.paper-meadow-note > span { background:linear-gradient(180deg,#f1f2d7 0 75%,#7cae78 76%); }
+.reflection-paper-choice.paper-cloud-note > span,
+.reflection-detail-paper.paper-cloud-note > span { background:linear-gradient(180deg,#c8edf3,#8fcbd9); }
+.reflection-paper-choice.paper-yellow-check > span,
+.reflection-detail-paper.paper-yellow-check > span { background-color:#f1daa0; background-image:linear-gradient(rgba(110,89,61,.18) 1px,transparent 1px),linear-gradient(90deg,rgba(110,89,61,.18) 1px,transparent 1px);background-size:8px 8px; }
+.reflection-paper-choice.paper-botanical-tape > span,
+.reflection-detail-paper.paper-botanical-tape > span { background:linear-gradient(145deg,#eddbb8 0 78%,#839269 79%); }
+.reflection-paper-choice.paper-sky-postcard > span,
+.reflection-detail-paper.paper-sky-postcard > span { background:linear-gradient(180deg,#bfe8ef 0 58%,#6fb7c9 59% 68%,#d9aa75 69%); }
+.reflection-paper-choice.paper-mint-list > span,
+.reflection-detail-paper.paper-mint-list > span { background:repeating-linear-gradient(180deg,#dbe8c9 0 8px,rgba(91,113,77,.18) 9px 10px); }
+
+@media (max-width: 760px) {
+  .overlay.reflection-wall-overlay { background: rgba(9, 28, 42, .88); backdrop-filter: blur(2px); }
+  .reflection-wall-header { padding: 12px 13px 11px; }
+  .reflection-wall-actions { gap: 8px; }
+  .reflection-wall-actions .reflection-header-control,
+  .reflection-find-drawer > summary { border-radius: 14px !important; }
+  .reflection-wall-section { min-height: max(520px, calc(100dvh - 150px)); }
+  .reflection-wall-look-controls { padding-inline: 10px; }
+  .reflection-wall-photo-reset { display: none; }
+  .reflection-find-panel { background: #f8f1e5 !important; }
+  .reflection-compose-paper textarea { font-size: 16px; }
+  .reflection-kept-compose,
+  .reflection-kept-detail { background: #f8f1e5 !important; }
+  .reflection-compose-footer { background: rgba(248,241,229,.97) !important; }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .reflection-wall-photo-button:hover,
+  .reflection-wall-photo-reset:hover,
+  .reflection-wall-more button:hover { transform: translateY(-1px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reflection-wall-photo-button,
+  .reflection-wall-photo-reset,
+  .reflection-wall-more button { transition: opacity 120ms linear !important; }
+}
