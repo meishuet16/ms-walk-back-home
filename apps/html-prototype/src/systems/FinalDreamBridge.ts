@@ -6,6 +6,7 @@ type FinalDreamAudio = {
   setLoop?: (loop: boolean) => void;
   ensurePlaying?: () => Promise<void>;
   stop?: () => void;
+  setScene?: (scene: "forest" | "bakery") => void;
 };
 
 const FINAL_DREAM_CHAPTER_ID = "final-dream-tomorrow";
@@ -17,25 +18,25 @@ type AppLike = {
   overlay: HTMLElement;
   stage?: HTMLElement;
   audio?: FinalDreamAudio;
-  showHome?: () => void;
+  returnToForest?: () => void;
   autosave?: () => void;
 };
 
-type AppPrototype = { enterCurrentMemory?: () => Promise<void> };
+type AppPrototype = {
+  enterCurrentMemory?: () => Promise<void>;
+  returnToForest?: () => void;
+};
 
 let activePresentation: FinalDreamPresentation | null = null;
 
 export function installFinalDreamBridge(prototype: AppPrototype): void {
   const originalEnter = prototype.enterCurrentMemory;
+  const originalReturnToForest = prototype.returnToForest;
   if (!originalEnter) return;
 
   prototype.enterCurrentMemory = async function(this: AppLike): Promise<void> {
     const door = this.currentDoor ?? this.activeDoor;
     if (door?.chapterId !== FINAL_DREAM_CHAPTER_ID) return originalEnter.call(this);
-
-    // Never let the normal world-space chapter path run for Final Dream. It is a
-    // single overlay presentation, so repeated forest actions must not stack or
-    // restart it.
     if (activePresentation) return;
 
     this.currentDoor = door;
@@ -58,11 +59,24 @@ export function installFinalDreamBridge(prototype: AppPrototype): void {
           // localStorage can be unavailable in privacy modes; replay still works.
         }
         this.autosave?.();
-        if (this.showHome) this.showHome();
-        else window.location.reload();
+        originalReturnToForest?.call(this);
       }
     });
     activePresentation = presentation;
     presentation.start();
   };
+
+  if (originalReturnToForest) {
+    prototype.returnToForest = function(this: AppLike): void {
+      if (activePresentation) {
+        activePresentation.destroy();
+        activePresentation = null;
+      }
+      this.audio?.stop?.();
+      originalReturnToForest.call(this);
+      this.audio?.setScene?.("forest");
+      this.audio?.setLoop?.(true);
+      void this.audio?.ensurePlaying?.();
+    };
+  }
 }
