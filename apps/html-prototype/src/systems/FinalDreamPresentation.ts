@@ -84,7 +84,7 @@ export class FinalDreamPresentation {
     this.currentTypedCount = 0;
     this.host.overlay.innerHTML = this.frameMarkup(frame);
     this.bindAdvance();
-    this.host.overlay.querySelector<HTMLElement>(".final-dream-frame")?.classList.add("final-dream-page-enter");
+    requestAnimationFrame(() => this.host.overlay.querySelector<HTMLElement>(".final-dream-frame")?.classList.add("final-dream-page-enter"));
     if (frame.text) this.startTyping();
   }
 
@@ -93,8 +93,9 @@ export class FinalDreamPresentation {
       ? `<img class="final-dream-portrait" src="${escapeHtml(frame.portrait)}" alt="" aria-hidden="true">`
       : "";
     const speaker = frame.speaker ? `<span class="final-dream-speaker">${escapeHtml(frame.speaker)}</span>` : "";
+    const topDialogue = ["sea", "sea-extra-day", "walk", "walk-choice", "walk-last"].includes(frame.id);
     const dialogue = frame.text
-      ? `<div class="final-dream-dialogue">${speaker}<p><span class="final-dream-type" aria-live="polite"></span><span class="final-dream-caret" aria-hidden="true"></span></p><span class="final-dream-next-mark" aria-hidden="true">›</span></div>`
+      ? `<div class="final-dream-dialogue${topDialogue ? " final-dream-dialogue-top" : ""}">${speaker}<p><span class="final-dream-type" aria-live="polite"></span><span class="final-dream-caret" aria-hidden="true"></span></p><span class="final-dream-next-mark" aria-hidden="true">›</span></div>`
       : "";
     return `<section class="final-dream-frame treatment-${escapeHtml(frame.treatment ?? "scene")}" data-final-dream-frame="${escapeHtml(frame.id)}">
       <div class="final-dream-image-wrap"><img class="final-dream-image" src="${escapeHtml(frame.image)}" alt=""></div>
@@ -123,7 +124,7 @@ export class FinalDreamPresentation {
         return;
       }
       const char = this.currentText[this.currentTypedCount - 1] ?? "";
-      const delay = /[。！？!?…]/.test(char) ? 105 : /[，、；：,;:]/.test(char) ? 70 : 34;
+      const delay = /[。！？!?…]/.test(char) ? 180 : /[，、；：,;:]/.test(char) ? 115 : 58;
       this.typeTimer = window.setTimeout(step, delay);
     };
     step();
@@ -180,7 +181,7 @@ export class FinalDreamPresentation {
         return;
       }
       const char = line[this.endingLineTypedCount - 1] ?? "";
-      const delay = /[。！？!?…]/.test(char) ? 120 : /[，、；：,;:]/.test(char) ? 78 : 42;
+      const delay = /[。！？!?…]/.test(char) ? 180 : /[，、；：,;:]/.test(char) ? 115 : 58;
       this.endingTimer = window.setTimeout(step, delay);
     };
     step();
@@ -189,11 +190,11 @@ export class FinalDreamPresentation {
   private scheduleNextEndingLine(): void {
     const isLast = this.endingIndex >= finalDreamEndingLines.length - 1;
     if (isLast) {
-      const hold = this.reducedMotion ? 250 : 3600;
+      const hold = this.reducedMotion ? 250 : 4200;
       this.transitionTimer = window.setTimeout(() => this.beginTitle(), hold);
       return;
     }
-    const pause = this.reducedMotion ? 80 : 520;
+    const pause = this.reducedMotion ? 80 : 760;
     this.endingTimer = window.setTimeout(() => {
       if (this.destroyed || this.phase !== "ending") return;
       this.endingIndex += 1;
@@ -205,7 +206,7 @@ export class FinalDreamPresentation {
     if (this.destroyed) return;
     this.phase = "title";
     this.host.overlay.innerHTML = `<section class="final-dream-black final-dream-title-card" aria-label="Walk Back Home">
-      <h1>W A L K&nbsp;&nbsp; B A C K&nbsp;&nbsp; H O M E</h1>
+      <h1>WALK BACK HOME</h1>
       <button class="final-dream-hit-target" type="button" data-final-dream-next aria-label="Continue to credits"></button>
     </section>`;
     this.bindAdvance();
@@ -215,7 +216,7 @@ export class FinalDreamPresentation {
     this.phase = "credits";
     this.host.overlay.innerHTML = `<section class="final-dream-black final-dream-credits">
       <div>${finalDreamCredits.map((line) => `<p>${escapeHtml(line)}</p>`).join("")}</div>
-      <button type="button" class="final-dream-return" data-final-dream-next>Return to title</button>
+      <button type="button" class="final-dream-return" data-final-dream-next>Return to forest</button>
     </section>`;
     this.bindAdvance();
   }
