@@ -6,22 +6,12 @@ type ReflectionVisualHost = {
 };
 
 export const REFLECTION_WALL_BACKGROUND_KEY = "walk-back-home:reflection-wall-background:v1";
-const REFLECTION_WALL_UNITS_KEY = "walk-back-home:reflection-wall-units:v1";
 
 function readBackground(): string {
   try {
     return window.localStorage.getItem(REFLECTION_WALL_BACKGROUND_KEY) ?? "";
   } catch {
     return "";
-  }
-}
-
-function readWallHeight(): number {
-  try {
-    const units = Math.max(1, Math.min(12, Math.round(Number(window.localStorage.getItem(REFLECTION_WALL_UNITS_KEY)) || 2)));
-    return 520 + Math.max(0, units - 1) * 420;
-  } catch {
-    return 940;
   }
 }
 
@@ -90,8 +80,9 @@ function applyBackground(app: ReflectionVisualHost): void {
   const wall = app.overlay.querySelector<HTMLElement>(".reflection-kept-wall");
   const background = readBackground();
 
-  /* Keep the outer shell out of the photo crop calculation. The pre-14:43 Wall framing
-     came from the Wall canvas itself using cover + center top; restore that exact geometry. */
+  /* Wall and List occupy the same second grid row under the same header. Applying the same
+     cover/center-top image to that viewport keeps the crop invariant when the view changes.
+     Do not give List an artificial content-height min-height: that changes cover geometry. */
   if (wall) {
     wall.classList.toggle("has-custom-background", Boolean(background));
     if (background) wall.style.setProperty("--rw-custom-background", `url(${JSON.stringify(background)})`);
@@ -104,20 +95,12 @@ function applyBackground(app: ReflectionVisualHost): void {
 
   if (!background) {
     if (canvas) clearBackground(canvas);
-    if (list) {
-      clearBackground(list);
-      list.style.removeProperty("min-height");
-    }
+    if (list) clearBackground(list);
     return;
   }
 
   if (canvas) applySurfaceBackground(canvas, background);
-  if (list) {
-    /* List must use the same physical surface dimensions as Wall before applying `cover`.
-       Otherwise a short one-row list computes a tighter crop and looks zoomed. */
-    list.style.setProperty("min-height", `${readWallHeight()}px`, "important");
-    applySurfaceBackground(list, background);
-  }
+  if (list) applySurfaceBackground(list, background);
 }
 
 function installWallLookControls(app: ReflectionVisualHost): void {
