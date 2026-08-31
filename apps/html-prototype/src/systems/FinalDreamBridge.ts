@@ -8,7 +8,7 @@ type AppLike = {
   root: HTMLElement;
   overlay: HTMLElement;
   stage?: HTMLElement;
-  returnToForest?: () => void;
+  showHome?: () => void;
   autosave?: () => void;
   showToast?: (message: string) => void;
 };
@@ -33,8 +33,13 @@ export function installFinalDreamBridge(prototype: AppPrototype): void {
       overlay: this.overlay,
       stage: this.stage,
       onComplete: () => {
+        try {
+          localStorage.setItem("walk.final-dream.seen", "1");
+        } catch {
+          // localStorage can be unavailable in privacy modes; replay still works.
+        }
         this.autosave?.();
-        if (this.returnToForest) this.returnToForest();
+        if (this.showHome) this.showHome();
         else window.location.reload();
       }
     });
