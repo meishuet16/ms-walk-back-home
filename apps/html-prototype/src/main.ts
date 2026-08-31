@@ -7,6 +7,7 @@ import { installCapsuleMachineBridge } from "./systems/CapsuleMachineBridge.js";
 import { installCapsuleMenuBridge } from "./systems/CapsuleMenuBridge.js";
 import { installCapsuleAudioCaptureBridge } from "./systems/CapsuleAudioCaptureBridge.js";
 import { installCapsuleKeptOrganizerBridge } from "./systems/CapsuleKeptOrganizerBridge.js";
+import { installLocalBackupSupplementBridge } from "./systems/LocalBackupSupplementBridge.js";
 import { SceneDebugEditor } from "./systems/SceneDebugEditor.js";
 
 installAuthoredCutsceneLifecycleBridge(WalkBackHomeApp.prototype);
@@ -17,6 +18,7 @@ installCapsuleMachineBridge(WalkBackHomeApp.prototype as unknown as { activateRo
 installCapsuleMenuBridge(WalkBackHomeApp.prototype);
 installCapsuleAudioCaptureBridge();
 installCapsuleKeptOrganizerBridge();
+installLocalBackupSupplementBridge(WalkBackHomeApp.prototype);
 
 const root = document.querySelector<HTMLElement>("#app")!;
 if (new URLSearchParams(window.location.search).get("debug") === "scene") {
