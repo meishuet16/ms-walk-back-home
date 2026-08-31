@@ -1,4 +1,4 @@
-import { finalDreamCredits, finalDreamEndingLines, finalDreamFrames, finalDreamMorningImage, finalDreamMusic, type FinalDreamFrame } from "../fixtures/finalDreamChapter.js";
+import { finalDreamCredits, finalDreamEndingLines, finalDreamFrames, finalDreamMorningImage, type FinalDreamFrame } from "../fixtures/finalDreamChapter.js";
 
 type FinalDreamHost = {
   root: HTMLElement;
@@ -19,7 +19,6 @@ export class FinalDreamPresentation {
   private index = 0;
   private phase: "dream" | "ending" | "title" | "credits" = "dream";
   private endingIndex = 0;
-  private audio: HTMLAudioElement | null = null;
   private destroyed = false;
   private transitionTimer = 0;
   private endingTimer = 0;
@@ -38,7 +37,6 @@ export class FinalDreamPresentation {
     this.host.root.classList.add("final-dream-active");
     this.host.overlay.classList.add("final-dream-overlay");
     document.addEventListener("keydown", this.keydown);
-    this.startMusic();
     this.renderDream();
   }
 
@@ -66,26 +64,9 @@ export class FinalDreamPresentation {
     window.clearTimeout(this.transitionTimer);
     window.clearTimeout(this.endingTimer);
     document.removeEventListener("keydown", this.keydown);
-    this.audio?.pause();
-    this.audio = null;
     this.host.root.classList.remove("final-dream-active");
     this.host.overlay.classList.remove("final-dream-overlay");
     this.host.overlay.innerHTML = "";
-  }
-
-  private startMusic(): void {
-    const audio = new Audio(finalDreamMusic);
-    audio.loop = false;
-    audio.volume = 0.34;
-    audio.preload = "auto";
-    this.audio = audio;
-    void audio.play().catch(() => {
-      const resume = () => {
-        void audio.play().catch(() => undefined);
-        this.host.overlay.removeEventListener("pointerdown", resume);
-      };
-      this.host.overlay.addEventListener("pointerdown", resume, { once: true });
-    });
   }
 
   private renderDream(): void {
@@ -113,7 +94,6 @@ export class FinalDreamPresentation {
   }
 
   private renderEnding(scheduleNext = false): void {
-    this.fadeMusic();
     const visible = finalDreamEndingLines.slice(0, this.endingIndex + 1);
     this.host.overlay.innerHTML = `<section class="final-dream-frame final-dream-ending" data-final-dream-frame="morning-road">
       <div class="final-dream-image-wrap"><img class="final-dream-image" src="${escapeHtml(finalDreamMorningImage)}" alt=""></div>
@@ -122,8 +102,8 @@ export class FinalDreamPresentation {
     </section>`;
 
     if (!scheduleNext) return;
-    const lineDelay = this.reducedMotion ? 120 : 1450;
-    const finalHold = this.reducedMotion ? 250 : 3800;
+    const lineDelay = this.reducedMotion ? 80 : 420;
+    const finalHold = this.reducedMotion ? 180 : 3200;
     this.endingTimer = window.setTimeout(() => {
       if (this.destroyed || this.phase !== "ending") return;
       if (this.endingIndex < finalDreamEndingLines.length - 1) {
@@ -138,7 +118,6 @@ export class FinalDreamPresentation {
   private beginTitle(): void {
     if (this.destroyed) return;
     this.phase = "title";
-    this.audio?.pause();
     this.host.overlay.innerHTML = `<section class="final-dream-black final-dream-title-card" aria-label="Walk Back Home">
       <h1>W A L K&nbsp;&nbsp; B A C K&nbsp;&nbsp; H O M E</h1>
       <button class="final-dream-hit-target" type="button" data-final-dream-next aria-label="Continue to credits"></button>
@@ -157,26 +136,6 @@ export class FinalDreamPresentation {
 
   private bindAdvance(): void {
     this.host.overlay.querySelector<HTMLElement>("[data-final-dream-next]")?.addEventListener("click", () => this.advance(), { once: true });
-  }
-
-  private fadeMusic(): void {
-    const audio = this.audio;
-    if (!audio || audio.paused) return;
-    const start = audio.volume;
-    const started = performance.now();
-    const duration = this.reducedMotion ? 0 : 4800;
-    if (duration === 0) {
-      audio.pause();
-      return;
-    }
-    const step = (now: number) => {
-      if (this.destroyed || !this.audio) return;
-      const progress = Math.min(1, (now - started) / duration);
-      audio.volume = Math.max(0, start * (1 - progress));
-      if (progress < 1) requestAnimationFrame(step);
-      else audio.pause();
-    };
-    requestAnimationFrame(step);
   }
 
   private finish(): void {
