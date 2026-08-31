@@ -4,7 +4,7 @@ import { installLabisLifecycleBridge } from "./systems/LabisLifecycleBridge.js";
 import { installRecordsScrollStabilityBridge } from "./systems/RecordsScrollStabilityBridge.js";
 import { installReflectionWallUi } from "./systems/ReflectionWallUiBridge.js";
 import { installCapsuleMachineBridge } from "./systems/CapsuleMachineBridge.js";
-import { installCapsuleTargetedFixesBridge } from "./systems/CapsuleTargetedFixesBridge.js";
+import { installCapsuleMenuBridge } from "./systems/CapsuleMenuBridge.js";
 import { SceneDebugEditor } from "./systems/SceneDebugEditor.js";
 
 installAuthoredCutsceneLifecycleBridge(WalkBackHomeApp.prototype);
@@ -12,7 +12,7 @@ installLabisLifecycleBridge(WalkBackHomeApp.prototype);
 installRecordsScrollStabilityBridge(WalkBackHomeApp.prototype);
 installReflectionWallUi(WalkBackHomeApp.prototype);
 installCapsuleMachineBridge(WalkBackHomeApp.prototype as unknown as { activateRoomInteraction?: (interaction: { id: string }) => void });
-installCapsuleTargetedFixesBridge(WalkBackHomeApp.prototype);
+installCapsuleMenuBridge(WalkBackHomeApp.prototype);
 
 const root = document.querySelector<HTMLElement>("#app")!;
 if (new URLSearchParams(window.location.search).get("debug") === "scene") {
