@@ -47,7 +47,7 @@ export function createReflectionWallState(now = new Date()): ReflectionWallState
 }
 
 export function createReflectionNote(state: ReflectionWallState, text: string, options: CreateOptions = {}): ReflectionWallState {
-  const trimmed = text.trim().slice(0, 500);
+  const trimmed = text.trim();
   if (!trimmed) return state;
   const now = options.now ?? new Date();
   const id = `reflection-${now.getTime()}-${state.notes.length + 1}`;
@@ -82,7 +82,7 @@ export function createChapterReflectionNote(state: ReflectionWallState, text: st
 }
 
 export function updateReflectionNote(state: ReflectionWallState, id: string, text: string, now = new Date()): ReflectionWallState {
-  const trimmed = text.trim().slice(0, 500);
+  const trimmed = text.trim();
   if (!trimmed) return state;
   return saveWall({
     ...state,
