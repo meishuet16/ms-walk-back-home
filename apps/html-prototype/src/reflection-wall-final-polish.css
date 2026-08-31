@@ -62,7 +62,26 @@
 }
 
 @media (max-width: 760px) {
-  .reflection-wall-header { padding-bottom: 10px !important; }
+  .reflection-wall-header {
+    padding-bottom: 10px !important;
+    /* A backdrop-filter establishes a containing block for fixed descendants on mobile browsers.
+       Find lives inside the header DOM, so remove that containing block and let the sheet anchor
+       to the real viewport instead. */
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    transform: none !important;
+    filter: none !important;
+    perspective: none !important;
+    contain: none !important;
+  }
+  .reflection-wall-actions,
+  .reflection-find-drawer {
+    transform: none !important;
+    filter: none !important;
+    perspective: none !important;
+    contain: none !important;
+  }
+
   .reflection-kept-list,
   .reflection-continuum-list { padding-inline: 8px !important; }
   .reflection-kept-list-row,
@@ -74,10 +93,11 @@
      or get stranded above/below the wall when the wall itself has been scrolled. */
   .reflection-find-drawer[open] .reflection-find-panel {
     position: fixed !important;
-    left: max(14px, env(safe-area-inset-left)) !important;
-    right: max(14px, env(safe-area-inset-right)) !important;
+    inset: auto max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)) !important;
     top: auto !important;
     bottom: max(14px, env(safe-area-inset-bottom)) !important;
+    left: max(14px, env(safe-area-inset-left)) !important;
+    right: max(14px, env(safe-area-inset-right)) !important;
     width: auto !important;
     max-width: none !important;
     max-height: min(68dvh, 560px) !important;
