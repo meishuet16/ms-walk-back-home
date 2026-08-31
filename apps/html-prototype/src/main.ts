@@ -1,4 +1,3 @@
-import "./final-dream.css";
 import { WalkBackHomeApp } from "./app.js";
 import { installAuthoredCutsceneLifecycleBridge } from "./systems/AuthoredCutsceneLifecycleBridge.js";
 import { installLabisLifecycleBridge } from "./systems/LabisLifecycleBridge.js";
