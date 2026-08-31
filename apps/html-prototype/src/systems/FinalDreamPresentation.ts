@@ -83,9 +83,9 @@ export class FinalDreamPresentation {
     this.currentText = frame.text ?? "";
     this.currentTypedCount = 0;
     this.host.overlay.innerHTML = this.frameMarkup(frame);
-    this.bindAdvance();
-    requestAnimationFrame(() => this.host.overlay.querySelector<HTMLElement>(".final-dream-frame")?.classList.add("final-dream-page-enter"));
+    this.host.overlay.querySelector<HTMLElement>(".final-dream-frame")?.classList.add("final-dream-page-enter");
     if (frame.text) this.startTyping();
+    else this.showNext();
   }
 
   private frameMarkup(frame: FinalDreamFrame): string {
@@ -93,16 +93,15 @@ export class FinalDreamPresentation {
       ? `<img class="final-dream-portrait" src="${escapeHtml(frame.portrait)}" alt="" aria-hidden="true">`
       : "";
     const speaker = frame.speaker ? `<span class="final-dream-speaker">${escapeHtml(frame.speaker)}</span>` : "";
-    const topDialogue = ["sea", "sea-extra-day", "walk", "walk-choice", "walk-last"].includes(frame.id);
     const dialogue = frame.text
-      ? `<div class="final-dream-dialogue${topDialogue ? " final-dream-dialogue-top" : ""}">${speaker}<p><span class="final-dream-type" aria-live="polite"></span><span class="final-dream-caret" aria-hidden="true"></span></p><span class="final-dream-next-mark" aria-hidden="true">›</span></div>`
+      ? `<div class="final-dream-dialogue">${speaker}<p><span class="final-dream-type" aria-live="polite"></span><span class="final-dream-caret" aria-hidden="true"></span></p></div>`
       : "";
     return `<section class="final-dream-frame treatment-${escapeHtml(frame.treatment ?? "scene")}" data-final-dream-frame="${escapeHtml(frame.id)}">
       <div class="final-dream-image-wrap"><img class="final-dream-image" src="${escapeHtml(frame.image)}" alt=""></div>
       ${portrait}
       <div class="final-dream-wash" aria-hidden="true"></div>
       ${dialogue}
-      <button class="final-dream-hit-target" type="button" data-final-dream-next aria-label="Continue the dream"></button>
+      <button class="final-dream-next-button" type="button" data-final-dream-next hidden aria-label="Next">NEXT ▸</button>
     </section>`;
   }
 
@@ -112,6 +111,7 @@ export class FinalDreamPresentation {
     if (this.reducedMotion) {
       target.textContent = this.currentText;
       this.typing = false;
+      this.showNext();
       return;
     }
     this.typing = true;
@@ -121,10 +121,12 @@ export class FinalDreamPresentation {
       target.textContent = this.currentText.slice(0, this.currentTypedCount);
       if (this.currentTypedCount >= this.currentText.length) {
         this.typing = false;
+        this.host.overlay.querySelector<HTMLElement>(".final-dream-caret")?.remove();
+        this.showNext();
         return;
       }
       const char = this.currentText[this.currentTypedCount - 1] ?? "";
-      const delay = /[。！？!?…]/.test(char) ? 180 : /[，、；：,;:]/.test(char) ? 115 : 58;
+      const delay = /[。！？!?…]/.test(char) ? 230 : /[，、；：,;:]/.test(char) ? 145 : 78;
       this.typeTimer = window.setTimeout(step, delay);
     };
     step();
@@ -136,12 +138,26 @@ export class FinalDreamPresentation {
     this.currentTypedCount = this.currentText.length;
     const target = this.host.overlay.querySelector<HTMLElement>(".final-dream-type");
     if (target) target.textContent = this.currentText;
+    this.host.overlay.querySelector<HTMLElement>(".final-dream-caret")?.remove();
+    this.showNext();
+  }
+
+  private showNext(): void {
+    const button = this.host.overlay.querySelector<HTMLButtonElement>("[data-final-dream-next]");
+    if (!button) return;
+    button.hidden = false;
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      this.advance();
+    }, { once: true });
   }
 
   private renderEndingShell(): void {
     this.host.overlay.innerHTML = `<section class="final-dream-frame final-dream-ending" data-final-dream-frame="morning-road">
       <div class="final-dream-image-wrap"><img class="final-dream-image" src="${escapeHtml(finalDreamMorningImage)}" alt=""></div>
       <div class="final-dream-morning-haze" aria-hidden="true"></div>
+      <div class="final-dream-ending-drift" aria-hidden="true"></div>
       <div class="final-dream-ending-copy" aria-live="polite"></div>
     </section>`;
   }
@@ -181,7 +197,7 @@ export class FinalDreamPresentation {
         return;
       }
       const char = line[this.endingLineTypedCount - 1] ?? "";
-      const delay = /[。！？!?…]/.test(char) ? 180 : /[，、；：,;:]/.test(char) ? 115 : 58;
+      const delay = /[。！？!?…]/.test(char) ? 300 : /[，、；：,;:]/.test(char) ? 180 : 96;
       this.endingTimer = window.setTimeout(step, delay);
     };
     step();
@@ -190,11 +206,11 @@ export class FinalDreamPresentation {
   private scheduleNextEndingLine(): void {
     const isLast = this.endingIndex >= finalDreamEndingLines.length - 1;
     if (isLast) {
-      const hold = this.reducedMotion ? 250 : 4200;
+      const hold = this.reducedMotion ? 250 : 4300;
       this.transitionTimer = window.setTimeout(() => this.beginTitle(), hold);
       return;
     }
-    const pause = this.reducedMotion ? 80 : 760;
+    const pause = this.reducedMotion ? 80 : 720;
     this.endingTimer = window.setTimeout(() => {
       if (this.destroyed || this.phase !== "ending") return;
       this.endingIndex += 1;
@@ -206,10 +222,11 @@ export class FinalDreamPresentation {
     if (this.destroyed) return;
     this.phase = "title";
     this.host.overlay.innerHTML = `<section class="final-dream-black final-dream-title-card" aria-label="Walk Back Home">
+      <div class="final-dream-title-haze" aria-hidden="true"></div>
       <h1>WALK BACK HOME</h1>
-      <button class="final-dream-hit-target" type="button" data-final-dream-next aria-label="Continue to credits"></button>
+      <button class="final-dream-next-button final-dream-title-next" type="button" data-final-dream-next>CONTINUE ▸</button>
     </section>`;
-    this.bindAdvance();
+    this.showNext();
   }
 
   private beginCredits(): void {
@@ -218,11 +235,7 @@ export class FinalDreamPresentation {
       <div>${finalDreamCredits.map((line) => `<p>${escapeHtml(line)}</p>`).join("")}</div>
       <button type="button" class="final-dream-return" data-final-dream-next>Return to forest</button>
     </section>`;
-    this.bindAdvance();
-  }
-
-  private bindAdvance(): void {
-    this.host.overlay.querySelector<HTMLElement>("[data-final-dream-next]")?.addEventListener("click", () => this.advance(), { once: true });
+    this.showNext();
   }
 
   private finish(): void {
