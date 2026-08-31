@@ -3,7 +3,7 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const root = resolve(import.meta.dirname, "..");
+const root = resolve(import.meta.dirname, "../..");
 
 test("main installs the local backup supplement bridge", () => {
   const main = readFileSync(resolve(root, "src/main.ts"), "utf8");
