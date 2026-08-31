@@ -11,18 +11,22 @@ type FinalDreamAudio = {
 
 const FINAL_DREAM_CHAPTER_ID = "final-dream-tomorrow";
 
+type FinalDreamDoor = { chapterId?: string; id?: string };
+
 type AppLike = {
-  currentDoor?: { chapterId?: string; id?: string } | null;
-  activeDoor?: { chapterId?: string; id?: string } | null;
+  currentDoor?: FinalDreamDoor | null;
+  activeDoor?: FinalDreamDoor | null;
   root: HTMLElement;
   overlay: HTMLElement;
   stage?: HTMLElement;
   audio?: FinalDreamAudio;
   autosave?: () => void;
+  enterCurrentMemory?: () => Promise<void>;
 };
 
 type AppPrototype = {
   enterCurrentMemory?: () => Promise<void>;
+  previewDoor?: (door: FinalDreamDoor) => void;
 };
 
 let activePresentation: FinalDreamPresentation | null = null;
@@ -33,6 +37,7 @@ function isFinalDreamDoor(door: { chapterId?: string } | null | undefined): bool
 
 export function installFinalDreamBridge(prototype: AppPrototype): void {
   const originalEnter = prototype.enterCurrentMemory;
+  const originalPreviewDoor = prototype.previewDoor;
   if (!originalEnter) return;
 
   prototype.enterCurrentMemory = async function(this: AppLike): Promise<void> {
@@ -70,4 +75,18 @@ export function installFinalDreamBridge(prototype: AppPrototype): void {
     activePresentation = presentation;
     presentation.start();
   };
+
+  // Final Dream is a presentation-only chapter. Intercept only its generic forest
+  // preview so Tomorrow enters directly; every other chapter keeps the native
+  // preview + interaction path untouched.
+  if (originalPreviewDoor) {
+    prototype.previewDoor = function(this: AppLike, door: FinalDreamDoor): void {
+      if (!isFinalDreamDoor(door)) {
+        originalPreviewDoor.call(this, door);
+        return;
+      }
+      this.currentDoor = door;
+      void this.enterCurrentMemory?.();
+    };
+  }
 }
