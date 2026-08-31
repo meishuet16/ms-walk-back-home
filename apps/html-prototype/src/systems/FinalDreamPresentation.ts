@@ -23,7 +23,7 @@ export class FinalDreamPresentation {
   private currentText = "";
   private currentTypedCount = 0;
   private endingLineTypedCount = 0;
-  private lastPointerAdvanceAt = 0;
+  private lastSurfaceAdvanceAt = 0;
   private readonly reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
   private readonly keydown = (event: KeyboardEvent) => {
     if (event.key !== "Enter" && event.key !== " " && event.key !== "ArrowRight") return;
@@ -35,14 +35,13 @@ export class FinalDreamPresentation {
   };
   private readonly pointerUp = (event: PointerEvent) => {
     if (!event.isPrimary) return;
-    this.lastPointerAdvanceAt = Date.now();
-    this.handleSurfaceAdvance(event.target, event);
+    this.handleCapturedSurfaceAdvance(event.target, event);
+  };
+  private readonly touchEnd = (event: TouchEvent) => {
+    this.handleCapturedSurfaceAdvance(event.target, event);
   };
   private readonly click = (event: MouseEvent) => {
-    // Pointer-capable browsers already delivered this interaction through pointerup.
-    // Keep click only as a compatibility/keyboard-generated fallback without double-advancing.
-    if (Date.now() - this.lastPointerAdvanceAt < 700) return;
-    this.handleSurfaceAdvance(event.target, event);
+    this.handleCapturedSurfaceAdvance(event.target, event);
   };
 
   constructor(private readonly host: FinalDreamHost) {}
@@ -52,8 +51,11 @@ export class FinalDreamPresentation {
     this.host.root.classList.add("final-dream-active");
     this.host.overlay.classList.add("final-dream-overlay");
     document.addEventListener("keydown", this.keydown, true);
-    this.host.overlay.addEventListener("pointerup", this.pointerUp, { passive: false });
-    this.host.overlay.addEventListener("click", this.click);
+    // Capture at document level so mobile taps still reach the presentation even if
+    // the stage, browser touch plumbing, or another app listener owns the target.
+    document.addEventListener("pointerup", this.pointerUp, { capture: true, passive: false });
+    document.addEventListener("touchend", this.touchEnd, { capture: true, passive: false });
+    document.addEventListener("click", this.click, true);
     this.renderDream();
   }
 
@@ -83,8 +85,9 @@ export class FinalDreamPresentation {
     window.clearTimeout(this.endingTimer);
     window.clearTimeout(this.typeTimer);
     document.removeEventListener("keydown", this.keydown, true);
-    this.host.overlay.removeEventListener("pointerup", this.pointerUp);
-    this.host.overlay.removeEventListener("click", this.click);
+    document.removeEventListener("pointerup", this.pointerUp, true);
+    document.removeEventListener("touchend", this.touchEnd, true);
+    document.removeEventListener("click", this.click, true);
     this.host.root.classList.remove("final-dream-active");
     this.host.overlay.classList.remove("final-dream-overlay");
     this.host.overlay.innerHTML = "";
@@ -96,13 +99,21 @@ export class FinalDreamPresentation {
     this.advance();
   }
 
-  private handleSurfaceAdvance(target: EventTarget | null, event: Event): void {
+  private handleCapturedSurfaceAdvance(target: EventTarget | null, event: Event): void {
     const element = target instanceof Element ? target : null;
     if (element?.closest("[data-final-dream-return]")) return;
     if (this.destroyed || this.phase === "ending" || this.phase === "credits") return;
     if (this.phase === "dream" && this.typing) return;
-    event.preventDefault();
+
+    const now = Date.now();
+    // A physical mobile tap can emit pointerup, touchend and click. Treat the
+    // whole burst as one VN advance while still allowing a later deliberate tap.
+    if (now - this.lastSurfaceAdvanceAt < 450) return;
+    this.lastSurfaceAdvanceAt = now;
+
+    if (event.cancelable) event.preventDefault();
     event.stopPropagation();
+    event.stopImmediatePropagation();
     this.advance();
   }
 
