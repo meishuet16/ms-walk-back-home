@@ -1,16 +1,18 @@
 import { roomInteractions, type RoomInteraction } from "./MujiRoom.js";
 import {
-  CAPSULE_TEXT_LIMIT,
   addCapsuleThought,
+  capsulePreviewText,
   drawCapsuleThought,
   keptCapsules,
   loadCapsuleMachineState,
   machineCapsules,
   saveCapsuleMachineState,
   setCapsuleStatus,
+  type CapsuleAttachment,
   type CapsuleMachineState,
   type CapsuleThought
 } from "./CapsuleMachine.js";
+import { CapsuleMediaStore } from "./CapsuleMediaStore.js";
 
 type RoomInteractionLike = { id: string };
 type CapsuleHost = {
@@ -59,21 +61,36 @@ function balls(): string {
   return Array.from({ length: 19 }, (_, index) => `<span class="capsule-ball capsule-ball--${tones[index % tones.length]}" aria-hidden="true"></span>`).join("");
 }
 
-function machineMarkup(extraClass = ""): string {
+function machineMarkup(interactive = false, extraClass = "", enabled = true): string {
   return `
-    <div class="muji-capsule-machine ${extraClass}" aria-hidden="true">
-      <div class="muji-capsule-machine__glass">
+    <div class="muji-capsule-machine ${extraClass}" aria-label="Capsule machine">
+      <div class="muji-capsule-machine__glass" aria-hidden="true">
         <div class="muji-capsule-machine__balls">${balls()}</div>
       </div>
-      <div class="muji-capsule-machine__neck"></div>
+      <div class="muji-capsule-machine__neck" aria-hidden="true"></div>
       <div class="muji-capsule-machine__body">
-        <div class="muji-capsule-machine__chute"><span></span></div>
-        <div class="muji-capsule-machine__knob"><i></i></div>
+        <div class="muji-capsule-machine__chute" aria-hidden="true"><span></span></div>
+        ${interactive
+          ? `<button class="muji-capsule-machine__knob capsule-knob-button" type="button" data-capsule-action="turn" ${enabled ? "" : "disabled"} aria-label="Turn the capsule machine knob"><i></i></button>`
+          : `<div class="muji-capsule-machine__knob" aria-hidden="true"><i></i></div>`}
       </div>
     </div>`;
 }
 
-function mainMarkup(state: CapsuleMachineState, notice = ""): string {
+function attachmentChip(attachment: CapsuleAttachment, removable = false): string {
+  const icon = attachment.kind === "image" ? "▧" : attachment.kind === "video" ? "▶" : "♪";
+  return `<span class="capsule-media-chip"><b>${icon}</b><span>${escapeHtml(attachment.name || attachment.kind)}</span>${removable ? `<button type="button" data-capsule-action="remove-media" data-capsule-media-remove="${escapeHtml(attachment.id)}" aria-label="Remove attachment">×</button>` : ""}</span>`;
+}
+
+function mediaViewer(attachments: CapsuleAttachment[] = []): string {
+  if (!attachments.length) return "";
+  return `<div class="capsule-media-viewer">${attachments.map((attachment) => `
+    <figure class="capsule-media-item capsule-media-item--${attachment.kind}" data-capsule-media-id="${escapeHtml(attachment.id)}" data-capsule-media-kind="${attachment.kind}">
+      <div class="capsule-media-loading">${attachment.kind === "audio" ? "♪ Voice note" : attachment.kind === "video" ? "▶ Video" : "▧ Photo"}</div>
+    </figure>`).join("")}</div>`;
+}
+
+function mainMarkup(state: CapsuleMachineState, draft: string, staged: CapsuleAttachment[], recording: boolean, notice = ""): string {
   const count = machineCapsules(state).length;
   const kept = keptCapsules(state).length;
   return `
@@ -86,35 +103,33 @@ function mainMarkup(state: CapsuleMachineState, notice = ""): string {
           <p>Write it down, turn the knob, meet it again.</p>
         </div>
         <button class="capsule-kept-button" type="button" data-capsule-action="kept" aria-label="Open kept capsules">
-          <span class="capsule-kept-icon">◒</span>
-          <span>Kept</span>
-          ${kept ? `<b>${kept}</b>` : ""}
+          <span class="capsule-kept-icon">◒</span><span>Kept</span>${kept ? `<b>${kept}</b>` : ""}
         </button>
       </header>
 
       <section class="capsule-compose" aria-label="Leave a thought">
-        <div class="capsule-mascots" aria-hidden="true">
-          <span>◡̈</span><span>•ᴗ•</span><span>˙ᵕ˙</span><span>ᵔᴥᵔ</span><span>⌒‿⌒</span>
-        </div>
+        <div class="capsule-mascots" aria-hidden="true"><span>◡̈</span><span>•ᴗ•</span><span>˙ᵕ˙</span><span>ᵔᴥᵔ</span><span>⌒‿⌒</span></div>
         <div class="capsule-input-row">
           <span class="capsule-spark">✦</span>
-          <textarea maxlength="${CAPSULE_TEXT_LIMIT}" rows="1" data-capsule-input placeholder="What crossed your mind just now?"></textarea>
+          <textarea rows="1" data-capsule-input placeholder="What crossed your mind just now?">${escapeHtml(draft)}</textarea>
           <button type="button" data-capsule-action="add" aria-label="Put thought in a capsule">→</button>
         </div>
-        <div class="capsule-compose-meta"><span data-capsule-count>0 / ${CAPSULE_TEXT_LIMIT}</span><small>Type a thought, then send it into the machine.</small></div>
+        <div class="capsule-compose-meta"><span data-capsule-count>${draft.length} characters</span><small>No word limit. Leave as much or as little as you want.</small></div>
+        <div class="capsule-media-tools">
+          <input type="file" data-capsule-file accept="image/*,video/*" multiple hidden>
+          <button type="button" data-capsule-action="pick-media"><span>▧</span> Photo / video</button>
+          <button type="button" data-capsule-action="record" class="${recording ? "is-recording" : ""}"><span>${recording ? "■" : "●"}</span> ${recording ? "Stop recording" : "Record a thought"}</button>
+        </div>
+        ${staged.length ? `<div class="capsule-media-staged">${staged.map((item) => attachmentChip(item, true)).join("")}</div>` : ""}
       </section>
 
       <section class="capsule-machine-stage">
         ${notice ? `<div class="capsule-notice" role="status">${escapeHtml(notice)}</div>` : ""}
-        ${machineMarkup()}
-        <button class="capsule-turn-button" type="button" data-capsule-action="turn" ${count ? "" : "disabled"}>
-          <span>↻</span>${count ? "Turn the knob · draw a thought" : "Leave a thought first"}
-        </button>
+        ${machineMarkup(true, "", count > 0)}
+        <p class="capsule-turn-hint">${count ? "Turn the knob to draw a random thought" : "Leave a thought first, then the knob will wake up"}</p>
       </section>
 
-      <footer class="capsule-footer">
-        <span>${count}</span> ${count === 1 ? "thought is" : "thoughts are"} waiting quietly inside.
-      </footer>
+      <footer class="capsule-footer"><span>${count}</span> ${count === 1 ? "thought is" : "thoughts are"} waiting quietly inside.</footer>
     </div>`;
 }
 
@@ -126,10 +141,11 @@ function resultMarkup(thought: CapsuleThought): string {
         <div><span>CAPSULE DRAW</span><h2>A capsule dropped.</h2></div>
       </header>
       <div class="capsule-result-stage">
-        ${machineMarkup("is-drawn")}
+        ${machineMarkup(false, "is-drawn")}
         <div class="capsule-dropped" aria-hidden="true"><i></i></div>
+        <div class="capsule-result-sparkles" aria-hidden="true"><i>✦</i><i>·</i><i>✧</i><i>·</i><i>✦</i></div>
         <p>Something from another day found its way back.</p>
-        <button class="capsule-primary" type="button" data-capsule-action="open">Open it</button>
+        <button class="capsule-primary" type="button" data-capsule-action="open">Open it gently</button>
       </div>
       <span class="capsule-result-id">${escapeHtml(thought.id.slice(-6))}</span>
     </div>`;
@@ -142,10 +158,15 @@ function openedMarkup(thought: CapsuleThought): string {
         <button class="capsule-icon-button" type="button" data-capsule-action="main" aria-label="Back">←</button>
         <div><span>FROM YOUR PAST SELF</span><h2>Your thought</h2></div>
       </header>
-      <div class="capsule-opened-visual" aria-hidden="true"><span></span><i></i></div>
+      <div class="capsule-opening-scene" aria-hidden="true">
+        <div class="capsule-opened-visual"><span></span><i></i></div>
+        <div class="capsule-opening-glow"></div>
+        <div class="capsule-opening-stars"><i>✦</i><i>✧</i><i>·</i><i>✦</i><i>·</i></div>
+      </div>
       <article class="capsule-note-card">
         <time>${escapeHtml(formatDate(thought.createdAt))}</time>
-        <p>${escapeHtml(thought.text).replace(/\n/g, "<br>")}</p>
+        ${thought.text ? `<p>${escapeHtml(thought.text).replace(/\n/g, "<br>")}</p>` : ""}
+        ${mediaViewer(thought.attachments)}
         <small>${escapeHtml(ageCopy(thought.createdAt))}</small>
       </article>
       <div class="capsule-open-actions">
@@ -163,19 +184,35 @@ function keptMarkup(state: CapsuleMachineState): string {
         <button class="capsule-icon-button" type="button" data-capsule-action="main" aria-label="Back">←</button>
         <div><span>YOUR LITTLE DRAWER</span><h2>Kept capsules</h2></div>
       </header>
-      <p class="capsule-kept-intro">Only the thoughts you chose to keep live here. The ones still in the machine stay hidden.</p>
+      <p class="capsule-kept-intro">A quiet preview of what you chose to keep. Open one only when you want the whole thing back.</p>
       <div class="capsule-kept-list">
         ${items.length ? items.map((thought, index) => `
-          <article class="capsule-kept-card">
+          <article class="capsule-kept-card capsule-kept-card--preview" data-capsule-action="view-kept" data-capsule-id="${escapeHtml(thought.id)}" tabindex="0" role="button" aria-label="Open kept capsule">
             <span class="capsule-kept-orb capsule-kept-orb--${index % 5}"></span>
-            <div><time>${escapeHtml(formatDate(thought.createdAt))}</time><p>${escapeHtml(thought.text).replace(/\n/g, "<br>")}</p></div>
-            <button type="button" data-capsule-action="return" data-capsule-id="${escapeHtml(thought.id)}">Return</button>
+            <div class="capsule-kept-preview-copy">
+              <time>${escapeHtml(formatDate(thought.createdAt))}</time>
+              <p>${escapeHtml(capsulePreviewText(thought))}</p>
+              ${thought.attachments?.length ? `<div class="capsule-kept-media-summary">${thought.attachments.map((item) => attachmentChip(item)).join("")}</div>` : ""}
+            </div>
+            <div class="capsule-kept-card-actions">
+              <span class="capsule-kept-open">Open ›</span>
+              <button type="button" data-capsule-action="return" data-capsule-id="${escapeHtml(thought.id)}">Return</button>
+            </div>
           </article>`).join("") : `
-          <div class="capsule-empty-kept">
-            <div>◒</div><strong>Nothing kept yet.</strong><p>When a capsule comes back at the right time, you can keep it here.</p>
-          </div>`}
+          <div class="capsule-empty-kept"><div>◒</div><strong>Nothing kept yet.</strong><p>When a capsule comes back at the right time, you can keep it here.</p></div>`}
       </div>
     </div>`;
+}
+
+function mediaKindFor(file: File): "image" | "video" | null {
+  if (file.type.startsWith("image/")) return "image";
+  if (file.type.startsWith("video/")) return "video";
+  return null;
+}
+
+function makeAttachment(blob: Blob, kind: "image" | "video" | "audio", name: string): CapsuleAttachment {
+  const id = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `capsule-media-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return { id, kind, name, mimeType: blob.type || "application/octet-stream", size: blob.size };
 }
 
 function openCapsuleMachine(): void {
@@ -183,7 +220,13 @@ function openCapsuleMachine(): void {
   let state = loadCapsuleMachineState(localStorage);
   let screen: CapsuleScreen = "main";
   let activeThought: CapsuleThought | null = null;
+  let draft = "";
+  let staged: CapsuleAttachment[] = [];
   let timer = 0;
+  let recorder: MediaRecorder | null = null;
+  let recordingStream: MediaStream | null = null;
+  let recordingChunks: Blob[] = [];
+  const mediaStore = new CapsuleMediaStore();
 
   const shell = document.createElement("section");
   shell.className = "capsule-experience";
@@ -194,21 +237,50 @@ function openCapsuleMachine(): void {
   document.documentElement.classList.add("capsule-experience-open");
 
   const persist = (): void => saveCapsuleMachineState(localStorage, state);
+
+  const hydrateMedia = async (): Promise<void> => {
+    const items = [...shell.querySelectorAll<HTMLElement>("[data-capsule-media-id]")];
+    await Promise.all(items.map(async (host) => {
+      const id = host.dataset.capsuleMediaId;
+      const kind = host.dataset.capsuleMediaKind;
+      if (!id || !kind) return;
+      const url = await mediaStore.objectUrl(id);
+      if (!url || !host.isConnected) return;
+      if (kind === "image") host.innerHTML = `<img src="${url}" alt="Capsule photo">`;
+      if (kind === "video") host.innerHTML = `<video src="${url}" controls playsinline preload="metadata"></video>`;
+      if (kind === "audio") host.innerHTML = `<audio src="${url}" controls preload="metadata"></audio>`;
+    }));
+  };
+
   const render = (notice = ""): void => {
     shell.dataset.screen = screen;
     shell.innerHTML = screen === "main"
-      ? mainMarkup(state, notice)
+      ? mainMarkup(state, draft, staged, Boolean(recorder), notice)
       : screen === "result" && activeThought
         ? resultMarkup(activeThought)
         : screen === "opened" && activeThought
           ? openedMarkup(activeThought)
           : keptMarkup(state);
-    const input = shell.querySelector<HTMLTextAreaElement>("[data-capsule-input]");
-    if (input) requestAnimationFrame(() => input.focus({ preventScroll: true }));
+    if (screen === "opened") void hydrateMedia();
+  };
+
+  const stopRecordingTracks = (): void => {
+    recordingStream?.getTracks().forEach((track) => track.stop());
+    recordingStream = null;
+  };
+
+  const discardStaged = async (): Promise<void> => {
+    const pending = staged;
+    staged = [];
+    await Promise.all(pending.map((item) => mediaStore.delete(item.id).catch(() => undefined)));
   };
 
   const close = (): void => {
     window.clearTimeout(timer);
+    if (recorder?.state === "recording") recorder.stop();
+    stopRecordingTracks();
+    void discardStaged();
+    mediaStore.revokeAll();
     shell.remove();
     document.documentElement.classList.remove("capsule-experience-open");
     window.removeEventListener("keydown", onKeydown);
@@ -216,16 +288,34 @@ function openCapsuleMachine(): void {
 
   const onKeydown = (event: KeyboardEvent): void => {
     if (event.key === "Escape") close();
+    const focused = document.activeElement as HTMLElement | null;
+    if ((event.key === "Enter" || event.key === " ") && focused?.matches(".capsule-kept-card--preview")) focused.click();
   };
   window.addEventListener("keydown", onKeydown);
 
   shell.addEventListener("input", (event) => {
     const target = event.target as HTMLTextAreaElement;
     if (!target.matches("[data-capsule-input]")) return;
+    draft = target.value;
     const counter = shell.querySelector<HTMLElement>("[data-capsule-count]");
-    if (counter) counter.textContent = `${target.value.length} / ${CAPSULE_TEXT_LIMIT}`;
+    if (counter) counter.textContent = `${draft.length} characters`;
     target.style.height = "auto";
-    target.style.height = `${Math.min(92, target.scrollHeight)}px`;
+    target.style.height = `${Math.min(180, target.scrollHeight)}px`;
+  });
+
+  shell.addEventListener("change", (event) => {
+    const input = event.target as HTMLInputElement;
+    if (!input.matches("[data-capsule-file]")) return;
+    void (async () => {
+      for (const file of [...(input.files ?? [])]) {
+        const kind = mediaKindFor(file);
+        if (!kind) continue;
+        const attachment = makeAttachment(file, kind, file.name);
+        await mediaStore.put(attachment.id, file);
+        staged = [...staged, attachment];
+      }
+      render(staged.length ? "Added to this capsule." : "That file type is not supported here.");
+    })();
   });
 
   shell.addEventListener("click", (event) => {
@@ -244,15 +334,66 @@ function openCapsuleMachine(): void {
       render();
       return;
     }
+    if (action === "pick-media") {
+      shell.querySelector<HTMLInputElement>("[data-capsule-file]")?.click();
+      return;
+    }
+    if (action === "remove-media") {
+      const id = target.dataset.capsuleMediaRemove;
+      if (!id) return;
+      staged = staged.filter((item) => item.id !== id);
+      void mediaStore.delete(id);
+      render();
+      return;
+    }
+    if (action === "record") {
+      if (recorder?.state === "recording") {
+        recorder.stop();
+        return;
+      }
+      if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+        render("Voice recording is not available in this browser.");
+        return;
+      }
+      void (async () => {
+        try {
+          recordingStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          recordingChunks = [];
+          recorder = new MediaRecorder(recordingStream);
+          recorder.addEventListener("dataavailable", (chunk) => {
+            if (chunk.data.size) recordingChunks.push(chunk.data);
+          });
+          recorder.addEventListener("stop", () => {
+            void (async () => {
+              const blob = new Blob(recordingChunks, { type: recorder?.mimeType || "audio/webm" });
+              const attachment = makeAttachment(blob, "audio", `Voice note ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`);
+              await mediaStore.put(attachment.id, blob);
+              staged = [...staged, attachment];
+              recorder = null;
+              stopRecordingTracks();
+              render("Voice note tucked into this capsule.");
+            })();
+          });
+          recorder.start();
+          render("Recording… tap again when you're done.");
+        } catch {
+          recorder = null;
+          stopRecordingTracks();
+          render("Microphone permission was not available.");
+        }
+      })();
+      return;
+    }
     if (action === "add") {
-      const input = shell.querySelector<HTMLTextAreaElement>("[data-capsule-input]");
-      const text = input?.value ?? "";
-      const next = addCapsuleThought(state, text);
+      const next = addCapsuleThought(state, draft, new Date(), undefined, staged);
       if (next === state) {
-        input?.focus();
+        shell.querySelector<HTMLTextAreaElement>("[data-capsule-input]")?.focus();
+        render("Write something, add a photo/video, or record a voice note first.");
         return;
       }
       state = next;
+      staged = [];
+      draft = "";
       persist();
       render("Your thought slipped into a capsule.");
       return;
@@ -269,7 +410,7 @@ function openCapsuleMachine(): void {
         shell.classList.remove("is-turning");
         screen = "result";
         render();
-      }, reduced ? 80 : 720);
+      }, reduced ? 80 : 900);
       return;
     }
     if (action === "open" && activeThought) {
@@ -293,7 +434,17 @@ function openCapsuleMachine(): void {
       render();
       return;
     }
+    if (action === "view-kept") {
+      const id = target.dataset.capsuleId;
+      const thought = state.thoughts.find((item) => item.id === id);
+      if (!thought) return;
+      activeThought = thought;
+      screen = "opened";
+      render();
+      return;
+    }
     if (action === "return") {
+      event.stopPropagation();
       const id = target.dataset.capsuleId;
       if (!id) return;
       state = setCapsuleStatus(state, id, "machine");
@@ -305,14 +456,14 @@ function openCapsuleMachine(): void {
   render();
 }
 
-export function installCapsuleMachineBridge(prototype: CapsuleHost): void {
+export function installCapsuleMachineBridge(prototype: object): void {
   if (!roomInteractions.some((item) => String(item.id) === "capsule")) roomInteractions.push(interaction);
   const marker = prototype as CapsuleHost & { __capsuleMachineInstalled?: boolean };
   if (marker.__capsuleMachineInstalled) return;
   marker.__capsuleMachineInstalled = true;
-  const original = prototype.activateRoomInteraction;
+  const original = marker.activateRoomInteraction;
   if (!original) return;
-  prototype.activateRoomInteraction = function (interactionItem: RoomInteractionLike): void {
+  marker.activateRoomInteraction = function (interactionItem: RoomInteractionLike): void {
     if (interactionItem.id === "capsule") {
       openCapsuleMachine();
       return;
