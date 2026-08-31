@@ -10,7 +10,7 @@ installAuthoredCutsceneLifecycleBridge(WalkBackHomeApp.prototype);
 installLabisLifecycleBridge(WalkBackHomeApp.prototype);
 installRecordsScrollStabilityBridge(WalkBackHomeApp.prototype);
 installReflectionWallUi(WalkBackHomeApp.prototype);
-installCapsuleMachineBridge(WalkBackHomeApp.prototype);
+installCapsuleMachineBridge(WalkBackHomeApp.prototype as unknown as { activateRoomInteraction?: (interaction: { id: string }) => void });
 
 const root = document.querySelector<HTMLElement>("#app")!;
 if (new URLSearchParams(window.location.search).get("debug") === "scene") {
