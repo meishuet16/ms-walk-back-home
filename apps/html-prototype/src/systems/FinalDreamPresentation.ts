@@ -22,6 +22,7 @@ export class FinalDreamPresentation {
   private typing = false;
   private currentText = "";
   private currentTypedCount = 0;
+  private endingLineTypedCount = 0;
   private readonly reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
   private readonly keydown = (event: KeyboardEvent) => {
     if (event.key === "Enter" || event.key === " " || event.key === "ArrowRight") {
@@ -53,7 +54,8 @@ export class FinalDreamPresentation {
       } else {
         this.phase = "ending";
         this.endingIndex = 0;
-        this.renderEnding(true);
+        this.renderEndingShell();
+        this.typeEndingLine();
       }
       return;
     }
@@ -135,26 +137,68 @@ export class FinalDreamPresentation {
     if (target) target.textContent = this.currentText;
   }
 
-  private renderEnding(scheduleNext = false): void {
-    const visible = finalDreamEndingLines.slice(0, this.endingIndex + 1);
+  private renderEndingShell(): void {
     this.host.overlay.innerHTML = `<section class="final-dream-frame final-dream-ending" data-final-dream-frame="morning-road">
       <div class="final-dream-image-wrap"><img class="final-dream-image" src="${escapeHtml(finalDreamMorningImage)}" alt=""></div>
       <div class="final-dream-morning-haze" aria-hidden="true"></div>
-      <div class="final-dream-ending-copy" aria-live="polite">${visible.map((line, index) => `<p class="ending-line ending-line-${index + 1}${index === this.endingIndex ? " ending-line-new" : ""}">${escapeHtml(line)}</p>`).join("")}</div>
+      <div class="final-dream-ending-copy" aria-live="polite"></div>
     </section>`;
+  }
 
-    if (!scheduleNext) return;
-    const lineDelay = this.reducedMotion ? 80 : 420;
-    const finalHold = this.reducedMotion ? 180 : 3200;
+  private typeEndingLine(): void {
+    if (this.destroyed || this.phase !== "ending") return;
+    const container = this.host.overlay.querySelector<HTMLElement>(".final-dream-ending-copy");
+    if (!container) return;
+    const line = finalDreamEndingLines[this.endingIndex];
+    if (!line) return;
+
+    const paragraph = document.createElement("p");
+    paragraph.className = `ending-line ending-line-${this.endingIndex + 1}`;
+    const text = document.createElement("span");
+    text.className = "ending-line-text";
+    const caret = document.createElement("span");
+    caret.className = "ending-line-caret";
+    caret.setAttribute("aria-hidden", "true");
+    paragraph.append(text, caret);
+    container.append(paragraph);
+    this.endingLineTypedCount = 0;
+
+    if (this.reducedMotion) {
+      text.textContent = line;
+      caret.remove();
+      this.scheduleNextEndingLine();
+      return;
+    }
+
+    const step = () => {
+      if (this.destroyed || this.phase !== "ending") return;
+      this.endingLineTypedCount = Math.min(line.length, this.endingLineTypedCount + 1);
+      text.textContent = line.slice(0, this.endingLineTypedCount);
+      if (this.endingLineTypedCount >= line.length) {
+        caret.remove();
+        this.scheduleNextEndingLine();
+        return;
+      }
+      const char = line[this.endingLineTypedCount - 1] ?? "";
+      const delay = /[。！？!?…]/.test(char) ? 120 : /[，、；：,;:]/.test(char) ? 78 : 42;
+      this.endingTimer = window.setTimeout(step, delay);
+    };
+    step();
+  }
+
+  private scheduleNextEndingLine(): void {
+    const isLast = this.endingIndex >= finalDreamEndingLines.length - 1;
+    if (isLast) {
+      const hold = this.reducedMotion ? 250 : 3600;
+      this.transitionTimer = window.setTimeout(() => this.beginTitle(), hold);
+      return;
+    }
+    const pause = this.reducedMotion ? 80 : 520;
     this.endingTimer = window.setTimeout(() => {
       if (this.destroyed || this.phase !== "ending") return;
-      if (this.endingIndex < finalDreamEndingLines.length - 1) {
-        this.endingIndex += 1;
-        this.renderEnding(true);
-      } else {
-        this.transitionTimer = window.setTimeout(() => this.beginTitle(), finalHold);
-      }
-    }, lineDelay);
+      this.endingIndex += 1;
+      this.typeEndingLine();
+    }, pause);
   }
 
   private beginTitle(): void {
