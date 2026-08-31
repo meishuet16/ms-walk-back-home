@@ -131,6 +131,15 @@ export function setCapsuleStatus(state: CapsuleMachineState, id: string, status:
   };
 }
 
+export function removeCapsuleThought(state: CapsuleMachineState, id: string, now = new Date()): CapsuleMachineState {
+  if (!state.thoughts.some((thought) => thought.id === id)) return state;
+  return {
+    ...state,
+    savedAt: now.toISOString(),
+    thoughts: state.thoughts.filter((thought) => thought.id !== id)
+  };
+}
+
 export function machineCapsules(state: CapsuleMachineState): CapsuleThought[] {
   return state.thoughts.filter((thought) => thought.status === "machine");
 }
