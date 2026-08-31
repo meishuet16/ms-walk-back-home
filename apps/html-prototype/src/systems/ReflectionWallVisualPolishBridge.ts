@@ -48,7 +48,7 @@ async function compressBackground(file: File): Promise<string> {
     const context = canvas.getContext("2d");
     if (!context) throw new Error("Canvas is unavailable");
     context.drawImage(image, 0, 0, width, height);
-    return canvas.toDataURL("image/jpeg", 0.82);
+    return canvas.toDataURL("image/jpeg", 0.8);
   } finally {
     URL.revokeObjectURL(objectUrl);
   }
@@ -59,19 +59,34 @@ function applyBackground(app: ReflectionVisualHost): void {
   if (!canvas) return;
   const background = readBackground();
   canvas.classList.toggle("has-custom-background", Boolean(background));
-  if (background) canvas.style.setProperty("--rw-custom-background", `url(${JSON.stringify(background)})`);
-  else canvas.style.removeProperty("--rw-custom-background");
+  if (background) {
+    canvas.style.setProperty(
+      "background-image",
+      `linear-gradient(180deg, rgba(17,45,61,.12), rgba(10,29,41,.24)), url(${JSON.stringify(background)})`,
+      "important"
+    );
+    canvas.style.setProperty("background-size", "cover", "important");
+    canvas.style.setProperty("background-position", "center top", "important");
+    canvas.style.setProperty("background-repeat", "no-repeat", "important");
+  } else {
+    canvas.style.removeProperty("background-image");
+    canvas.style.removeProperty("background-size");
+    canvas.style.removeProperty("background-position");
+    canvas.style.removeProperty("background-repeat");
+  }
 }
 
 function installWallLookControls(app: ReflectionVisualHost): void {
-  const canvas = app.overlay.querySelector<HTMLElement>("[data-reflection-canvas]");
-  if (!canvas || canvas.querySelector("[data-reflection-wall-look]")) return;
+  const panel = app.overlay.querySelector<HTMLElement>(".reflection-find-panel");
+  if (!panel || panel.querySelector("[data-reflection-wall-look]")) return;
   const hasBackground = Boolean(readBackground());
-  const controls = document.createElement("div");
+  const controls = document.createElement("section");
   controls.className = "reflection-wall-look-controls";
   controls.setAttribute("data-reflection-wall-look", "");
-  controls.innerHTML = `<input class="reflection-wall-photo-input" type="file" accept="image/*" aria-label="Choose Reflection Wall background image"><button type="button" class="reflection-wall-photo-button" aria-label="Choose wall background"><span aria-hidden="true">▧</span><span>Wall photo</span></button>${hasBackground ? `<button type="button" class="reflection-wall-photo-reset" style="display:inline-flex" aria-label="Restore the room wall">Use room wall</button>` : ""}`;
-  canvas.append(controls);
+  controls.innerHTML = `<div class="reflection-wall-look-copy"><span>Wall background</span><small>${hasBackground ? "Using your photo" : "Using the room wall"}</small></div><div class="reflection-wall-look-actions"><input class="reflection-wall-photo-input" type="file" accept="image/*" aria-label="Choose Reflection Wall background image"><button type="button" class="reflection-wall-photo-button">${hasBackground ? "Change photo" : "Choose photo"}</button>${hasBackground ? `<button type="button" class="reflection-wall-photo-reset" aria-label="Restore the room wall">Use room wall</button>` : ""}</div>`;
+  const hint = panel.querySelector(".reflection-find-hint");
+  if (hint) panel.insertBefore(controls, hint);
+  else panel.append(controls);
 
   const input = controls.querySelector<HTMLInputElement>(".reflection-wall-photo-input");
   const choose = controls.querySelector<HTMLButtonElement>(".reflection-wall-photo-button");
@@ -90,9 +105,8 @@ function installWallLookControls(app: ReflectionVisualHost): void {
         app.showToast("This image is too large to keep here.");
         return;
       }
-      applyBackground(app);
-      app.showToast("Wall background changed.");
       app.openReflectionWall();
+      app.showToast("Wall background changed.");
     } catch {
       app.showToast("Unable to use that image.");
     }
@@ -104,11 +118,30 @@ function installWallLookControls(app: ReflectionVisualHost): void {
   });
 }
 
+function suppressShowMoreJump(app: ReflectionVisualHost): void {
+  const canvas = app.overlay.querySelector<HTMLElement>("[data-reflection-canvas]");
+  if (!canvas || canvas.dataset.stableShowMore === "true") return;
+  canvas.dataset.stableShowMore = "true";
+  canvas.addEventListener("click", (event) => {
+    const target = event.target instanceof Element ? event.target.closest("[data-reflection-show-more]") : null;
+    if (!target) return;
+    const restore = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function (): void { /* keep the Reflection canvas anchored */ };
+    requestAnimationFrame(() => {
+      Element.prototype.scrollIntoView = restore;
+    });
+  }, true);
+}
+
 function decorateWall(app: ReflectionVisualHost, scrollTop: number): void {
   applyBackground(app);
   installWallLookControls(app);
+  suppressShowMoreJump(app);
   const canvas = app.overlay.querySelector<HTMLElement>("[data-reflection-canvas]");
-  if (canvas && scrollTop > 0) canvas.scrollTop = Math.min(scrollTop, Math.max(0, canvas.scrollHeight - canvas.clientHeight));
+  if (canvas) {
+    const maxScroll = Math.max(0, canvas.scrollHeight - canvas.clientHeight);
+    canvas.scrollTop = Math.min(scrollTop, maxScroll);
+  }
 }
 
 export function installReflectionWallVisualPolishBridge(prototype: object): void {
