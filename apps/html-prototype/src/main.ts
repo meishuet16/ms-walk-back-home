@@ -5,6 +5,7 @@ import { installRecordsScrollStabilityBridge } from "./systems/RecordsScrollStab
 import { installReflectionWallUi } from "./systems/ReflectionWallUiBridge.js";
 import { installCapsuleMachineBridge } from "./systems/CapsuleMachineBridge.js";
 import { installCapsuleMenuBridge } from "./systems/CapsuleMenuBridge.js";
+import { installCapsuleAudioCaptureBridge } from "./systems/CapsuleAudioCaptureBridge.js";
 import { SceneDebugEditor } from "./systems/SceneDebugEditor.js";
 
 installAuthoredCutsceneLifecycleBridge(WalkBackHomeApp.prototype);
@@ -13,6 +14,7 @@ installRecordsScrollStabilityBridge(WalkBackHomeApp.prototype);
 installReflectionWallUi(WalkBackHomeApp.prototype);
 installCapsuleMachineBridge(WalkBackHomeApp.prototype as unknown as { activateRoomInteraction?: (interaction: { id: string }) => void });
 installCapsuleMenuBridge(WalkBackHomeApp.prototype);
+installCapsuleAudioCaptureBridge();
 
 const root = document.querySelector<HTMLElement>("#app")!;
 if (new URLSearchParams(window.location.search).get("debug") === "scene") {
