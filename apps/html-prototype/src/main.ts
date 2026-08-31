@@ -1,22 +1,12 @@
 import { WalkBackHomeApp } from "./app.js";
 import { installAuthoredCutsceneLifecycleBridge } from "./systems/AuthoredCutsceneLifecycleBridge.js";
 import { installLabisLifecycleBridge } from "./systems/LabisLifecycleBridge.js";
-import { installReflectionWallExperienceBridge } from "./systems/ReflectionWallExperienceBridge.js";
-import { installReflectionWallOverlayCleanupBridge } from "./systems/ReflectionWallOverlayCleanupBridge.js";
-import { installReflectionWallPaperBoundsBridge } from "./systems/ReflectionWallPaperBoundsBridge.js";
-import { installReflectionWallPaperCatalog } from "./systems/ReflectionWallPaperCatalogBridge.js";
-import { installReflectionWallVisualPolishBridge } from "./systems/ReflectionWallVisualPolishBridge.js";
-import { installReflectionWallContinuumBridge } from "./systems/ReflectionWallContinuumBridge.js";
+import { installReflectionWallUi } from "./systems/ReflectionWallUiBridge.js";
 import { SceneDebugEditor } from "./systems/SceneDebugEditor.js";
 
 installAuthoredCutsceneLifecycleBridge(WalkBackHomeApp.prototype);
 installLabisLifecycleBridge(WalkBackHomeApp.prototype);
-installReflectionWallPaperCatalog();
-installReflectionWallExperienceBridge(WalkBackHomeApp.prototype);
-installReflectionWallPaperBoundsBridge(WalkBackHomeApp.prototype);
-installReflectionWallVisualPolishBridge(WalkBackHomeApp.prototype);
-installReflectionWallContinuumBridge(WalkBackHomeApp.prototype);
-installReflectionWallOverlayCleanupBridge(WalkBackHomeApp.prototype);
+installReflectionWallUi(WalkBackHomeApp.prototype);
 
 const root = document.querySelector<HTMLElement>("#app")!;
 if (new URLSearchParams(window.location.search).get("debug") === "scene") {
