@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import test from "node:test";
 
-const root = new URL("../", import.meta.url);
+const packageRoot = process.cwd();
 
 async function read(path: string): Promise<string> {
-  return readFile(new URL(path, root), "utf8");
+  return readFile(resolve(packageRoot, path), "utf8");
 }
 
 test("Reflection Wall uses one JavaScript feature installer from main", async () => {
