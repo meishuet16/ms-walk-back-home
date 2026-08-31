@@ -31,7 +31,8 @@ for (const file of [
   "world-mini-games-extra.js",
   "world-mini-games-refine.css",
   "world-mini-games-refine.js",
-  "world-utility-tools-polish.css"
+  "world-utility-tools-polish.css",
+  "reflection-wall-experience.css"
 ]) {
   await copyFile(resolve(root, `src/${file}`), resolve(root, `dist/${file}`));
 }
