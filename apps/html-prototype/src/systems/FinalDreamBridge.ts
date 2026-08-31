@@ -1,4 +1,12 @@
+import { finalDreamMusic } from "../fixtures/finalDreamChapter.js";
 import { FinalDreamPresentation } from "./FinalDreamPresentation.js";
+
+type FinalDreamAudio = {
+  setTrack?: (src: string, autoPlay?: boolean) => boolean;
+  setLoop?: (loop: boolean) => void;
+  ensurePlaying?: () => Promise<void>;
+  stop?: () => void;
+};
 
 const FINAL_DREAM_CHAPTER_ID = "final-dream-tomorrow";
 
@@ -8,9 +16,9 @@ type AppLike = {
   root: HTMLElement;
   overlay: HTMLElement;
   stage?: HTMLElement;
+  audio?: FinalDreamAudio;
   showHome?: () => void;
   autosave?: () => void;
-  showToast?: (message: string) => void;
 };
 
 type AppPrototype = { enterCurrentMemory?: () => Promise<void> };
@@ -24,10 +32,10 @@ export function installFinalDreamBridge(prototype: AppPrototype): void {
     if (door?.chapterId !== FINAL_DREAM_CHAPTER_ID) return originalEnter.call(this);
 
     this.currentDoor = door;
-    this.showToast?.("A dream returns without a date.");
+    this.audio?.setTrack?.(finalDreamMusic, true);
+    this.audio?.setLoop?.(false);
+    void this.audio?.ensurePlaying?.();
 
-    // Final Dream is deliberately not a world-space SceneLayout. Keep the underlying
-    // forest scene alive and present the chapter as a full-screen linear memory layer.
     const presentation = new FinalDreamPresentation({
       root: this.root,
       overlay: this.overlay,
@@ -38,6 +46,7 @@ export function installFinalDreamBridge(prototype: AppPrototype): void {
         } catch {
           // localStorage can be unavailable in privacy modes; replay still works.
         }
+        this.audio?.stop?.();
         this.autosave?.();
         if (this.showHome) this.showHome();
         else window.location.reload();
