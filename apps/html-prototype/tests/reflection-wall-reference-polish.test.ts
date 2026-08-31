@@ -7,7 +7,7 @@ import { REFLECTION_WALL_BACKGROUND_KEY } from "../src/systems/ReflectionWallVis
 test("reference paper catalog adds playful stationery without duplicate ids", () => {
   const before = reflectionPaperStyles.length;
   installReflectionWallPaperCatalog();
-  const ids = reflectionPaperStyles.map((style) => style.id);
+  const ids: string[] = reflectionPaperStyles.map((style) => style.id);
   assert.equal(reflectionPaperStyles.length >= before + 8, true);
   assert.equal(new Set(ids).size, ids.length);
   for (const style of reflectionWallExtraPaperStyles()) assert.equal(ids.includes(style.id), true);
