@@ -21,6 +21,7 @@ type ReflectionWallApp = {
   formatReflectionTimestamp: (value: string) => string;
   focusStage: () => void;
   showToast: (message: string) => void;
+  syncGameplayChromeVisibility: () => void;
   openReflectionWall: () => void;
   refreshReflectionWallOnly: () => void;
   showReflectionComposer: (noteId?: string) => void;
@@ -32,8 +33,11 @@ type ExperienceState = {
   selectedNoteId: string;
 };
 
+type ReflectionInsets = { x: number; y: number };
+
 const experience = new WeakMap<object, ExperienceState>();
 const DRAG_THRESHOLD = 6;
+const DEFAULT_SAFE_INSETS: ReflectionInsets = { x: 12, y: 12 };
 
 function stateFor(app: object): ExperienceState {
   const current = experience.get(app);
@@ -47,8 +51,24 @@ export function reflectionDragIntent(distance: number, threshold = DRAG_THRESHOL
   return Number.isFinite(distance) && distance >= threshold;
 }
 
-export function reflectionWallPositionStyle(note: Pick<ReflectionNote, "x" | "y" | "rotation">, zIndex = 1): string {
-  return `left:${note.x}%;top:${note.y}%;transform:translate(-50%, -50%) rotate(${note.rotation}deg);z-index:${zIndex};`;
+export function reflectionSafePosition(position: { x: number; y: number }, insets: ReflectionInsets = DEFAULT_SAFE_INSETS): { x: number; y: number } {
+  const xInset = Math.max(4, Math.min(45, Number.isFinite(insets.x) ? insets.x : DEFAULT_SAFE_INSETS.x));
+  const yInset = Math.max(4, Math.min(45, Number.isFinite(insets.y) ? insets.y : DEFAULT_SAFE_INSETS.y));
+  const x = Number.isFinite(position.x) ? position.x : 50;
+  const y = Number.isFinite(position.y) ? position.y : 50;
+  return {
+    x: Math.max(xInset, Math.min(100 - xInset, x)),
+    y: Math.max(yInset, Math.min(100 - yInset, y))
+  };
+}
+
+export function reflectionWallPositionStyle(
+  note: Pick<ReflectionNote, "x" | "y" | "rotation">,
+  zIndex = 1,
+  insets: ReflectionInsets = DEFAULT_SAFE_INSETS
+): string {
+  const safe = reflectionSafePosition(note, insets);
+  return `left:${safe.x}%;top:${safe.y}%;transform:translate(-50%, -50%) rotate(${note.rotation}deg);z-index:${zIndex};`;
 }
 
 function renderFlags(note: ReflectionNote): string {
@@ -97,7 +117,7 @@ function renderWall(app: ReflectionWallApp, notes: ReflectionNote[]): string {
     <div class="reflection-wall-grain" aria-hidden="true"></div>
     ${notes.map((note) => renderWallNote(app, note, ui.arrange, ui.selectedNoteId === note.id)).join("")}
     ${ui.arrange ? `<div class="reflection-arrange-dock" role="toolbar" aria-label="Arrange wall controls">
-      <span>${ui.selectedNoteId ? "Selected note" : "Tap a note, then drag it"}</span>
+      <span>${ui.selectedNoteId ? "Move or turn this paper" : "Tap a paper, then drag"}</span>
       <button type="button" data-reflection-rotate="-1" ${ui.selectedNoteId ? "" : "disabled"} aria-label="Rotate selected note left">↶</button>
       <button type="button" data-reflection-rotate="1" ${ui.selectedNoteId ? "" : "disabled"} aria-label="Rotate selected note right">↷</button>
       <button type="button" data-reflection-arrange-toggle>Done</button>
@@ -119,12 +139,14 @@ function renderFind(app: ReflectionWallApp): string {
   const views: Array<[ReflectionWallView, string]> = [["wall", "Wall"], ["list", "List"]];
   const sorts: Array<[ReflectionWallSort, string]> = [["manual", "Wall order"], ["newest", "Newest"], ["oldest", "Oldest"]];
   return `<details class="reflection-wall-filter-menu reflection-find-drawer">
-    <summary aria-label="Find notes"><span aria-hidden="true">⌕</span> Find</summary>
+    <summary class="reflection-header-control" aria-label="Find notes"><span class="rw-action-icon" aria-hidden="true">⌕</span><span class="rw-action-label">Find</span></summary>
     <div class="reflection-find-panel">
-      <label class="reflection-search-field"><span>Find a thought</span><input id="reflection-search" type="search" placeholder="Search words…" value="${app.escapeHtml(app.reflectionWallSearch)}"></label>
+      <div class="reflection-find-sheet-head"><span>FIND ON THE WALL</span><strong>Look through what Muji kept</strong></div>
+      <label class="reflection-search-field"><span>Words</span><input id="reflection-search" type="search" placeholder="Search a thought…" value="${app.escapeHtml(app.reflectionWallSearch)}"></label>
       <div class="reflection-find-group"><span>Show</span><div class="reflection-chip-row">${filters.map(([filter, label]) => `<button class="${app.reflectionWallFilter === filter ? "selected" : ""}" data-action="reflection-wall-filter" data-filter="${filter}">${label}</button>`).join("")}</div></div>
       <div class="reflection-find-group"><span>View</span><div class="reflection-chip-row">${views.map(([view, label]) => `<button class="${app.reflectionWallView === view ? "selected" : ""}" data-action="reflection-wall-view" data-view="${view}">${label}</button>`).join("")}</div></div>
       <div class="reflection-find-group"><span>Order</span><div class="reflection-chip-row">${sorts.map(([sort, label]) => `<button class="${app.reflectionWallSort === sort ? "selected" : ""}" data-action="reflection-wall-sort" data-sort="${sort}">${label}</button>`).join("")}</div></div>
+      <small class="reflection-find-hint">Tap Find again to tuck this drawer away.</small>
     </div>
   </details>`;
 }
@@ -134,10 +156,10 @@ function renderHeader(app: ReflectionWallApp, count: number): string {
   return `<header class="reflection-wall-header">
     <div class="reflection-wall-title"><span>MUJI ROOM</span><h2>Reflection Wall</h2><p><b>${count}</b> little thing${count === 1 ? "" : "s"} kept here</p></div>
     <div class="reflection-wall-actions">
-      <button class="reflection-primary-action" data-action="reflection-note-new"><span aria-hidden="true">✎</span> Leave a note</button>
+      <button class="reflection-header-control reflection-primary-action" data-action="reflection-note-new" aria-label="Leave a note"><span class="rw-action-icon" aria-hidden="true">✎</span><span class="rw-action-label">Note</span></button>
       ${renderFind(app)}
-      <button type="button" class="${ui.arrange ? "selected" : ""}" data-reflection-arrange-toggle><span aria-hidden="true">✥</span> ${ui.arrange ? "Done" : "Arrange"}</button>
-      <button class="reflection-wall-close-button" data-action="close" aria-label="Close Reflection Wall">×</button>
+      ${app.reflectionWallView === "wall" ? `<button type="button" class="reflection-header-control${ui.arrange ? " selected" : ""}" data-reflection-arrange-toggle aria-label="${ui.arrange ? "Finish arranging" : "Arrange wall"}"><span class="rw-action-icon" aria-hidden="true">✥</span><span class="rw-action-label">${ui.arrange ? "Done" : "Arrange"}</span></button>` : ""}
+      <button class="reflection-header-control reflection-wall-close-button" data-action="close" aria-label="Close Reflection Wall"><span class="rw-action-icon" aria-hidden="true">×</span></button>
     </div>
   </header>`;
 }
@@ -153,6 +175,15 @@ function attachPaperPicker(app: ReflectionWallApp): void {
     buttons.forEach((item) => item.classList.toggle("selected", item === button));
     preview.className = `reflection-compose-paper ${style === "paper-mix" ? "paper-cream-torn" : `paper-${style}`}`;
   }));
+}
+
+function safeInsetsForShell(shell: HTMLElement, canvas: HTMLElement): ReflectionInsets {
+  const rect = canvas.getBoundingClientRect();
+  if (!rect.width || !rect.height) return DEFAULT_SAFE_INSETS;
+  return {
+    x: Math.max(DEFAULT_SAFE_INSETS.x, Math.min(34, (shell.offsetWidth / rect.width) * 50 + 2)),
+    y: Math.max(DEFAULT_SAFE_INSETS.y, Math.min(34, (shell.offsetHeight / rect.height) * 50 + 2))
+  };
 }
 
 function attachArrange(app: ReflectionWallApp): void {
@@ -176,6 +207,9 @@ function attachArrange(app: ReflectionWallApp): void {
   if (!canvas) return;
 
   app.overlay.querySelectorAll<HTMLButtonElement>("[data-reflection-move]").forEach((button) => {
+    const shell = button.closest<HTMLElement>("[data-note-shell]");
+    if (!shell) return;
+
     button.addEventListener("keydown", (event) => {
       const noteId = button.dataset.note ?? "";
       if (!noteId || !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
@@ -188,8 +222,9 @@ function attachArrange(app: ReflectionWallApp): void {
       if (event.key === "ArrowRight") next.x += step;
       if (event.key === "ArrowUp") next.y -= step;
       if (event.key === "ArrowDown") next.y += step;
+      const safe = reflectionSafePosition(next, safeInsetsForShell(shell, canvas));
       ui.selectedNoteId = noteId;
-      app.reflectionWall = moveReflectionNote(app.reflectionWall, noteId, next);
+      app.reflectionWall = moveReflectionNote(app.reflectionWall, noteId, safe);
       app.save.saveReflectionWall(app.reflectionWall);
       app.openReflectionWall();
       requestAnimationFrame(() => app.overlay.querySelector<HTMLButtonElement>(`[data-reflection-move][data-note="${CSS.escape(noteId)}"]`)?.focus());
@@ -199,13 +234,10 @@ function attachArrange(app: ReflectionWallApp): void {
       if (event.button !== 0) return;
       const noteId = button.dataset.note ?? "";
       if (!noteId) return;
-      const shell = button.closest<HTMLElement>("[data-note-shell]");
-      if (!shell) return;
       const startX = event.clientX;
       const startY = event.clientY;
       let moved = false;
-      let liveX = 0;
-      let liveY = 0;
+      let live = reflectionSafePosition({ x: 50, y: 50 });
       button.setPointerCapture(event.pointerId);
       shell.classList.add("lifting");
 
@@ -214,10 +246,14 @@ function attachArrange(app: ReflectionWallApp): void {
         if (!moved && !reflectionDragIntent(distance)) return;
         moved = true;
         const rect = canvas.getBoundingClientRect();
-        liveX = Math.max(5, Math.min(95, ((moveEvent.clientX - rect.left) / Math.max(1, rect.width)) * 100));
-        liveY = Math.max(7, Math.min(93, ((moveEvent.clientY - rect.top) / Math.max(1, rect.height)) * 100));
+        const raw = {
+          x: ((moveEvent.clientX - rect.left) / Math.max(1, rect.width)) * 100,
+          y: ((moveEvent.clientY - rect.top) / Math.max(1, rect.height)) * 100
+        };
+        const insets = safeInsetsForShell(shell, canvas);
+        live = reflectionSafePosition(raw, insets);
         const note = app.reflectionWall.notes.find((item) => item.id === noteId);
-        if (note) shell.setAttribute("style", reflectionWallPositionStyle({ ...note, x: liveX, y: liveY }, 500));
+        if (note) shell.setAttribute("style", reflectionWallPositionStyle({ ...note, ...live }, 500, insets));
       };
 
       const onUp = (upEvent: PointerEvent) => {
@@ -228,7 +264,7 @@ function attachArrange(app: ReflectionWallApp): void {
         try { button.releasePointerCapture(upEvent.pointerId); } catch { /* capture may already be released */ }
         ui.selectedNoteId = noteId;
         if (moved) {
-          app.reflectionWall = moveReflectionNote(app.reflectionWall, noteId, { x: liveX, y: liveY });
+          app.reflectionWall = moveReflectionNote(app.reflectionWall, noteId, live);
           app.save.saveReflectionWall(app.reflectionWall);
         }
         app.openReflectionWall();
@@ -246,6 +282,11 @@ function attachExperience(app: ReflectionWallApp): void {
   attachPaperPicker(app);
 }
 
+function showReflectionChrome(app: ReflectionWallApp): void {
+  app.overlay.classList.add("reflection-wall-overlay");
+  app.syncGameplayChromeVisibility();
+}
+
 export function installReflectionWallExperienceBridge(prototype: object): void {
   const appPrototype = prototype as ReflectionWallApp;
 
@@ -261,8 +302,8 @@ export function installReflectionWallExperienceBridge(prototype: object): void {
       search: this.reflectionWallSearch
     });
     const body = this.reflectionWallView === "wall" ? renderWall(this, notes) : renderList(this, notes);
-    this.overlay.classList.add("reflection-wall-overlay");
     this.overlay.innerHTML = `<div class="modal reflection-wall-modal reflection-kept-wall" role="dialog" aria-modal="true" aria-label="Reflection Wall">${renderHeader(this, notes.length)}${body}</div>`;
+    showReflectionChrome(this);
     if (findOpen) {
       const drawer = this.overlay.querySelector<HTMLDetailsElement>(".reflection-find-drawer");
       if (drawer) drawer.open = true;
@@ -293,25 +334,25 @@ export function installReflectionWallExperienceBridge(prototype: object): void {
     const note = this.reflectionWall.notes.find((item) => item.id === noteId);
     const selectedStyle = note?.styleId ?? "paper-mix";
     const paperButtons = [
-      `<button type="button" class="reflection-paper-choice surprise${selectedStyle === "paper-mix" ? " selected" : ""}" data-reflection-style="paper-mix"><span>?</span><small>Surprise me</small></button>`,
+      `<button type="button" class="reflection-paper-choice surprise${selectedStyle === "paper-mix" ? " selected" : ""}" data-reflection-style="paper-mix"><span>?</span><small>Surprise</small></button>`,
       ...reflectionPaperStyles.map((style) => `<button type="button" class="reflection-paper-choice paper-${style.id}${selectedStyle === style.id ? " selected" : ""}" data-reflection-style="${style.id}"><span aria-hidden="true"></span><small>${this.escapeHtml(style.label)}</small></button>`)
     ].join("");
     const previewClass = selectedStyle === "paper-mix" ? "cream-torn" : selectedStyle;
     const selectOptions = [`<option value="paper-mix">Paper Mix</option>`, ...reflectionPaperStyles.map((style) => `<option value="${style.id}" ${selectedStyle === style.id ? "selected" : ""}>${style.label}</option>`)].join("");
-    this.overlay.classList.add("reflection-wall-overlay");
     this.overlay.innerHTML = `<div class="modal reflection-compose reflection-kept-compose" role="dialog" aria-modal="true" aria-label="${note ? "Edit reflection note" : "Leave a note"}">
-      <header><div><span>MUJI ROOM · REFLECTION WALL</span><h2>${note ? "Hold this thought a little differently" : "Leave a note"}</h2><p>${note ? "The words can change. The day they arrived stays the same." : "Write anything you want to keep in sight."}</p></div><button data-action="reflection-wall" aria-label="Back to Reflection Wall">×</button></header>
-      <div class="reflection-compose-layout">
+      <header class="reflection-compose-header"><div><span>MUJI ROOM · REFLECTION WALL</span><h2>${note ? "Edit this note" : "Leave a note"}</h2><p>${note ? "Change the words or the paper." : "Keep a small thought where you can see it again."}</p></div><button class="reflection-round-close" data-action="reflection-wall" aria-label="Back to Reflection Wall">×</button></header>
+      <div class="reflection-compose-body">
         <section class="reflection-compose-paper paper-${this.escapeHtml(previewClass)}" data-reflection-paper-preview>
           <span class="reflection-paper-fixture" aria-hidden="true"></span>
-          <textarea id="reflection-note-text" rows="8" maxlength="500" placeholder="A thought worth keeping…" aria-label="Reflection note">${this.escapeHtml(note?.text ?? "")}</textarea>
+          <textarea id="reflection-note-text" rows="7" maxlength="500" placeholder="A thought worth keeping…" aria-label="Reflection note">${this.escapeHtml(note?.text ?? "")}</textarea>
           <small>${note ? this.escapeHtml(this.formatReflectionTimestamp(note.createdAt).split(" · ")[0]) : "today"}</small>
         </section>
-        <aside class="reflection-paper-tray"><div><span>Choose paper</span><p>Pieces of paper Muji has kept.</p></div><div class="reflection-paper-choice-grid">${paperButtons}</div></aside>
+        <aside class="reflection-paper-tray"><div class="reflection-paper-tray-title"><span>Choose paper</span><p>Swipe this little tray sideways.</p></div><div class="reflection-paper-choice-grid">${paperButtons}</div></aside>
       </div>
       <select id="reflection-note-style" class="reflection-style-select-hidden" aria-hidden="true" tabindex="-1">${selectOptions}</select>
-      <footer><button data-action="reflection-wall">Cancel</button><button class="reflection-primary-action" data-action="reflection-note-save" data-note="${this.escapeHtml(noteId)}">${note ? "Keep changes" : "Pin to Wall"}</button></footer>
+      <footer class="reflection-compose-footer"><button data-action="reflection-wall">Cancel</button><button class="reflection-primary-action" data-action="reflection-note-save" data-note="${this.escapeHtml(noteId)}">${note ? "Save changes" : "Pin to Wall"}</button></footer>
     </div>`;
+    showReflectionChrome(this);
     attachPaperPicker(this);
     this.focusStage();
     requestAnimationFrame(() => this.overlay.querySelector<HTMLTextAreaElement>("#reflection-note-text")?.focus());
@@ -321,14 +362,16 @@ export function installReflectionWallExperienceBridge(prototype: object): void {
     const note = this.reflectionWall.notes.find((item) => item.id === noteId);
     if (!note) return;
     const papers = reflectionPaperStyles.map((style) => `<button class="reflection-detail-paper paper-${style.id}${note.styleId === style.id ? " selected" : ""}" data-action="reflection-note-paper" data-note="${this.escapeHtml(note.id)}" data-style="${style.id}" aria-label="Change paper to ${this.escapeHtml(style.label)}"><span aria-hidden="true"></span></button>`).join("");
-    this.overlay.classList.add("reflection-wall-overlay");
     this.overlay.innerHTML = `<div class="modal reflection-detail reflection-kept-detail" role="dialog" aria-modal="true" aria-label="Reflection note detail">
-      <header><div><span>${note.source === "chapter" ? "FROM A MEMORY" : "KEPT BY MUJI"}</span><h2>${note.source === "chapter" ? "A memory left this behind" : "A note from the wall"}</h2></div><button data-action="reflection-wall" aria-label="Back to Reflection Wall">×</button></header>
-      <section class="reflection-detail-paper-stage"><article class="reflection-detail-note paper-${this.escapeHtml(note.styleId)}"><span class="reflection-paper-fixture" aria-hidden="true"></span><p>${this.escapeHtml(note.text).replace(/\n/g, "<br>")}</p><small>— ${this.escapeHtml(this.formatReflectionTimestamp(note.createdAt).split(" · ")[0])}</small>${sourceStamp(this, note)}</article></section>
-      <div class="reflection-detail-meta"><span>${note.source === "chapter" ? `Memory${note.chapterId ? ` · ${this.escapeHtml(note.chapterId)}` : ""}` : "Manual note"}</span>${note.updatedAt ? `<span>Edited ${this.escapeHtml(this.formatReflectionTimestamp(note.updatedAt))}</span>` : ""}</div>
-      <section class="reflection-detail-controls"><div class="reflection-detail-actions"><button data-action="reflection-note-edit" data-note="${this.escapeHtml(note.id)}">Edit</button><button class="${note.pinned ? "selected" : ""}" data-action="reflection-note-pin" data-note="${this.escapeHtml(note.id)}">${note.pinned ? "● Pinned" : "○ Pin"}</button><button class="${note.favorite ? "selected" : ""}" data-action="reflection-note-favorite" data-note="${this.escapeHtml(note.id)}">${note.favorite ? "★ Favourite" : "☆ Favourite"}</button><button class="danger" data-action="reflection-note-delete" data-note="${this.escapeHtml(note.id)}">Delete</button></div><div class="reflection-detail-papers"><span>Change paper</span><div>${papers}</div></div></section>
-      <footer><button data-action="reflection-wall">Back to Wall</button></footer>
+      <header class="reflection-detail-header"><div><span>${note.source === "chapter" ? "FROM A MEMORY" : "KEPT BY MUJI"}</span><h2>${note.source === "chapter" ? "Memory note" : "A note from the wall"}</h2></div><button class="reflection-round-close" data-action="reflection-wall" aria-label="Back to Reflection Wall">×</button></header>
+      <div class="reflection-detail-scroll">
+        <section class="reflection-detail-paper-stage"><article class="reflection-detail-note paper-${this.escapeHtml(note.styleId)}"><span class="reflection-paper-fixture" aria-hidden="true"></span><p>${this.escapeHtml(note.text).replace(/\n/g, "<br>")}</p><small>— ${this.escapeHtml(this.formatReflectionTimestamp(note.createdAt).split(" · ")[0])}</small>${sourceStamp(this, note)}</article></section>
+        <div class="reflection-detail-meta"><span>${note.source === "chapter" ? `Memory${note.chapterId ? ` · ${this.escapeHtml(note.chapterId)}` : ""}` : "Manual note"}</span>${note.updatedAt ? `<span>Edited ${this.escapeHtml(this.formatReflectionTimestamp(note.updatedAt))}</span>` : ""}</div>
+        <section class="reflection-detail-controls"><div class="reflection-detail-actions"><button data-action="reflection-note-edit" data-note="${this.escapeHtml(note.id)}">Edit</button><button class="${note.pinned ? "selected" : ""}" data-action="reflection-note-pin" data-note="${this.escapeHtml(note.id)}">${note.pinned ? "● Pinned" : "○ Pin"}</button><button class="${note.favorite ? "selected" : ""}" data-action="reflection-note-favorite" data-note="${this.escapeHtml(note.id)}">${note.favorite ? "★ Favourite" : "☆ Favourite"}</button><button class="danger" data-action="reflection-note-delete" data-note="${this.escapeHtml(note.id)}">Delete</button></div><div class="reflection-detail-papers"><span>Change paper</span><div>${papers}</div></div></section>
+      </div>
+      <footer class="reflection-detail-footer"><button data-action="reflection-wall">Back to Wall</button></footer>
     </div>`;
+    showReflectionChrome(this);
     this.focusStage();
   };
 }
