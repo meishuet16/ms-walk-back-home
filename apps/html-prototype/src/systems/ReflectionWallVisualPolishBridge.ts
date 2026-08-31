@@ -65,23 +65,16 @@ function applyBackground(app: ReflectionVisualHost): void {
     else wall.style.removeProperty("--rw-custom-background");
   }
 
+  /* The custom photo belongs to the Reflection root, never the current child view.
+     Leaving an inline `cover` background on the Wall canvas made Wall and List use two
+     different crop/zoom calculations. Clear every legacy child-level background here so
+     Wall/List share the exact same root-level image geometry. */
   if (!canvas) return;
   canvas.classList.toggle("has-custom-background", Boolean(background));
-  if (background) {
-    canvas.style.setProperty(
-      "background-image",
-      `linear-gradient(180deg, rgba(17,45,61,.10), rgba(10,29,41,.22)), url(${JSON.stringify(background)})`,
-      "important"
-    );
-    canvas.style.setProperty("background-size", "cover", "important");
-    canvas.style.setProperty("background-position", "center top", "important");
-    canvas.style.setProperty("background-repeat", "no-repeat", "important");
-  } else {
-    canvas.style.removeProperty("background-image");
-    canvas.style.removeProperty("background-size");
-    canvas.style.removeProperty("background-position");
-    canvas.style.removeProperty("background-repeat");
-  }
+  canvas.style.removeProperty("background-image");
+  canvas.style.removeProperty("background-size");
+  canvas.style.removeProperty("background-position");
+  canvas.style.removeProperty("background-repeat");
 }
 
 function installWallLookControls(app: ReflectionVisualHost): void {
