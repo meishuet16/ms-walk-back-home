@@ -1,0 +1,34 @@
+/* Final Records tweaks: keep the approved player layout intact. */
+@media (max-width: 700px) {
+  /* Treat custom cover art as a circular vinyl label instead of a square image
+     pasted onto the record. The separate Cover view remains unchanged. */
+  .records-turntable-disc.has-cover {
+    background:
+      radial-gradient(circle, transparent 0 6%, rgba(15, 11, 13, .82) 6.5% 9%, transparent 9.5%),
+      var(--cover),
+      repeating-radial-gradient(circle, #151315 0 2px, #292528 3px 4px);
+    background-size: auto, 36% 36%, auto;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-clip: border-box, padding-box, border-box;
+  }
+
+  .records-turntable-disc.has-cover::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 36%;
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: var(--cover) center / cover no-repeat;
+    box-shadow: inset 0 0 0 1px rgba(255, 240, 215, .18);
+    pointer-events: none;
+  }
+
+  .records-turntable-disc.has-cover > span {
+    position: relative;
+    z-index: 1;
+  }
+}
