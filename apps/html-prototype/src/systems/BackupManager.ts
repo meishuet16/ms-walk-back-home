@@ -3,10 +3,15 @@ import { normalizeReflectionWallState } from "./ReflectionWall.js";
 import { filterPersistableDiaryEntries } from "./DiaryOwnership.js";
 import { stripLegacyJourneyProgress } from "./SaveManager.js";
 import { normalizeMiniGamesState, type MiniGamesState } from "./games/MiniGamesState.js";
+import { CAPSULE_STORAGE_KEY, normalizeCapsuleMachineState, saveCapsuleMachineState } from "./CapsuleMachine.js";
+import { CapsuleMediaStore } from "./CapsuleMediaStore.js";
+import { REFLECTION_WALL_BACKGROUND_KEY } from "./ReflectionWallVisualPolishBridge.js";
+
+export type BackupBlobKind = "music" | "journal-media" | "capsule-media" | "capsule-state" | "reflection-wall-background";
 
 export type BackupBlobEntry = {
   key: string;
-  kind?: "music" | "journal-media";
+  kind?: BackupBlobKind;
   type: string;
   dataUrl: string;
 };
@@ -14,6 +19,8 @@ export type BackupBlobEntry = {
 export type BackupBlobWriter = {
   putBlob(key: string, blob: Blob): Promise<void>;
 };
+
+export type BackupKeyValueWriter = Pick<Storage, "setItem" | "removeItem">;
 
 export type WalkBackupBundle = {
   app: "walk-back-home-html-prototype";
@@ -79,12 +86,45 @@ export function walkBackupFilename(now = new Date()): string {
 
 export async function restoreBackupBlobEntries(
   blobs: BackupBlobEntry[],
-  stores: { journalStore: BackupBlobWriter; musicStore: BackupBlobWriter }
+  stores: {
+    journalStore: BackupBlobWriter;
+    musicStore: BackupBlobWriter;
+    capsuleStore?: BackupBlobWriter;
+    localStorage?: BackupKeyValueWriter;
+  }
 ): Promise<void> {
+  const capsuleStore = stores.capsuleStore ?? (typeof indexedDB !== "undefined" ? new CapsuleMediaStore() : null);
+  const localStore = stores.localStorage ?? (typeof localStorage !== "undefined" ? localStorage : null);
+
   for (const entry of blobs) {
     const response = await fetch(entry.dataUrl);
     const source = await response.blob();
     const blob = source.type === entry.type ? source : new Blob([await source.arrayBuffer()], { type: entry.type });
+
+    if (entry.kind === "capsule-state") {
+      if (!localStore) continue;
+      try {
+        const state = normalizeCapsuleMachineState(JSON.parse(await blob.text()));
+        saveCapsuleMachineState(localStore, state);
+      } catch {
+        // Ignore a malformed supplemental state entry without blocking the rest of a valid backup.
+      }
+      continue;
+    }
+
+    if (entry.kind === "reflection-wall-background") {
+      if (!localStore) continue;
+      const background = await blob.text();
+      if (background) localStore.setItem(REFLECTION_WALL_BACKGROUND_KEY, background);
+      else localStore.removeItem(REFLECTION_WALL_BACKGROUND_KEY);
+      continue;
+    }
+
+    if (entry.kind === "capsule-media") {
+      if (capsuleStore) await capsuleStore.putBlob(entry.key, blob);
+      continue;
+    }
+
     await (entry.kind === "journal-media" ? stores.journalStore : stores.musicStore).putBlob(entry.key, blob);
   }
 }
@@ -93,7 +133,14 @@ function isBackupBlobEntry(value: unknown): value is BackupBlobEntry {
   if (!value || typeof value !== "object") return false;
   const candidate = value as BackupBlobEntry;
   return typeof candidate.key === "string"
-    && (candidate.kind === undefined || candidate.kind === "music" || candidate.kind === "journal-media")
+    && (
+      candidate.kind === undefined
+      || candidate.kind === "music"
+      || candidate.kind === "journal-media"
+      || candidate.kind === "capsule-media"
+      || candidate.kind === "capsule-state"
+      || candidate.kind === "reflection-wall-background"
+    )
     && typeof candidate.type === "string"
     && typeof candidate.dataUrl === "string"
     && candidate.dataUrl.startsWith("data:");

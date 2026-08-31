@@ -7,6 +7,10 @@ export class CapsuleMediaStore {
     await this.transaction(db, "readwrite", (store) => store.put(blob, key));
   }
 
+  async putBlob(key: string, blob: Blob): Promise<void> {
+    await this.put(key, blob);
+  }
+
   async get(key: string): Promise<Blob | null> {
     const db = await this.db();
     return await this.transaction<Blob | null>(db, "readonly", (store) => store.get(key));
