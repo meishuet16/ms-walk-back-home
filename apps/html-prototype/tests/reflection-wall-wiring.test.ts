@@ -19,7 +19,7 @@ test("Reflection Wall uses one JavaScript feature installer from main", async ()
 
 test("Reflection Wall uses one public stylesheet entrypoint", async () => {
   const html = await read("src/index.html");
-  const reflectionLinks = [...html.matchAll(/href="\.\/(reflection-wall[^"]+\.css)"/g)].map((match) => match[1]);
+  const reflectionLinks = [...html.matchAll(/href="\.\/(reflection-wall[^\"]*\.css)"/g)].map((match) => match[1]);
   assert.deepEqual(reflectionLinks, ["reflection-wall.css"]);
 
   const entry = await read("src/reflection-wall.css");
