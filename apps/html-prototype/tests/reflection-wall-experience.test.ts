@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createReflectionNote, createReflectionWallState, moveReflectionNote, reflectionPaperStyles, rotateReflectionNote } from "../src/systems/ReflectionWall.js";
-import { reflectionDragIntent, reflectionWallPositionStyle } from "../src/systems/ReflectionWallExperienceBridge.js";
+import { reflectionDragIntent, reflectionSafePosition, reflectionWallPositionStyle } from "../src/systems/ReflectionWallExperienceBridge.js";
 
 const now = new Date("2026-08-31T00:00:00.000Z");
 
@@ -25,6 +25,12 @@ test("moving a note clamps normalized coordinates and brings the touched note to
   assert.equal(moved.notes.at(-1)?.updatedAt, "2026-08-31T00:02:00.000Z");
 });
 
+test("finite wall safe bounds keep a whole note away from invisible edges", () => {
+  assert.deepEqual(reflectionSafePosition({ x: -20, y: 140 }), { x: 12, y: 88 });
+  assert.deepEqual(reflectionSafePosition({ x: 99, y: 1 }, { x: 18, y: 22 }), { x: 82, y: 22 });
+  assert.deepEqual(reflectionSafePosition({ x: 50, y: 50 }, { x: 18, y: 22 }), { x: 50, y: 50 });
+});
+
 test("rotating a note is restrained to the tactile paper range", () => {
   const state = createReflectionNote(createReflectionWallState(), "paper", { now, rotation: 4.5 });
   const id = state.notes[0].id;
@@ -46,5 +52,12 @@ test("wall position style uses persisted normalized coordinates and rotation", (
   assert.equal(
     reflectionWallPositionStyle({ x: 42.5, y: 63, rotation: -1.7 }, 123),
     "left:42.5%;top:63%;transform:translate(-50%, -50%) rotate(-1.7deg);z-index:123;"
+  );
+});
+
+test("wall position style clamps legacy edge coordinates before rendering", () => {
+  assert.equal(
+    reflectionWallPositionStyle({ x: 4, y: 96, rotation: 0 }, 5),
+    "left:12%;top:88%;transform:translate(-50%, -50%) rotate(0deg);z-index:5;"
   );
 });
