@@ -30,6 +30,14 @@ export class FinalDreamPresentation {
       this.advance();
     }
   };
+  private readonly pointerUp = (event: PointerEvent) => {
+    if (this.destroyed || this.phase === "ending" || this.phase === "credits") return;
+    if (this.phase === "dream" && this.typing) return;
+    const target = event.target as HTMLElement | null;
+    if (target?.closest("[data-final-dream-return]")) return;
+    event.preventDefault();
+    this.advance();
+  };
 
   constructor(private readonly host: FinalDreamHost) {}
 
@@ -38,6 +46,7 @@ export class FinalDreamPresentation {
     this.host.root.classList.add("final-dream-active");
     this.host.overlay.classList.add("final-dream-overlay");
     document.addEventListener("keydown", this.keydown);
+    this.host.overlay.addEventListener("pointerup", this.pointerUp);
     this.renderDream();
   }
 
@@ -68,6 +77,7 @@ export class FinalDreamPresentation {
     window.clearTimeout(this.endingTimer);
     window.clearTimeout(this.typeTimer);
     document.removeEventListener("keydown", this.keydown);
+    this.host.overlay.removeEventListener("pointerup", this.pointerUp);
     this.host.root.classList.remove("final-dream-active");
     this.host.overlay.classList.remove("final-dream-overlay");
     this.host.overlay.innerHTML = "";
@@ -80,7 +90,6 @@ export class FinalDreamPresentation {
     this.currentText = frame.text ?? "";
     this.currentTypedCount = 0;
     this.host.overlay.innerHTML = this.frameMarkup(frame);
-    this.bindTapAdvance();
     this.host.overlay.querySelector<HTMLElement>(".final-dream-frame")?.classList.add("final-dream-page-enter");
     if (frame.text) this.startTyping();
   }
@@ -98,17 +107,7 @@ export class FinalDreamPresentation {
       ${portrait}
       <div class="final-dream-wash" aria-hidden="true"></div>
       ${dialogue}
-      <button class="final-dream-hit-target" type="button" data-final-dream-tap aria-label="Continue the dream"></button>
     </section>`;
-  }
-
-  private bindTapAdvance(): void {
-    this.host.overlay.querySelector<HTMLElement>("[data-final-dream-tap]")?.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      if (this.typing) return;
-      this.advance();
-    });
   }
 
   private startTyping(): void {
@@ -208,9 +207,7 @@ export class FinalDreamPresentation {
     this.host.overlay.innerHTML = `<section class="final-dream-black final-dream-title-card" aria-label="Walk Back Home">
       <div class="final-dream-title-haze" aria-hidden="true"></div>
       <h1>WALK BACK HOME</h1>
-      <button class="final-dream-hit-target" type="button" data-final-dream-tap aria-label="Continue to credits"></button>
     </section>`;
-    this.bindTapAdvance();
   }
 
   private beginCredits(): void {
