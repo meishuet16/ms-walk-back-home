@@ -39,7 +39,8 @@ for (const file of [
   "reflection-wall-reference-polish.css",
   "reflection-wall-stability-fixes.css",
   "reflection-wall-continuum.css",
-  "reflection-wall-final-polish.css"
+  "reflection-wall-final-polish.css",
+  "capsule-machine.css"
 ]) {
   await copyFile(resolve(root, `src/${file}`), resolve(root, `dist/${file}`));
 }
