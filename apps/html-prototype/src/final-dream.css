@@ -7,50 +7,61 @@
 .final-dream-active .stage-wrap { width: 100vw; height: 100dvh; max-height: none; margin: 0; border: 0; border-radius: 0; box-shadow: none; background: #c8dce4; }
 .final-dream-active canvas { opacity: 0; pointer-events: none; }
 .final-dream-overlay { position: fixed !important; inset: 0 !important; z-index: 1000 !important; display: block !important; background: #c8dce4; color: #263943; overflow: hidden; font-family: "Courier New", "Microsoft JhengHei", monospace; image-rendering: auto; }
-.final-dream-frame { position: relative; width: 100%; height: 100dvh; overflow: hidden; background: #c7dbe3; isolation: isolate; opacity: 1; }
-.final-dream-frame.final-dream-page-enter { animation: final-dream-page-in 820ms cubic-bezier(.22,.61,.36,1) both; }
+.final-dream-frame { position: relative; width: 100%; height: 100dvh; overflow: hidden; background: #c7dbe3; isolation: isolate; }
+.final-dream-frame.final-dream-page-enter { animation: final-dream-page-in 1.15s cubic-bezier(.22,.61,.36,1) both; }
+.final-dream-frame.final-dream-page-enter::after { content: ""; position: absolute; inset: 0; z-index: 7; pointer-events: none; background: linear-gradient(180deg, rgba(238,247,249,.46), rgba(221,235,239,.18) 42%, rgba(210,228,234,.38)); mix-blend-mode: screen; animation: final-dream-veil 1.35s ease-out both; }
 .final-dream-image-wrap { position: absolute; inset: 0; display: grid; place-items: center; background: #c7dbe3; }
-.final-dream-image { width: 100%; height: 100%; object-fit: cover; object-position: center; filter: saturate(.82) contrast(.92) brightness(1.035); transform: scale(1.004); animation: final-dream-arrive 1100ms cubic-bezier(.22,.61,.36,1) both; }
-.final-dream-wash { position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(180deg, rgba(221,238,242,.06) 0%, transparent 48%, rgba(177,204,214,.04) 78%, rgba(204,222,228,.12) 100%); }
-.final-dream-frame.treatment-fragment .final-dream-image { filter: saturate(.72) contrast(.88) brightness(1.07); }
-.final-dream-frame.treatment-fragment .final-dream-wash { background: radial-gradient(circle at 50% 45%, transparent 34%, rgba(216,231,235,.1) 72%, rgba(215,229,233,.22) 100%); }
-.final-dream-frame.treatment-hero .final-dream-image { filter: saturate(.86) contrast(.93) brightness(1.025); }
-.final-dream-portrait { position: absolute; z-index: 3; left: 50%; bottom: clamp(96px, 13dvh, 136px); width: min(58vw, 330px); max-height: 43dvh; object-fit: contain; object-position: center bottom; transform: translateX(-50%); filter: drop-shadow(0 12px 18px rgba(53,79,91,.08)); animation: final-dream-portrait-in 720ms cubic-bezier(.22,.61,.36,1) both; pointer-events: none; }
-.final-dream-dialogue { position: absolute; z-index: 5; left: 50%; bottom: max(8px, env(safe-area-inset-bottom)); width: min(76vw, 440px); transform: translateX(-50%); padding: 10px 14px 12px; border: 2px solid rgba(54,76,86,.58); border-radius: 0; background: rgba(224,238,242,.34); box-shadow: 2px 2px 0 rgba(43,62,70,.1), inset 0 0 0 1px rgba(255,255,255,.24); backdrop-filter: blur(1.5px); -webkit-backdrop-filter: blur(1.5px); animation: final-dream-dialogue-in 620ms cubic-bezier(.22,.61,.36,1) both; }
-.final-dream-dialogue-top { top: max(22px, env(safe-area-inset-top)); bottom: auto; }
+.final-dream-image { width: 100%; height: 100%; object-fit: cover; object-position: center; filter: saturate(.8) contrast(.91) brightness(1.04); transform: scale(1.006); animation: final-dream-arrive 1.5s cubic-bezier(.22,.61,.36,1) both; }
+.final-dream-wash { position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(180deg, rgba(225,240,244,.12) 0%, transparent 44%, rgba(180,206,216,.05) 76%, rgba(207,226,232,.16) 100%); }
+.final-dream-frame.treatment-fragment .final-dream-image { filter: saturate(.7) contrast(.86) brightness(1.08); }
+.final-dream-frame.treatment-fragment .final-dream-wash { background: radial-gradient(circle at 50% 42%, transparent 24%, rgba(216,231,235,.12) 70%, rgba(215,229,233,.32) 100%); animation: final-dream-breathe 5.5s ease-in-out infinite alternate; }
+.final-dream-frame.treatment-hero .final-dream-image { filter: saturate(.84) contrast(.92) brightness(1.03); }
+.final-dream-portrait { position: absolute; z-index: 3; left: 50%; bottom: clamp(104px, 14dvh, 148px); width: min(60vw, 340px); max-height: 44dvh; object-fit: contain; object-position: center bottom; transform: translateX(-50%); filter: drop-shadow(0 12px 18px rgba(53,79,91,.08)); animation: final-dream-portrait-in .9s cubic-bezier(.22,.61,.36,1) both; pointer-events: none; }
+.final-dream-dialogue { position: absolute; z-index: 5; left: 50%; bottom: max(7px, env(safe-area-inset-bottom)); width: min(72vw, 430px); transform: translateX(-50%); padding: 10px 14px 12px; border: 1px solid rgba(54,76,86,.55); border-radius: 0; background: rgba(226,239,243,.42); box-shadow: 2px 2px 0 rgba(43,62,70,.10), inset 0 0 0 1px rgba(255,255,255,.3); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); animation: final-dream-dialogue-in .85s cubic-bezier(.22,.61,.36,1) both; }
 .final-dream-dialogue::before { content: ""; position: absolute; inset: 3px; border: 1px solid rgba(72,99,110,.14); pointer-events: none; }
-.final-dream-speaker { display: block; margin-bottom: 5px; color: rgba(45,66,74,.72); font: 700 9px/1.2 "Courier New", "Microsoft JhengHei", monospace; letter-spacing: .18em; text-transform: uppercase; }
-.final-dream-dialogue p { margin: 0; min-height: 2.3em; color: #273b43; font: 700 clamp(13px, 3.3vw, 16px)/1.52 "Courier New", "Microsoft JhengHei", monospace; letter-spacing: .02em; text-shadow: 0 1px 0 rgba(255,255,255,.72), 0 0 8px rgba(236,246,248,.52); white-space: pre-line; }
+.final-dream-speaker { display: block; margin-bottom: 5px; color: rgba(39,59,67,.78); font: 700 9px/1.2 "Courier New", "Microsoft JhengHei", monospace; letter-spacing: .18em; text-transform: uppercase; }
+.final-dream-dialogue p { margin: 0; min-height: 2.3em; color: #263b44; font: 700 clamp(13px, 3.3vw, 16px)/1.56 "Courier New", "Microsoft JhengHei", monospace; letter-spacing: .02em; text-shadow: 0 1px 0 rgba(255,255,255,.76), 0 0 8px rgba(236,247,250,.55); white-space: pre-line; }
 .final-dream-type { display: inline; }
-.final-dream-caret { display: inline-block; width: .5em; height: .95em; margin-left: .12em; vertical-align: -.1em; background: rgba(47,66,74,.58); animation: final-dream-caret 760ms steps(1,end) infinite; }
-.final-dream-next-mark { position: absolute; right: 10px; bottom: 6px; color: rgba(48,70,79,.52); font: 700 17px/1 "Courier New", monospace; animation: final-dream-next 1.5s steps(2,end) infinite; }
-.final-dream-dialogue-top .final-dream-next-mark { top: 7px; bottom: auto; }
-.final-dream-hit-target { position: absolute; inset: 0; z-index: 8; width: 100%; height: 100%; padding: 0; border: 0; border-radius: 0; opacity: 0; background: transparent; box-shadow: none; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-.final-dream-ending .final-dream-image { filter: saturate(.62) contrast(.86) brightness(1.12); animation: final-dream-morning 10s ease-out both; }
-.final-dream-morning-haze { position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, rgba(230,241,242,.1), rgba(218,232,234,.18) 52%, rgba(228,238,239,.34)); pointer-events: none; }
-.final-dream-ending-copy { position: absolute; z-index: 4; left: 50%; top: 50%; width: min(82vw, 470px); transform: translate(-50%, -50%); text-align: center; color: #354b53; text-shadow: 0 1px rgba(255,255,255,.58); font-family: "Courier New", "Microsoft JhengHei", monospace; }
-.final-dream-ending-copy p { margin: 0 0 .72em; font-size: clamp(15px, 3.8vw, 18px); line-height: 1.68; letter-spacing: .025em; }
-.final-dream-ending-copy .ending-line-5 { margin-top: 1.45em; }
-.final-dream-ending-copy .ending-line-9 { margin-top: 1.45em; }
-.final-dream-ending-copy .ending-line-10 { margin-top: 1.25em; font-size: clamp(18px, 4.7vw, 22px); letter-spacing: .08em; }
-.ending-line-caret { display: inline-block; width: .48em; height: .92em; margin-left: .12em; vertical-align: -.1em; background: rgba(53,75,83,.52); animation: final-dream-caret 760ms steps(1,end) infinite; }
-.final-dream-black { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: #050708; color: #d9d6cc; text-align: center; }
-.final-dream-title-card { animation: final-dream-black-in 1.9s ease both; }
-.final-dream-title-card h1 { margin: 0; padding: 0 12px; max-width: calc(100vw - 24px); color: #d8d5cc; font: 700 clamp(11px, 2.8vw, 19px)/1.2 "Courier New", monospace; letter-spacing: clamp(.12em, .8vw, .28em); white-space: nowrap; animation: final-dream-title 2.5s ease both; }
+.final-dream-caret { display: inline-block; width: .48em; height: .94em; margin-left: .12em; vertical-align: -.1em; background: rgba(47,66,74,.5); animation: final-dream-caret .88s steps(1,end) infinite; }
+.final-dream-next-button { position: absolute; z-index: 12; right: max(18px, env(safe-area-inset-right)); bottom: max(17px, env(safe-area-inset-bottom)); min-width: 76px; min-height: 42px; padding: 10px 13px; border: 1px solid rgba(50,73,82,.42); border-radius: 0; background: rgba(229,241,245,.46); color: rgba(38,58,66,.82); box-shadow: 2px 2px 0 rgba(43,62,70,.10); font: 700 11px/1 "Courier New", monospace; letter-spacing: .09em; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; animation: final-dream-next-appear .55s ease both, final-dream-next 1.8s steps(2,end) .55s infinite; }
+.final-dream-next-button[hidden] { display: none !important; }
+.final-dream-next-button:focus-visible { outline: 2px solid rgba(48,70,79,.42); outline-offset: 3px; }
+.final-dream-frame.dialogue-top .final-dream-dialogue { top: max(18px, env(safe-area-inset-top)); bottom: auto; }
+.final-dream-frame.dialogue-top .final-dream-next-button { top: max(20px, env(safe-area-inset-top)); bottom: auto; }
+.final-dream-ending .final-dream-image { filter: saturate(.5) contrast(.83) brightness(1.14); animation: final-dream-morning 15s ease-out both; }
+.final-dream-morning-haze { position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, rgba(235,246,248,.28), rgba(218,233,238,.34) 52%, rgba(232,241,243,.58)); pointer-events: none; animation: final-dream-waking-haze 8s ease-in-out infinite alternate; }
+.final-dream-ending-drift { position: absolute; inset: -8%; z-index: 2; pointer-events: none; opacity: .28; background: radial-gradient(circle at 28% 22%, rgba(255,255,255,.72), transparent 28%), radial-gradient(circle at 72% 46%, rgba(238,247,250,.62), transparent 30%), linear-gradient(115deg, transparent 35%, rgba(255,255,255,.28) 50%, transparent 68%); filter: blur(24px); animation: final-dream-drift 12s ease-in-out infinite alternate; }
+.final-dream-ending-copy { position: absolute; z-index: 4; left: 50%; top: 50%; width: min(86vw, 500px); transform: translate(-50%, -50%); text-align: center; color: #213943; text-shadow: 0 1px 0 rgba(255,255,255,.92), 0 0 12px rgba(238,248,250,.9); font-family: "Microsoft JhengHei", "PingFang TC", "Noto Sans CJK TC", sans-serif; font-weight: 650; }
+.final-dream-ending-copy p { margin: 0 0 .9em; font-size: clamp(17px, 4.2vw, 21px); line-height: 1.72; letter-spacing: .045em; }
+.final-dream-ending-copy .ending-line-5 { margin-top: 1.5em; }
+.final-dream-ending-copy .ending-line-9 { margin-top: 1.5em; }
+.final-dream-ending-copy .ending-line-10 { margin-top: 1.35em; font-size: clamp(21px, 5.3vw, 27px); letter-spacing: .12em; font-weight: 750; }
+.ending-line-caret { display: inline-block; width: .42em; height: .9em; margin-left: .13em; vertical-align: -.08em; background: rgba(32,57,67,.42); animation: final-dream-caret .95s steps(1,end) infinite; }
+.final-dream-black { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: #050708; color: #d9d6cc; text-align: center; overflow: hidden; }
+.final-dream-title-card { animation: final-dream-black-in 2.4s ease both; }
+.final-dream-title-haze { position: absolute; inset: -15%; background: radial-gradient(circle at 50% 50%, rgba(196,214,219,.08), transparent 40%); filter: blur(26px); animation: final-dream-title-haze 6s ease-in-out infinite alternate; }
+.final-dream-title-card h1 { position: relative; z-index: 1; margin: 0; padding: 0 18px; color: #e5e2d9; font: 700 clamp(13px, 3.7vw, 20px)/1.4 "Courier New", monospace; letter-spacing: clamp(.12em, .8vw, .26em); white-space: nowrap; animation: final-dream-title 2.7s ease both; }
+.final-dream-title-next { bottom: max(28px, env(safe-area-inset-bottom)); background: rgba(8,12,14,.34); color: rgba(229,226,217,.72); border-color: rgba(229,226,217,.18); box-shadow: none; }
 .final-dream-credits { align-content: center; gap: 52px; padding: 54px 24px max(38px, env(safe-area-inset-bottom)); font-family: "Courier New", monospace; }
-.final-dream-credits div { animation: final-dream-title 1.7s ease both; }
-.final-dream-credits p { margin: .6em 0; color: rgba(222,219,210,.76); font-size: clamp(13px, 3.5vw, 16px); line-height: 1.65; letter-spacing: .035em; }
-.final-dream-return { position: absolute; left: 50%; bottom: max(32px, env(safe-area-inset-bottom)); transform: translateX(-50%); padding: 10px 15px; border: 0; background: transparent; color: rgba(222,219,210,.48); box-shadow: none; font: 12px/1.4 "Courier New", monospace; letter-spacing: .08em; }
+.final-dream-credits div { animation: final-dream-title 1.8s ease both; }
+.final-dream-credits p { margin: .6em 0; color: rgba(222,219,210,.8); font-size: clamp(13px, 3.5vw, 16px); line-height: 1.65; letter-spacing: .035em; }
+.final-dream-return { position: absolute; left: 50%; bottom: max(32px, env(safe-area-inset-bottom)); transform: translateX(-50%); padding: 11px 15px; border: 1px solid rgba(222,219,210,.15); background: rgba(255,255,255,.02); color: rgba(222,219,210,.64); box-shadow: none; font: 12px/1.4 "Courier New", monospace; letter-spacing: .08em; touch-action: manipulation; }
 .final-dream-return:hover, .final-dream-return:focus-visible { color: #e5e1d7; outline: 1px solid rgba(229,225,215,.34); filter: none; }
-@keyframes final-dream-page-in { from { opacity: 0; transform: scale(1.012); } 45% { opacity: .82; } to { opacity: 1; transform: scale(1); } }
-@keyframes final-dream-arrive { from { opacity: .18; transform: scale(1.02); filter: saturate(.68) contrast(.88) brightness(1.09); } to { opacity: 1; transform: scale(1.004); } }
-@keyframes final-dream-portrait-in { from { opacity: 0; transform: translate(-50%, 7px); } to { opacity: 1; transform: translate(-50%, 0); } }
-@keyframes final-dream-dialogue-in { from { opacity: 0; transform: translate(-50%, 4px); } to { opacity: 1; transform: translate(-50%, 0); } }
-@keyframes final-dream-next { 0%,100% { transform: translateY(0); opacity: .34; } 50% { transform: translateY(2px); opacity: .75; } }
-@keyframes final-dream-caret { 0%,49% { opacity: .82; } 50%,100% { opacity: 0; } }
-@keyframes final-dream-morning { from { transform: scale(1.012); } to { transform: scale(1.001); } }
+@keyframes final-dream-page-in { from { opacity: .2; transform: scale(1.018); filter: blur(5px) brightness(1.09); } 45% { opacity: .82; filter: blur(1.4px) brightness(1.045); } to { opacity: 1; transform: scale(1); filter: blur(0) brightness(1); } }
+@keyframes final-dream-veil { from { opacity: .92; } 55% { opacity: .32; } to { opacity: 0; } }
+@keyframes final-dream-arrive { from { opacity: .42; transform: scale(1.026); filter: saturate(.58) contrast(.84) brightness(1.14) blur(2px); } to { opacity: 1; transform: scale(1.006); filter: saturate(.8) contrast(.91) brightness(1.04) blur(0); } }
+@keyframes final-dream-portrait-in { from { opacity: 0; transform: translate(-50%, 12px) scale(.992); filter: blur(2px); } to { opacity: 1; transform: translate(-50%, 0) scale(1); filter: blur(0); } }
+@keyframes final-dream-dialogue-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes final-dream-next-appear { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes final-dream-next { 0%,100% { transform: translateX(0); opacity: .55; } 50% { transform: translateX(2px); opacity: .95; } }
+@keyframes final-dream-caret { 0%,49% { opacity: .75; } 50%,100% { opacity: 0; } }
+@keyframes final-dream-morning { from { transform: scale(1.018); opacity: 1; } to { transform: scale(1.002); opacity: .9; } }
+@keyframes final-dream-waking-haze { from { opacity: .54; } to { opacity: .78; } }
+@keyframes final-dream-drift { from { transform: translate3d(-1.8%, -1%, 0) scale(1); opacity: .2; } to { transform: translate3d(2%, 1.4%, 0) scale(1.04); opacity: .38; } }
+@keyframes final-dream-breathe { from { opacity: .7; } to { opacity: 1; } }
 @keyframes final-dream-black-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes final-dream-title { from { opacity: 0; letter-spacing: .48em; } to { opacity: 1; } }
+@keyframes final-dream-title { from { opacity: 0; letter-spacing: .38em; filter: blur(2px); } to { opacity: 1; filter: blur(0); } }
+@keyframes final-dream-title-haze { from { opacity: .2; transform: scale(.96); } to { opacity: .6; transform: scale(1.06); } }
 @media (min-width: 760px) {
   .final-dream-overlay { background: #101719; }
   .final-dream-frame { width: min(560px, 100vw); margin: 0 auto; box-shadow: 0 0 80px rgba(0,0,0,.32); }
@@ -58,5 +69,5 @@
   .final-dream-dialogue { width: min(410px, 70%); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .final-dream-frame.final-dream-page-enter, .final-dream-image, .final-dream-portrait, .final-dream-dialogue, .final-dream-title-card, .final-dream-title-card h1, .final-dream-credits div, .final-dream-next-mark, .final-dream-caret, .ending-line-caret { animation: none !important; }
+  .final-dream-frame.final-dream-page-enter, .final-dream-frame.final-dream-page-enter::after, .final-dream-image, .final-dream-portrait, .final-dream-dialogue, .final-dream-next-button, .final-dream-ending .final-dream-image, .final-dream-morning-haze, .final-dream-ending-drift, .final-dream-title-card, .final-dream-title-card h1, .final-dream-title-haze, .final-dream-credits div, .final-dream-caret, .ending-line-caret { animation: none !important; }
 }
