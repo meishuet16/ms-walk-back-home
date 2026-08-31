@@ -1,0 +1,82 @@
+/* Final Reflection Wall polish — loaded last. */
+
+/* List view keeps the photo as the scene. Only rows carry a readable glass-paper surface. */
+.reflection-kept-list,
+.reflection-continuum-list {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.reflection-kept-list-row,
+.reflection-continuum-list .reflection-kept-list-row {
+  background: rgba(255, 249, 238, .56) !important;
+  border: 1px solid rgba(255,255,255,.24) !important;
+  box-shadow: 0 7px 18px rgba(9, 28, 39, .10) !important;
+  backdrop-filter: blur(4px) saturate(.92) !important;
+  -webkit-backdrop-filter: blur(4px) saturate(.92) !important;
+}
+.reflection-kept-list-row:hover,
+.reflection-kept-list-row:focus-within {
+  background: rgba(255, 249, 238, .68) !important;
+}
+
+/* The header is room chrome, not a detached opaque card. Keep it close to the wall. */
+.reflection-kept-wall { row-gap: 0 !important; }
+.reflection-wall-header {
+  margin: 0 !important;
+  background: linear-gradient(180deg, rgba(13, 54, 78, .78), rgba(12, 46, 67, .72)) !important;
+  border-bottom-color: rgba(255,255,255,.12) !important;
+  box-shadow: 0 6px 16px rgba(5, 24, 35, .10) !important;
+  backdrop-filter: blur(7px) saturate(.92);
+  -webkit-backdrop-filter: blur(7px) saturate(.92);
+}
+.reflection-wall-canvas,
+.reflection-continuum-wall {
+  margin-top: 0 !important;
+  border-top: 0 !important;
+}
+
+/* Primary composer action must look actionable and give tactile feedback. */
+.reflection-compose-footer .reflection-primary-action:not(:disabled) {
+  background: linear-gradient(180deg, #829577, #6f8367) !important;
+  border-color: rgba(89, 111, 80, .55) !important;
+  color: #fffaf0 !important;
+  box-shadow: 0 6px 14px rgba(66, 84, 61, .20) !important;
+  opacity: 1 !important;
+  transition: transform 110ms ease, box-shadow 140ms ease, filter 140ms ease !important;
+}
+.reflection-compose-footer .reflection-primary-action:not(:disabled):active {
+  transform: scale(.965) translateY(1px) !important;
+  box-shadow: 0 2px 7px rgba(66, 84, 61, .18) !important;
+  filter: brightness(.96) !important;
+}
+.reflection-compose-footer .reflection-primary-action:disabled {
+  background: #d8d2c6 !important;
+  border-color: rgba(90, 82, 75, .10) !important;
+  color: rgba(90, 82, 75, .48) !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+  cursor: not-allowed;
+}
+
+@media (max-width: 760px) {
+  .reflection-wall-header { padding-bottom: 10px !important; }
+  .reflection-kept-list,
+  .reflection-continuum-list { padding-inline: 8px !important; }
+  .reflection-kept-list-row,
+  .reflection-continuum-list .reflection-kept-list-row {
+    background: rgba(255, 249, 238, .54) !important;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .reflection-compose-footer .reflection-primary-action:not(:disabled):hover {
+    filter: brightness(1.035);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reflection-compose-footer .reflection-primary-action { transition: none !important; }
+}
