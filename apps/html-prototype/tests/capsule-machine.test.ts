@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   CAPSULE_STORAGE_KEY,
   addCapsuleThought,
+  capsulePreviewText,
   createCapsuleMachineState,
   drawCapsuleThought,
   keptCapsules,
@@ -53,4 +54,37 @@ test("capsule state persists through the local storage adapter", () => {
   saveCapsuleMachineState(storage, state);
   assert.ok(memory.has(CAPSULE_STORAGE_KEY));
   assert.equal(loadCapsuleMachineState(storage, now).thoughts[0]?.text, "stored locally");
+});
+
+test("capsule thoughts no longer truncate at 200 characters", () => {
+  const now = new Date("2026-08-31T08:00:00.000Z");
+  const longThought = "很长的一段想法。".repeat(120);
+  const state = addCapsuleThought(createCapsuleMachineState(now), longThought, now, "long");
+  assert.equal(state.thoughts[0]?.text, longThought);
+  assert.ok((state.thoughts[0]?.text.length ?? 0) > 200);
+});
+
+test("kept previews are shortened without changing the saved full content", () => {
+  const now = new Date("2026-08-31T08:00:00.000Z");
+  const full = "Sometimes a kept capsule can be very long, but the drawer should only show a gentle preview until the user opens it.";
+  const thought = addCapsuleThought(createCapsuleMachineState(now), full, now, "preview").thoughts[0]!;
+  const preview = capsulePreviewText(thought, 42);
+  assert.ok(preview.endsWith("…"));
+  assert.ok(preview.length <= 42);
+  assert.equal(thought.text, full);
+});
+
+test("capsules may contain media without text and preserve media metadata", () => {
+  const now = new Date("2026-08-31T08:00:00.000Z");
+  const state = addCapsuleThought(createCapsuleMachineState(now), "", now, "media-only", [{
+    id: "media-1",
+    kind: "image",
+    name: "sunset.jpg",
+    mimeType: "image/jpeg",
+    size: 1234
+  }]);
+  assert.equal(state.thoughts.length, 1);
+  assert.equal(state.thoughts[0]?.text, "");
+  assert.equal(state.thoughts[0]?.attachments?.[0]?.name, "sunset.jpg");
+  assert.equal(capsulePreviewText(state.thoughts[0]!), "Media capsule");
 });
