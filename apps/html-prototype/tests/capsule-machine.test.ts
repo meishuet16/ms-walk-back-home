@@ -9,6 +9,7 @@ import {
   keptCapsules,
   loadCapsuleMachineState,
   machineCapsules,
+  removeCapsuleThought,
   saveCapsuleMachineState,
   setCapsuleStatus
 } from "../src/systems/CapsuleMachine.js";
@@ -41,6 +42,16 @@ test("keeping a capsule removes it from random draws until it is returned", () =
   assert.equal(drawCapsuleThought(state, () => 0, now), null);
   state = setCapsuleStatus(state, "capsule-a", "machine", now);
   assert.equal(machineCapsules(state).length, 1);
+});
+
+test("removing a kept capsule permanently removes it from both collections", () => {
+  const now = new Date("2026-08-31T08:00:00.000Z");
+  let state = addCapsuleThought(createCapsuleMachineState(now), "delete me", now, "capsule-a");
+  state = setCapsuleStatus(state, "capsule-a", "kept", now);
+  state = removeCapsuleThought(state, "capsule-a", new Date("2026-08-31T09:00:00.000Z"));
+  assert.equal(state.thoughts.length, 0);
+  assert.equal(keptCapsules(state).length, 0);
+  assert.equal(machineCapsules(state).length, 0);
 });
 
 test("capsule state persists through the local storage adapter", () => {
