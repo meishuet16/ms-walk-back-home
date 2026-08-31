@@ -32,6 +32,7 @@ for (const file of [
   "world-mini-games-refine.css",
   "world-mini-games-refine.js",
   "world-utility-tools-polish.css",
+  "reflection-wall.css",
   "reflection-wall-experience.css",
   "reflection-wall-mobile-polish.css",
   "reflection-wall-reference-polish.css",
