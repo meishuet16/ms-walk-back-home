@@ -1,8 +1,13 @@
-import type { ReflectionNote, ReflectionWallState } from "../types.js";
+import type { ReflectionNote, ReflectionWallFilter, ReflectionWallSort, ReflectionWallState, ReflectionWallView } from "../types.js";
+import { visibleReflectionNotes } from "./ReflectionWall.js";
 
 type ReflectionContinuumHost = {
   overlay: HTMLElement;
   reflectionWall: ReflectionWallState;
+  reflectionWallView: ReflectionWallView;
+  reflectionWallFilter: ReflectionWallFilter;
+  reflectionWallSort: ReflectionWallSort;
+  reflectionWallSearch: string;
   save: { saveReflectionWall: (state: ReflectionWallState) => void };
   escapeHtml: (value: string) => string;
   formatReflectionTimestamp: (value: string) => string;
@@ -90,11 +95,21 @@ function migrateLegacySections(app: ReflectionContinuumHost): void {
   try { window.localStorage.setItem(WALL_MIGRATED_KEY, "1"); } catch { /* migration still valid for this session */ }
 }
 
+function visibleNotes(app: ReflectionContinuumHost): ReflectionNote[] {
+  return visibleReflectionNotes(app.reflectionWall, {
+    view: app.reflectionWallView,
+    sort: app.reflectionWallSort,
+    search: app.reflectionWallSearch,
+    filter: app.reflectionWallFilter
+  });
+}
+
 function continuumHtml(app: ReflectionContinuumHost, arranging: boolean, selectedNoteId: string): string {
   const units = readUnits();
-  const notes = app.reflectionWall.notes.map((note) => renderNote(app, note, arranging, selectedNoteId === note.id)).join("");
-  const empty = app.reflectionWall.notes.length === 0
-    ? `<div class="reflection-wall-empty"><span aria-hidden="true">✦</span><h3>The wall is quiet.</h3><p>Leave a thought here when one feels worth seeing again.</p><button data-action="reflection-note-new">Leave a note</button></div>`
+  const filteredNotes = visibleNotes(app);
+  const notes = filteredNotes.map((note) => renderNote(app, note, arranging, selectedNoteId === note.id)).join("");
+  const empty = filteredNotes.length === 0
+    ? `<div class="reflection-wall-empty"><span aria-hidden="true">✦</span><h3>${app.reflectionWall.notes.length ? "Nothing found here." : "The wall is quiet."}</h3><p>${app.reflectionWall.notes.length ? "Try another word or filter." : "Leave a thought here when one feels worth seeing again."}</p>${app.reflectionWall.notes.length ? "" : `<button data-action="reflection-note-new">Leave a note</button>`}</div>`
     : "";
   return `<section class="reflection-wall-canvas reflection-continuum-wall${arranging ? " arranging" : ""}" data-reflection-canvas aria-label="Reflection Wall" style="--reflection-continuum-height:${wallMinHeight(units)}px">
     <div class="reflection-continuum-surface" data-reflection-continuum-surface>
