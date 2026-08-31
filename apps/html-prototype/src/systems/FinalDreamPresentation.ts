@@ -26,10 +26,12 @@ export class FinalDreamPresentation {
   private lastTouchAt = 0;
   private readonly reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
   private readonly keydown = (event: KeyboardEvent) => {
-    if (event.key === "Enter" || event.key === " " || event.key === "ArrowRight") {
-      event.preventDefault();
-      this.tryAdvance();
-    }
+    if (event.key !== "Enter" && event.key !== " " && event.key !== "ArrowRight") return;
+    if (this.destroyed || this.phase === "ending" || this.phase === "credits") return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    this.tryAdvance();
   };
   private readonly pointerUp = (event: PointerEvent) => {
     if (event.pointerType === "touch") this.lastTouchAt = Date.now();
@@ -50,7 +52,7 @@ export class FinalDreamPresentation {
     this.destroyed = false;
     this.host.root.classList.add("final-dream-active");
     this.host.overlay.classList.add("final-dream-overlay");
-    document.addEventListener("keydown", this.keydown);
+    document.addEventListener("keydown", this.keydown, true);
     this.host.overlay.addEventListener("pointerup", this.pointerUp, { passive: false });
     this.host.overlay.addEventListener("touchend", this.touchEnd, { passive: false });
     this.host.overlay.addEventListener("click", this.click);
@@ -72,9 +74,8 @@ export class FinalDreamPresentation {
       }
       return;
     }
-    if (this.phase === "ending") return;
-    if (this.phase === "title") return this.beginCredits();
-    this.finish();
+    if (this.phase === "ending" || this.phase === "credits") return;
+    if (this.phase === "title") this.beginCredits();
   }
 
   destroy(): void {
@@ -83,7 +84,7 @@ export class FinalDreamPresentation {
     window.clearTimeout(this.transitionTimer);
     window.clearTimeout(this.endingTimer);
     window.clearTimeout(this.typeTimer);
-    document.removeEventListener("keydown", this.keydown);
+    document.removeEventListener("keydown", this.keydown, true);
     this.host.overlay.removeEventListener("pointerup", this.pointerUp);
     this.host.overlay.removeEventListener("touchend", this.touchEnd);
     this.host.overlay.removeEventListener("click", this.click);
@@ -235,12 +236,26 @@ export class FinalDreamPresentation {
   }
 
   private beginCredits(): void {
+    if (this.destroyed) return;
     this.phase = "credits";
     this.host.overlay.innerHTML = `<section class="final-dream-black final-dream-credits">
       <div>${finalDreamCredits.map((line) => `<p>${escapeHtml(line)}</p>`).join("")}</div>
       <button type="button" class="final-dream-return" data-final-dream-return>Return to forest</button>
     </section>`;
-    this.host.overlay.querySelector<HTMLElement>("[data-final-dream-return]")?.addEventListener("click", () => this.finish(), { once: true });
+    const returnButton = this.host.overlay.querySelector<HTMLButtonElement>("[data-final-dream-return]");
+    returnButton?.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      this.finish();
+    }, { once: true });
+    returnButton?.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      this.finish();
+    });
   }
 
   private finish(): void {
