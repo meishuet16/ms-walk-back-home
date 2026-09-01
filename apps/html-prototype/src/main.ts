@@ -12,6 +12,7 @@ import { installLocalBackupSupplementBridge } from "./systems/LocalBackupSupplem
 import { installChapterMusicBridge } from "./systems/ChapterMusicBridge.js";
 import { installFinalDreamBridge } from "./systems/FinalDreamBridge.js";
 import { initializeStoryRouteStartup, installStoryRouteBridge } from "./systems/StoryRouteBridge.js";
+import { installStoryRouteMobileFixBridge } from "./systems/StoryRouteMobileFixBridge.js";
 import { SceneDebugEditor } from "./systems/SceneDebugEditor.js";
 
 installAuthoredCutsceneLifecycleBridge(WalkBackHomeApp.prototype);
@@ -27,6 +28,7 @@ installLocalBackupSupplementBridge(WalkBackHomeApp.prototype);
 installChapterMusicBridge(WalkBackHomeApp.prototype as unknown as { enterCurrentMemory?: () => Promise<void>; finishReturnToForest?: () => void });
 installFinalDreamBridge(WalkBackHomeApp.prototype as unknown as { enterCurrentMemory?: () => Promise<void> });
 installStoryRouteBridge(WalkBackHomeApp.prototype as unknown as Parameters<typeof installStoryRouteBridge>[0]);
+installStoryRouteMobileFixBridge(WalkBackHomeApp.prototype as unknown as Parameters<typeof installStoryRouteMobileFixBridge>[0]);
 
 const root = document.querySelector<HTMLElement>("#app")!;
 if (new URLSearchParams(window.location.search).get("debug") === "scene") {
