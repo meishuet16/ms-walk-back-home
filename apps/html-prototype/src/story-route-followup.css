@@ -1,0 +1,52 @@
+.story-title-muji,
+.threshold-muji {
+  width: 80px !important;
+  height: 96px !important;
+  background: url("./assets/muji-sheet-v2/muji-04.png") center / contain no-repeat !important;
+  image-rendering: pixelated;
+}
+
+.story-title-muji {
+  transform: translateX(-50%) scale(1.28) !important;
+}
+
+.threshold-muji {
+  transform: translateX(-50%) scale(1.12) !important;
+}
+
+.story-route-muji {
+  width: 58px !important;
+  height: 70px !important;
+  background: url("./assets/muji-sheet-v2/muji-04.png") center / contain no-repeat !important;
+  image-rendering: pixelated;
+  pointer-events: none;
+  z-index: 7;
+}
+
+.story-route-muji.is-following-current {
+  position: absolute !important;
+  bottom: auto !important;
+  transform: translate(-50%, -122%) !important;
+  filter: drop-shadow(0 7px 8px rgba(0,0,0,.55));
+  transition: left .28s ease, top .28s ease;
+}
+
+.menu-panel [data-story-return="threshold"] {
+  border-color: rgba(255, 221, 157, .42);
+  background: rgba(50, 38, 27, .78);
+}
+
+@media (max-width: 720px) {
+  .story-title-muji {
+    width: 74px !important;
+    height: 90px !important;
+  }
+  .threshold-muji {
+    width: 68px !important;
+    height: 82px !important;
+  }
+  .story-route-muji {
+    width: 52px !important;
+    height: 63px !important;
+  }
+}
