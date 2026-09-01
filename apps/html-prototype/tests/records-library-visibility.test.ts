@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  developerHiddenRecordIds,
   filterTracksForLibraryView,
   hideBuiltInRecord,
   libraryView,
@@ -54,4 +55,26 @@ test("Records visibility deduplicates hidden ids so repeated Hide is harmless", 
   const once = hideBuiltInRecord({}, "chapter-theme");
   const twice = hideBuiltInRecord(once, "chapter-theme");
   assert.deepEqual(normalizedHiddenBuiltInIds(twice), ["chapter-theme"]);
+});
+
+test("developer-hidden built-ins never enter Records or the personal playback queue", () => {
+  developerHiddenRecordIds.add("chapter-theme");
+  try {
+    assert.deepEqual(filterTracksForLibraryView(tracks, {}).map((track) => track.id), ["forest-theme", "my-song"]);
+    assert.deepEqual(filterTracksForLibraryView(tracks, { libraryView: "hidden", hiddenBuiltInRecordIds: ["chapter-theme"] }).map((track) => track.id), []);
+    assert.deepEqual(personalPlaybackCandidates(tracks, {}).map((track) => track.id), ["forest-theme", "my-song"]);
+  } finally {
+    developerHiddenRecordIds.delete("chapter-theme");
+  }
+});
+
+test("developer-hidden policy does not delete or mutate the underlying bundled track", () => {
+  developerHiddenRecordIds.add("chapter-theme");
+  try {
+    const player = hideBuiltInRecord({}, "chapter-theme");
+    assert.deepEqual(normalizedHiddenBuiltInIds(player), []);
+    assert.equal(tracks.find((track) => track.id === "chapter-theme")?.source, "built-in");
+  } finally {
+    developerHiddenRecordIds.delete("chapter-theme");
+  }
 });
