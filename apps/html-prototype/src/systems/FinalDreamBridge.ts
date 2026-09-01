@@ -1,4 +1,3 @@
-import { finalDreamMusic } from "../fixtures/finalDreamChapter.js";
 import { FinalDreamPresentation } from "./FinalDreamPresentation.js";
 
 type FinalDreamAudio = {
@@ -12,6 +11,7 @@ type FinalDreamAudio = {
 };
 
 const FINAL_DREAM_CHAPTER_ID = "final-dream-tomorrow";
+export const finalDreamMusic = "assets/audio/有形的翅膀-张韶涵.mp3";
 
 type FinalDreamDoor = { chapterId?: string; id?: string };
 
@@ -57,8 +57,6 @@ function finishFinalDreamIntoForest(app: AppLike): void {
     return;
   }
 
-  // Preserve the established forest-return lifecycle, suppressing only its immediate
-  // Forest BGM swap so the Final Dream song can finish naturally after the visuals return.
   const originalSetScene = audio.setScene.bind(audio);
   audio.setScene = (scene) => {
     if (scene !== "forest") originalSetScene(scene);
@@ -73,7 +71,6 @@ function finishFinalDreamIntoForest(app: AppLike): void {
   let unsubscribe: () => void = () => {};
   unsubscribe = audio.onEnded?.(() => {
     unsubscribe();
-    // A later scene or music choice owns playback if anything changed before the song ended.
     if (app.scene !== "forest" || !(audio.isCurrentTrack?.(finalDreamMusic) ?? false)) return;
     originalSetScene("forest");
     audio.setLoop?.(true);
@@ -119,9 +116,6 @@ export function installFinalDreamBridge(prototype: AppPrototype): void {
     presentation.start();
   };
 
-  // Final Dream is a presentation-only chapter. Intercept only its generic forest
-  // preview so Tomorrow enters directly; every other chapter keeps the native
-  // preview + interaction path untouched.
   if (originalPreviewDoor) {
     prototype.previewDoor = function(this: AppLike, door: FinalDreamDoor): void {
       if (!isFinalDreamDoor(door)) {
