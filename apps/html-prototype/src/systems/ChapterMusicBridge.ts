@@ -26,20 +26,19 @@ type ChapterMusicPrototype = {
 
 const FINAL_DREAM_CHAPTER_ID = "final-dream-tomorrow";
 
-// Authored soundtrack catalogue. Keeping these assignments here lets older chapter
-// fixtures remain untouched while still using the same generic chapter-music lifecycle.
-// Every assigned song is one-shot and may finish naturally after returning to Forest.
+// These names intentionally match the repository assets byte-for-byte. Records
+// visibility is a separate concern; these files are owned directly by chapters.
 export const authoredChapterMusic: Record<string, ChapterMusicConfig> = {
-  "july21-why-cant-you-stay": { src: "assets/audio/再见太难-黄龄.mp3", loop: false, continueInForestUntilEnd: true },
-  "june25-so-i-came": { src: "assets/audio/可惜不是你-梁静茹.mp3", loop: false, continueInForestUntilEnd: true },
-  "june24-only-came-for-you": { src: "assets/audio/瞬-郑润泽.mp3", loop: false, continueInForestUntilEnd: true },
-  "may23-i-arrived": { src: "assets/audio/带我走-杨丞琳.mp3", loop: false, continueInForestUntilEnd: true },
-  "april25-just-good-friends": { src: "assets/audio/我好想你-苏打绿.mp3", loop: false, continueInForestUntilEnd: true },
-  "march30-too-fated": { src: "assets/audio/那些年-胡夏.mp3", loop: false, continueInForestUntilEnd: true },
+  "july21-why-cant-you-stay": { src: "assets/audio/利得彙再见太难Music.mp3", loop: false, continueInForestUntilEnd: true },
+  "june25-so-i-came": { src: "assets/audio/梁靜茹可惜不是你伴奏.mp3", loop: false, continueInForestUntilEnd: true },
+  "june24-only-came-for-you": { src: "assets/audio/郑润泽瞬伴奏Music.mp3", loop: false, continueInForestUntilEnd: true },
+  "may23-i-arrived": { src: "assets/audio/带我走live吴青峰.mp3", loop: false, continueInForestUntilEnd: true },
+  "april25-just-good-friends": { src: "assets/audio/我好想你伴奏版Music.mp3", loop: false, continueInForestUntilEnd: true },
+  "march30-too-fated": { src: "assets/audio/胡夏 Xia Hu - Those Bygone Years 那些年-NA.mp3", loop: false, continueInForestUntilEnd: true },
   "oct29-a-little-closer": { src: "assets/audio/Dear D (亲爱的告诉你)-项睿娴.mp3", loop: false, continueInForestUntilEnd: true },
-  "1122-before-sunrise": { src: "assets/audio/Time Machine- mj apanay.mp3", loop: false, continueInForestUntilEnd: true },
-  "april05-come-down": { src: "assets/audio/雨是甜的-尤长靖.mp3", loop: false, continueInForestUntilEnd: true },
-  "april06-not-gone-yet": { src: "assets/audio/雨是甜的-尤长靖.mp3", loop: false, continueInForestUntilEnd: true }
+  "1122-before-sunrise": { src: "assets/audio/[lyric video] time machine - mj apanay (ft. aren park)(MP3_160K).mp3", loop: false, continueInForestUntilEnd: true },
+  "april05-come-down": { src: "assets/audio/Bell 宇田  雨是甜的歌詞 眼淚苦苦的雨是甜的.mp3", loop: false, continueInForestUntilEnd: true },
+  "april06-not-gone-yet": { src: "assets/audio/Bell 宇田  雨是甜的歌詞 眼淚苦苦的雨是甜的.mp3", loop: false, continueInForestUntilEnd: true }
 };
 
 function chapterMusicFor(door: ChapterDoor | null | undefined): ChapterMusicConfig | null {
@@ -82,14 +81,22 @@ export function installChapterMusicBridge(prototype: ChapterMusicPrototype): voi
       return;
     }
 
+    // Returning to Forest must not let scene/personal-player restoration replace
+    // the chapter-owned song before it naturally finishes.
     const originalSetScene = audio.setScene.bind(audio);
+    const originalSetTrack = audio.setTrack.bind(audio);
     audio.setScene = (scene) => {
       if (scene !== "forest") originalSetScene(scene);
+    };
+    audio.setTrack = (src, autoPlay) => {
+      if (audio.isCurrentTrack(music.src) && !audio.isCurrentTrack(src)) return false;
+      return originalSetTrack(src, autoPlay);
     };
     try {
       originalReturn.call(this);
     } finally {
       audio.setScene = originalSetScene;
+      audio.setTrack = originalSetTrack;
     }
 
     audio.setLoop(false);
