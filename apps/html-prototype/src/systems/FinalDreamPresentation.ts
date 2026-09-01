@@ -89,7 +89,7 @@ export class FinalDreamPresentation {
     document.removeEventListener("pointerup", this.pointerUp, true);
     document.removeEventListener("touchend", this.touchEnd, true);
     document.removeEventListener("click", this.click, true);
-    this.host.root.classList.remove("final-dream-active");
+    this.host.root.classList.remove("final-dream-active", "final-dream-audio-fade");
     this.host.overlay.classList.remove("final-dream-overlay");
     this.host.overlay.innerHTML = "";
   }
@@ -194,7 +194,7 @@ export class FinalDreamPresentation {
         return;
       }
       const char = this.currentText[this.currentTypedCount - 1] ?? "";
-      const delay = /[。！？!?…]/.test(char) ? 300 : /[，、；：,;:]/.test(char) ? 190 : 108;
+      const delay = /[。！？!?…]/.test(char) ? 340 : /[，、；：,;:]/.test(char) ? 215 : 122;
       this.typeTimer = window.setTimeout(step, delay);
     };
     step();
@@ -252,7 +252,7 @@ export class FinalDreamPresentation {
         return;
       }
       const char = line[this.endingLineTypedCount - 1] ?? "";
-      const delay = /[。！？!?…]/.test(char) ? 330 : /[，、；：,;:]/.test(char) ? 205 : 112;
+      const delay = /[。！？!?…]/.test(char) ? 350 : /[，、；：,;:]/.test(char) ? 220 : 120;
       this.endingTimer = window.setTimeout(step, delay);
     };
     step();
