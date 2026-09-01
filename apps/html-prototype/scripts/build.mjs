@@ -14,6 +14,7 @@ await writeFile(resolve(root, "dist/public/assets/audio-manifest.json"), JSON.st
 await copyFile(resolve(root, "src/index.html"), resolve(root, "dist/index.html"));
 await copyFile(resolve(root, "src/styles.css"), resolve(root, "dist/styles.css"));
 for (const file of [
+  "final-dream.css",
   "spin-wheel-world.css",
   "spin-wheel-choice-sheet.css",
   "spin-wheel-preset-ui.css",

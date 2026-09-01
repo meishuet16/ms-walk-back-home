@@ -10,6 +10,7 @@ import { june25Chapter } from "../fixtures/june25Chapter.js";
 import { july21Chapter } from "../fixtures/july21Chapter.js";
 import { november22Chapter } from "../fixtures/november22Chapter.js";
 import { oct29Chapter } from "../fixtures/oct29Chapter.js";
+import { finalDreamChapter } from "../fixtures/finalDreamChapter.js";
 import type { ChapterDefinition } from "../types.js";
 
 export type AuthoredForestEntry = (typeof forestDoors)[number];
@@ -63,7 +64,8 @@ export const chapterRegistry: Record<string, ChapterDefinition> = {
   "june25-so-i-came": june25Chapter,
   "july21-why-cant-you-stay": july21Chapter,
   "1122-before-sunrise": november22Chapter,
-  "oct29-a-little-closer": oct29Chapter
+  "oct29-a-little-closer": oct29Chapter,
+  "final-dream-tomorrow": finalDreamChapter
 };
 
 export const forestEntries = forestDoors;

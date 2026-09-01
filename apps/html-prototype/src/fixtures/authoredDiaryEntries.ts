@@ -4,8 +4,10 @@ import { june25DiaryEntry } from "./june25Chapter.js";
 import { april25DiaryEntry } from "./april25Chapter.js";
 import { november22DiaryEntry } from "./november22Chapter.js";
 import { oct29DiaryEntry } from "./oct29Chapter.js";
+import { finalDreamDiaryEntry } from "./finalDreamChapter.js";
 
 export const authoredChapterDiaryEntries: DiaryEntry[] = [
+  finalDreamDiaryEntry,
   april25DiaryEntry,
   july21DiaryEntry,
   june25DiaryEntry,
