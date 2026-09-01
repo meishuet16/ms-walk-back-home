@@ -39,8 +39,6 @@ export function installChapterMusicBridge(prototype: ChapterMusicPrototype): voi
   const originalReturn = prototype.finishReturnToForest;
   if (!originalEnter || !originalReturn) return;
 
-  // Capture the chapter music at entry. finishReturnToForest mutates/clears door
-  // state, so return-time lookup must not depend on currentDoor still being intact.
   let activeChapterMusic: ChapterMusicConfig | null = null;
   let carryUnsubscribe: (() => void) | null = null;
 
@@ -67,9 +65,9 @@ export function installChapterMusicBridge(prototype: ChapterMusicPrototype): voi
       return;
     }
 
-    // Suppress only the synchronous Forest restoration performed by the existing
-    // return lifecycle. Restore AudioManager immediately afterwards so Records and
-    // unrelated scenes keep their original behaviour.
+    // Match the proven Final Dream return strategy: while the existing Forest
+    // lifecycle runs, suppress only attempts to replace the chapter track with
+    // Forest audio. Restore AudioManager methods immediately afterwards.
     const originalSetScene = audio.setScene.bind(audio);
     const originalSetTrack = audio.setTrack.bind(audio);
     audio.setScene = (scene) => { if (scene !== "forest") originalSetScene(scene); };
