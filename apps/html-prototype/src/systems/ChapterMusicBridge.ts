@@ -11,7 +11,7 @@ type ChapterAudio = {
   onEnded: (callback: () => void) => () => void;
 };
 type ChapterMusicApp = { currentDoor?: ChapterDoor | null; activeDoor?: ChapterDoor | null; scene?: string; audio?: ChapterAudio };
-type ChapterMusicPrototype = { enterCurrentMemory?: () => Promise<void>; finishReturnToForest?: () => void };
+type ChapterMusicPrototype = { enterCurrentMemory?: () => Promise<void>; finishReturnToForest?: () => void; applyAudioForCurrentScene?: () => void };
 
 const FINAL_DREAM_CHAPTER_ID = "final-dream-tomorrow";
 
@@ -37,37 +37,75 @@ function chapterMusicFor(door: ChapterDoor | null | undefined): ChapterMusicConf
 export function installChapterMusicBridge(prototype: ChapterMusicPrototype): void {
   const originalEnter = prototype.enterCurrentMemory;
   const originalReturn = prototype.finishReturnToForest;
+  const originalApplyAudio = prototype.applyAudioForCurrentScene;
   if (!originalEnter || !originalReturn) return;
 
   let activeChapterMusic: ChapterMusicConfig | null = null;
   let carryUnsubscribe: (() => void) | null = null;
+  let carryingIntoForest = false;
+
+  const stopCarry = (): void => {
+    carryUnsubscribe?.();
+    carryUnsubscribe = null;
+    carryingIntoForest = false;
+  };
+
+  const beginForestCarry = (app: ChapterMusicApp, music: ChapterMusicConfig): void => {
+    const audio = app.audio;
+    if (!audio || carryingIntoForest || !audio.isCurrentTrack(music.src)) return;
+    carryingIntoForest = true;
+    audio.setLoop(false);
+    carryUnsubscribe?.();
+    let unsubscribe: () => void = () => {};
+    unsubscribe = audio.onEnded(() => {
+      unsubscribe();
+      carryUnsubscribe = null;
+      carryingIntoForest = false;
+      activeChapterMusic = null;
+      if (app.scene !== "forest" || !audio.isCurrentTrack(music.src)) return;
+      audio.setScene("forest");
+      audio.setLoop(true);
+      void audio.ensurePlaying();
+    });
+    carryUnsubscribe = unsubscribe;
+  };
 
   prototype.enterCurrentMemory = async function(this: ChapterMusicApp): Promise<void> {
     const music = chapterMusicFor(this.currentDoor ?? this.activeDoor);
+    stopCarry();
     await originalEnter.call(this);
     activeChapterMusic = music;
     if (!music || !this.audio) return;
-    carryUnsubscribe?.();
-    carryUnsubscribe = null;
     this.audio.setTrack(music.src, false);
     this.audio.setLoop(music.loop ?? false);
     void this.audio.ensurePlaying();
+  };
+
+  // Forest audio can be restored by more than one authored-chapter exit path.
+  // Guard the shared restoration point as well as finishReturnToForest so every
+  // normal chapter gets the same carry-until-ended semantics as Final Dream.
+  if (originalApplyAudio) prototype.applyAudioForCurrentScene = function(this: ChapterMusicApp): void {
+    const music = activeChapterMusic;
+    if (this.scene === "forest" && music?.continueInForestUntilEnd && this.audio?.isCurrentTrack(music.src)) {
+      beginForestCarry(this, music);
+      return;
+    }
+    originalApplyAudio.call(this);
   };
 
   prototype.finishReturnToForest = function(this: ChapterMusicApp): void {
     const music = activeChapterMusic ?? chapterMusicFor(this.currentDoor ?? this.activeDoor);
     const audio = this.audio;
     const shouldCarry = Boolean(music?.continueInForestUntilEnd && audio?.isCurrentTrack(music.src));
-    activeChapterMusic = null;
 
     if (!shouldCarry || !music || !audio) {
+      activeChapterMusic = null;
+      stopCarry();
       originalReturn.call(this);
       return;
     }
 
-    // Match the proven Final Dream return strategy: while the existing Forest
-    // lifecycle runs, suppress only attempts to replace the chapter track with
-    // Forest audio. Restore AudioManager methods immediately afterwards.
+    activeChapterMusic = music;
     const originalSetScene = audio.setScene.bind(audio);
     const originalSetTrack = audio.setTrack.bind(audio);
     audio.setScene = (scene) => { if (scene !== "forest") originalSetScene(scene); };
@@ -81,18 +119,6 @@ export function installChapterMusicBridge(prototype: ChapterMusicPrototype): voi
       audio.setScene = originalSetScene;
       audio.setTrack = originalSetTrack;
     }
-
-    audio.setLoop(false);
-    carryUnsubscribe?.();
-    let unsubscribe: () => void = () => {};
-    unsubscribe = audio.onEnded(() => {
-      unsubscribe();
-      carryUnsubscribe = null;
-      if (this.scene !== "forest" || !audio.isCurrentTrack(music.src)) return;
-      originalSetScene("forest");
-      audio.setLoop(true);
-      void audio.ensurePlaying();
-    });
-    carryUnsubscribe = unsubscribe;
+    beginForestCarry(this, music);
   };
 }
