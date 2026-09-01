@@ -16,150 +16,129 @@ type AppLike = {
   scene: string;
   player: { x: number; y: number };
   canvas: HTMLCanvasElement;
-  ctx: CanvasRenderingContext2D;
   overlay: HTMLElement;
   hud: HTMLElement;
   currentDoor: unknown;
   activeDoor: unknown;
-  images?: { forest?: HTMLImageElement };
-  drawMuji?: (point: { x: number; y: number }, time: number, scale: number) => void;
-  currentSceneLayout?: (scene?: string) => { spawn: { x: number; y: number }; size?: { w: number; h: number } };
+  currentSceneLayout?: (scene?: string) => { spawn: { x: number; y: number } };
   sceneViewport?: (layout: unknown) => { w: number; h: number };
   sceneCamera?: (layout: unknown, width: number, height: number) => { x: number; y: number };
   enterCurrentMemory?: () => Promise<void> | void;
   applyAudioForCurrentScene?: () => void;
   autosave?: () => void;
   focusStage?: () => void;
+  newMemory?: () => unknown;
   lastHudHtml?: string;
   [key: string]: unknown;
 };
 
 type AppPrototype = Record<string, ((...args: unknown[]) => unknown) | undefined>;
-
-type RouteSession = {
-  returningToStory: boolean;
-  activeChapterId: StoryChapterId | "";
-};
-
+type RouteSession = { returningToStory: boolean; activeChapterId: StoryChapterId | "" };
 const sessions = new WeakMap<object, RouteSession>();
 
 function sessionFor(app: AppLike): RouteSession {
-  const key = app as object;
-  let session = sessions.get(key);
+  let session = sessions.get(app as object);
   if (!session) {
     session = { returningToStory: false, activeChapterId: "" };
-    sessions.set(key, session);
+    sessions.set(app as object, session);
   }
   return session;
 }
 
 function loadProgress(): StoryRouteProgress {
-  try {
-    return normalizeStoryRouteProgress(JSON.parse(localStorage.getItem(STORY_PROGRESS_KEY) ?? "null"));
-  } catch {
-    return normalizeStoryRouteProgress(null);
-  }
+  try { return normalizeStoryRouteProgress(JSON.parse(localStorage.getItem(STORY_PROGRESS_KEY) ?? "null")); }
+  catch { return normalizeStoryRouteProgress(null); }
 }
-
 function saveProgress(progress: StoryRouteProgress): void {
-  try {
-    localStorage.setItem(STORY_PROGRESS_KEY, JSON.stringify(progress));
-  } catch {
-    // Story progression is a convenience layer; chapter runtime remains authoritative.
-  }
+  try { localStorage.setItem(STORY_PROGRESS_KEY, JSON.stringify(progress)); } catch {}
 }
-
 function escapeHtml(value: string): string {
-  return value.replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char] ?? char));
+  return value.replace(/[&<>'"]/g, (char) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#39;", '"':"&quot;" }[char] ?? char));
 }
 
-function bindOverlay(app: AppLike, originalNewMemory: (...args: unknown[]) => unknown): void {
-  if (app.overlay.dataset.storyRouteBound === "true") return;
-  app.overlay.dataset.storyRouteBound = "true";
-  app.overlay.addEventListener("click", (event) => {
-    const target = (event.target as HTMLElement | null)?.closest<HTMLElement>("[data-story-action]");
-    if (!target) return;
-    const action = target.dataset.storyAction;
-    if (action === "threshold") return showThreshold(app, originalNewMemory);
-    if (action === "story") return showStoryRoute(app, originalNewMemory);
-    if (action === "forest") {
-      originalNewMemory.call(app);
-      return;
-    }
-    if (action === "room") {
-      originalNewMemory.call(app);
-      app.scene = "muji-room";
-      const layout = app.currentSceneLayout?.("muji-room");
-      if (layout?.spawn) app.player = { ...layout.spawn };
-      app.currentDoor = null;
-      app.activeDoor = null;
-      app.overlay.innerHTML = "";
-      app.applyAudioForCurrentScene?.();
-      app.autosave?.();
-      app.focusStage?.();
-      return;
-    }
-    if (action === "chapter") {
-      const chapterId = target.dataset.chapter as StoryChapterId | undefined;
-      if (!chapterId || !STORY_CHAPTER_IDS.includes(chapterId)) return;
-      const state = storyChapterState(chapterId, loadProgress());
-      if (state === "locked") return showStoryChapterPreview(app, chapterId, true, originalNewMemory);
-      return startStoryChapter(app, chapterId, originalNewMemory);
-    }
-    if (action === "chapter-preview") {
-      const chapterId = target.dataset.chapter as StoryChapterId | undefined;
-      if (!chapterId || !STORY_CHAPTER_IDS.includes(chapterId)) return;
-      return showStoryChapterPreview(app, chapterId, false, originalNewMemory);
-    }
-    if (action === "chapter-start") {
-      const chapterId = target.dataset.chapter as StoryChapterId | undefined;
-      if (!chapterId || !STORY_CHAPTER_IDS.includes(chapterId)) return;
-      return startStoryChapter(app, chapterId, originalNewMemory);
-    }
-  });
+function shell(app: AppLike): HTMLElement | null { return app.canvas.closest<HTMLElement>(".game-shell"); }
+function stage(app: AppLike): HTMLElement | null { return app.canvas.closest<HTMLElement>(".stage-wrap"); }
+
+function setEntryMode(app: AppLike, mode: "title" | "threshold" | "story" | null): void {
+  const enabled = mode !== null;
+  shell(app)?.classList.toggle("story-shell-active", enabled);
+  stage(app)?.classList.toggle("story-stage-active", enabled);
+  app.overlay.classList.toggle("story-route-overlay", enabled);
+  app.hud.classList.toggle("story-hud-hidden", enabled);
+  if (mode) shell(app)?.setAttribute("data-story-screen", mode);
+  else shell(app)?.removeAttribute("data-story-screen");
 }
 
-function showThreshold(app: AppLike, originalNewMemory: (...args: unknown[]) => unknown): void {
-  bindOverlay(app, originalNewMemory);
+function clearForestWorldPrompt(app: AppLike): void {
+  (app.canvas.parentElement ?? app.hud).querySelector<HTMLElement>(".forest-world-prompt")?.remove();
+  app.hud.querySelector<HTMLElement>(".forest-world-prompt")?.remove();
+}
+
+function showTitle(app: AppLike): void {
+  app.scene = "title";
+  app.currentDoor = null;
+  app.activeDoor = null;
+  clearForestWorldPrompt(app);
+  setEntryMode(app, "title");
+  app.overlay.classList.remove("dialogue-open", "lightweight-presentation");
+  app.overlay.innerHTML = `
+    <section class="story-title-screen" data-story-action="threshold" aria-label="Walk Back Home title screen">
+      <div class="story-title-star" aria-hidden="true"></div>
+      <div class="story-title-copy">
+        <h1>Walk Back Home</h1>
+        <p>Where every memory leads me home.</p>
+      </div>
+      <div class="story-title-muji" aria-hidden="true"></div>
+      <div class="story-title-enter"><span>Tap to begin</span><small>进入记忆的入口</small></div>
+      <small class="story-title-credit">A game by Muji</small>
+    </section>`;
+  app.focusStage?.();
+}
+
+function showThreshold(app: AppLike): void {
   app.scene = "threshold";
   app.currentDoor = null;
   app.activeDoor = null;
+  setEntryMode(app, "threshold");
   app.overlay.classList.remove("dialogue-open", "lightweight-presentation");
   app.overlay.innerHTML = `
-    <section class="threshold-hub" aria-label="Choose where to go">
-      <div class="threshold-haze"></div>
-      <div class="threshold-heading"><small>Where do you want to begin?</small><h1>Three ways home.</h1></div>
+    <section class="threshold-hub" aria-label="Choose a way home">
+      <header class="threshold-heading"><small>Choose a way home</small><h1>Where do you want to go?</h1></header>
       <div class="threshold-entrances">
-        <button class="threshold-entry threshold-story" data-story-action="story">
-          <span class="threshold-symbol">✦</span><strong>The Story</strong><em>Walk Back Home</em><p>沿着真实日期，把已经写下来的故事重新走一遍。</p>
+        <button class="threshold-entry threshold-story" data-story-action="story" type="button">
+          <span class="threshold-glow" aria-hidden="true"></span><span class="threshold-symbol">✦</span>
+          <strong>The Story</strong><em>Walk Back Home</em><p>按真实日期，重新走过已经写下来的故事。</p>
         </button>
-        <button class="threshold-entry threshold-forest" data-story-action="forest">
-          <span class="threshold-symbol">❧</span><strong>The Forest</strong><em>Memories</em><p>回到现在的月份森林，翻看所有记忆与日记。</p>
+        <button class="threshold-entry threshold-forest" data-story-action="forest" type="button">
+          <span class="threshold-glow" aria-hidden="true"></span><span class="threshold-symbol">❧</span>
+          <strong>The Forest</strong><em>Memories</em><p>按月份翻阅所有记忆与日记。</p>
         </button>
-        <button class="threshold-entry threshold-room" data-story-action="room">
-          <span class="threshold-symbol">⌂</span><strong>Muji Room</strong><em>My Place</em><p>回房间。写日记、听歌、整理自己的小世界。</p>
+        <button class="threshold-entry threshold-room" data-story-action="room" type="button">
+          <span class="threshold-glow" aria-hidden="true"></span><span class="threshold-symbol">⌂</span>
+          <strong>Muji Room</strong><em>My Place</em><p>回到房间，听歌、写日记、整理自己的小世界。</p>
         </button>
       </div>
-      <p class="threshold-footnote">走近一条路，就从那里开始。</p>
+      <div class="threshold-muji" aria-hidden="true"></div>
+      <p class="threshold-footnote">Tap an entrance to continue.</p>
     </section>`;
   app.focusStage?.();
 }
 
 const routePoints = [
-  [10, 78], [23, 67], [37, 57], [52, 48], [68, 39], [82, 28], [88, 16],
-  [72, 12], [56, 21], [42, 31], [29, 42], [18, 54], [11, 22]
+  [28, 118], [70, 245], [34, 372], [72, 499], [31, 626], [68, 753], [35, 880],
+  [73, 1007], [31, 1134], [67, 1261], [34, 1388], [69, 1515], [50, 1642]
 ] as const;
 
 function storyPathSvg(): string {
-  const points = routePoints.map(([x, y]) => `${x},${y}`).join(" ");
-  return `<svg class="story-route-line" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline points="${points}" /></svg>`;
+  const d = routePoints.map(([x, y], i) => `${i === 0 ? "M" : "L"} ${x} ${y}`).join(" ");
+  return `<svg class="story-route-line" viewBox="0 0 100 1760" preserveAspectRatio="none" aria-hidden="true"><path d="${d}" /></svg>`;
 }
 
-function showStoryRoute(app: AppLike, originalNewMemory: (...args: unknown[]) => unknown): void {
-  bindOverlay(app, originalNewMemory);
+function showStoryRoute(app: AppLike): void {
   app.scene = "story-route";
   app.currentDoor = null;
   app.activeDoor = null;
+  setEntryMode(app, "story");
   const progress = loadProgress();
   const currentId = currentStoryChapterId(progress);
   const completeCount = storyCompletionCount(progress);
@@ -169,10 +148,10 @@ function showStoryRoute(app: AppLike, originalNewMemory: (...args: unknown[]) =>
     const state = storyChapterState(chapterId, progress);
     const [x, y] = routePoints[index];
     const number = String(index + 1).padStart(2, "0");
-    const isFinal = chapterId === "final-dream-tomorrow";
-    return `<button class="story-node is-${state}${isFinal ? " is-final" : ""}" style="--story-x:${x}%;--story-y:${y}%" data-story-action="chapter" data-chapter="${chapterId}" aria-label="Chapter ${number} ${escapeHtml(chapter.title)} ${state}">
-      <span class="story-node-orb">${state === "completed" ? "✓" : state === "locked" ? "·" : number}</span>
-      <span class="story-node-copy"><small>${isFinal ? "Last Chapter" : `Chapter ${number}`}</small><strong>${escapeHtml(chapter.title)}</strong><em>${isFinal ? "Final Dream" : escapeHtml(chapter.date)}</em></span>
+    const finalDream = chapterId === "final-dream-tomorrow";
+    return `<button class="story-node is-${state}${finalDream ? " is-final" : ""}" style="--story-x:${x}%;--story-y:${y}px" data-story-action="chapter" data-chapter="${chapterId}" type="button">
+      <span class="story-node-orb">${state === "completed" ? "✓" : state === "locked" ? "•" : number}</span>
+      <span class="story-node-copy"><small>${finalDream ? "Last Chapter" : `Chapter ${number}`}</small><strong>${escapeHtml(chapter.title)}</strong><em>${escapeHtml(chapter.date)}</em></span>
     </button>`;
   }).join("");
   const current = chapterRegistry[currentId];
@@ -180,202 +159,155 @@ function showStoryRoute(app: AppLike, originalNewMemory: (...args: unknown[]) =>
   app.overlay.innerHTML = `
     <section class="story-route-shell" aria-label="Story Route">
       <header class="story-route-header">
-        <button class="story-back" data-story-action="threshold" aria-label="Back to threshold">‹</button>
-        <div><small>The Story</small><h1>Walk Back Home</h1><p>按真实日期顺序，一章一章走回去。</p></div>
+        <button class="story-back" data-story-action="threshold" type="button" aria-label="Back">‹</button>
+        <div><small>The Story</small><h1>Walk Back Home</h1><p>按真实日期，一章一章走回去。</p></div>
         <div class="story-progress"><strong>${completeCount} / ${STORY_CHAPTER_IDS.length}</strong><span>completed</span></div>
       </header>
-      <div class="story-route-world">
-        ${storyPathSvg()}
-        ${nodes}
-        <div class="story-route-muji" aria-hidden="true">Muji</div>
-        <div class="story-current-card"><small>现在走到</small><strong>${escapeHtml(current?.title ?? "Final Dream")}</strong><span>${escapeHtml(current?.date ?? "")}</span></div>
+      <div class="story-route-scroll">
+        <div class="story-route-world">
+          ${storyPathSvg()}
+          <div class="story-route-sparkles" aria-hidden="true"></div>
+          ${nodes}
+          <div class="story-route-muji" aria-hidden="true"></div>
+        </div>
       </div>
-      <footer class="story-route-footer"><span>完成当前章节后，下一段路才会亮起来。</span><button data-story-action="chapter-preview" data-chapter="${currentId}">查看当前章节</button></footer>
+      <footer class="story-route-footer">
+        <div><small>Current chapter</small><strong>${escapeHtml(current?.title ?? "Final Dream")}</strong><span>${escapeHtml(current?.date ?? "")}</span></div>
+        <button data-story-action="chapter-preview" data-chapter="${currentId}" type="button">View chapter</button>
+      </footer>
     </section>`;
-  app.focusStage?.();
+  requestAnimationFrame(() => {
+    const currentNode = app.overlay.querySelector<HTMLElement>(".story-node.is-current");
+    currentNode?.scrollIntoView({ block: "center", behavior: "auto" });
+  });
 }
 
-function showStoryChapterPreview(app: AppLike, chapterId: StoryChapterId, locked: boolean, originalNewMemory: (...args: unknown[]) => unknown): void {
+function showStoryChapterPreview(app: AppLike, chapterId: StoryChapterId, locked: boolean): void {
   const chapter = chapterRegistry[chapterId];
   if (!chapter) return;
-  const index = STORY_CHAPTER_IDS.indexOf(chapterId);
-  const number = String(index + 1).padStart(2, "0");
+  const number = String(STORY_CHAPTER_IDS.indexOf(chapterId) + 1).padStart(2, "0");
   const finalDream = chapterId === "final-dream-tomorrow";
   const description = locked
-    ? "前面的路还没有想起来。先完成上一章。"
+    ? "前面的路还没有解锁。先完成上一章。"
     : finalDream
       ? "这一章不需要操控。准备好以后，就让梦自己走完。"
-      : "沿着真实日期继续走。完成这一章后，下一段路会亮起来。";
-  const canStart = !locked;
+      : "完成这一章后，会自动回到 Story Route，并解锁下一章。";
   app.overlay.insertAdjacentHTML("beforeend", `
-    <div class="story-chapter-sheet" role="dialog" aria-modal="true" aria-label="Chapter ${number}">
-      <button class="story-sheet-close" data-story-action="story" aria-label="Close">×</button>
+    <div class="story-chapter-sheet" role="dialog" aria-modal="true">
+      <button class="story-sheet-close" data-story-action="story" type="button" aria-label="Close">×</button>
       <small>${finalDream ? "Last Chapter" : `Chapter ${number}`}</small>
-      <h2>${escapeHtml(chapter.title)}</h2>
-      <p class="story-sheet-date">${escapeHtml(chapter.date)}</p>
+      <h2>${escapeHtml(chapter.title)}</h2><p class="story-sheet-date">${escapeHtml(chapter.date)}</p>
       <p>${description}</p>
-      ${canStart ? `<button class="story-sheet-start" data-story-action="chapter-start" data-chapter="${chapterId}">${finalDream ? "进入 Final Dream" : "进入章节"}</button>` : ""}
+      ${locked ? "" : `<button class="story-sheet-start" data-story-action="chapter-start" data-chapter="${chapterId}" type="button">${finalDream ? "Enter Final Dream" : "Enter Chapter"}</button>`}
     </div>`);
-  bindOverlay(app, originalNewMemory);
 }
 
-function startStoryChapter(app: AppLike, chapterId: StoryChapterId, originalNewMemory: (...args: unknown[]) => unknown): void {
+function leaveEntryMode(app: AppLike): void {
+  setEntryMode(app, null);
+  app.overlay.classList.remove("story-route-overlay");
+  app.overlay.innerHTML = "";
+}
+
+function startStoryChapter(app: AppLike, chapterId: StoryChapterId): void {
   const entry = forestEntries.find((door) => door.chapterId === chapterId);
   if (!entry) return;
-  originalNewMemory.call(app);
+  leaveEntryMode(app);
+  app.newMemory?.();
   app.currentDoor = entry;
   app.activeDoor = entry;
-  const routeSession = sessionFor(app);
-  routeSession.returningToStory = true;
-  routeSession.activeChapterId = chapterId;
-  app.overlay.innerHTML = "";
+  const session = sessionFor(app);
+  session.returningToStory = true;
+  session.activeChapterId = chapterId;
   const result = app.enterCurrentMemory?.();
   if (result instanceof Promise) void result;
 }
 
-function finishStoryReturn(app: AppLike, originalNewMemory: (...args: unknown[]) => unknown): void {
-  const routeSession = sessionFor(app);
-  if (!routeSession.returningToStory) return;
-  routeSession.returningToStory = false;
-  routeSession.activeChapterId = "";
-  window.setTimeout(() => showStoryRoute(app, originalNewMemory), 0);
+function openForest(app: AppLike): void {
+  leaveEntryMode(app);
+  app.newMemory?.();
+}
+function openRoom(app: AppLike): void {
+  leaveEntryMode(app);
+  app.newMemory?.();
+  app.scene = "muji-room";
+  const layout = app.currentSceneLayout?.("muji-room");
+  if (layout?.spawn) app.player = { ...layout.spawn };
+  app.currentDoor = null;
+  app.activeDoor = null;
+  app.applyAudioForCurrentScene?.();
+  app.autosave?.();
+  app.focusStage?.();
 }
 
-function drawPolishedTitle(app: AppLike, time: number): void {
-  const { ctx, canvas } = app;
-  const forest = app.images?.forest;
-  if (forest?.complete && forest.naturalWidth > 0) ctx.drawImage(forest, 0, 0, canvas.width, canvas.height);
-  else {
-    const fill = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    fill.addColorStop(0, "#061427");
-    fill.addColorStop(1, "#0b1c22");
-    ctx.fillStyle = fill;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+function handleStoryAction(app: AppLike, target: HTMLElement): void {
+  const action = target.dataset.storyAction;
+  if (action === "threshold") return showThreshold(app);
+  if (action === "story") return showStoryRoute(app);
+  if (action === "forest") return openForest(app);
+  if (action === "room") return openRoom(app);
+  const chapterId = target.dataset.chapter as StoryChapterId | undefined;
+  if (!chapterId || !STORY_CHAPTER_IDS.includes(chapterId)) return;
+  if (action === "chapter") {
+    const state = storyChapterState(chapterId, loadProgress());
+    return showStoryChapterPreview(app, chapterId, state === "locked");
   }
-  const shade = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-  shade.addColorStop(0, "rgba(2,8,18,.72)");
-  shade.addColorStop(.55, "rgba(3,10,20,.32)");
-  shade.addColorStop(1, "rgba(2,8,18,.58)");
-  ctx.fillStyle = shade;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  const compact = canvas.width < 680;
-  const left = compact ? 34 : 60;
-  ctx.fillStyle = "#fff2d0";
-  ctx.font = `${compact ? 36 : 58}px Georgia`;
-  ctx.fillText("Walk Back Home", left, compact ? 112 : 132);
-  ctx.fillStyle = "rgba(255,242,208,.78)";
-  ctx.font = `${compact ? 14 : 18}px Georgia`;
-  ctx.fillText("Where every memory leads me home.", left + 3, compact ? 145 : 170);
-  ctx.fillStyle = "rgba(255,255,255,.66)";
-  ctx.font = `${compact ? 13 : 15}px system-ui`;
-  ctx.fillText("Tap / Enter to begin", left + 3, canvas.height - (compact ? 54 : 68));
-  app.drawMuji?.({ x: canvas.width * .72, y: canvas.height * .82 }, time, canvas.width / 960);
+  if (action === "chapter-preview") return showStoryChapterPreview(app, chapterId, false);
+  if (action === "chapter-start") return startStoryChapter(app, chapterId);
 }
 
-function forestPromptHost(app: AppLike): HTMLElement {
-  return app.canvas.parentElement ?? app.hud;
-}
-
-function clearForestWorldPrompt(app: AppLike): void {
-  forestPromptHost(app).querySelector<HTMLElement>(".forest-world-prompt")?.remove();
-  app.hud.querySelector<HTMLElement>(".forest-world-prompt")?.remove();
-}
-
-function isGenericForestPrompt(text: string): boolean {
-  return !text || /virtual joystick|wasd|arrows|enter$/i.test(text);
+function bindOverlay(app: AppLike): void {
+  if (app.overlay.dataset.storyRouteBound === "true") return;
+  app.overlay.dataset.storyRouteBound = "true";
+  app.overlay.addEventListener("pointerup", (event) => {
+    if (event.pointerType === "mouse") return;
+    const target = (event.target as HTMLElement | null)?.closest<HTMLElement>("[data-story-action]");
+    if (!target) return;
+    event.preventDefault();
+    event.stopPropagation();
+    handleStoryAction(app, target);
+  });
+  app.overlay.addEventListener("click", (event) => {
+    const target = (event.target as HTMLElement | null)?.closest<HTMLElement>("[data-story-action]");
+    if (!target) return;
+    if (event.detail !== 0 && matchMedia("(pointer: coarse)").matches) return;
+    event.preventDefault();
+    event.stopPropagation();
+    handleStoryAction(app, target);
+  });
 }
 
 function renderForestWorldPrompt(app: AppLike): void {
   const fixedPrompt = app.hud.querySelector<HTMLElement>(".prompt");
-  const promptText = fixedPrompt?.textContent?.trim() ?? "";
   if (app.scene !== "forest") {
-    if (fixedPrompt) {
-      fixedPrompt.style.visibility = "";
-      fixedPrompt.style.pointerEvents = "";
-    }
+    if (fixedPrompt) { fixedPrompt.style.visibility = ""; fixedPrompt.style.pointerEvents = ""; }
     clearForestWorldPrompt(app);
     return;
   }
-
-  if (fixedPrompt) {
-    fixedPrompt.style.visibility = "hidden";
-    fixedPrompt.style.pointerEvents = "none";
-  }
-
+  if (fixedPrompt) { fixedPrompt.style.visibility = "hidden"; fixedPrompt.style.pointerEvents = "none"; }
   const door = app.activeDoor as { date?: string; title?: string; chapterId?: string } | null;
-  if (!door && isGenericForestPrompt(promptText)) {
-    clearForestWorldPrompt(app);
-    return;
-  }
-
-  const host = forestPromptHost(app);
+  if (!door) return clearForestWorldPrompt(app);
+  const host = app.canvas.parentElement ?? app.hud;
   let bubble = host.querySelector<HTMLElement>(".forest-world-prompt");
-  if (!bubble) {
-    bubble = document.createElement("div");
-    bubble.className = "forest-world-prompt";
-    host.appendChild(bubble);
-  }
-
-  const finalDream = door?.chapterId === "final-dream-tomorrow";
+  if (!bubble) { bubble = document.createElement("div"); bubble.className = "forest-world-prompt"; host.appendChild(bubble); }
+  const finalDream = door.chapterId === "final-dream-tomorrow";
   bubble.innerHTML = finalDream
     ? `<strong>Final Dream</strong><span>这一章不需要操控。准备好以后，就让梦自己走完。</span>`
-    : `<strong>${escapeHtml(promptText || `${door?.date ?? ""} ${door?.title ?? "Memory"}`)}</strong>`;
-
-  try {
-    const layout = app.currentSceneLayout?.("forest");
-    if (!layout || !app.sceneViewport || !app.sceneCamera) throw new Error("no scene projection");
-    const viewport = app.sceneViewport(layout);
-    const camera = app.sceneCamera(layout, viewport.w, viewport.h);
-    const worldScale = app.canvas.width / viewport.w;
-    const screenX = (app.player.x - camera.x) * worldScale;
-    const screenY = (app.player.y - camera.y) * worldScale;
-    const canvasRect = app.canvas.getBoundingClientRect();
-    const hostRect = host.getBoundingClientRect();
-    const x = canvasRect.left - hostRect.left + (screenX / app.canvas.width) * canvasRect.width;
-    const y = canvasRect.top - hostRect.top + (screenY / app.canvas.height) * canvasRect.height;
-    bubble.style.left = `${Math.max(46, Math.min(hostRect.width - 46, x))}px`;
-    bubble.style.top = `${Math.max(72, Math.min(hostRect.height - 64, y - 18))}px`;
-  } catch {
-    bubble.style.left = "50%";
-    bubble.style.top = "55%";
-  }
+    : `<strong>${escapeHtml([door.date, door.title].filter(Boolean).join(" · "))}</strong><span>Tap A to enter</span>`;
 }
 
-function forceStartupTitle(app: AppLike): void {
-  app.scene = "title";
-  app.currentDoor = null;
-  app.activeDoor = null;
-  app.overlay.classList.remove("dialogue-open", "lightweight-presentation");
-  app.overlay.innerHTML = "";
-  app.lastHudHtml = "";
-  clearForestWorldPrompt(app);
-  app.applyAudioForCurrentScene?.();
-  app.focusStage?.();
-}
-
-export function initializeStoryRouteStartup(app: object): void {
-  forceStartupTitle(app as AppLike);
+export function initializeStoryRouteStartup(appObject: object): void {
+  const app = appObject as AppLike;
+  bindOverlay(app);
+  showTitle(app);
 }
 
 export function installStoryRouteBridge(proto: AppPrototype): void {
   const originalNewMemory = proto.newMemory;
   if (!originalNewMemory) return;
-
   proto.newMemory = function(this: AppLike, ...args: unknown[]): unknown {
-    if (this.scene === "title") {
-      showThreshold(this, originalNewMemory);
-      return;
-    }
+    if (this.scene === "title") { showThreshold(this); return; }
     return originalNewMemory.apply(this, args);
   };
-
-  const originalDrawTitle = proto.drawTitle;
-  if (originalDrawTitle) {
-    proto.drawTitle = function(this: AppLike, time: unknown): unknown {
-      drawPolishedTitle(this, typeof time === "number" ? time : performance.now());
-      return;
-    };
-  }
 
   const originalDrawHud = proto.drawHud;
   if (originalDrawHud) {
@@ -390,27 +322,32 @@ export function installStoryRouteBridge(proto: AppPrototype): void {
   if (originalComplete) {
     proto.completeChapterMemoryRun = function(this: AppLike, ...args: unknown[]): unknown {
       const result = originalComplete.apply(this, args);
-      const chapterId = typeof args[0] === "string" ? args[0] : sessionFor(this).activeChapterId;
-      if (sessionFor(this).returningToStory && chapterId) saveProgress(markStoryChapterCompleted(loadProgress(), chapterId));
+      const chapterId = (typeof args[0] === "string" ? args[0] : sessionFor(this).activeChapterId) as StoryChapterId | "";
+      if (sessionFor(this).returningToStory && chapterId && STORY_CHAPTER_IDS.includes(chapterId)) {
+        saveProgress(markStoryChapterCompleted(loadProgress(), chapterId));
+      }
       return result;
     };
   }
+
+  const returnToStory = (app: AppLike) => {
+    const session = sessionFor(app);
+    if (!session.returningToStory) return;
+    session.returningToStory = false;
+    session.activeChapterId = "";
+    window.setTimeout(() => showStoryRoute(app), 0);
+  };
 
   const originalFinishReturn = proto.finishReturnToForest;
   if (originalFinishReturn) {
     proto.finishReturnToForest = function(this: AppLike, ...args: unknown[]): unknown {
-      const result = originalFinishReturn.apply(this, args);
-      finishStoryReturn(this, originalNewMemory);
-      return result;
+      const result = originalFinishReturn.apply(this, args); returnToStory(this); return result;
     };
   }
-
   const originalFinishBakery = proto.finishBakery;
   if (originalFinishBakery) {
     proto.finishBakery = function(this: AppLike, ...args: unknown[]): unknown {
-      const result = originalFinishBakery.apply(this, args);
-      finishStoryReturn(this, originalNewMemory);
-      return result;
+      const result = originalFinishBakery.apply(this, args); returnToStory(this); return result;
     };
   }
 }
