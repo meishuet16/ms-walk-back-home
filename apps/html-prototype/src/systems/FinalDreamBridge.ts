@@ -11,7 +11,7 @@ type FinalDreamAudio = {
 };
 
 const FINAL_DREAM_CHAPTER_ID = "final-dream-tomorrow";
-export const finalDreamMusic = "assets/audio/有形的翅膀-张韶涵.mp3";
+export const finalDreamMusic = "assets/audio/張韶涵有形的翅膀伴奏Ringtone.mp3";
 
 type FinalDreamDoor = { chapterId?: string; id?: string };
 
@@ -57,14 +57,24 @@ function finishFinalDreamIntoForest(app: AppLike): void {
     return;
   }
 
+  // Final Dream owns the audio until its song ends. Returning the visuals to
+  // Forest must not let Forest or Records swap in another track mid-ending.
   const originalSetScene = audio.setScene.bind(audio);
+  const originalSetTrack = audio.setTrack?.bind(audio);
   audio.setScene = (scene) => {
     if (scene !== "forest") originalSetScene(scene);
   };
+  if (originalSetTrack) {
+    audio.setTrack = (src, autoPlay) => {
+      if ((audio.isCurrentTrack?.(finalDreamMusic) ?? false) && !(audio.isCurrentTrack?.(src) ?? false)) return false;
+      return originalSetTrack(src, autoPlay);
+    };
+  }
   try {
     finishReturnToForest.call(app);
   } finally {
     audio.setScene = originalSetScene;
+    if (originalSetTrack) audio.setTrack = originalSetTrack;
   }
 
   audio.setLoop?.(false);
