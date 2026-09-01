@@ -4,6 +4,7 @@ import {
   developerHiddenRecordIds,
   filterTracksForLibraryView,
   hideBuiltInRecord,
+  installRecordsLibraryVisibilityBridge,
   libraryView,
   normalizedHiddenBuiltInIds,
   personalPlaybackCandidates,
@@ -77,4 +78,41 @@ test("developer-hidden policy does not delete or mutate the underlying bundled t
   } finally {
     developerHiddenRecordIds.delete("chapter-theme");
   }
+});
+
+test("Records bridge preserves the app's scene guard for track-ended events", async () => {
+  let endedRan = false;
+  const prototype = {
+    visibleMusicTracks() { return tracks; },
+    allPersonalTracks() { return tracks; },
+    async handlePersonalTrackEnded(this: { scene?: string }) {
+      if (this.scene !== "forest") return;
+      endedRan = true;
+    }
+  };
+  installRecordsLibraryVisibilityBridge(prototype);
+  const app = Object.assign(Object.create(prototype), {
+    scene: "chapter-memory",
+    personalPlayer: { playing: true, hiddenBuiltInRecordIds: ["chapter-theme"], libraryView: "hidden" as const }
+  });
+  await app.handlePersonalTrackEnded();
+  assert.equal(endedRan, false);
+});
+
+test("Records playback controls use playable candidates without changing the active library view", async () => {
+  let observedIds: string[] = [];
+  const prototype = {
+    visibleMusicTracks() { return tracks; },
+    allPersonalTracks() { return tracks; },
+    async playAdjacentPersonalTrack(this: { visibleMusicTracks: () => typeof tracks }) {
+      observedIds = this.visibleMusicTracks().map((track) => track.id);
+    }
+  };
+  installRecordsLibraryVisibilityBridge(prototype);
+  const app = Object.assign(Object.create(prototype), {
+    personalPlayer: { hiddenBuiltInRecordIds: ["chapter-theme"], libraryView: "hidden" as const }
+  });
+  await app.playAdjacentPersonalTrack(1);
+  assert.deepEqual(observedIds, ["forest-theme", "my-song"]);
+  assert.equal(app.personalPlayer.libraryView, "hidden");
 });
