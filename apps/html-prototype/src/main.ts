@@ -13,6 +13,7 @@ import { installChapterMusicBridge } from "./systems/ChapterMusicBridge.js";
 import { installFinalDreamBridge } from "./systems/FinalDreamBridge.js";
 import { initializeStoryRouteStartup, installStoryRouteBridge } from "./systems/StoryRouteBridge.js";
 import { installStoryRouteMobileFixBridge } from "./systems/StoryRouteMobileFixBridge.js";
+import { initializeStoryEntryUi } from "./systems/StoryEntryUiBridge.js";
 import { SceneDebugEditor } from "./systems/SceneDebugEditor.js";
 
 installAuthoredCutsceneLifecycleBridge(WalkBackHomeApp.prototype);
@@ -36,45 +37,5 @@ if (new URLSearchParams(window.location.search).get("debug") === "scene") {
 } else {
   const app = new WalkBackHomeApp(root);
   initializeStoryRouteStartup(app);
-
-  const overlay = root.querySelector<HTMLElement>(".overlay");
-  const hud = root.querySelector<HTMLElement>(".hud");
-  if (overlay) {
-    let started = false;
-    const start = () => {
-      if (started) return;
-      started = true;
-      hud?.style.removeProperty("visibility");
-      window.removeEventListener("keydown", onTitleKeydown);
-      (app as unknown as { newMemory: () => void }).newMemory();
-    };
-    const onTitleKeydown = (event: KeyboardEvent) => {
-      if (event.key !== "Enter" && event.key !== " ") return;
-      event.preventDefault();
-      start();
-    };
-
-    hud?.style.setProperty("visibility", "hidden");
-    overlay.innerHTML = `
-      <section class="story-title-screen" aria-label="Walk Back Home title screen">
-        <div class="story-title-shade" aria-hidden="true"></div>
-        <div class="story-title-copy">
-          <small>A walk through memories that still glow</small>
-          <h1>Walk Back Home</h1>
-          <p>Where every memory leads me home.</p>
-        </div>
-        <button class="story-title-start" type="button">Begin the walk <span>→</span></button>
-        <p class="story-title-hint">Tap anywhere · Enter</p>
-      </section>`;
-
-    overlay.querySelector<HTMLElement>(".story-title-screen")?.addEventListener("click", (event) => {
-      if ((event.target as HTMLElement).closest("button, a")) return;
-      start();
-    });
-    overlay.querySelector<HTMLButtonElement>(".story-title-start")?.addEventListener("click", (event) => {
-      event.stopPropagation();
-      start();
-    });
-    window.addEventListener("keydown", onTitleKeydown);
-  }
+  initializeStoryEntryUi(app);
 }
