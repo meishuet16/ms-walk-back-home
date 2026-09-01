@@ -35,12 +35,15 @@
     z-index: 1;
   }
 
-  /* Library filter stays compact instead of reclaiming a full vertical button stack. */
   .records-library-filter {
     position: relative;
     display: inline-block;
     min-width: 0;
     z-index: 32;
+  }
+
+  .records-library-filter[open] {
+    z-index: 140;
   }
 
   .records-library-filter > summary {
@@ -63,7 +66,7 @@
     width: max-content;
     min-width: 168px;
     max-width: min(240px, calc(100vw - 32px));
-    z-index: 80;
+    z-index: 150;
     padding: 6px;
     border: 1px solid rgba(224, 164, 116, .25);
     border-radius: 14px;
@@ -80,9 +83,6 @@
     text-align: left;
   }
 
-  /* The old sort popover was positioned against the modal/page and escaped to
-     the left. Make the details element the containing block and anchor the menu
-     directly under its own trigger. */
   .records-sort-menu-anchor {
     position: relative !important;
     z-index: 34;
@@ -96,7 +96,7 @@
   }
 
   .records-sort-menu-anchor[open] {
-    z-index: 90;
+    z-index: 120;
   }
 
   .records-sort-menu-anchor > :not(summary) {
@@ -109,6 +109,6 @@
     width: max-content;
     min-width: 100%;
     max-width: min(280px, calc(100vw - 52px));
-    z-index: 100 !important;
+    z-index: 130 !important;
   }
 }
