@@ -9,7 +9,7 @@ import {
   storyCompletionCount
 } from "../src/systems/StoryRoute.js";
 
-test("story route keeps the authored chronological order and Final Dream last", () => {
+test("story route keeps the authored chronological order, excludes Bakery, and keeps Final Dream last", () => {
   assert.deepEqual(STORY_CHAPTER_IDS, [
     "oct29-a-little-closer",
     "1122-before-sunrise",
@@ -22,9 +22,9 @@ test("story route keeps the authored chronological order and Final Dream last", 
     "june25-so-i-came",
     "labis-motor-day",
     "july21-why-cant-you-stay",
-    "bakery-day",
     "final-dream-tomorrow"
   ]);
+  assert.equal(STORY_CHAPTER_IDS.includes("bakery-day" as never), false);
 });
 
 test("only the first incomplete chapter is current", () => {
@@ -40,7 +40,7 @@ test("only the first incomplete chapter is current", () => {
   assert.equal(storyCompletionCount(progress), 1);
 });
 
-test("progress normalization ignores unknown chapter ids", () => {
-  const progress = normalizeStoryRouteProgress({ completedChapterIds: ["oct29-a-little-closer", "not-a-chapter", "oct29-a-little-closer"] });
+test("progress normalization ignores unknown and removed chapter ids", () => {
+  const progress = normalizeStoryRouteProgress({ completedChapterIds: ["oct29-a-little-closer", "bakery-day", "not-a-chapter", "oct29-a-little-closer"] });
   assert.deepEqual(progress.completedChapterIds, ["oct29-a-little-closer"]);
 });
