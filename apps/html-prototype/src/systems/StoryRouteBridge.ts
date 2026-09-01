@@ -42,7 +42,6 @@ type RouteSession = {
 };
 
 const sessions = new WeakMap<object, RouteSession>();
-const startupTitleApplied = new WeakSet<object>();
 
 function sessionFor(app: AppLike): RouteSession {
   const key = app as object;
@@ -282,8 +281,13 @@ function clearForestWorldPrompt(app: AppLike): void {
   app.hud.querySelector<HTMLElement>(".forest-world-prompt")?.remove();
 }
 
+function isGenericForestPrompt(text: string): boolean {
+  return !text || /virtual joystick|wasd|arrows|enter$/i.test(text);
+}
+
 function renderForestWorldPrompt(app: AppLike): void {
   const fixedPrompt = app.hud.querySelector<HTMLElement>(".prompt");
+  const promptText = fixedPrompt?.textContent?.trim() ?? "";
   if (app.scene !== "forest") {
     if (fixedPrompt) {
       fixedPrompt.style.visibility = "";
@@ -293,54 +297,51 @@ function renderForestWorldPrompt(app: AppLike): void {
     return;
   }
 
-  // Keep the original prompt in layout so the existing month selector retains
-  // exactly the same vertical geometry, but make the prompt itself invisible.
   if (fixedPrompt) {
     fixedPrompt.style.visibility = "hidden";
     fixedPrompt.style.pointerEvents = "none";
   }
 
-  const host = forestPromptHost(app);
-  let bubble = host.querySelector<HTMLElement>(".forest-world-prompt");
   const door = app.activeDoor as { date?: string; title?: string; chapterId?: string } | null;
-  if (!door) {
-    bubble?.remove();
+  if (!door && isGenericForestPrompt(promptText)) {
+    clearForestWorldPrompt(app);
     return;
   }
+
+  const host = forestPromptHost(app);
+  let bubble = host.querySelector<HTMLElement>(".forest-world-prompt");
   if (!bubble) {
     bubble = document.createElement("div");
     bubble.className = "forest-world-prompt";
     host.appendChild(bubble);
   }
 
-  const touch = matchMedia("(pointer: coarse)").matches;
-  const finalDream = door.chapterId === "final-dream-tomorrow";
+  const finalDream = door?.chapterId === "final-dream-tomorrow";
   bubble.innerHTML = finalDream
     ? `<strong>Final Dream</strong><span>这一章不需要操控。准备好以后，就让梦自己走完。</span>`
-    : `<strong>${touch ? "Tap A" : "Press E"} · ${escapeHtml(door.date ?? "")} ${escapeHtml(door.title ?? "Memory")}</strong>`;
+    : `<strong>${escapeHtml(promptText || `${door?.date ?? ""} ${door?.title ?? "Memory"}`)}</strong>`;
 
   try {
     const layout = app.currentSceneLayout?.("forest");
     if (!layout || !app.sceneViewport || !app.sceneCamera) throw new Error("no scene projection");
     const viewport = app.sceneViewport(layout);
     const camera = app.sceneCamera(layout, viewport.w, viewport.h);
-    const scale = app.canvas.width / viewport.w;
-    const x = (app.player.x - camera.x) * scale;
-    const y = (app.player.y - camera.y) * scale;
-    const leftPercent = Math.max(9, Math.min(91, x / app.canvas.width * 100));
-    const topPercent = Math.max(10, Math.min(88, y / app.canvas.height * 100 - 3.5));
-    bubble.style.left = `${leftPercent}%`;
-    bubble.style.top = `${topPercent}%`;
+    const worldScale = app.canvas.width / viewport.w;
+    const screenX = (app.player.x - camera.x) * worldScale;
+    const screenY = (app.player.y - camera.y) * worldScale;
+    const canvasRect = app.canvas.getBoundingClientRect();
+    const hostRect = host.getBoundingClientRect();
+    const x = canvasRect.left - hostRect.left + (screenX / app.canvas.width) * canvasRect.width;
+    const y = canvasRect.top - hostRect.top + (screenY / app.canvas.height) * canvasRect.height;
+    bubble.style.left = `${Math.max(46, Math.min(hostRect.width - 46, x))}px`;
+    bubble.style.top = `${Math.max(72, Math.min(hostRect.height - 64, y - 18))}px`;
   } catch {
     bubble.style.left = "50%";
-    bubble.style.top = "58%";
+    bubble.style.top = "55%";
   }
 }
 
 function forceStartupTitle(app: AppLike): void {
-  const key = app as object;
-  if (startupTitleApplied.has(key)) return;
-  startupTitleApplied.add(key);
   app.scene = "title";
   app.currentDoor = null;
   app.activeDoor = null;
@@ -350,6 +351,10 @@ function forceStartupTitle(app: AppLike): void {
   clearForestWorldPrompt(app);
   app.applyAudioForCurrentScene?.();
   app.focusStage?.();
+}
+
+export function initializeStoryRouteStartup(app: object): void {
+  forceStartupTitle(app as AppLike);
 }
 
 export function installStoryRouteBridge(proto: AppPrototype): void {
@@ -363,15 +368,6 @@ export function installStoryRouteBridge(proto: AppPrototype): void {
     }
     return originalNewMemory.apply(this, args);
   };
-
-  const originalLoadAutosave = proto.loadAutosave;
-  if (originalLoadAutosave) {
-    proto.loadAutosave = function(this: AppLike, ...args: unknown[]): unknown {
-      const result = originalLoadAutosave.apply(this, args);
-      forceStartupTitle(this);
-      return result;
-    };
-  }
 
   const originalDrawTitle = proto.drawTitle;
   if (originalDrawTitle) {
