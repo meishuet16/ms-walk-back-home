@@ -22,6 +22,7 @@ type AppLike = {
   audio?: FinalDreamAudio;
   autosave?: () => void;
   enterCurrentMemory?: () => Promise<void>;
+  finishReturnToForest?: () => void;
 };
 
 type AppPrototype = {
@@ -65,6 +66,17 @@ export function installFinalDreamBridge(prototype: AppPrototype): void {
         } catch {
           // localStorage can be unavailable in privacy modes; replay still works.
         }
+
+        // Reuse the app's established forest-return lifecycle instead of maintaining
+        // a second partial reset here. This restores scene/UI/player/audio/autosave
+        // exactly the same way as the existing Return to Forest actions.
+        if (this.finishReturnToForest) {
+          this.finishReturnToForest();
+          return;
+        }
+
+        // Defensive fallback for an unexpected host that does not expose the app
+        // lifecycle method. The normal WalkBackHomeApp path always uses the branch above.
         this.audio?.stop?.();
         this.audio?.setScene?.("forest");
         this.audio?.setLoop?.(true);
