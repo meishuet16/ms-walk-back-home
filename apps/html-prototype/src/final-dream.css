@@ -21,7 +21,7 @@
 .final-dream-dialogue::before { content: ""; position: absolute; inset: 3px; border: 1px solid rgba(72,99,110,.045); pointer-events: none; }
 .final-dream-speaker { display: block; margin-bottom: 8px; color: rgba(31,52,61,.86); font: 700 11px/1.25 "Courier New", "Microsoft JhengHei", monospace; letter-spacing: .17em; text-transform: uppercase; }
 .final-dream-dialogue p { margin: 0; min-height: 3.15em; color: #17313b; font: 700 clamp(17px, 4.35vw, 21px)/1.68 "Courier New", "Microsoft JhengHei", monospace; letter-spacing: .018em; text-shadow: 0 1px 0 rgba(255,255,255,.98), 0 0 10px rgba(241,249,251,.92), 0 0 18px rgba(241,249,251,.58); white-space: pre-line; }
-.final-dream-dialogue-tomorrow p { font-size: clamp(21px, 5.45vw, 27px); line-height: 1.62; letter-spacing: .035em; }
+.final-dream-dialogue-tomorrow p { font-size: clamp(25px, 6.4vw, 33px); line-height: 1.55; letter-spacing: .045em; font-weight: 800; }
 .final-dream-type { display: inline; }
 .final-dream-caret { display: inline-block; width: .48em; height: .94em; margin-left: .12em; vertical-align: -.1em; background: rgba(34,59,68,.44); animation: final-dream-caret 1s steps(1,end) infinite; }
 .final-dream-ending .final-dream-image { filter: saturate(.5) contrast(.83) brightness(1.14); animation: final-dream-morning 16s ease-out both; }
