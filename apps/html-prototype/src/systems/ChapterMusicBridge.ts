@@ -79,7 +79,7 @@ export function installChapterMusicBridge(prototype: ChapterMusicPrototype): voi
     }
 
     audio.setLoop(false);
-    let unsubscribe = () => undefined;
+    let unsubscribe: () => void = () => {};
     unsubscribe = audio.onEnded(() => {
       unsubscribe();
       // Do not steal playback if the player entered another memory or changed music
