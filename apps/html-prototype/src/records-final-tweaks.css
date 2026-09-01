@@ -34,4 +34,81 @@
     position: relative;
     z-index: 1;
   }
+
+  .records-library-filter {
+    position: relative;
+    display: inline-block;
+    min-width: 0;
+    z-index: 32;
+  }
+
+  .records-library-filter[open] {
+    z-index: 140;
+  }
+
+  .records-library-filter > summary {
+    box-sizing: border-box;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    list-style: none;
+    white-space: nowrap;
+  }
+
+  .records-library-filter > summary::-webkit-details-marker { display: none; }
+
+  .records-library-filter-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    width: max-content;
+    min-width: 168px;
+    max-width: min(240px, calc(100vw - 32px));
+    z-index: 150;
+    padding: 6px;
+    border: 1px solid rgba(224, 164, 116, .25);
+    border-radius: 14px;
+    background: rgba(25, 22, 40, .98);
+    box-shadow: 0 14px 32px rgba(0, 0, 0, .38);
+  }
+
+  .records-library-filter-menu > button {
+    width: 100%;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    text-align: left;
+  }
+
+  .records-sort-menu-anchor {
+    position: relative !important;
+    z-index: 34;
+    width: fit-content;
+    max-width: 100%;
+  }
+
+  .records-sort-menu-anchor > summary {
+    box-sizing: border-box;
+    min-height: 44px;
+  }
+
+  .records-sort-menu-anchor[open] {
+    z-index: 120;
+  }
+
+  .records-sort-menu-anchor > :not(summary) {
+    position: absolute !important;
+    top: calc(100% + 6px) !important;
+    left: 0 !important;
+    right: auto !important;
+    transform: none !important;
+    box-sizing: border-box;
+    width: max-content;
+    min-width: 100%;
+    max-width: min(280px, calc(100vw - 52px));
+    z-index: 130 !important;
+  }
 }
