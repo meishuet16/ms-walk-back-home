@@ -45,7 +45,8 @@ for (const file of [
   "capsule-machine-polish.css",
   "capsule-machine-fixes.css",
   "capsule-kept-organizer.css",
-  "story-route.css"
+  "story-route.css",
+  "story-route-followup.css"
 ]) {
   await copyFile(resolve(root, `src/${file}`), resolve(root, `dist/${file}`));
 }
@@ -58,7 +59,7 @@ for (const stylesheet of localStylesheets) await access(resolve(root, "dist", st
 
 await mkdir(resolve(root, "dist/browser/ffmpeg"), { recursive: true });
 await copyFile(resolve(root, "../../node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.js"), resolve(root, "dist/browser/ffmpeg/ffmpeg-core.js"));
-await copyFile(resolve(root, "../../node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.wasm"), resolve(root, "dist/browser/ffmpeg/ffmpeg-core.wasm"));
+await copyFile(resolve(root, "../../node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.wasm"), resolve(root, "dist/browser/ffmpeg-core.wasm"));
 for (const file of ["worker.js", "const.js", "errors.js"]) {
   await copyFile(resolve(root, `../../node_modules/@ffmpeg/ffmpeg/dist/esm/${file}`), resolve(root, `dist/browser/${file}`));
 }
