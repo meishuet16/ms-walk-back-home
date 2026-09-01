@@ -17,10 +17,10 @@
 .final-dream-frame.treatment-fragment .final-dream-wash { background: radial-gradient(circle at 50% 42%, transparent 26%, rgba(216,231,235,.1) 70%, rgba(215,229,233,.25) 100%); animation: final-dream-breathe 6.2s ease-in-out infinite alternate; }
 .final-dream-frame.treatment-hero .final-dream-image { filter: saturate(.84) contrast(.92) brightness(1.03); }
 .final-dream-portrait { position: absolute; z-index: 3; left: 50%; bottom: clamp(96px, 13dvh, 138px); width: min(60vw, 340px); max-height: 44dvh; object-fit: contain; object-position: center bottom; transform: translateX(-50%); filter: drop-shadow(0 12px 18px rgba(53,79,91,.08)); animation: final-dream-portrait-in 1.05s cubic-bezier(.22,.61,.36,1) both; pointer-events: none; }
-.final-dream-dialogue { position: absolute; z-index: 5; left: 50%; top: max(22px, env(safe-area-inset-top)); bottom: auto; width: min(86vw, 500px); transform: translateX(-50%); padding: 14px 18px 16px; border: 1px solid rgba(54,76,86,.24); border-radius: 0; background: rgba(226,239,243,.075); box-shadow: 0 1px 0 rgba(43,62,70,.05), inset 0 0 0 1px rgba(255,255,255,.14); backdrop-filter: blur(.7px); -webkit-backdrop-filter: blur(.7px); animation: final-dream-dialogue-in 1.15s ease both; }
-.final-dream-dialogue::before { content: ""; position: absolute; inset: 3px; border: 1px solid rgba(72,99,110,.07); pointer-events: none; }
-.final-dream-speaker { display: block; margin-bottom: 7px; color: rgba(31,52,61,.86); font: 700 11px/1.25 "Courier New", "Microsoft JhengHei", monospace; letter-spacing: .17em; text-transform: uppercase; }
-.final-dream-dialogue p { margin: 0; min-height: 2.5em; color: #17313b; font: 700 clamp(16px, 4.1vw, 20px)/1.62 "Courier New", "Microsoft JhengHei", monospace; letter-spacing: .018em; text-shadow: 0 1px 0 rgba(255,255,255,.98), 0 0 10px rgba(241,249,251,.92), 0 0 18px rgba(241,249,251,.58); white-space: pre-line; }
+.final-dream-dialogue { position: absolute; z-index: 5; left: 50%; top: max(18px, env(safe-area-inset-top)); bottom: auto; width: min(92vw, 560px); transform: translateX(-50%); padding: 19px 22px 22px; border: 1px solid rgba(54,76,86,.18); border-radius: 0; background: rgba(226,239,243,.045); box-shadow: 0 1px 0 rgba(43,62,70,.035), inset 0 0 0 1px rgba(255,255,255,.09); backdrop-filter: blur(.45px); -webkit-backdrop-filter: blur(.45px); animation: final-dream-dialogue-in 1.15s ease both; }
+.final-dream-dialogue::before { content: ""; position: absolute; inset: 3px; border: 1px solid rgba(72,99,110,.045); pointer-events: none; }
+.final-dream-speaker { display: block; margin-bottom: 8px; color: rgba(31,52,61,.86); font: 700 11px/1.25 "Courier New", "Microsoft JhengHei", monospace; letter-spacing: .17em; text-transform: uppercase; }
+.final-dream-dialogue p { margin: 0; min-height: 3.15em; color: #17313b; font: 700 clamp(17px, 4.35vw, 21px)/1.68 "Courier New", "Microsoft JhengHei", monospace; letter-spacing: .018em; text-shadow: 0 1px 0 rgba(255,255,255,.98), 0 0 10px rgba(241,249,251,.92), 0 0 18px rgba(241,249,251,.58); white-space: pre-line; }
 .final-dream-type { display: inline; }
 .final-dream-caret { display: inline-block; width: .48em; height: .94em; margin-left: .12em; vertical-align: -.1em; background: rgba(34,59,68,.44); animation: final-dream-caret 1s steps(1,end) infinite; }
 .final-dream-frame[data-final-dream-frame="sea-reveal"] .final-dream-dialogue,
@@ -62,7 +62,7 @@
   .final-dream-overlay { background: #101719; }
   .final-dream-frame { width: min(560px, 100vw); margin: 0 auto; box-shadow: 0 0 80px rgba(0,0,0,.32); }
   .final-dream-image-wrap { background: #c7dbe3; }
-  .final-dream-dialogue { width: min(475px, 84%); }
+  .final-dream-dialogue { width: min(525px, 91%); }
 }
 @media (prefers-reduced-motion: reduce) {
   .final-dream-frame.final-dream-page-enter, .final-dream-frame.final-dream-page-enter::after, .final-dream-image, .final-dream-portrait, .final-dream-dialogue, .final-dream-ending .final-dream-image, .final-dream-morning-haze, .final-dream-ending-drift, .final-dream-title-card, .final-dream-title-card h1, .final-dream-title-haze, .final-dream-credits div, .final-dream-caret, .ending-line-caret { animation: none !important; }
