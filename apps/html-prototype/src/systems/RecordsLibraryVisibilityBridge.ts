@@ -28,12 +28,20 @@ type AppLike = {
   autosave?: () => void;
 };
 
-// Developer-owned Records catalogue policy.
-// Add built-in record IDs here when a bundled track must remain playable by the
-// game (Chapter BGM / Final Dream / direct AudioManager use) but should never
-// appear in the player's Records catalogue. This list is intentionally empty by
-// default: visibility policy must be explicit, never inferred from audio assets.
-export const developerHiddenRecordIds = new Set<string>([]);
+// Developer-owned Records catalogue policy. These are soundtrack assets, not
+// collectible Records. They remain fully available to Chapter / Final Dream audio.
+export const developerHiddenRecordIds = new Set<string>([
+  "audio-track-238698", // 有形的翅膀
+  "audio-track-199401", // 再见太难
+  "audio-track-212197", // 可惜不是你
+  "audio-track-124043", // 瞬
+  "audio-track-161995", // 带我走
+  "audio-track-184685", // 我好想你
+  "audio-track-137485", // 那些年
+  "audio-dear-d", // 亲爱的告诉你
+  "audio-time-machine-mj-apanay", // Time Machine
+  "audio-track-226075" // 雨是甜的
+]);
 
 export function isDeveloperHiddenRecord(trackId: string): boolean {
   return developerHiddenRecordIds.has(trackId);
