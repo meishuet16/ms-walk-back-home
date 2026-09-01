@@ -13,7 +13,6 @@ import { installChapterMusicBridge } from "./systems/ChapterMusicBridge.js";
 import { installFinalDreamBridge } from "./systems/FinalDreamBridge.js";
 import { initializeStoryRouteStartup, installStoryRouteBridge } from "./systems/StoryRouteBridge.js";
 import { installStoryRouteMobileFixBridge } from "./systems/StoryRouteMobileFixBridge.js";
-import { initializeStoryEntryUi } from "./systems/StoryEntryUiBridge.js";
 import { SceneDebugEditor } from "./systems/SceneDebugEditor.js";
 
 installAuthoredCutsceneLifecycleBridge(WalkBackHomeApp.prototype);
@@ -37,5 +36,4 @@ if (new URLSearchParams(window.location.search).get("debug") === "scene") {
 } else {
   const app = new WalkBackHomeApp(root);
   initializeStoryRouteStartup(app);
-  initializeStoryEntryUi(app);
 }
