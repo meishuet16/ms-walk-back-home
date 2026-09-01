@@ -18,20 +18,48 @@ export const developerHiddenRecordIds = new Set<string>([
 export function isDeveloperHiddenRecord(trackId: string): boolean { return developerHiddenRecordIds.has(trackId); }
 export function normalizedHiddenBuiltInIds(player?: PlayerWithVisibility): string[] { return [...new Set((player?.hiddenBuiltInRecordIds ?? []).filter((id): id is string => typeof id === "string" && Boolean(id)))]; }
 export function libraryView(player?: PlayerWithVisibility): LibraryView { const view = player?.libraryView; return view === "personal" || view === "built-in" || view === "hidden" ? view : "all"; }
+export function developerVisibleTracks<T extends Track>(tracks: T[]): T[] { return tracks.filter((track) => track.source !== "built-in" || !isDeveloperHiddenRecord(track.id)); }
+export function recordCountForDisplay<T extends Track>(tracks: T[], player?: PlayerWithVisibility): number { const hidden = new Set(normalizedHiddenBuiltInIds(player)); return developerVisibleTracks(tracks).filter((track) => track.source !== "built-in" || !hidden.has(track.id)).length; }
+export function fallbackPersonalTrackId<T extends Track>(tracks: T[], player?: PlayerWithVisibility): string | undefined { return personalPlaybackCandidates(tracks, player)[0]?.id; }
 export function filterTracksForLibraryView<T extends Track>(tracks: T[], player?: PlayerWithVisibility): T[] {
-  const developerVisibleTracks = tracks.filter((track) => track.source !== "built-in" || !isDeveloperHiddenRecord(track.id));
+  const visibleTracks = developerVisibleTracks(tracks);
   const hidden = new Set(normalizedHiddenBuiltInIds(player)); const view = libraryView(player);
-  if (view === "hidden") return developerVisibleTracks.filter((track) => track.source === "built-in" && hidden.has(track.id));
-  return developerVisibleTracks.filter((track) => { if (track.source === "built-in" && hidden.has(track.id)) return false; if (view === "personal") return track.source === "user"; if (view === "built-in") return track.source === "built-in"; return true; });
+  if (view === "hidden") return visibleTracks.filter((track) => track.source === "built-in" && hidden.has(track.id));
+  return visibleTracks.filter((track) => { if (track.source === "built-in" && hidden.has(track.id)) return false; if (view === "personal") return track.source === "user"; if (view === "built-in") return track.source === "built-in"; return true; });
 }
-export function personalPlaybackCandidates<T extends Track>(tracks: T[], player?: PlayerWithVisibility): T[] { const hidden = new Set(normalizedHiddenBuiltInIds(player)); return tracks.filter((track) => track.source !== "built-in" || (!hidden.has(track.id) && !isDeveloperHiddenRecord(track.id))); }
+export function personalPlaybackCandidates<T extends Track>(tracks: T[], player?: PlayerWithVisibility): T[] { const hidden = new Set(normalizedHiddenBuiltInIds(player)); return developerVisibleTracks(tracks).filter((track) => track.source !== "built-in" || !hidden.has(track.id)); }
 export function hideBuiltInRecord(player: PlayerWithVisibility, trackId: string): PlayerWithVisibility { if (isDeveloperHiddenRecord(trackId)) return player; return { ...player, hiddenBuiltInRecordIds: [...new Set([...normalizedHiddenBuiltInIds(player), trackId])] }; }
 export function restoreBuiltInRecord(player: PlayerWithVisibility, trackId: string): PlayerWithVisibility { if (isDeveloperHiddenRecord(trackId)) return player; return { ...player, hiddenBuiltInRecordIds: normalizedHiddenBuiltInIds(player).filter((id) => id !== trackId) }; }
 function nextTrackId(ids: string[], currentId: string | undefined, direction: -1 | 1, shuffle: boolean): string | undefined { if (!ids.length) return undefined; const currentIndex = ids.indexOf(currentId ?? ""); if (direction > 0 && shuffle && ids.length > 1) { const candidates = ids.filter((id) => id !== currentId); return candidates[Math.floor(Math.random() * candidates.length)] ?? candidates[0]; } if (currentIndex < 0) return direction > 0 ? ids[0] : ids[ids.length - 1]; return ids[(currentIndex + direction + ids.length) % ids.length]; }
 function persistVisibility(app: AppLike): void { if (!app.personalPlayer) return; app.save?.savePersonalPlayer?.(app.personalPlayer); app.autosave?.(); }
 function labelFor(view: LibraryView, hiddenCount: number): string { if (view === "personal") return "My Music"; if (view === "built-in") return "Built-in"; if (view === "hidden") return `Hidden${hiddenCount ? ` (${hiddenCount})` : ""}`; return "All"; }
+function replaceRecordCountCopy(overlay: HTMLElement, count: number): void {
+  const replace = (value: string): string => value
+    .replace(/\bBrowse\s+\d+\s+records\b/gi, `Browse ${count} records`)
+    .replace(/\b\d+\s+records\b/gi, `${count} records`);
+  const walker = document.createTreeWalker(overlay, NodeFilter.SHOW_TEXT);
+  const nodes: Text[] = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode as Text);
+  for (const node of nodes) {
+    const parent = node.parentElement;
+    if (!parent || parent.closest(".records-library-filter-menu")) continue;
+    const next = replace(node.data);
+    if (next !== node.data) node.data = next;
+  }
+}
+async function repairDeveloperHiddenSelection(app: AppLike): Promise<boolean> {
+  const player = app.personalPlayer;
+  const selectedId = player?.selectedTrackId;
+  if (!player || !selectedId || !isDeveloperHiddenRecord(selectedId)) return false;
+  const fallbackId = fallbackPersonalTrackId(app.allPersonalTracks?.() ?? [], player);
+  if (!fallbackId || fallbackId === selectedId) return false;
+  await app.selectVinyl?.(fallbackId, false);
+  return true;
+}
 function injectVisibilityControls(app: AppLike): void {
   const overlay = app.overlay; const player = app.personalPlayer; if (!overlay || !player || !app.recordsPanelOpen) return;
+  const allTracks = app.allPersonalTracks?.() ?? [];
+  replaceRecordCountCopy(overlay, recordCountForDisplay(allTracks, player));
   const view = libraryView(player); const hiddenCount = normalizedHiddenBuiltInIds(player).filter((id) => !isDeveloperHiddenRecord(id)).length;
   const filter = `<details class="records-library-filter"><summary aria-label="Filter record library">${labelFor(view, hiddenCount)}<span aria-hidden="true">⌄</span></summary><div class="records-library-filter-menu">${(["all", "personal", "built-in", "hidden"] as LibraryView[]).map((id) => `<button data-action="records-library-view" data-view="${id}" class="${view === id ? "selected" : ""}">${labelFor(id, hiddenCount)}</button>`).join("")}</div></details>`;
   overlay.querySelectorAll(".records-library, .records-song-tools").forEach((host) => { if (!host.querySelector(".records-library-filter")) host.insertAdjacentHTML("afterbegin", filter); });
@@ -39,7 +67,7 @@ function injectVisibilityControls(app: AppLike): void {
   const hidden = new Set(normalizedHiddenBuiltInIds(player));
   overlay.querySelectorAll<HTMLElement>("[data-track], [data-record]").forEach((node) => {
     const trackId = node.dataset.track ?? node.dataset.record ?? ""; if (!trackId || isDeveloperHiddenRecord(trackId)) return;
-    const track = app.allPersonalTracks?.().find((item) => item.id === trackId); if (track?.source !== "built-in") return;
+    const track = allTracks.find((item) => item.id === trackId); if (track?.source !== "built-in") return;
     const menu = node.closest(".record-list-row")?.querySelector(".records-song-menu") ?? node.closest(".records-track-action-sheet")?.querySelector(".records-track-actions");
     if (!menu || menu.querySelector(`[data-visibility-track="${CSS.escape(trackId)}"]`)) return;
     const isHidden = hidden.has(trackId); const safeId = trackId.replace(/&/g, "&amp;").replace(/\"/g, "&quot;");
@@ -48,7 +76,7 @@ function injectVisibilityControls(app: AppLike): void {
 }
 export function installRecordsLibraryVisibilityBridge(prototype: AppLike): void {
   const originalVisible = prototype.visibleMusicTracks; if (originalVisible) prototype.visibleMusicTracks = function(this: AppLike): Track[] { return filterTracksForLibraryView(originalVisible.call(this), this.personalPlayer); };
-  const originalShow = prototype.showRecords; if (originalShow) prototype.showRecords = async function(this: AppLike): Promise<void> { await originalShow.call(this); injectVisibilityControls(this); };
+  const originalShow = prototype.showRecords; if (originalShow) prototype.showRecords = async function(this: AppLike): Promise<void> { if (await repairDeveloperHiddenSelection(this)) return; await originalShow.call(this); injectVisibilityControls(this); };
   const originalClick = prototype.handleClick; if (originalClick) prototype.handleClick = function(this: AppLike, event: Event): void {
     const target = (event.target as HTMLElement | null)?.closest<HTMLElement>("[data-action]"); const action = target?.dataset.action;
     if (action === "records-library-view") { if (!this.personalPlayer) return; const requested = target?.dataset.view as LibraryView | undefined; this.personalPlayer.libraryView = requested === "personal" || requested === "built-in" || requested === "hidden" ? requested : "all"; persistVisibility(this); void this.showRecords?.(); return; }
