@@ -9,6 +9,8 @@ type ChapterAudio = {
   setScene: (scene: "forest" | "bakery") => void;
   ensurePlaying: () => Promise<void>;
   onEnded: (callback: () => void) => () => void;
+  getCurrentTime?: () => number;
+  seek?: (seconds: number) => void;
 };
 type ChapterMusicApp = { currentDoor?: ChapterDoor | null; activeDoor?: ChapterDoor | null; scene?: string; audio?: ChapterAudio };
 type ChapterMusicPrototype = { enterCurrentMemory?: () => Promise<void>; finishReturnToForest?: () => void; applyAudioForCurrentScene?: () => void };
@@ -82,8 +84,8 @@ export function installChapterMusicBridge(prototype: ChapterMusicPrototype): voi
   };
 
   // Forest audio can be restored by more than one authored-chapter exit path.
-  // Guard the shared restoration point as well as finishReturnToForest so every
-  // normal chapter gets the same carry-until-ended semantics as Final Dream.
+  // Guard the shared restoration point so a carrying chapter owns the one audio
+  // element until its track naturally ends.
   if (originalApplyAudio) prototype.applyAudioForCurrentScene = function(this: ChapterMusicApp): void {
     const music = activeChapterMusic;
     if (this.scene === "forest" && music?.continueInForestUntilEnd && this.audio?.isCurrentTrack(music.src)) {
@@ -106,6 +108,7 @@ export function installChapterMusicBridge(prototype: ChapterMusicPrototype): voi
     }
 
     activeChapterMusic = music;
+    const chapterPosition = Math.max(0, audio.getCurrentTime?.() ?? 0);
     const originalSetScene = audio.setScene.bind(audio);
     const originalSetTrack = audio.setTrack.bind(audio);
     audio.setScene = (scene) => { if (scene !== "forest") originalSetScene(scene); };
@@ -118,6 +121,17 @@ export function installChapterMusicBridge(prototype: ChapterMusicPrototype): voi
     } finally {
       audio.setScene = originalSetScene;
       audio.setTrack = originalSetTrack;
+    }
+
+    // Postcondition: returning to Forest must not replace a chapter track that
+    // opted into carry. This also covers exit code that bypasses the guarded
+    // setScene/setTrack calls internally. If anything replaced it, restore the
+    // same chapter source and resume from the position captured before exit.
+    if (!audio.isCurrentTrack(music.src)) {
+      audio.setTrack(music.src, false);
+      audio.setLoop(false);
+      audio.seek?.(chapterPosition);
+      void audio.ensurePlaying();
     }
     beginForestCarry(this, music);
   };
