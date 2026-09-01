@@ -8,6 +8,7 @@ import { installCapsuleMenuBridge } from "./systems/CapsuleMenuBridge.js";
 import { installCapsuleAudioCaptureBridge } from "./systems/CapsuleAudioCaptureBridge.js";
 import { installCapsuleKeptOrganizerBridge } from "./systems/CapsuleKeptOrganizerBridge.js";
 import { installLocalBackupSupplementBridge } from "./systems/LocalBackupSupplementBridge.js";
+import { installChapterMusicBridge } from "./systems/ChapterMusicBridge.js";
 import { installFinalDreamBridge } from "./systems/FinalDreamBridge.js";
 import { SceneDebugEditor } from "./systems/SceneDebugEditor.js";
 
@@ -20,6 +21,7 @@ installCapsuleMenuBridge(WalkBackHomeApp.prototype);
 installCapsuleAudioCaptureBridge();
 installCapsuleKeptOrganizerBridge();
 installLocalBackupSupplementBridge(WalkBackHomeApp.prototype);
+installChapterMusicBridge(WalkBackHomeApp.prototype as unknown as { enterCurrentMemory?: () => Promise<void>; finishReturnToForest?: () => void });
 installFinalDreamBridge(WalkBackHomeApp.prototype as unknown as { enterCurrentMemory?: () => Promise<void> });
 
 const root = document.querySelector<HTMLElement>("#app")!;

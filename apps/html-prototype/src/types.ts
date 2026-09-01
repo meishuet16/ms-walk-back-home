@@ -310,8 +310,18 @@ export type ChapterReflection = {
   closureLines: string[];
 };
 
+export type ChapterMusicConfig = {
+  /** Bundled path relative to public/, for example assets/audio/march30.mp3. */
+  src: string;
+  /** Chapter themes default to one play-through rather than looping forever. */
+  loop?: boolean;
+  /** Let an unfinished chapter theme follow the player back into the forest. */
+  continueInForestUntilEnd?: boolean;
+};
+
 export type ChapterDefinition = HtmlChapterScene & {
   runtimeScene: SceneId;
+  music?: ChapterMusicConfig;
   canonicalClosure: {
     historicalEventId: string;
     lines: string[];
