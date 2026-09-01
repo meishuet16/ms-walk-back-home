@@ -19,6 +19,7 @@ export class FinalDreamPresentation {
   private transitionTimer = 0;
   private endingTimer = 0;
   private typeTimer = 0;
+  private autoAdvanceTimer = 0;
   private typing = false;
   private currentText = "";
   private currentTypedCount = 0;
@@ -59,6 +60,7 @@ export class FinalDreamPresentation {
 
   advance(): void {
     if (this.destroyed) return;
+    window.clearTimeout(this.autoAdvanceTimer);
     if (this.phase === "dream") {
       if (this.typing) return;
       if (this.index < finalDreamFrames.length - 1) {
@@ -82,6 +84,7 @@ export class FinalDreamPresentation {
     window.clearTimeout(this.transitionTimer);
     window.clearTimeout(this.endingTimer);
     window.clearTimeout(this.typeTimer);
+    window.clearTimeout(this.autoAdvanceTimer);
     document.removeEventListener("keydown", this.keydown, true);
     document.removeEventListener("pointerup", this.pointerUp, true);
     document.removeEventListener("touchend", this.touchEnd, true);
@@ -104,7 +107,7 @@ export class FinalDreamPresentation {
         if (event.cancelable) event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
-        this.finish();
+        this.beginForestFade();
       }
       return;
     }
@@ -124,22 +127,43 @@ export class FinalDreamPresentation {
   private renderDream(): void {
     const frame = finalDreamFrames[this.index];
     if (!frame) return;
+    window.clearTimeout(this.autoAdvanceTimer);
     this.typing = false;
     this.currentText = frame.text ?? "";
     this.currentTypedCount = 0;
-    this.host.overlay.innerHTML = this.frameMarkup(frame);
-    this.host.overlay.querySelector<HTMLElement>(".final-dream-frame")?.classList.add("final-dream-page-enter");
+
+    const previousFrame = finalDreamFrames[this.index - 1];
+    const sameImage = previousFrame?.image === frame.image;
+    const currentSection = this.host.overlay.querySelector<HTMLElement>(".final-dream-frame");
+    const currentImage = currentSection?.querySelector<HTMLImageElement>(".final-dream-image")?.getAttribute("src");
+
+    if (sameImage && currentSection && currentImage === frame.image) {
+      currentSection.className = `final-dream-frame treatment-${frame.treatment ?? "scene"}`;
+      currentSection.dataset.finalDreamFrame = frame.id;
+      currentSection.querySelector(".final-dream-portrait")?.remove();
+      currentSection.querySelector(".final-dream-dialogue")?.remove();
+      if (frame.portrait) currentSection.insertAdjacentHTML("beforeend", `<img class="final-dream-portrait" src="${escapeHtml(frame.portrait)}" alt="" aria-hidden="true">`);
+      if (frame.text) currentSection.insertAdjacentHTML("beforeend", this.dialogueMarkup(frame));
+    } else {
+      this.host.overlay.innerHTML = this.frameMarkup(frame);
+      this.host.overlay.querySelector<HTMLElement>(".final-dream-frame")?.classList.add("final-dream-page-enter");
+    }
+
     if (frame.text) this.startTyping();
+    else this.scheduleDreamAdvance();
+  }
+
+  private dialogueMarkup(frame: FinalDreamFrame): string {
+    const speaker = frame.speaker ? `<span class="final-dream-speaker">${escapeHtml(frame.speaker)}</span>` : "";
+    const emphasis = frame.id === "tomorrow-02" ? " final-dream-dialogue-tomorrow" : "";
+    return `<div class="final-dream-dialogue${emphasis}">${speaker}<p><span class="final-dream-type" aria-live="polite"></span><span class="final-dream-caret" aria-hidden="true"></span></p></div>`;
   }
 
   private frameMarkup(frame: FinalDreamFrame): string {
     const portrait = frame.portrait
       ? `<img class="final-dream-portrait" src="${escapeHtml(frame.portrait)}" alt="" aria-hidden="true">`
       : "";
-    const speaker = frame.speaker ? `<span class="final-dream-speaker">${escapeHtml(frame.speaker)}</span>` : "";
-    const dialogue = frame.text
-      ? `<div class="final-dream-dialogue">${speaker}<p><span class="final-dream-type" aria-live="polite"></span><span class="final-dream-caret" aria-hidden="true"></span></p></div>`
-      : "";
+    const dialogue = frame.text ? this.dialogueMarkup(frame) : "";
     return `<section class="final-dream-frame treatment-${escapeHtml(frame.treatment ?? "scene")}" data-final-dream-frame="${escapeHtml(frame.id)}">
       <div class="final-dream-image-wrap"><img class="final-dream-image" src="${escapeHtml(frame.image)}" alt=""></div>
       ${portrait}
@@ -155,6 +179,7 @@ export class FinalDreamPresentation {
       target.textContent = this.currentText;
       this.typing = false;
       this.host.overlay.querySelector<HTMLElement>(".final-dream-caret")?.remove();
+      this.scheduleDreamAdvance();
       return;
     }
     this.typing = true;
@@ -165,13 +190,22 @@ export class FinalDreamPresentation {
       if (this.currentTypedCount >= this.currentText.length) {
         this.typing = false;
         this.host.overlay.querySelector<HTMLElement>(".final-dream-caret")?.remove();
+        this.scheduleDreamAdvance();
         return;
       }
       const char = this.currentText[this.currentTypedCount - 1] ?? "";
-      const delay = /[。！？!?…]/.test(char) ? 260 : /[，、；：,;:]/.test(char) ? 165 : 92;
+      const delay = /[。！？!?…]/.test(char) ? 300 : /[，、；：,;:]/.test(char) ? 190 : 108;
       this.typeTimer = window.setTimeout(step, delay);
     };
     step();
+  }
+
+  private scheduleDreamAdvance(): void {
+    window.clearTimeout(this.autoAdvanceTimer);
+    this.autoAdvanceTimer = window.setTimeout(() => {
+      if (this.destroyed || this.phase !== "dream" || this.typing) return;
+      this.advance();
+    }, this.reducedMotion ? 600 : 3000);
   }
 
   private renderEndingShell(): void {
@@ -250,6 +284,7 @@ export class FinalDreamPresentation {
 
   private beginCredits(): void {
     if (this.destroyed) return;
+    window.clearTimeout(this.autoAdvanceTimer);
     this.phase = "credits";
     this.host.overlay.innerHTML = `<section class="final-dream-black final-dream-credits">
       <div>${finalDreamCredits.map((line) => `<p>${escapeHtml(line)}</p>`).join("")}</div>
@@ -260,15 +295,24 @@ export class FinalDreamPresentation {
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
-      this.finish();
+      this.beginForestFade();
     }, { once: true });
     returnButton?.addEventListener("keydown", (event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
-      this.finish();
+      this.beginForestFade();
     });
+    this.autoAdvanceTimer = window.setTimeout(() => this.beginForestFade(), this.reducedMotion ? 900 : 6000);
+  }
+
+  private beginForestFade(): void {
+    if (this.destroyed || this.phase !== "credits") return;
+    window.clearTimeout(this.autoAdvanceTimer);
+    this.host.overlay.querySelector<HTMLElement>(".final-dream-credits")?.classList.add("final-dream-credits-exit");
+    this.host.root.classList.add("final-dream-audio-fade");
+    this.transitionTimer = window.setTimeout(() => this.finish(), this.reducedMotion ? 80 : 1600);
   }
 
   private finish(): void {
