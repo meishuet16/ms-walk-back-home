@@ -38,26 +38,10 @@ function positionPromptAtMuji(app: AppLike, bubble: HTMLElement): void {
   }
 }
 
-function ensureForestPrompt(app: AppLike): void {
-  if (app.scene !== "forest") return;
-  const host = promptHost(app);
-  let bubble = host.querySelector<HTMLElement>(".forest-world-prompt");
-  if (!bubble) {
-    bubble = document.createElement("div");
-    bubble.className = "forest-world-prompt";
-    host.appendChild(bubble);
-  }
-
-  // StoryRouteBridge supplies the richer chapter/memory copy whenever an
-  // interaction is active. This fallback keeps the original movement/control
-  // hint near Muji instead of leaving an empty bottom-left slot.
-  if (!app.activeDoor) {
-    const touch = matchMedia("(pointer: coarse)").matches;
-    bubble.innerHTML = touch
-      ? "<strong>Virtual joystick · A</strong>"
-      : "<strong>Move · WASD / Arrows · E</strong>";
-  }
-  positionPromptAtMuji(app, bubble);
+function keepContextualForestPromptAnchored(app: AppLike): void {
+  if (app.scene !== "forest" || !app.activeDoor) return;
+  const bubble = promptHost(app).querySelector<HTMLElement>(".forest-world-prompt");
+  if (bubble) positionPromptAtMuji(app, bubble);
 }
 
 export function installStoryRouteMobileFixBridge(proto: AppPrototype): void {
@@ -66,9 +50,8 @@ export function installStoryRouteMobileFixBridge(proto: AppPrototype): void {
     proto.syncSceneOrientation = function(this: AppLike, ...args: unknown[]): unknown {
       const sceneBeforeSync = this.scene;
       const result = originalSyncSceneOrientation.apply(this, args);
-      // The legacy portrait shortcut intentionally skipped the title by forcing
-      // title -> forest. Story Route now needs the title on mobile too, so keep
-      // orientation/layout syncing but cancel only that legacy scene mutation.
+      // Keep the legacy orientation/layout sync, but cancel its old portrait-only
+      // title -> forest shortcut so the new title/threshold flow can exist on mobile.
       if (sceneBeforeSync === "title" && this.scene === "forest") {
         this.scene = "title";
         this.currentDoor = null;
@@ -82,7 +65,7 @@ export function installStoryRouteMobileFixBridge(proto: AppPrototype): void {
   if (originalDrawHud) {
     proto.drawHud = function(this: AppLike, ...args: unknown[]): unknown {
       const result = originalDrawHud.apply(this, args);
-      ensureForestPrompt(this);
+      keepContextualForestPromptAnchored(this);
       return result;
     };
   }
