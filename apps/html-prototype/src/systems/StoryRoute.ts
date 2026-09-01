@@ -10,7 +10,6 @@ export const STORY_CHAPTER_IDS = [
   "june25-so-i-came",
   "labis-motor-day",
   "july21-why-cant-you-stay",
-  "bakery-day",
   "final-dream-tomorrow"
 ] as const;
 
