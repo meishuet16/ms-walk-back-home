@@ -1,4 +1,5 @@
 import { initializeStoryRouteStartup } from "./StoryRouteBridge.js";
+import { markStoryChapterCompleted, normalizeStoryRouteProgress } from "./StoryRoute.js";
 
 type DoorLike = { chapterId?: string } | null | undefined;
 type AppLike = {
@@ -14,10 +15,20 @@ type AppLike = {
 type AppPrototype = Record<string, ((...args: unknown[]) => unknown) | undefined>;
 
 const FINAL_DREAM_ID = "final-dream-tomorrow";
+const STORY_PROGRESS_KEY = "walk-back-home:story-route-progress:v1";
 
 function openThreshold(app: AppLike): void {
   initializeStoryRouteStartup(app);
   app.newMemory?.();
+}
+
+function markFinalDreamComplete(): void {
+  try {
+    const progress = normalizeStoryRouteProgress(JSON.parse(localStorage.getItem(STORY_PROGRESS_KEY) ?? "null"));
+    localStorage.setItem(STORY_PROGRESS_KEY, JSON.stringify(markStoryChapterCompleted(progress, FINAL_DREAM_ID)));
+  } catch {
+    // Final Dream can still return to the title even if local storage is unavailable.
+  }
 }
 
 function injectWaysHome(app: AppLike): void {
@@ -50,7 +61,8 @@ function syncStoryRouteMuji(app: AppLike): void {
   if (!route) return;
   const world = route.querySelector<HTMLElement>(".story-route-world");
   const muji = route.querySelector<HTMLElement>(".story-route-muji");
-  const current = route.querySelector<HTMLElement>(".story-node.is-current");
+  const current = route.querySelector<HTMLElement>(".story-node.is-current")
+    ?? route.querySelector<HTMLElement>(".story-node.is-final");
   const path = route.querySelector<SVGPathElement>(".story-route-line path");
   const nodes = [...route.querySelectorAll<HTMLElement>(".story-node")];
   if (!world || !muji || !current) return;
@@ -114,6 +126,7 @@ export function installStoryRouteFollowupBridge(proto: AppPrototype): void {
       const chapterId = this.currentDoor?.chapterId ?? this.activeDoor?.chapterId;
       const result = originalFinishReturn.apply(this, args);
       if (chapterId === FINAL_DREAM_ID) {
+        markFinalDreamComplete();
         window.setTimeout(() => initializeStoryRouteStartup(this), 0);
       }
       return result;
