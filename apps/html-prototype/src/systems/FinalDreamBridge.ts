@@ -3,10 +3,12 @@ import { FinalDreamPresentation } from "./FinalDreamPresentation.js";
 
 type FinalDreamAudio = {
   setTrack?: (src: string, autoPlay?: boolean) => boolean;
+  isCurrentTrack?: (src: string) => boolean;
   setLoop?: (loop: boolean) => void;
   ensurePlaying?: () => Promise<void>;
   stop?: () => void;
   setScene?: (scene: "forest" | "bakery") => void;
+  onEnded?: (callback: () => void) => () => void;
 };
 
 const FINAL_DREAM_CHAPTER_ID = "final-dream-tomorrow";
@@ -16,6 +18,7 @@ type FinalDreamDoor = { chapterId?: string; id?: string };
 type AppLike = {
   currentDoor?: FinalDreamDoor | null;
   activeDoor?: FinalDreamDoor | null;
+  scene?: string;
   root: HTMLElement;
   overlay: HTMLElement;
   stage?: HTMLElement;
@@ -34,6 +37,48 @@ let activePresentation: FinalDreamPresentation | null = null;
 
 function isFinalDreamDoor(door: { chapterId?: string } | null | undefined): boolean {
   return door?.chapterId === FINAL_DREAM_CHAPTER_ID;
+}
+
+function finishFinalDreamIntoForest(app: AppLike): void {
+  const audio = app.audio;
+  const finishReturnToForest = app.finishReturnToForest;
+  if (!audio || !finishReturnToForest || !audio.setScene) {
+    audio?.stop?.();
+    audio?.setScene?.("forest");
+    audio?.setLoop?.(true);
+    void audio?.ensurePlaying?.();
+    app.autosave?.();
+    return;
+  }
+
+  const isDreamTrack = audio.isCurrentTrack?.(finalDreamMusic) ?? false;
+  if (!isDreamTrack) {
+    finishReturnToForest.call(app);
+    return;
+  }
+
+  // Preserve the established forest-return lifecycle, suppressing only its immediate
+  // Forest BGM swap so the Final Dream song can finish naturally after the visuals return.
+  const originalSetScene = audio.setScene.bind(audio);
+  audio.setScene = (scene) => {
+    if (scene !== "forest") originalSetScene(scene);
+  };
+  try {
+    finishReturnToForest.call(app);
+  } finally {
+    audio.setScene = originalSetScene;
+  }
+
+  audio.setLoop?.(false);
+  let unsubscribe: () => void = () => {};
+  unsubscribe = audio.onEnded?.(() => {
+    unsubscribe();
+    // A later scene or music choice owns playback if anything changed before the song ended.
+    if (app.scene !== "forest" || !(audio.isCurrentTrack?.(finalDreamMusic) ?? false)) return;
+    originalSetScene("forest");
+    audio.setLoop?.(true);
+    void audio.ensurePlaying?.();
+  }) ?? (() => {});
 }
 
 export function installFinalDreamBridge(prototype: AppPrototype): void {
@@ -67,21 +112,7 @@ export function installFinalDreamBridge(prototype: AppPrototype): void {
           // localStorage can be unavailable in privacy modes; replay still works.
         }
 
-        // Reuse the app's established forest-return lifecycle instead of maintaining
-        // a second partial reset here. This restores scene/UI/player/audio/autosave
-        // exactly the same way as the existing Return to Forest actions.
-        if (this.finishReturnToForest) {
-          this.finishReturnToForest();
-          return;
-        }
-
-        // Defensive fallback for an unexpected host that does not expose the app
-        // lifecycle method. The normal WalkBackHomeApp path always uses the branch above.
-        this.audio?.stop?.();
-        this.audio?.setScene?.("forest");
-        this.audio?.setLoop?.(true);
-        void this.audio?.ensurePlaying?.();
-        this.autosave?.();
+        finishFinalDreamIntoForest(this);
       }
     });
     activePresentation = presentation;
