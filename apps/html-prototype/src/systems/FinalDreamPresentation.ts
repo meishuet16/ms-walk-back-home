@@ -51,8 +51,6 @@ export class FinalDreamPresentation {
     this.host.root.classList.add("final-dream-active");
     this.host.overlay.classList.add("final-dream-overlay");
     document.addEventListener("keydown", this.keydown, true);
-    // Capture at document level so mobile taps still reach the presentation even if
-    // the stage, browser touch plumbing, or another app listener owns the target.
     document.addEventListener("pointerup", this.pointerUp, { capture: true, passive: false });
     document.addEventListener("touchend", this.touchEnd, { capture: true, passive: false });
     document.addEventListener("click", this.click, true);
@@ -101,13 +99,19 @@ export class FinalDreamPresentation {
 
   private handleCapturedSurfaceAdvance(target: EventTarget | null, event: Event): void {
     const element = target instanceof Element ? target : null;
-    if (element?.closest("[data-final-dream-return]")) return;
+    if (element?.closest("[data-final-dream-return]")) {
+      if (this.phase === "credits") {
+        if (event.cancelable) event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        this.finish();
+      }
+      return;
+    }
     if (this.destroyed || this.phase === "ending" || this.phase === "credits") return;
     if (this.phase === "dream" && this.typing) return;
 
     const now = Date.now();
-    // A physical mobile tap can emit pointerup, touchend and click. Treat the
-    // whole burst as one VN advance while still allowing a later deliberate tap.
     if (now - this.lastSurfaceAdvanceAt < 450) return;
     this.lastSurfaceAdvanceAt = now;
 
