@@ -11,7 +11,7 @@ import { installCapsuleKeptOrganizerBridge } from "./systems/CapsuleKeptOrganize
 import { installLocalBackupSupplementBridge } from "./systems/LocalBackupSupplementBridge.js";
 import { installChapterMusicBridge } from "./systems/ChapterMusicBridge.js";
 import { installFinalDreamBridge } from "./systems/FinalDreamBridge.js";
-import { installStoryRouteBridge } from "./systems/StoryRouteBridge.js";
+import { initializeStoryRouteStartup, installStoryRouteBridge } from "./systems/StoryRouteBridge.js";
 import { SceneDebugEditor } from "./systems/SceneDebugEditor.js";
 
 installAuthoredCutsceneLifecycleBridge(WalkBackHomeApp.prototype);
@@ -32,5 +32,6 @@ const root = document.querySelector<HTMLElement>("#app")!;
 if (new URLSearchParams(window.location.search).get("debug") === "scene") {
   void new SceneDebugEditor(root).mount();
 } else {
-  new WalkBackHomeApp(root);
+  const app = new WalkBackHomeApp(root);
+  initializeStoryRouteStartup(app);
 }
