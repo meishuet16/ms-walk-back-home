@@ -26,10 +26,26 @@ type ChapterMusicPrototype = {
 
 const FINAL_DREAM_CHAPTER_ID = "final-dream-tomorrow";
 
+// Authored soundtrack catalogue. Keeping these assignments here lets older chapter
+// fixtures remain untouched while still using the same generic chapter-music lifecycle.
+// Every assigned song is one-shot and may finish naturally after returning to Forest.
+export const authoredChapterMusic: Record<string, ChapterMusicConfig> = {
+  "july21-why-cant-you-stay": { src: "assets/audio/再见太难-黄龄.mp3", loop: false, continueInForestUntilEnd: true },
+  "june25-so-i-came": { src: "assets/audio/可惜不是你-梁静茹.mp3", loop: false, continueInForestUntilEnd: true },
+  "june24-only-came-for-you": { src: "assets/audio/瞬-郑润泽.mp3", loop: false, continueInForestUntilEnd: true },
+  "may23-i-arrived": { src: "assets/audio/带我走-杨丞琳.mp3", loop: false, continueInForestUntilEnd: true },
+  "april25-just-good-friends": { src: "assets/audio/我好想你-苏打绿.mp3", loop: false, continueInForestUntilEnd: true },
+  "march30-too-fated": { src: "assets/audio/那些年-胡夏.mp3", loop: false, continueInForestUntilEnd: true },
+  "oct29-a-little-closer": { src: "assets/audio/Dear D (亲爱的告诉你)-项睿娴.mp3", loop: false, continueInForestUntilEnd: true },
+  "1122-before-sunrise": { src: "assets/audio/Time Machine- mj apanay.mp3", loop: false, continueInForestUntilEnd: true },
+  "april05-come-down": { src: "assets/audio/雨是甜的-尤长靖.mp3", loop: false, continueInForestUntilEnd: true },
+  "april06-not-gone-yet": { src: "assets/audio/雨是甜的-尤长靖.mp3", loop: false, continueInForestUntilEnd: true }
+};
+
 function chapterMusicFor(door: ChapterDoor | null | undefined): ChapterMusicConfig | null {
   const chapterId = door?.chapterId;
   if (!chapterId || chapterId === FINAL_DREAM_CHAPTER_ID) return null;
-  return chapterRegistry[chapterId]?.music ?? null;
+  return chapterRegistry[chapterId]?.music ?? authoredChapterMusic[chapterId] ?? null;
 }
 
 /**
@@ -66,8 +82,6 @@ export function installChapterMusicBridge(prototype: ChapterMusicPrototype): voi
       return;
     }
 
-    // The normal forest-return lifecycle calls setScene("forest"). Suppress only that
-    // one audio switch so all existing scene/UI/player/autosave cleanup still runs.
     const originalSetScene = audio.setScene.bind(audio);
     audio.setScene = (scene) => {
       if (scene !== "forest") originalSetScene(scene);
@@ -82,8 +96,6 @@ export function installChapterMusicBridge(prototype: ChapterMusicPrototype): voi
     let unsubscribe: () => void = () => {};
     unsubscribe = audio.onEnded(() => {
       unsubscribe();
-      // Do not steal playback if the player entered another memory or changed music
-      // before this chapter theme naturally ended.
       if (this.scene !== "forest" || !audio.isCurrentTrack(music.src)) return;
       originalSetScene("forest");
       audio.setLoop(true);
