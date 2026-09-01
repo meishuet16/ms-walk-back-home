@@ -42,6 +42,7 @@ type RouteSession = {
 };
 
 const sessions = new WeakMap<object, RouteSession>();
+const startupTitleApplied = new WeakSet<object>();
 
 function sessionFor(app: AppLike): RouteSession {
   const key = app as object;
@@ -272,11 +273,35 @@ function drawPolishedTitle(app: AppLike, time: number): void {
   app.drawMuji?.({ x: canvas.width * .72, y: canvas.height * .82 }, time, canvas.width / 960);
 }
 
+function forestPromptHost(app: AppLike): HTMLElement {
+  return app.canvas.parentElement ?? app.hud;
+}
+
+function clearForestWorldPrompt(app: AppLike): void {
+  forestPromptHost(app).querySelector<HTMLElement>(".forest-world-prompt")?.remove();
+  app.hud.querySelector<HTMLElement>(".forest-world-prompt")?.remove();
+}
+
 function renderForestWorldPrompt(app: AppLike): void {
-  if (app.scene !== "forest") return;
   const fixedPrompt = app.hud.querySelector<HTMLElement>(".prompt");
-  if (fixedPrompt) fixedPrompt.style.display = "none";
-  let bubble = app.hud.querySelector<HTMLElement>(".forest-world-prompt");
+  if (app.scene !== "forest") {
+    if (fixedPrompt) {
+      fixedPrompt.style.visibility = "";
+      fixedPrompt.style.pointerEvents = "";
+    }
+    clearForestWorldPrompt(app);
+    return;
+  }
+
+  // Keep the original prompt in layout so the existing month selector retains
+  // exactly the same vertical geometry, but make the prompt itself invisible.
+  if (fixedPrompt) {
+    fixedPrompt.style.visibility = "hidden";
+    fixedPrompt.style.pointerEvents = "none";
+  }
+
+  const host = forestPromptHost(app);
+  let bubble = host.querySelector<HTMLElement>(".forest-world-prompt");
   const door = app.activeDoor as { date?: string; title?: string; chapterId?: string } | null;
   if (!door) {
     bubble?.remove();
@@ -285,13 +310,15 @@ function renderForestWorldPrompt(app: AppLike): void {
   if (!bubble) {
     bubble = document.createElement("div");
     bubble.className = "forest-world-prompt";
-    app.hud.appendChild(bubble);
+    host.appendChild(bubble);
   }
+
   const touch = matchMedia("(pointer: coarse)").matches;
   const finalDream = door.chapterId === "final-dream-tomorrow";
   bubble.innerHTML = finalDream
     ? `<strong>Final Dream</strong><span>这一章不需要操控。准备好以后，就让梦自己走完。</span>`
     : `<strong>${touch ? "Tap A" : "Press E"} · ${escapeHtml(door.date ?? "")} ${escapeHtml(door.title ?? "Memory")}</strong>`;
+
   try {
     const layout = app.currentSceneLayout?.("forest");
     if (!layout || !app.sceneViewport || !app.sceneCamera) throw new Error("no scene projection");
@@ -300,12 +327,29 @@ function renderForestWorldPrompt(app: AppLike): void {
     const scale = app.canvas.width / viewport.w;
     const x = (app.player.x - camera.x) * scale;
     const y = (app.player.y - camera.y) * scale;
-    bubble.style.left = `${Math.max(10, Math.min(90, x / app.canvas.width * 100))}%`;
-    bubble.style.top = `${Math.max(12, Math.min(82, y / app.canvas.height * 100 - 10))}%`;
+    const leftPercent = Math.max(9, Math.min(91, x / app.canvas.width * 100));
+    const topPercent = Math.max(10, Math.min(88, y / app.canvas.height * 100 - 3.5));
+    bubble.style.left = `${leftPercent}%`;
+    bubble.style.top = `${topPercent}%`;
   } catch {
     bubble.style.left = "50%";
-    bubble.style.top = "68%";
+    bubble.style.top = "58%";
   }
+}
+
+function forceStartupTitle(app: AppLike): void {
+  const key = app as object;
+  if (startupTitleApplied.has(key)) return;
+  startupTitleApplied.add(key);
+  app.scene = "title";
+  app.currentDoor = null;
+  app.activeDoor = null;
+  app.overlay.classList.remove("dialogue-open", "lightweight-presentation");
+  app.overlay.innerHTML = "";
+  app.lastHudHtml = "";
+  clearForestWorldPrompt(app);
+  app.applyAudioForCurrentScene?.();
+  app.focusStage?.();
 }
 
 export function installStoryRouteBridge(proto: AppPrototype): void {
@@ -319,6 +363,15 @@ export function installStoryRouteBridge(proto: AppPrototype): void {
     }
     return originalNewMemory.apply(this, args);
   };
+
+  const originalLoadAutosave = proto.loadAutosave;
+  if (originalLoadAutosave) {
+    proto.loadAutosave = function(this: AppLike, ...args: unknown[]): unknown {
+      const result = originalLoadAutosave.apply(this, args);
+      forceStartupTitle(this);
+      return result;
+    };
+  }
 
   const originalDrawTitle = proto.drawTitle;
   if (originalDrawTitle) {
