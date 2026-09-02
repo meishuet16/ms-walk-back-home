@@ -1,4 +1,4 @@
-import { cp, mkdir, copyFile, readdir, writeFile } from "node:fs/promises";
+import { cp, mkdir, copyFile, readdir, writeFile, access } from "node:fs/promises";
 import { build } from "esbuild";
 import { dirname, resolve } from "node:path";
 
@@ -44,10 +44,20 @@ for (const file of [
   "capsule-machine.css",
   "capsule-machine-polish.css",
   "capsule-machine-fixes.css",
-  "capsule-kept-organizer.css"
+  "capsule-kept-organizer.css",
+  "story-route.css",
+  "story-route-followup.css",
+  "reflection-detail-hotfix.css"
 ]) {
   await copyFile(resolve(root, `src/${file}`), resolve(root, `dist/${file}`));
 }
+
+// Prevent successful CI/Vercel builds that silently omit a stylesheet linked by index.html.
+// This caught the Story Route mobile UI issue where source CSS existed but never reached dist.
+const indexHtml = await (await import("node:fs/promises")).readFile(resolve(root, "src/index.html"), "utf8");
+const localStylesheets = [...indexHtml.matchAll(/<link\s+[^>]*href=["']\.\/([^"']+\.css)["'][^>]*>/g)].map((match) => match[1]);
+for (const stylesheet of localStylesheets) await access(resolve(root, "dist", stylesheet));
+
 await mkdir(resolve(root, "dist/browser/ffmpeg"), { recursive: true });
 await copyFile(resolve(root, "../../node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.js"), resolve(root, "dist/browser/ffmpeg/ffmpeg-core.js"));
 await copyFile(resolve(root, "../../node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.wasm"), resolve(root, "dist/browser/ffmpeg/ffmpeg-core.wasm"));
