@@ -1,0 +1,43 @@
+/* Keep Timeline delete confirmation inside the Journal panel's coordinate space.
+   `position: fixed` is captured by the transformed modal ancestor on some browsers,
+   which caused the veil/card to jump to the upper-left. */
+.timeline-panel {
+  position: relative !important;
+  isolation: isolate;
+}
+
+.timeline-delete-confirmation.delete-confirmation {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 7600 !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 20px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+}
+
+.timeline-delete-confirmation.delete-confirmation > div:first-child,
+.timeline-delete-confirmation .delete-confirmation-actions {
+  width: min(360px, calc(100% - 20px)) !important;
+  max-width: 360px !important;
+  flex: 0 0 auto !important;
+}
+
+@media (max-width: 760px) {
+  .timeline-delete-confirmation.delete-confirmation {
+    padding: 16px !important;
+  }
+
+  .timeline-delete-confirmation.delete-confirmation > div:first-child,
+  .timeline-delete-confirmation .delete-confirmation-actions {
+    width: min(340px, calc(100% - 8px)) !important;
+  }
+}
