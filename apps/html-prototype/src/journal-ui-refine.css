@@ -1,0 +1,208 @@
+/* Second Journal refinement pass. Kept separate so the first preview can be compared easily. */
+
+/* Edit Journal: warmer, shorter header and a denser paper hierarchy. */
+.journal-modal.diary-editor {
+  background:
+    linear-gradient(180deg, #6f6855 0, #766f5b 78px, #e7dcc4 78px, #e7dcc4 100%);
+}
+
+.journal-modal.diary-editor .journal-toolbar {
+  min-height: 68px;
+  padding: max(7px, env(safe-area-inset-top)) 12px 7px;
+  border-bottom: 1px solid rgba(255, 245, 215, .2);
+  background:
+    linear-gradient(180deg, rgba(99, 92, 73, .98), rgba(79, 75, 61, .98));
+  color: #fff4d3;
+  box-shadow: 0 7px 18px rgba(53, 43, 29, .16);
+}
+
+.journal-modal.diary-editor .journal-brand {
+  gap: 8px;
+}
+
+.journal-modal.diary-editor .journal-brand h2 {
+  color: #fff1c8;
+  font-size: clamp(17px, 4.3vw, 21px);
+  letter-spacing: .055em;
+  text-shadow: 0 1px rgba(48, 39, 27, .28);
+}
+
+.journal-modal.diary-editor .journal-mascot {
+  width: 42px !important;
+  height: 42px !important;
+  flex: 0 0 42px !important;
+  transform: none !important;
+  background: url("assets/muji-sheet-v2/muji-04.png") center / contain no-repeat !important;
+  image-rendering: pixelated;
+}
+
+.journal-modal.diary-editor .journal-mascot::before,
+.journal-modal.diary-editor .journal-mascot::after {
+  display: none !important;
+}
+
+.journal-modal.diary-editor .journal-toolbar > .journal-icon-button {
+  width: 40px;
+  min-height: 40px;
+  border-color: rgba(255, 242, 205, .24);
+  background: rgba(255, 249, 229, .07);
+  color: #fff0c2;
+}
+
+.journal-modal.diary-editor .journal-done {
+  min-height: 40px;
+  padding: 7px 14px;
+  border-color: rgba(239, 218, 163, .46);
+  background: linear-gradient(180deg, #9a8b5f, #766b4b);
+  color: #fff8db;
+}
+
+.journal-modal.diary-editor .journal-sheet {
+  width: min(760px, calc(100% - 18px));
+  margin-top: 12px;
+  border-radius: 7px 12px 12px 7px;
+}
+
+.journal-modal.diary-editor .journal-page-inner {
+  padding-top: 15px;
+  padding-bottom: 28px;
+}
+
+.journal-modal.diary-editor .journal-mobile-top-meta {
+  margin-bottom: 9px;
+}
+
+.journal-modal.diary-editor .journal-kind > span {
+  display: none;
+}
+
+.journal-modal.diary-editor .journal-kind select {
+  min-height: 32px;
+  padding: 4px 27px 4px 10px;
+  background: rgba(255, 251, 239, .55);
+  font-size: 11px;
+}
+
+.journal-modal.diary-editor .journal-mobile-top-meta .journal-icon-button {
+  width: 32px;
+  min-height: 32px;
+}
+
+.journal-modal.diary-editor .journal-meta-card {
+  gap: 7px 16px;
+  margin-bottom: 8px;
+  padding-bottom: 10px;
+}
+
+.journal-modal.diary-editor .journal-meta-card label {
+  gap: 1px;
+  font-size: 11px;
+}
+
+.journal-modal.diary-editor .journal-meta-card .journal-title-row {
+  margin-bottom: 0;
+}
+
+.journal-modal.diary-editor .journal-meta-card .journal-title-row > span {
+  display: none;
+}
+
+.journal-modal.diary-editor .journal-meta-card .journal-title-row input {
+  min-height: 40px;
+  padding: 0 0 5px;
+  font-size: clamp(24px, 6vw, 32px);
+  line-height: 1.1;
+}
+
+.journal-modal.diary-editor .journal-meta-card input {
+  min-height: 31px;
+  padding: 3px 0 4px;
+  font-size: 14px;
+}
+
+.journal-modal.diary-editor .journal-weekday {
+  margin-top: -1px;
+  font-size: 11px;
+}
+
+.journal-modal.diary-editor #diary-body {
+  min-height: clamp(330px, 49dvh, 620px);
+  padding: 7px 3px 34px;
+  border-top: 0;
+  font-size: clamp(16px, 4vw, 18px);
+  line-height: 1.75;
+}
+
+/* The editor footer is one compact stationery tray, not three giant blocks. */
+.journal-modal.diary-editor .mobile-editor-toolbar {
+  gap: 7px !important;
+  padding: 8px 10px max(8px, env(safe-area-inset-bottom)) !important;
+  border-top-color: rgba(113, 86, 51, .18) !important;
+  background: rgba(246, 236, 213, .975) !important;
+}
+
+.journal-modal.diary-editor .mobile-editor-toolbar > button,
+.journal-modal.diary-editor .mobile-editor-toolbar .journal-audio-recording-controls > button {
+  min-height: 52px !important;
+  border-radius: 11px !important;
+  background: rgba(255, 252, 243, .72) !important;
+  box-shadow: inset 0 1px rgba(255,255,255,.82), 0 2px 6px rgba(67, 47, 28, .055) !important;
+}
+
+.journal-modal.diary-editor .mobile-editor-toolbar .journal-audio-recording-state {
+  display: none;
+}
+
+.journal-modal.diary-editor .mobile-editor-toolbar > button span,
+.journal-modal.diary-editor .mobile-editor-toolbar .journal-audio-recording-controls > button span {
+  margin-top: 1px;
+  font-size: 11px;
+}
+
+/* Voice-note players should never inherit a muted or zero-volume state. */
+.journal-audio-player {
+  accent-color: #7d6a45;
+}
+
+@media (max-width: 760px) {
+  .journal-modal.diary-editor .journal-toolbar {
+    min-height: 66px;
+  }
+
+  .journal-modal.diary-editor .journal-brand .journal-mascot {
+    width: 38px !important;
+    height: 38px !important;
+    flex-basis: 38px !important;
+  }
+
+  .journal-modal.diary-editor .journal-page-inner {
+    padding: 13px 20px 26px 40px;
+  }
+
+  .journal-modal.diary-editor .journal-meta-card {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .journal-modal.diary-editor .journal-meta-card .journal-date-row {
+    grid-column: 1 / -1;
+  }
+
+  .journal-modal.diary-editor .journal-meta-card .journal-title-row input {
+    font-size: clamp(25px, 7.4vw, 31px);
+  }
+
+  .journal-modal.diary-editor #diary-body {
+    min-height: 42dvh;
+  }
+}
+
+@media (max-width: 390px) {
+  .journal-modal.diary-editor .journal-page-inner {
+    padding-left: 34px;
+    padding-right: 14px;
+  }
+
+  .journal-modal.diary-editor .journal-meta-card {
+    gap-inline: 12px;
+  }
+}
