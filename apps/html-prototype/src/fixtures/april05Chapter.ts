@@ -220,24 +220,57 @@ export const april05Chapter: ChapterDefinition = {
   title: "下来一下",
   mood: "a late hostel-night memory that stays ordinary and close",
   weather: "warm night after a humid day",
-  location: "KTHO residential-college entrance / front sitting area",
+  location: "Residential-college entrance / front sitting area",
   characters: ["Muji", "MS", "ET", "ST", "Angela"],
   objects: ["water gun", "front sitting area", "school bag", "bicycle"],
   evidence: ["authored-405-landscape-scene-layout", "authored-405-portrait-scene-layout"],
   dialogue: [],
-  canonicalClosure: {
-    historicalEventId: "april05-ktho-night-memory",
-    lines: ["那晚，她最后还是回去冲凉了。", "第二天早上，她还有 quiz。"]
-  },
+canonicalClosure: {
+  historicalEventId: "april05-ktho-night-memory",
+  lines: [
+    "那天她下楼以后，我们在宿舍门口闹了一阵，也聊了一会儿。",
+    "后来她说要回去冲凉，就上楼了。"
+  ]
+},
   reflectionQuotes: []
 };
 
 export const april05ReflectionQuotes = [
-  { id: "april05-accepting", tone: "accepting" as const, preference: { acceptance: 1, companionship: 1 }, lines: ["她说她开心。", "后来她也说，还是会痛。", "那晚两个都是真的。"] },
-  { id: "april05-closeness", tone: "holding" as const, preference: { closeness: 1 }, lines: ["我还是会记得，", "她被叫下来以后，没有马上走。"] },
-  { id: "april05-honesty", tone: "holding" as const, preference: { honesty: 1 }, lines: ["我当然还是会想，", "那些动作是什么意思。", "只是这次不替她回答。"] },
-  { id: "april05-distance", tone: "not-ready" as const, preference: { distance: 1 }, lines: ["她下来。", "坐了一会。", "又回去了。", "回忆不一定要比这更多。"] },
-  { id: "april05-companionship", tone: "accepting" as const, preference: { companionship: 1 }, lines: ["四个人在宿舍门口尬聊到很晚。", "当时也就这样。"] }
+  {
+    id: "april05-accepting",
+    tone: "accepting" as const,
+    preference: { acceptance: 1 },
+    lines: ["她说她开心。", "后来她也说，还是会痛。", "那晚两个都是真的。"],
+    afterline: "后来我没有再要求其中一个，把另一个盖过去。"
+  },
+  {
+    id: "april05-closeness",
+    tone: "holding" as const,
+    preference: { closeness: 1 },
+    lines: ["我还是会记得，", "她被叫下来以后，没有马上走。"],
+    afterline: "至少她那晚确实没有马上走。"
+  },
+  {
+    id: "april05-honesty",
+    tone: "holding" as const,
+    preference: { honesty: 1, intervention: 1 },
+    lines: ["我当然还是会想，", "那些动作是什么意思。", "只是这次不替她回答。"],
+    afterline: "想知道是真的，不知道也是真的。"
+  },
+  {
+    id: "april05-distance",
+    tone: "not-ready" as const,
+    preference: { distance: 1 },
+    lines: ["她下来。", "坐了一会。", "又回去了。", "回忆不一定要比这更多。"],
+    afterline: "先记到这里就好。"
+  },
+  {
+    id: "april05-companionship",
+    tone: "accepting" as const,
+    preference: { companionship: 1 },
+    lines: ["四个人在宿舍门口尬聊到很晚。", "当时也就这样。"],
+    afterline: "后来想起来，最好笑的还是我们四个在那里乱成一团。"
+  }
 ];
 
 april05Chapter.reflectionQuotes = april05ReflectionQuotes;
@@ -305,7 +338,7 @@ sprite("et", "et-water-sprayed-01"),
   { type: "move", actor: "angela", position: at("angela-sprayed-position"), duration: 0.35, asset: "angela-03", facing: "left" },
   { type: "move", actor: "st", position: at("st-sprayed-position"), duration: 0.35, asset: "st-03", facing: "right" },
   { type: "wait", duration: 0.22 },
-  dialogue("朋友", "你看ms无差别攻击","assets/624/echo-portraits/group-echoes/01-morning-angela-st.png"),
+  dialogue("朋友", "你看这个人无差别攻击","assets/624/echo-portraits/group-echoes/01-morning-angela-st.png"),
   { type: "moveGroup", duration: 0.45, moves: [
     { actor: "et", position: at("et-lock-position"), asset: "et-lock-01", facing: "right" },
     { actor: "ms", position: at("ms-locked-target"), asset: "ms-locked-01", facing: "left" }
@@ -318,30 +351,30 @@ sprite("et", "et-water-sprayed-01"),
   { type: "wait", duration: 0.22 },
   spriteGroup(["et", "et-lock-08"], ["ms", "ms-locked-08"]),
   dialogue("她", "我真的想象不到怎么会有那么抽象random的人","assets/624/echo-portraits/group-echoes/hug.png"),
-  dialogue("我", "啊你讲谁","assets/624/echo-portraits/group-echoes/hug.png"),
-  dialogue("她", "啧 顽皮","assets/624/echo-portraits/group-echoes/hug.png"),
+  dialogue("我", "啊 你讲谁","assets/624/echo-portraits/group-echoes/hug.png"),
+  dialogue("她", "啧 顽皮 没想到还真的是给你复仇成功","assets/624/echo-portraits/group-echoes/hug.png"),
   { type: "moveGroup", duration: 0.35, moves: [
     { actor: "et", position: at("et-final-talk-position"), asset: "et-wait", facing: "right" },
     { actor: "ms", position: at("ms-final-talk-position"), asset: "ms-wait", facing: "left" }
   ] },
-  dialogue("她", "你知道今天是四月五号吗","assets/624/echo-portraits/et-portraits/01-questioning.png"),
+  dialogue("她", "你知道今天是什么日子吗","assets/624/echo-portraits/et-portraits/01-questioning.png"),
   dialogue("她", "清明节刚过，而且今年复活节也快到了。","assets/624/echo-portraits/et-portraits/01-questioning.png"),
-  dialogue("我", "你哭过啊","assets/523/memory-portrait/02.png"),
+  dialogue("我", "你哭过？","assets/523/memory-portrait/02.png"),
   dialogue("她", "是啦 想起来一些伤心事","assets/624/echo-portraits/et-portraits/03-guilt-quiet.png"),
   { type: "checkpoint", id: "april-five-sad-thing" },
   dialogue("我", "那你现在开心吗","assets/523/memory-portrait/01.png"),
   dialogue("她", "开心啊 因为可以见到你~","assets/624/echo-portraits/et-portraits/08-soft-look.png"),
-  dialogue("她", "你们看她不回我","assets/624/echo-portraits/et-portraits/01-questioning.png"),
+  dialogue("她", "你们看她不回应我","assets/624/echo-portraits/et-portraits/01-questioning.png"),
   dialogue("我", "啊 我要回什么 恭喜你？","assets/523/memory-portrait/01.png"),
   { type: "checkpoint", id: "april-five-happy-because-see-you" },
   dialogue("她", "明天约跑步可以 要我背着重重的书包一起跑就不可以","assets/624/echo-portraits/et-portraits/01-questioning.png"),
-  dialogue("我", "那我帮你拿去给 faculty，书包不用背着跑。","assets/523/memory-portrait/02.png"),
+  dialogue("我", "那我帮你拿去给 faculty，书包你就不用背着跑了。","assets/523/memory-portrait/02.png"),
   dialogue("她", "噢真的吗 这样就可以~","assets/624/echo-portraits/et-portraits/01-questioning.png"),
-  dialogue("她", "欸我明天早上还有 presentation 和 quiz，我还没读完。","assets/624/echo-portraits/et-portraits/01-questioning.png"),
+  dialogue("她", "欸我明天早上还有 presentation 和 quiz，我现在还没读完。","assets/624/echo-portraits/et-portraits/01-questioning.png"),
   { type: "checkpoint", id: "april-five-quiz" },
   { type: "move", actor: "et", position: at("et-goodbye-position"), duration: 0.45, asset: "et-wait", facing: "right" },
   { type: "move", actor: "ms", position: at("ms-final-talk-position"), duration: 0.3, asset: "ms-wait", facing: "left" },
-  dialogue("她", "我不行了ms 我要去冲凉了","assets/624/echo-portraits/et-portraits/03-guilt-quiet.png"),
+  dialogue("她", "天气很冷 我不行了 我要回去冲凉了","assets/624/echo-portraits/et-portraits/03-guilt-quiet.png"),
   { type: "move", actor: "et", position: at("et-exit-position"), duration: 0.75, asset: "et-walk", facing: "right" },
   { type: "fade", actors: ["ms", "et", "st", "angela"], duration: 0.5 },
   { type: "despawn", actor: "ms" },
@@ -364,14 +397,14 @@ export const april05EchoActions: Record<April05EchoId, April05Action[]> = {
   ],
   bicycle: [
     dialogue("朋友", "你们两个是好朋友吗"),
-    dialogue("朋友", "好朋友会摸头吗"),
-    dialogue("MUJI", "不知道，好像也不需要知道了")
+    dialogue("朋友", "真的是这样吗"),
+    dialogue("MEMORY", "不知道，好像也不需要知道了")
   ],
   "phone-after-return": [
     dialogue("她", "真的过了很久啦 只是今天想起来发现还是会痛","assets/624/echo-portraits/et-portraits/03-guilt-quiet.png"),
-    dialogue("我", "4月5号痛完了 还有6号7号要过","assets/523/memory-portrait/01.png"),
-    dialogue("我", "等你长大了就懂了","assets/523/memory-portrait/01.png"),
-    dialogue("她", "我明明比你大","assets/624/echo-portraits/et-portraits/01-questioning.png")
+    dialogue("我", "还是会痛也没关系 不需要刻意逼自己遗忘 4月5号痛完了 还有6号7号要过","assets/523/memory-portrait/01.png"),
+    dialogue("我", "等你长大了就懂了。","assets/523/memory-portrait/01.png"),
+    dialogue("她", "我明明比你大。","assets/624/echo-portraits/et-portraits/01-questioning.png")
   ]
 };
 
