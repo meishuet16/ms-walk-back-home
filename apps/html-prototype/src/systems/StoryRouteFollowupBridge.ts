@@ -9,11 +9,13 @@ type AppLike = {
   currentDoor?: DoorLike;
   activeDoor?: DoorLike;
   newMemory?: () => unknown;
+  activateRoomInteraction?: (interaction: { id: string }) => void;
+  toggleFullscreen?: () => Promise<void> | void;
   [key: string]: unknown;
 };
 
 type AppPrototype = Record<string, ((...args: unknown[]) => unknown) | undefined>;
-type QuickDestination = "records" | "threshold" | "forest" | "room" | "reflection" | "timeline";
+type QuickDestination = "records" | "threshold" | "forest" | "room" | "capsule" | "reflection" | "timeline" | "fullscreen";
 
 const FINAL_DREAM_ID = "final-dream-tomorrow";
 const STORY_PROGRESS_KEY = "walk-back-home:story-route-progress:v1";
@@ -81,6 +83,10 @@ function roomIcon(): string {
   return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.2 12 4l8 7.2V20h-6v-5h-4v5H4z"/></svg>`;
 }
 
+function capsuleIcon(): string {
+  return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.1 16.9a5 5 0 0 1 0-7.1l2.7-2.7a5 5 0 0 1 7.1 7.1l-2.7 2.7a5 5 0 0 1-7.1 0Z"/><path d="m9.1 8.1 6.8 6.8"/></svg>`;
+}
+
 function reflectionIcon(): string {
   return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5h11.5v14H6z"/><path d="m15.7 3.5 2.8 2.8M8.3 9.2h6.8M8.3 12h5.1M8.3 14.8h4"/></svg>`;
 }
@@ -89,13 +95,19 @@ function timelineIcon(): string {
   return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4v16"/><circle cx="8" cy="6" r="1.7" class="fill"/><circle cx="8" cy="12" r="1.7" class="fill"/><circle cx="8" cy="18" r="1.7" class="fill"/><path d="M11.5 6h6M11.5 12h4.5M11.5 18h6"/></svg>`;
 }
 
+function fullscreenIcon(): string {
+  return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 4.5h-4v4M15.5 4.5h4v4M4.5 15.5v4h4M19.5 15.5v4h-4"/></svg>`;
+}
+
 const quickItems: Array<{ id: QuickDestination; label: string; icon: () => string }> = [
   { id: "records", label: "Records", icon: vinylIcon },
   { id: "threshold", label: "Ways Home", icon: thresholdIcon },
   { id: "forest", label: "The Forest", icon: forestIcon },
   { id: "room", label: "Muji Room", icon: roomIcon },
+  { id: "capsule", label: "Capsule", icon: capsuleIcon },
   { id: "reflection", label: "Reflection Wall", icon: reflectionIcon },
-  { id: "timeline", label: "Timeline", icon: timelineIcon }
+  { id: "timeline", label: "Timeline", icon: timelineIcon },
+  { id: "fullscreen", label: "Fullscreen", icon: fullscreenIcon }
 ];
 
 function quickDockMarkup(): string {
@@ -104,7 +116,7 @@ function quickDockMarkup(): string {
       <span aria-hidden="true">◇</span>
     </button>
     <div class="quick-access-rail" data-quick-rail hidden>
-      ${quickItems.map((item, index) => `<button class="quick-access-item${index === 1 || index === 4 ? " quick-access-group-start" : ""}" type="button" data-quick-destination="${item.id}" aria-label="${item.label}" title="${item.label}">${item.icon()}<span class="sr-only">${item.label}</span></button>`).join("")}
+      ${quickItems.map((item, index) => `<button class="quick-access-item${index === 1 || index === 4 || index === 7 ? " quick-access-group-start" : ""}" type="button" data-quick-destination="${item.id}" aria-label="${item.label}" title="${item.label}">${item.icon()}<span class="sr-only">${item.label}</span></button>`).join("")}
     </div>
   </div>`;
 }
@@ -135,19 +147,19 @@ function menuButtonByLabel(shell: HTMLElement, label: string): HTMLButtonElement
   return buttons.find((button) => button.textContent?.trim().toLowerCase() === label.toLowerCase()) ?? null;
 }
 
-function existingNavigationButton(shell: HTMLElement, destination: Exclude<QuickDestination, "threshold">): HTMLButtonElement | null {
-  const selectors: Record<Exclude<QuickDestination, "threshold">, string[]> = {
+function existingNavigationButton(shell: HTMLElement, destination: "records" | "forest" | "room" | "reflection" | "timeline"): HTMLButtonElement | null {
+  const selectors: Record<"records" | "forest" | "room" | "reflection" | "timeline", string[]> = {
     records: ["[data-action='room-records']"],
     forest: ["[data-action='forest']"],
     room: ["[data-action='open-room']"],
-    reflection: ["[data-action='open-reflection-wall']", "[data-action='reflection-wall']", "[data-action='open-reflections']"],
+    reflection: ["[data-action='reflection-wall']", "[data-action='open-reflection-wall']", "[data-action='open-reflections']"],
     timeline: ["[data-action='open-timeline']"]
   };
   for (const selector of selectors[destination]) {
     const button = shell.querySelector<HTMLButtonElement>(`.menu-panel ${selector}`);
     if (button) return button;
   }
-  const labels: Record<Exclude<QuickDestination, "threshold">, string[]> = {
+  const labels: Record<"records" | "forest" | "room" | "reflection" | "timeline", string[]> = {
     records: ["Records"],
     forest: ["Forest", "The Forest"],
     room: ["Muji Room"],
@@ -167,6 +179,14 @@ function activateQuickDestination(app: AppLike, destination: QuickDestination): 
   closeAllNavigation(shell);
   if (destination === "threshold") {
     openThreshold(app);
+    return;
+  }
+  if (destination === "capsule") {
+    app.activateRoomInteraction?.({ id: "capsule" });
+    return;
+  }
+  if (destination === "fullscreen") {
+    void app.toggleFullscreen?.();
     return;
   }
   existingNavigationButton(shell, destination)?.click();
