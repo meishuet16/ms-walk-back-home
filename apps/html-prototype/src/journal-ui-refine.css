@@ -164,6 +164,127 @@
   accent-color: #7d6a45;
 }
 
+/* Keep the category/menu row separate from the actual editable title. */
+.journal-modal.diary-editor .journal-mobile-top-meta,
+.journal-modal.diary-editor .journal-kind,
+.journal-modal.diary-editor .journal-mobile-top-meta .journal-icon-button,
+.journal-modal.diary-editor .journal-meta-card,
+.journal-modal.diary-editor .journal-meta-card .journal-title-row {
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+}
+
+.journal-modal.diary-editor .journal-mobile-top-meta {
+  z-index: 3;
+  min-height: 34px;
+  margin: 0 0 14px !important;
+}
+
+.journal-modal.diary-editor .journal-meta-card .journal-title-row {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  z-index: 1;
+  margin: 0 0 7px !important;
+}
+
+.journal-modal.diary-editor .journal-meta-card .journal-title-row input {
+  width: 100%;
+  min-width: 0;
+  padding-top: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* Date + mood share one row; location + weather share the next row. */
+.journal-modal.diary-editor .journal-meta-card .journal-date-row {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.journal-modal.diary-editor .journal-meta-card label:has(#diary-mood-text) {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.journal-modal.diary-editor .journal-meta-card label:has(#diary-location) {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+.journal-modal.diary-editor .journal-meta-card label:has(#diary-weather) {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+.journal-modal.diary-editor .journal-weekday {
+  grid-column: 1 / -1;
+  grid-row: 4;
+}
+
+.journal-modal.diary-editor #diary-date {
+  max-width: 185px;
+  min-width: 142px;
+  padding-right: 3px !important;
+}
+
+/* Reader utilities are compact utilities, not two giant primary actions. */
+.monthly-reader .reader-actions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+  margin: 7px 0 10px !important;
+}
+
+.monthly-reader .reader-actions > span {
+  flex: 1 1 100% !important;
+  margin-bottom: 1px;
+}
+
+.monthly-reader .reader-actions > button {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-height: 36px !important;
+  padding: 6px 11px !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+  font-size: 13px !important;
+}
+
+.monthly-reader .reader-actions [data-action="export-month-pdf"] {
+  border-color: rgba(118, 91, 55, .3) !important;
+  background: #735838 !important;
+  color: #fff4d4 !important;
+}
+
+.monthly-reader .reader-actions [data-action="change-month-cover"] {
+  border-color: rgba(110, 83, 51, .26) !important;
+  background: rgba(255, 248, 230, .78) !important;
+  color: #60462f !important;
+}
+
+.monthly-reader .journal-cover-editor {
+  margin: 2px 0 10px !important;
+  padding: 10px !important;
+  border-radius: 10px !important;
+}
+
+.monthly-books .book-cover-thumb.has-custom-cover {
+  position: relative;
+  overflow: hidden;
+  color: #fff8dc;
+  text-shadow: 0 1px 4px rgba(24, 18, 12, .7);
+}
+
+.monthly-books .book-cover-thumb.has-custom-cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(22,18,13,.04), rgba(22,18,13,.22));
+  pointer-events: none;
+}
+
 @media (max-width: 760px) {
   .journal-modal.diary-editor .journal-toolbar {
     min-height: 66px;
@@ -180,11 +301,7 @@
   }
 
   .journal-modal.diary-editor .journal-meta-card {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .journal-modal.diary-editor .journal-meta-card .journal-date-row {
-    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr) !important;
   }
 
   .journal-modal.diary-editor .journal-meta-card .journal-title-row input {
@@ -193,6 +310,30 @@
 
   .journal-modal.diary-editor #diary-body {
     min-height: 42dvh;
+  }
+
+  .journal-panel.monthly-books {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding-bottom: max(48px, env(safe-area-inset-bottom)) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .monthly-books .book-shelf-section,
+  .monthly-books .book-grid {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  .monthly-books .book-shelf-section {
+    padding-bottom: max(88px, calc(env(safe-area-inset-bottom) + 48px)) !important;
   }
 }
 
