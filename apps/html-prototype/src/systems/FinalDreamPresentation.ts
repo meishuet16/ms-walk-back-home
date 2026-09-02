@@ -1,4 +1,5 @@
 import { finalDreamCredits, finalDreamEndingLines, finalDreamFrames, finalDreamMorningImage, type FinalDreamFrame } from "../fixtures/finalDreamChapter.js";
+import { finalDreamEpiloguePages } from "../fixtures/finalDreamEpilogue.js";
 
 type FinalDreamHost = {
   root: HTMLElement;
@@ -13,17 +14,20 @@ function escapeHtml(value: string): string {
 
 export class FinalDreamPresentation {
   private index = 0;
-  private phase: "dream" | "ending" | "title" | "credits" = "dream";
+  private phase: "dream" | "ending" | "epilogue" | "title" | "credits" = "dream";
   private endingIndex = 0;
+  private epilogueIndex = 0;
   private destroyed = false;
   private transitionTimer = 0;
   private endingTimer = 0;
   private typeTimer = 0;
   private autoAdvanceTimer = 0;
   private typing = false;
+  private epilogueTyping = false;
   private currentText = "";
   private currentTypedCount = 0;
   private endingLineTypedCount = 0;
+  private epilogueTypedCount = 0;
   private lastSurfaceAdvanceAt = 0;
   private readonly reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
   private readonly keydown = (event: KeyboardEvent) => {
@@ -75,6 +79,19 @@ export class FinalDreamPresentation {
       return;
     }
     if (this.phase === "ending" || this.phase === "credits") return;
+    if (this.phase === "epilogue") {
+      if (this.epilogueTyping) {
+        this.finishEpilogueTyping();
+        return;
+      }
+      if (this.epilogueIndex < finalDreamEpiloguePages.length - 1) {
+        this.epilogueIndex += 1;
+        this.renderEpiloguePage();
+      } else {
+        this.beginTitle();
+      }
+      return;
+    }
     if (this.phase === "title") this.beginCredits();
   }
 
@@ -97,6 +114,10 @@ export class FinalDreamPresentation {
   private tryAdvance(): void {
     if (this.destroyed || this.phase === "ending" || this.phase === "credits") return;
     if (this.phase === "dream" && this.typing) return;
+    if (this.phase === "epilogue" && this.epilogueTyping) {
+      this.finishEpilogueTyping();
+      return;
+    }
     this.advance();
   }
 
@@ -113,6 +134,14 @@ export class FinalDreamPresentation {
     }
     if (this.destroyed || this.phase === "ending" || this.phase === "credits") return;
     if (this.phase === "dream" && this.typing) return;
+
+    if (this.phase === "epilogue" && this.epilogueTyping) {
+      if (event.cancelable) event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      this.finishEpilogueTyping();
+      return;
+    }
 
     const now = Date.now();
     if (now - this.lastSurfaceAdvanceAt < 450) return;
@@ -261,8 +290,8 @@ export class FinalDreamPresentation {
   private scheduleNextEndingLine(): void {
     const isLast = this.endingIndex >= finalDreamEndingLines.length - 1;
     if (isLast) {
-      const hold = this.reducedMotion ? 250 : 5200;
-      this.transitionTimer = window.setTimeout(() => this.beginTitle(), hold);
+      const hold = this.reducedMotion ? 250 : 4200;
+      this.transitionTimer = window.setTimeout(() => this.beginEpilogue(), hold);
       return;
     }
     const pause = this.reducedMotion ? 80 : 960;
@@ -273,8 +302,88 @@ export class FinalDreamPresentation {
     }, pause);
   }
 
+  private beginEpilogue(): void {
+    if (this.destroyed) return;
+    window.clearTimeout(this.typeTimer);
+    window.clearTimeout(this.autoAdvanceTimer);
+    this.phase = "epilogue";
+    this.epilogueIndex = 0;
+    this.renderEpiloguePage();
+  }
+
+  private renderEpiloguePage(): void {
+    if (this.destroyed || this.phase !== "epilogue") return;
+    window.clearTimeout(this.typeTimer);
+    window.clearTimeout(this.autoAdvanceTimer);
+    this.epilogueTyping = false;
+    this.epilogueTypedCount = 0;
+    const page = finalDreamEpiloguePages[this.epilogueIndex];
+    if (!page) return this.beginTitle();
+    this.currentText = page.join("\n");
+    this.host.overlay.innerHTML = `<section class="final-dream-black final-dream-epilogue" data-final-dream-epilogue="${this.epilogueIndex + 1}">
+      <div class="final-dream-epilogue-grain" aria-hidden="true"></div>
+      <div class="final-dream-epilogue-copy" aria-live="polite"><span class="final-dream-epilogue-type"></span><span class="final-dream-epilogue-caret" aria-hidden="true"></span></div>
+      <div class="final-dream-epilogue-progress" aria-hidden="true">${this.epilogueIndex + 1} / ${finalDreamEpiloguePages.length}</div>
+    </section>`;
+    this.typeEpiloguePage();
+  }
+
+  private typeEpiloguePage(): void {
+    const target = this.host.overlay.querySelector<HTMLElement>(".final-dream-epilogue-type");
+    if (!target) return;
+    if (this.reducedMotion) {
+      target.textContent = this.currentText;
+      this.epilogueTyping = false;
+      this.host.overlay.querySelector<HTMLElement>(".final-dream-epilogue-caret")?.remove();
+      this.host.overlay.querySelector<HTMLElement>(".final-dream-epilogue")?.classList.add("is-ready");
+      this.scheduleEpilogueAdvance();
+      return;
+    }
+    this.epilogueTyping = true;
+    const step = () => {
+      if (this.destroyed || this.phase !== "epilogue" || !this.epilogueTyping) return;
+      this.epilogueTypedCount = Math.min(this.currentText.length, this.epilogueTypedCount + 1);
+      target.textContent = this.currentText.slice(0, this.epilogueTypedCount);
+      if (this.epilogueTypedCount >= this.currentText.length) {
+        this.epilogueTyping = false;
+        this.host.overlay.querySelector<HTMLElement>(".final-dream-epilogue-caret")?.remove();
+        this.host.overlay.querySelector<HTMLElement>(".final-dream-epilogue")?.classList.add("is-ready");
+        this.scheduleEpilogueAdvance();
+        return;
+      }
+      const char = this.currentText[this.epilogueTypedCount - 1] ?? "";
+      const delay = /[。！？!?…]/.test(char) ? 190 : /[，、；：,;:——]/.test(char) ? 105 : char === "\n" ? 150 : 48;
+      this.typeTimer = window.setTimeout(step, delay);
+    };
+    step();
+  }
+
+  private finishEpilogueTyping(): void {
+    if (this.phase !== "epilogue" || !this.epilogueTyping) return;
+    window.clearTimeout(this.typeTimer);
+    const target = this.host.overlay.querySelector<HTMLElement>(".final-dream-epilogue-type");
+    if (target) target.textContent = this.currentText;
+    this.epilogueTypedCount = this.currentText.length;
+    this.epilogueTyping = false;
+    this.host.overlay.querySelector<HTMLElement>(".final-dream-epilogue-caret")?.remove();
+    this.host.overlay.querySelector<HTMLElement>(".final-dream-epilogue")?.classList.add("is-ready");
+    this.scheduleEpilogueAdvance();
+  }
+
+  private scheduleEpilogueAdvance(): void {
+    window.clearTimeout(this.autoAdvanceTimer);
+    const isLast = this.epilogueIndex >= finalDreamEpiloguePages.length - 1;
+    this.autoAdvanceTimer = window.setTimeout(() => {
+      if (this.destroyed || this.phase !== "epilogue" || this.epilogueTyping) return;
+      this.advance();
+    }, this.reducedMotion ? 1200 : isLast ? 7600 : 6200);
+  }
+
   private beginTitle(): void {
     if (this.destroyed) return;
+    window.clearTimeout(this.typeTimer);
+    window.clearTimeout(this.autoAdvanceTimer);
+    this.epilogueTyping = false;
     this.phase = "title";
     this.host.overlay.innerHTML = `<section class="final-dream-black final-dream-title-card" aria-label="Walk Back Home">
       <div class="final-dream-title-haze" aria-hidden="true"></div>
