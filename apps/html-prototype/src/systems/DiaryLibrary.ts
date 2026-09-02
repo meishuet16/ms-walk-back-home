@@ -107,7 +107,7 @@ export function getDiaryForestMemories(library: DiaryLibraryState): DiaryForestM
 }
 
 export function forestNodesForMonth(publicEntries: AuthoredForestEntry[], library: DiaryLibraryState, monthKey: string): Array<AuthoredForestEntry | DiaryForestMemory> {
-  const visiblePublicEntries = publicEntries.filter((entry) => forestEntryMatchesMonth(entry.date, monthKey));
+  const visiblePublicEntries = publicEntries.filter((entry) => forestEntryMatchesMonth(entry.date, monthKey, entry.year));
   const publicChapterIds = new Set(publicEntries.map((entry) => entry.chapterId));
   const privateMemories = getDiaryForestMemories(library)
     .filter((entry) => entry.date.startsWith(monthKey))
@@ -115,8 +115,9 @@ export function forestNodesForMonth(publicEntries: AuthoredForestEntry[], librar
   return [...visiblePublicEntries, ...privateMemories];
 }
 
-function forestEntryMatchesMonth(date: string, monthKey: string): boolean {
+function forestEntryMatchesMonth(date: string, monthKey: string, year?: number): boolean {
+  const [yearText, monthText] = monthKey.split("-");
+  if (year !== undefined && String(year) !== yearText) return false;
   if (/^\d{4}-\d{2}/.test(date)) return date.startsWith(monthKey);
-  const [, monthText] = monthKey.split("-");
   return date.startsWith(`${monthText}.`) || date.startsWith(`${monthText}/`);
 }
