@@ -45,6 +45,11 @@ jobs:
           ]
           mapping = {"ms": "我", "et": "她", "ziqi": "朋友", "st": "朋友", "angela": "朋友"}
 
+          march30 = Path("apps/html-prototype/src/fixtures/march30Memory.ts")
+          text = march30.read_text(encoding="utf-8")
+          text = text.replace('speaker: "MS" | "ET"', 'speaker: "我" | "她"')
+          march30.write_text(text, encoding="utf-8")
+
           speaker_prop = re.compile(r'(\bspeaker\s*:\s*["\'])(ms|et|ziqi|st|angela)(["\'])', re.I)
           dialogue_arg = re.compile(r'(\bdialogue\(\s*["\'])(ms|et|ziqi|st|angela)(["\'])', re.I)
 
@@ -65,13 +70,6 @@ jobs:
                   path.write_text(updated, encoding="utf-8")
                   print(f"{filename}: {count} speaker label(s) changed")
                   total += count
-
-          # March 30 has a narrow speaker type and one compile-time test fixture.
-          # These are support/schema updates only; dialogue text, actors, assets, ids, and characters remain untouched.
-          march30 = Path("apps/html-prototype/src/fixtures/march30Memory.ts")
-          text = march30.read_text(encoding="utf-8")
-          text = text.replace('speaker: "MS" | "ET"', 'speaker: "我" | "她"')
-          march30.write_text(text, encoding="utf-8")
 
           test = Path("apps/html-prototype/tests/march30-memory.test.ts")
           text = test.read_text(encoding="utf-8")
