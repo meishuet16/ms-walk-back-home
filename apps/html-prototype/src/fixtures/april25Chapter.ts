@@ -16,7 +16,7 @@ export const april25MainPortraitSequence: AuthoredPortraitSequence = {
   id: "apr25-main",
   beats: [
     beat("echo-wait", [
-      memory("傍晚骑脚车，要回的时候，我本来只是打算去 KTHO 装水了顺路找 ST。"),
+      memory("傍晚骑脚车，要回的时候，我本来只是打算经过她宿舍楼下 装水了顺路去朋友房间。"),
       memory("结果一转进去。"),
       memory("远远就看到一个熟悉的身影。"),
       ms("哇塞。"),
@@ -28,7 +28,7 @@ export const april25MainPortraitSequence: AuthoredPortraitSequence = {
       et("所以我就多等了一下。"),
       ms("好有缘哦。"),
       et("巧咯。来剪刘海。"),
-      ms("我满头大汗 wor。")
+      ms("真的假的 我满头大汗 wor。")
     ]),
     beat("echo-look", [
       memory("我去装水喝。"),
@@ -58,10 +58,10 @@ export const april25MainPortraitSequence: AuthoredPortraitSequence = {
       ms("跟谁讲？"),
       et("跟我讲啊。"),
       et("八卦什么的。"),
-      memory("后来我跟她确认下一次爬山的时间。"),
-      memory("本来还想 jio 她去 Flying Fox。"),
+      memory("后来我就跟她确认下一次爬山的时间。"),
+      memory("本来还想 jio 她去别一个活动。"),
       memory("她其实 ok，也得空。"),
-      memory("只是 Grab 太远了。")
+      memory("只是车程太远了。")
     ]),
     beat("echo-hair-start", [
       memory("然后就是剪刘海环节。"),
@@ -74,10 +74,10 @@ export const april25MainPortraitSequence: AuthoredPortraitSequence = {
       memory("她突然对着我的脸吹气。"),
       memory("把碎头发吹走。"),
       ms("what。"),
-      memory("她笑得很大声。")
+      memory("她笑得很大声。。。")
     ]),
     beat("echo-hair-03", [
-      memory("然后她的剪刀一直划过我的眉毛。"),
+      memory("她的剪刀一直划过我的眉毛。"),
       memory("我很害怕。"),
       memory("一直皱着脸。"),
       et("不要皱着脸先。"),
@@ -94,7 +94,7 @@ export const april25MainPortraitSequence: AuthoredPortraitSequence = {
       et("不要要求那么高。")
     ]),
     beat("echo-argue", [
-      memory("回到 lobby 的时候遇到 Angela。"),
+      memory("回到 lobby 的时候遇到朋友。"),
       angela("很可爱的刘海。"),
       ms("错了错了。"),
       ms("我不要可爱。"),
@@ -112,13 +112,13 @@ export const april25MainPortraitSequence: AuthoredPortraitSequence = {
     beat("echo-arm", [
       memory("我后来 show muscle 视频给她们看。"),
       memory("她一看到就要跟我掰手腕。"),
-      memory("Angela 帮我录。"),
+      memory("朋友帮我录。"),
       memory("然后她输了。"),
-      et("我的 muscle 没有你大粒。"),
+      et("哇佬 我的 muscle 没有你大粒。"),
       ms("哎哟。"),
       ms("你放水了。"),
-      ms("我之前没有赢过。"),
-      et("我是你赢的第一个人。"),
+      ms("我之前都没有赢过。"),
+      et("那我就是你赢的第一个人。"),
       memory("然后她不服输。"),
       memory("换个位置又来一次。"),
       memory("又输了。"),
@@ -134,9 +134,9 @@ export const april25MainPortraitSequence: AuthoredPortraitSequence = {
       ms("跑步我肯定被你拉爆。"),
       ms("我骑脚车你跑步就可以。"),
       memory("最后也没有真的跑。"),
-      memory("散场以前我又约她明天。"),
-      et("明天我要去练羽球。"),
-      et("我们报名混双了。")
+      memory("散场以前我又约她明天剪头发。"),
+      et("明天不可以 我要去练羽球。"),
+      et("我和你认识的那个朋友报名混双了。")
     ]),
     beat("echo-arm", [
       ms("他约你就去。"),
@@ -149,17 +149,17 @@ export const april25MainPortraitSequence: AuthoredPortraitSequence = {
       et("怎么了？"),
       et("那个男生有黑历史吗？"),
       ms("也没什么。"),
-      ms("只是一个有点敏感多疑的小男生。"),
+      ms("只是一个感觉有点奇怪的男生。"),
       et("是朋友就快点告诉我。"),
       ms("没什么啦。"),
-      et("那明天他如果要找人，我可以拉你吗？"),
+      et("那明天他如果要拉人打球，我可以拉你吗？"),
       ms("。。。")
     ]),
     beat("echo-invite", [
       memory("回到宿舍冲好凉。"),
-      memory("那个男生真的来找我。"),
-      memory("还 mention ET 也去。"),
-      ms("是你叫他问的吗？"),
+      memory("那个男生还真的来找我。"),
+      memory("还 mention 她也去。"),
+      ms("欸 是你叫他问的吗？"),
       et("他要你啦。"),
       et("你来就可以陪我了哈哈哈。"),
       et("一起受苦。"),
@@ -173,9 +173,9 @@ export const april25MainPortraitSequence: AuthoredPortraitSequence = {
       memory("好多 message。"),
       memory("群里也炸了。"),
       memory("大家都被震惊了。"),
-      memory("妈妈要打我了 把头发给别人剪"),
+      memory("感觉妈妈要打我了 把头发给别人剪"),
       memory("妈妈问我那是谁"),
-      ms("我们只是好朋友。")
+      ms("我的一个朋友。")
     ])
   ]
 };
@@ -239,11 +239,11 @@ export const april25PortraitSequences: Record<string, AuthoredPortraitSequence> 
       beat("echo-introvert", [
         et("怎样，今天什么感想？"),
         ms("啥感想？"),
-        et("为什么你这么安静？"),
+        et("为什么你今天这么安静？"),
         ms("我是大i人啊。"),
         ms("而且我跟他也是第一次见 ei。"),
         et("屁啦。"),
-        et("你对我又不看你i。"),
+        et("你对着我又不看你i。"),
         ms("嘿嘿。")
       ])
     ]
@@ -255,7 +255,7 @@ export const april25PortraitSequences: Record<string, AuthoredPortraitSequence> 
         friend("你觉得你们现在是什么关系？"),
         ms("朋友。"),
         memory("然后我开始讲我真正介意的东西。"),
-        ms("我很愧疚。"),
+        ms("我觉得很愧疚。"),
         ms("我觉得对她不公平。"),
         memory("朋友好像并不这样觉得。"),
         memory("她说，我的想法不一定就是对方的想法。"),
@@ -299,7 +299,7 @@ export const april25ReflectionChoices: Array<{ id: string; prompt: string; choic
     prompt: "那晚我说：\n\n“她对我越好，我越愧疚。”",
     choices: [
       choice("apr26-guilt-feeling", "我把自己的感觉，当成了对她的冒犯。", { honesty: 1, acceptance: 1 }, "我那晚一直在替一件没有说出口的事道歉。\n\n可是她当时没有给它定过罪。"),
-      choice("apr26-guilt-want-more", "我怕我想要的，比好朋友多。", { honesty: 1, closeness: 1, holding: 1 }, "“好朋友是肯定是的。”\n\n难的是后面那半句。\n\n我一直没有说。"),
+      choice("apr26-guilt-want-more", "我怕我想要的，比好朋友多。", { honesty: 1, closeness: 1, holding: 1 }, "“好朋友或许是的。”\n\n难的是后面那半句。\n\n我一直没有说。"),
       choice("apr26-guilt-dont-know", "我不知道她怎么想，所以那时候宁愿不动。", { avoidance: 1, concealment: 1, distance: 1 }, "那晚我没有去问她。\n\n半夜十二点以后，还是带着疑问自己骑脚车回宿舍。")
     ]
   }
@@ -331,10 +331,10 @@ export const april25Chapter: ChapterDefinition = {
   diaryEntryId: "authored-diary-april25-just-good-friends",
   runtimeScene: "425",
   date: "04.25–04.26",
-  title: "只是好朋友",
+  title: "只是朋友",
   mood: "quiet",
   weather: "晴",
-  location: "KTHO / April 26 memory residues",
+  location: "April 26 memory residues",
   characters: ["MS", "ET", "friends"],
   objects: ["bicycle", "scissors", "badminton bag", "watermelon juice"],
   evidence: ["approved-425-portrait-world", "approved-425-landscape-world", "approved-425-memory-portraits"],
@@ -382,9 +382,9 @@ export const april25Chapter: ChapterDefinition = {
 export const april25DiaryBody = [
   "04.25–04.26 · Just Friends",
   "那两天其实没有发生什么很大的事情。",
-  "四月二十五号中午醒来的时候，第一条听见的是你的语音。你说，早安美雪，你的饭团到了。我还很认真地问，你怎么知道。",
+  "四月二十五号中午醒来的时候，第一条听见的是你的语音。你说，早安，你的饭团到了。我还很认真地问，你怎么知道。",
   "后来才想起来，那阵子我好像常常买。名字一次又一次出现在订单里面，被你看见，也不是什么奇怪的事。",
-  "晚上我去骑脚车。骑完以后，本来只是想去 KTHO 装水，再去找别人。",
+  "晚上我去骑脚车。骑完以后，本来只是想去你宿舍楼下装水，再去找别人。",
   "转进去的时候，远远看见一个很熟悉的人。",
   "你说，你也是远远看到一个骑脚车的人，觉得好像是我，所以多等了一下。",
   "我第一反应还是那句。",
@@ -404,7 +404,7 @@ export const april25DiaryBody = [
   "可能真的什么都没有发生。",
   "剪完以后，你很满意，说很可爱。",
   "我说，我要的是帅气。",
-  "后来 Angela 来了，也说可爱。你们两个像讲好的一样，我一个人坚持了半天，最后还是没有人理。",
+  "后来朋友来了，也说可爱。你们两个像讲好的一样，我一个人坚持了半天，最后还是没有人理。",
   "再后来你看到我练 muscle 的视频，突然要跟我掰手腕。",
   "第一次输了，你不服，换了位置又来一次。",
   "还是输。",
@@ -475,9 +475,9 @@ export const april25DiaryBody = [
   "自然到我不知道哪些事情值得记，哪些其实根本没有别的意思。",
   "你会在我下场以后走过来，抓着我的肩膀念我。",
   "经过的时候又顺手揉乱我的头发，说这个刘海真的很可爱。",
-  "你记得我平时很安静，所以那天还问我怎么了。",
+  "你记得我平时没有那么安静，所以那天回程车上还问我今天怎么了。",
   "我说，我本来就是 i 人。",
-  "你说，屁啦，你对我又不看你 i。",
+  "你说：屁啦，你对着我又不看你 i。",
   "我只会嘿嘿。",
   "其实那句话也没有错。",
   "有些人不会真的把你变成另外一种人。",
@@ -512,7 +512,7 @@ export const april25DiaryEntry: DiaryEntry = {
   date: "2026-04-25",
   title: "04.25–04.26 · Just Friends",
   body: april25DiaryBody.join("\n\n"),
-  location: "KTHO / April 26 memories",
+  location: "April 26 memories",
   weather: "晴",
   memoryKind: "chapter",
   mood: "quiet",
