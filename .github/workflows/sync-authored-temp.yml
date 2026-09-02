@@ -38,3 +38,5 @@ jobs:
           git add -f apps/html-prototype/src/fixtures/generated/authoredContentExpectations.ts
           git commit -m "Sync authored content expectations"
           git push origin HEAD:feat/journal-ui-pdf-polish
+
+# Trigger after workflow registration.
