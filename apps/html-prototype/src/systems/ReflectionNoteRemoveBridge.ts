@@ -1,11 +1,11 @@
-import { deleteReflectionNote, type ReflectionWallState } from "./ReflectionWall.js";
+import { deleteReflectionNote } from "./ReflectionWall.js";
+import type { ReflectionWallState } from "../types.js";
 
 type ReflectionRemoveApp = {
   overlay: HTMLElement;
   reflectionWall: ReflectionWallState;
   save: { saveReflectionWall: (state: ReflectionWallState) => void };
   openReflectionWall: () => void;
-  escapeHtml?: (value: string) => string;
   [key: string]: unknown;
 };
 
