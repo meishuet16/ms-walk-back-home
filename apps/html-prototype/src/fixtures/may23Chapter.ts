@@ -133,14 +133,14 @@ export const may23Chapter: ChapterDefinition = {
   title: "05.23 · 我到了，你呢",
   mood: "rain, silence, and a walk that turned back",
   weather: "Rain",
-  location: "KTHO",
+  location: "lobby",
   characters: ["Muji", "MS", "ET", "Tung Ern"],
   objects: ["hostel lobby", "toilet-side doorway", "bus stop", "phone", "rain"],
   evidence: ["authored-523-portrait-scene-layout", "authored-523-landscape-scene-layout", "may23-individual-character-frames"],
   dialogue: [],
   canonicalClosure: {
     historicalEventId: "may23-hostel-memory",
-    lines: ["那晚最后没有散到步。", "MS 一个人走了回去。"]
+    lines: ["那晚最后没有散到步。", "我一个人走了回去。"]
   },
   reflectionQuotes: [
     { id: "may23-accepting", tone: "accepting", preference: { honesty: 1, acceptance: 1 }, lines: ["19:29，她问：你在哪里。", "那时候，我已经走了一半。"], afterline: "那天我是真的到了。" },
@@ -244,7 +244,7 @@ export const may23EchoDialogues: Record<
     },
     {
       speaker: "MEMORY",
-      text: "我原本就是因为她会去，\n才跟朋友约了这个活动。",
+      text: "其实我讲了，只是不重要了。",
       portrait: "assets/523/memory-portrait/bus-stop-memory.png"
     },
     {
@@ -254,14 +254,14 @@ export const may23EchoDialogues: Record<
     }
   ],
   "judge-stars": [
-    { speaker: "我", text: "ziqi 说，她看见 judge 的纸。" ,portrait: "assets/523/memory-portrait/judge-stars.png"  },
-    { speaker: "我", text: "我们组一颗星。学姐那组两颗。" ,portrait: "assets/523/memory-portrait/judge-stars.png"  },
-    { speaker: "我", text: "那时候我们还以为，是第一和第二。后来学姐那组第三。我们什么也没有。" ,portrait: "assets/523/memory-portrait/judge-stars.png"   }
+    { speaker: "我", text: "朋友说，她看见 judge 的纸。" ,portrait: "assets/523/memory-portrait/judge-stars.png"  },
+    { speaker: "我", text: "我们组一颗星。另外一组组两颗。" ,portrait: "assets/523/memory-portrait/judge-stars.png"  },
+    { speaker: "我", text: "那时候我们还以为，是第一和第二。后来那组第三。我们什么也没有。" ,portrait: "assets/523/memory-portrait/judge-stars.png"   }
   ],
   "tart-after-rain": [
     { speaker: "她", text: "下雨后送温暖。" ,portrait: "assets/523/memory-portrait/tart-after-rain.png"  },
     { speaker: "我", text: "有心的话留三粒给我。" ,portrait: "assets/523/memory-portrait/tart-after-rain.png"  },
-    { speaker: "她", text: "对不起美雪 我不该每天挑衅你\n结果你以德报怨！！" ,portrait: "assets/523/memory-portrait/tart-after-rain.png"  }
+    { speaker: "她", text: "对不起 我不该每天挑衅你\n结果你以德报怨！！" ,portrait: "assets/523/memory-portrait/tart-after-rain.png"  }
   ],
   "laundry-weight": [
     { speaker: "我", text: "那天后来，脚车还是坏着。" ,portrait: "assets/523/memory-portrait/laundry-weight.png"  },
@@ -393,8 +393,8 @@ export function resolveMay23Actions(layout: SceneLayout, mode: "main" | "echo", 
     { type: "despawn", actor: "et" },
     { type: "despawn", actor: "tung-ern" },
     { type: "dialogue", speaker: "我", text: "她还是没有回我。",portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
-    { type: "dialogue", speaker: "我", text: "我甚至还在想，\n她是不是买了东西回来给我。",portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
-    { type: "dialogue", speaker: "我", text: "结果都是我以为。",portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
+    { type: "dialogue", speaker: "我", text: "我甚至还在想，\n她是不是没看手机。",portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
+    { type: "dialogue", speaker: "我", text: "结果都是我以为。我就这样呆了半小时 要离开时才等来回复",portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
     move(layout, "ms", "ms-bus-stop-wait", "ms-walk-away", "down", 0.85, 0.3),
     { type: "sprite", actor: "ms", sprite: spriteForPath(layout, "ms", "ms-bus-stop-wait", "ms-walk-away", "down", "passing"), visualScale: 0.3 },
     move(layout, "ms", "ms-walk-away", "ms-halfway-home", "down", 1.1, 0.3),
@@ -404,7 +404,7 @@ export function resolveMay23Actions(layout: SceneLayout, mode: "main" | "echo", 
     { type: "face", actor: "ms", direction: "up" },
     move(layout, "ms", "ms-halfway-home", "ms-return-stop", "up", 0.8, 0.3, 0.3, "up", { speaker: "她", text: "算了啦 我8：30要去吃饭" ,portrait: "assets/523/memory-portrait/bus-stop-memory.png"}, 0.35),
     { type: "sprite", actor: "ms", sprite: spriteForPath(layout, "ms", "ms-halfway-home", "ms-return-stop", "up", "passing"), visualScale: 0.3 },
-    { type: "dialogue", speaker: "她", text: "刚跟朋友走mecar" ,portrait: "assets/523/memory-portrait/01.png"},
+    { type: "dialogue", speaker: "她", text: "刚跟朋友出去" ,portrait: "assets/523/memory-portrait/01.png"},
     { type: "dialogue", speaker: "她", text: "哈哈哈哈" ,portrait: "assets/523/memory-portrait/01.png"},
     { type: "checkpoint", id: "may23-reflection-1" },
     { type: "checkpoint", id: "may23-reflection-2" },
