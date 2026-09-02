@@ -1,0 +1,228 @@
+/* Journal UI/UX polish: scoped to the existing Journal surfaces. */
+
+/* Monthly reader owns the vertical scroll on mobile so entries can always reach the end. */
+.journal-panel.monthly-reader {
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.monthly-reader .reader-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+}
+
+.monthly-reader .reader-actions > span {
+  flex: 1 1 100%;
+  color: rgba(67, 48, 31, .72);
+  font-size: .9rem;
+}
+
+.monthly-reader .reader-actions button {
+  min-height: 42px;
+}
+
+.monthly-reader .month-cover-crop-control,
+.monthly-reader #month-cover-input {
+  display: none;
+}
+
+.monthly-reader .journal-cover-editor {
+  display: none;
+  gap: 10px;
+  margin: 10px 0 14px;
+  padding: 12px;
+  border: 1px solid rgba(111, 76, 43, .24);
+  border-radius: 12px;
+  background: rgba(255, 249, 232, .72);
+  box-shadow: inset 0 1px rgba(255,255,255,.7);
+}
+
+.monthly-reader.cover-editing .journal-cover-editor {
+  display: grid;
+}
+
+.monthly-reader .journal-cover-editor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.monthly-reader .journal-cover-editor-head strong {
+  font-size: 1rem;
+}
+
+.monthly-reader .journal-cover-editor .month-cover-crop-control {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: #5f4934;
+}
+
+.monthly-reader .journal-cover-editor select {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid rgba(105, 72, 40, .38);
+  border-radius: 9px;
+  background: #fff9e8;
+  color: #3d2b1e;
+  font: inherit;
+}
+
+.monthly-reader .journal-cover-editor-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+
+.monthly-reader .journal-cover-editor-actions button {
+  min-height: 44px;
+}
+
+.monthly-reader .journal-cover-editor-actions [data-journal-cover-done] {
+  background: linear-gradient(#758566, #5f704f);
+  border-color: rgba(84, 105, 70, .72);
+}
+
+/* Existing Edit Journal has exactly three media actions: image, voice, video. */
+.mobile-editor-toolbar {
+  gap: 8px !important;
+  padding: 9px max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)) !important;
+  background: linear-gradient(180deg, rgba(255, 249, 232, .94), rgba(244, 231, 204, .98)) !important;
+  border-top: 1px solid rgba(111, 76, 43, .22) !important;
+  box-shadow: 0 -10px 28px rgba(50, 36, 24, .1) !important;
+}
+
+.mobile-editor-toolbar > button,
+.mobile-editor-toolbar .journal-audio-toolbar-slot {
+  min-width: 0;
+}
+
+.mobile-editor-toolbar > button,
+.mobile-editor-toolbar .journal-audio-recording-controls > button {
+  width: 100% !important;
+  min-height: 58px !important;
+  padding: 7px 6px !important;
+  border: 1px solid rgba(116, 82, 48, .24) !important;
+  border-radius: 12px !important;
+  background: rgba(255, 251, 238, .78) !important;
+  color: #4a3422 !important;
+  box-shadow: inset 0 1px rgba(255,255,255,.8), 0 2px 8px rgba(75, 49, 27, .08) !important;
+}
+
+.mobile-editor-toolbar > button:active,
+.mobile-editor-toolbar .journal-audio-recording-controls > button:active {
+  transform: translateY(1px);
+  background: #f3e2bd !important;
+}
+
+.mobile-editor-toolbar > button span,
+.mobile-editor-toolbar .journal-audio-recording-controls > button span {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  line-height: 1.15;
+}
+
+.mobile-editor-toolbar .journal-audio-toolbar-slot {
+  display: grid;
+  align-content: center;
+}
+
+.mobile-editor-toolbar .journal-audio-recording-controls {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 5px;
+}
+
+.mobile-editor-toolbar .journal-audio-recording-controls.recording {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.mobile-editor-toolbar .journal-audio-recording-controls.recording > button {
+  min-height: 52px !important;
+  padding-inline: 3px !important;
+}
+
+.mobile-editor-toolbar .journal-audio-recording-state {
+  min-height: 14px;
+  margin-top: 3px;
+  color: rgba(82, 58, 36, .62);
+  font-size: 10px;
+  line-height: 1.15;
+  text-align: center;
+}
+
+/* Show-more keeps spatial continuity but makes the reveal perceptible. */
+.timeline-load-feedback {
+  margin: 8px auto 0;
+  color: rgba(82, 58, 36, .7);
+  font-size: 12px;
+  text-align: center;
+  animation: journal-feedback 1.8s ease both;
+}
+
+.timeline-list article.journal-reveal {
+  animation: journal-entry-reveal .42s cubic-bezier(.22,.61,.36,1) both;
+}
+
+@keyframes journal-entry-reveal {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes journal-feedback {
+  0%, 78% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@media (max-width: 760px) {
+  .journal-panel.monthly-reader {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding-bottom: max(34px, env(safe-area-inset-bottom)) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .monthly-reader .book-spread {
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding-bottom: max(64px, env(safe-area-inset-bottom)) !important;
+  }
+
+  .monthly-reader .pdf-cover-preview {
+    min-height: clamp(210px, 48vh, 360px);
+  }
+
+  .monthly-reader .reader-actions {
+    align-items: stretch;
+  }
+
+  .monthly-reader .reader-actions button {
+    flex: 1 1 calc(50% - 6px);
+  }
+
+  .mobile-editor-toolbar {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timeline-list article.journal-reveal,
+  .timeline-load-feedback {
+    animation: none !important;
+  }
+}
