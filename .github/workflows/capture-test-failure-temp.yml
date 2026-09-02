@@ -1,0 +1,33 @@
+name: Capture Test Failure Temp
+
+on:
+  push:
+    branches:
+      - feat/journal-ui-pdf-polish
+    paths:
+      - '.github/workflows/capture-test-failure-temp.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  capture-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Capture npm test output
+        run: |
+          set +e
+          npm test > test-output.txt 2>&1
+          status=$?
+          echo "TEST_EXIT_CODE=$status" >> test-output.txt
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: test-failure-output
+          path: test-output.txt
