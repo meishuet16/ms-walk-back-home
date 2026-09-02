@@ -34,6 +34,14 @@
 .final-dream-ending-copy .ending-line-10 { margin-top: 1.4em; font-size: clamp(23px, 5.8vw, 29px); letter-spacing: .14em; font-weight: 800; }
 .ending-line-caret { display: inline-block; width: .42em; height: .9em; margin-left: .13em; vertical-align: -.08em; background: rgba(24,50,60,.42); animation: final-dream-caret 1.05s steps(1,end) infinite; }
 .final-dream-black { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: #050708; color: #d9d6cc; text-align: center; overflow: hidden; }
+.final-dream-epilogue { padding: max(30px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(34px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); cursor: pointer; animation: final-dream-black-in 1.8s ease both; }
+.final-dream-epilogue-grain { position: absolute; inset: -8%; pointer-events: none; opacity: .16; background: radial-gradient(circle at 32% 28%, rgba(222,219,210,.08), transparent 27%), radial-gradient(circle at 68% 72%, rgba(196,214,219,.05), transparent 31%); filter: blur(24px); animation: final-dream-epilogue-breathe 8s ease-in-out infinite alternate; }
+.final-dream-epilogue-copy { position: relative; z-index: 1; width: min(86vw, 520px); max-height: calc(100dvh - 110px); overflow: auto; margin: 0 auto; color: rgba(230,226,217,.9); text-align: left; white-space: pre-line; font: 500 clamp(16px, 4.2vw, 20px)/1.92 "Microsoft JhengHei", "PingFang TC", "Noto Sans CJK TC", sans-serif; letter-spacing: .035em; text-wrap: pretty; scrollbar-width: none; animation: final-dream-epilogue-rise 1.4s cubic-bezier(.22,.61,.36,1) both; }
+.final-dream-epilogue-copy::-webkit-scrollbar { display: none; }
+.final-dream-epilogue.is-ready .final-dream-epilogue-copy { color: rgba(235,231,222,.96); }
+.final-dream-epilogue-caret { display: inline-block; width: .42em; height: .92em; margin-left: .12em; vertical-align: -.08em; background: rgba(222,219,210,.52); animation: final-dream-caret 1s steps(1,end) infinite; }
+.final-dream-epilogue-progress { position: absolute; z-index: 1; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); color: rgba(217,214,204,.22); font: 10px/1.4 "Courier New", monospace; letter-spacing: .14em; transition: opacity .8s ease; }
+.final-dream-epilogue.is-ready .final-dream-epilogue-progress { opacity: .58; }
 .final-dream-title-card { animation: final-dream-black-in 2.6s ease both; }
 .final-dream-title-haze { position: absolute; inset: -15%; background: radial-gradient(circle at 50% 50%, rgba(196,214,219,.08), transparent 40%); filter: blur(26px); animation: final-dream-title-haze 6.4s ease-in-out infinite alternate; }
 .final-dream-title-card h1 { position: relative; z-index: 1; margin: 0; padding: 0 18px; color: #e5e2d9; font: 700 clamp(13px, 3.7vw, 20px)/1.4 "Courier New", monospace; letter-spacing: clamp(.12em, .8vw, .26em); white-space: nowrap; animation: final-dream-title 2.9s ease both; }
@@ -54,6 +62,8 @@
 @keyframes final-dream-drift { from { transform: translate3d(-2%, -1.2%, 0) scale(1); opacity: .18; } to { transform: translate3d(2.4%, 1.8%, 0) scale(1.05); opacity: .42; } }
 @keyframes final-dream-breathe { from { opacity: .66; } to { opacity: 1; } }
 @keyframes final-dream-black-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes final-dream-epilogue-rise { from { opacity: 0; transform: translateY(14px); filter: blur(1.8px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
+@keyframes final-dream-epilogue-breathe { from { opacity: .08; transform: scale(.98); } to { opacity: .2; transform: scale(1.04); } }
 @keyframes final-dream-credits-out { from { opacity: 1; } to { opacity: 0; } }
 @keyframes final-dream-title { from { opacity: 0; letter-spacing: .38em; filter: blur(2px); } to { opacity: 1; filter: blur(0); } }
 @keyframes final-dream-title-haze { from { opacity: .2; transform: scale(.96); } to { opacity: .6; transform: scale(1.06); } }
@@ -62,7 +72,8 @@
   .final-dream-frame { width: min(560px, 100vw); margin: 0 auto; box-shadow: 0 0 80px rgba(0,0,0,.32); }
   .final-dream-image-wrap { background: #c7dbe3; }
   .final-dream-dialogue { width: min(525px, 91%); }
+  .final-dream-epilogue-copy { width: min(74vw, 560px); font-size: clamp(16px, 2vw, 20px); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .final-dream-frame.final-dream-page-enter, .final-dream-frame.final-dream-page-enter::after, .final-dream-image, .final-dream-portrait, .final-dream-dialogue, .final-dream-ending .final-dream-image, .final-dream-morning-haze, .final-dream-ending-drift, .final-dream-title-card, .final-dream-title-card h1, .final-dream-title-haze, .final-dream-credits div, .final-dream-caret, .ending-line-caret, .final-dream-credits-exit { animation: none !important; }
+  .final-dream-frame.final-dream-page-enter, .final-dream-frame.final-dream-page-enter::after, .final-dream-image, .final-dream-portrait, .final-dream-dialogue, .final-dream-ending .final-dream-image, .final-dream-morning-haze, .final-dream-ending-drift, .final-dream-epilogue, .final-dream-epilogue-grain, .final-dream-epilogue-copy, .final-dream-title-card, .final-dream-title-card h1, .final-dream-title-haze, .final-dream-credits div, .final-dream-caret, .ending-line-caret, .final-dream-epilogue-caret, .final-dream-credits-exit { animation: none !important; }
 }

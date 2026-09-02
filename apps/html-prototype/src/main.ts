@@ -12,10 +12,12 @@ import { installCapsuleAudioCaptureBridge } from "./systems/CapsuleAudioCaptureB
 import { installCapsuleKeptOrganizerBridge } from "./systems/CapsuleKeptOrganizerBridge.js";
 import { installLocalBackupSupplementBridge } from "./systems/LocalBackupSupplementBridge.js";
 import { installChapterMusicBridge } from "./systems/ChapterMusicBridge.js";
+import { installFinalDreamEpiloguePolishBridge } from "./systems/FinalDreamEpiloguePolishBridge.js";
 import { installFinalDreamBridge } from "./systems/FinalDreamBridge.js";
 import { initializeStoryRouteStartup, installStoryRouteBridge } from "./systems/StoryRouteBridge.js";
 import { installStoryRouteMobileFixBridge } from "./systems/StoryRouteMobileFixBridge.js";
 import { initializeStoryRouteFollowups, installStoryRouteFollowupBridge } from "./systems/StoryRouteFollowupBridge.js";
+import { initializeStoryRouteLabisCompletion, installStoryRouteLabisCompletionBridge } from "./systems/StoryRouteLabisCompletionBridge.js";
 import { SceneDebugEditor } from "./systems/SceneDebugEditor.js";
 
 installAuthoredCutsceneLifecycleBridge(WalkBackHomeApp.prototype);
@@ -29,10 +31,12 @@ installCapsuleAudioCaptureBridge();
 installCapsuleKeptOrganizerBridge();
 installLocalBackupSupplementBridge(WalkBackHomeApp.prototype);
 installChapterMusicBridge(WalkBackHomeApp.prototype as unknown as { enterCurrentMemory?: () => Promise<void>; finishReturnToForest?: () => void });
+installFinalDreamEpiloguePolishBridge();
 installFinalDreamBridge(WalkBackHomeApp.prototype as unknown as { enterCurrentMemory?: () => Promise<void> });
 installStoryRouteBridge(WalkBackHomeApp.prototype as unknown as Parameters<typeof installStoryRouteBridge>[0]);
 installStoryRouteMobileFixBridge(WalkBackHomeApp.prototype as unknown as Parameters<typeof installStoryRouteMobileFixBridge>[0]);
 installStoryRouteFollowupBridge(WalkBackHomeApp.prototype as unknown as Parameters<typeof installStoryRouteFollowupBridge>[0]);
+installStoryRouteLabisCompletionBridge(WalkBackHomeApp.prototype as unknown as Parameters<typeof installStoryRouteLabisCompletionBridge>[0]);
 
 const root = document.querySelector<HTMLElement>("#app")!;
 if (new URLSearchParams(window.location.search).get("debug") === "scene") {
@@ -41,6 +45,7 @@ if (new URLSearchParams(window.location.search).get("debug") === "scene") {
   const app = new WalkBackHomeApp(root);
   initializeStoryRouteStartup(app);
   initializeStoryRouteFollowups(app);
+  initializeStoryRouteLabisCompletion(app);
   initializeReflectionNoteRemove(app);
   initializeCapsuleFullscreenBridge(app);
 }
