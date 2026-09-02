@@ -43,3 +43,5 @@ jobs:
             git commit -m "Update authored content expectations"
             git push
           fi
+
+# sync requested after final authored copy edits
