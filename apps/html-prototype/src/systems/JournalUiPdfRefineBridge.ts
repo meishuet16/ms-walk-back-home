@@ -1,4 +1,4 @@
-import type { DiaryEntry, DiaryMedia } from "../types.js";
+import type { DiaryEntry, DiaryMedia, JournalBookCover } from "../types.js";
 import { diaryMediaItems } from "./ScrapbookComposer.js";
 import type { JournalMonth, MonthlyJournalPdfPage } from "./JournalModel.js";
 
@@ -9,21 +9,26 @@ const PAGE_RIGHT = 1114;
 const PAGE_TOP = 116;
 const PAGE_BOTTOM = 1570;
 const BODY_WIDTH = PAGE_RIGHT - PAGE_LEFT;
-const RULE_START = 232;
-const RULE_STEP = 50;
-const RULE_TEXT_OFFSET = 8;
+const RULE_START = 286;
+const RULE_STEP = 54;
+const RULE_TEXT_OFFSET = 9;
 const PHOTO_COLUMNS = 3;
 const PHOTO_GAP = 24;
 const PHOTO_SIZE = Math.floor((BODY_WIDTH - PHOTO_GAP * (PHOTO_COLUMNS - 1)) / PHOTO_COLUMNS);
 
 type JournalPrototype = {
   renderMonthlyPdfFlowPages?: (month: JournalMonth) => Promise<MonthlyJournalPdfPage[]>;
+  openMonthlyBook?: (monthKey?: string) => void;
+  showMonthlyBooks?: () => void;
+  handleMonthCoverInput?: (input: HTMLInputElement) => Promise<void>;
 };
 
 type JournalHost = {
   overlay: HTMLElement;
+  monthlyCovers?: Record<string, JournalBookCover>;
   loadCanvasImage: (src: string) => Promise<HTMLImageElement | null>;
   drawPdfImage: (ctx: CanvasRenderingContext2D, image: HTMLImageElement, x: number, y: number, width: number, height: number) => void;
+  openMonthlyBook?: (monthKey?: string) => void;
 };
 
 function splitWrappedLines(ctx: CanvasRenderingContext2D, value: string, maxWidth: number): Array<string | null> {
@@ -57,7 +62,7 @@ function drawPageSurface(ctx: CanvasRenderingContext2D): void {
   ctx.strokeStyle = "rgba(126, 91, 53, .17)";
   ctx.lineWidth = 2;
   ctx.strokeRect(72, 58, PAGE_WIDTH - 144, PAGE_HEIGHT - 116);
-  ctx.strokeStyle = "rgba(120, 91, 58, .085)";
+  ctx.strokeStyle = "rgba(120, 91, 58, .082)";
   ctx.lineWidth = 1;
   for (let y = RULE_START; y < PAGE_BOTTOM + RULE_STEP; y += RULE_STEP) {
     ctx.beginPath();
@@ -68,7 +73,7 @@ function drawPageSurface(ctx: CanvasRenderingContext2D): void {
 }
 
 function drawPageFooter(ctx: CanvasRenderingContext2D, pageNumber: number): void {
-  ctx.fillStyle = "rgba(76, 56, 39, .43)";
+  ctx.fillStyle = "rgba(76, 56, 39, .42)";
   ctx.font = "400 17px Georgia, 'Times New Roman', serif";
   ctx.textAlign = "left";
   ctx.fillText("Walk Back Home", PAGE_LEFT, 1640);
@@ -104,6 +109,62 @@ function installJournalAudioPlaybackGuard(): void {
   }, true);
 }
 
+function coverPosition(cover: JournalBookCover): string {
+  if (cover.crop === "top") return "center top";
+  if (cover.crop === "bottom") return "center bottom";
+  return "center center";
+}
+
+function applyCoverToElement(element: HTMLElement, cover: JournalBookCover): void {
+  const src = cover.src.trim();
+  if (!src || src.startsWith("linear-gradient")) return;
+  element.style.backgroundImage = `url("${src.replace(/"/g, "%22")}")`;
+  element.style.backgroundSize = cover.crop === "contain" ? "contain" : "cover";
+  element.style.backgroundPosition = coverPosition(cover);
+  element.style.backgroundRepeat = "no-repeat";
+  element.classList.add("has-custom-cover");
+}
+
+function refreshBooksCoverThumbs(host: JournalHost): void {
+  const covers = host.monthlyCovers ?? {};
+  host.overlay.querySelectorAll<HTMLElement>(".monthly-book").forEach((book) => {
+    const monthKey = book.dataset.month ?? "";
+    const cover = covers[monthKey];
+    const thumb = book.querySelector<HTMLElement>(".book-cover-thumb");
+    if (!cover || !thumb) return;
+    applyCoverToElement(thumb, cover);
+  });
+}
+
+function refreshReaderCover(host: JournalHost, monthKey: string): void {
+  if (!monthKey) return;
+  const cover = host.monthlyCovers?.[monthKey];
+  const preview = host.overlay.querySelector<HTMLElement>(".monthly-reader .pdf-cover-preview");
+  if (!cover || !preview) return;
+  applyCoverToElement(preview, cover);
+}
+
+function installImmediateCoverPreview(host: JournalHost, monthKey: string): void {
+  const input = host.overlay.querySelector<HTMLInputElement>("#month-cover-input");
+  if (!input || input.dataset.immediateCoverPreview === "true") return;
+  input.dataset.immediateCoverPreview = "true";
+  input.addEventListener("change", () => {
+    const file = input.files?.[0];
+    const preview = host.overlay.querySelector<HTMLElement>(".monthly-reader .pdf-cover-preview");
+    if (!file || !file.type.startsWith("image/") || !preview) return;
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      if (typeof reader.result !== "string") return;
+      preview.style.backgroundImage = `url("${reader.result.replace(/"/g, "%22")}")`;
+      preview.style.backgroundSize = "cover";
+      preview.style.backgroundPosition = "center center";
+      preview.classList.add("has-custom-cover");
+    });
+    reader.readAsDataURL(file);
+    window.setTimeout(() => refreshReaderCover(host, monthKey), 0);
+  });
+}
+
 async function renderRefinedBookFlow(this: JournalHost, month: JournalMonth): Promise<MonthlyJournalPdfPage[]> {
   const canvas = document.createElement("canvas");
   canvas.width = PAGE_WIDTH;
@@ -134,51 +195,50 @@ async function renderRefinedBookFlow(this: JournalHost, month: JournalMonth): Pr
   beginPage();
 
   for (const entry of [...month.entries].reverse()) {
-    const headerEstimate = 170;
+    const headerEstimate = 232;
     if (dirty && cursorY + headerEstimate > PAGE_BOTTOM - RULE_STEP) pushPage();
 
-    ctx.fillStyle = "rgba(74, 54, 38, .58)";
-    ctx.font = "500 18px Georgia, 'Times New Roman', serif";
-    ctx.fillText(entry.date, PAGE_LEFT, cursorY);
-    cursorY += 32;
+    ctx.fillStyle = "rgba(74, 54, 38, .56)";
+    ctx.font = "500 17px Georgia, 'Times New Roman', serif";
+    ctx.fillText(entry.date, PAGE_LEFT, cursorY + 5);
+    cursorY += 56;
 
     ctx.fillStyle = "#493421";
-    ctx.font = "700 39px Georgia, 'Songti TC', 'STSong', 'Noto Serif CJK TC', serif";
+    ctx.font = "600 41px 'Segoe Print', 'Bradley Hand', 'Chalkboard SE', 'Kaiti TC', 'STKaiti', 'KaiTi', cursive";
     const titleLines = splitWrappedLines(ctx, entry.title || "Untitled Memory", BODY_WIDTH);
     for (const titleLine of titleLines) {
       if (titleLine === null) continue;
       ctx.fillText(titleLine, PAGE_LEFT, cursorY);
-      cursorY += 46;
+      cursorY += 54;
     }
+    cursorY += 18;
 
     const meta = entryMeta(entry);
     if (meta) {
-      cursorY += 3;
-      ctx.fillStyle = "rgba(74, 54, 38, .52)";
-      ctx.font = "400 18px 'Songti TC', 'STSong', 'Noto Serif CJK TC', 'PMingLiU', serif";
+      ctx.fillStyle = "rgba(74, 54, 38, .51)";
+      ctx.font = "400 18px 'Kaiti TC', 'STKaiti', 'KaiTi', 'DFKai-SB', 'PMingLiU', serif";
       ctx.fillText(meta, PAGE_LEFT, cursorY);
-      cursorY += 29;
+      cursorY += 34;
     }
 
-    cursorY += 10;
-    ctx.strokeStyle = "rgba(98, 70, 43, .17)";
+    ctx.strokeStyle = "rgba(98, 70, 43, .16)";
     ctx.beginPath();
-    ctx.moveTo(PAGE_LEFT, cursorY);
-    ctx.lineTo(PAGE_RIGHT, cursorY);
+    ctx.moveTo(PAGE_LEFT, cursorY + 2);
+    ctx.lineTo(PAGE_RIGHT, cursorY + 2);
     ctx.stroke();
-    cursorY += 26;
+    cursorY += 34;
     dirty = true;
 
-    ctx.fillStyle = "#4a392c";
-    ctx.font = "400 26px 'Songti TC', 'STSong', 'Noto Serif CJK TC', 'PMingLiU', Georgia, serif";
+    ctx.fillStyle = "#49382b";
+    ctx.font = "400 27px 'Kaiti TC', 'STKaiti', 'KaiTi', 'DFKai-SB', 'Songti TC', 'STSong', serif";
     const bodyLines = splitWrappedLines(ctx, entry.body || "Empty draft", BODY_WIDTH);
     let baseline = nextTextBaseline(cursorY);
 
     for (const line of bodyLines) {
       if (baseline > PAGE_BOTTOM - 16) {
         pushPage();
-        ctx.fillStyle = "#4a392c";
-        ctx.font = "400 26px 'Songti TC', 'STSong', 'Noto Serif CJK TC', 'PMingLiU', Georgia, serif";
+        ctx.fillStyle = "#49382b";
+        ctx.font = "400 27px 'Kaiti TC', 'STKaiti', 'KaiTi', 'DFKai-SB', 'Songti TC', 'STSong', serif";
         baseline = nextTextBaseline(PAGE_TOP + 34);
       }
       if (line !== null) ctx.fillText(line, PAGE_LEFT, baseline);
@@ -186,7 +246,7 @@ async function renderRefinedBookFlow(this: JournalHost, month: JournalMonth): Pr
       dirty = true;
     }
 
-    cursorY = baseline + 14;
+    cursorY = baseline + 16;
     const photos = entryImages(entry);
     let photoIndex = 0;
     while (photoIndex < photos.length) {
@@ -227,4 +287,33 @@ async function renderRefinedBookFlow(this: JournalHost, month: JournalMonth): Pr
 export function installJournalUiPdfRefineBridge(proto: JournalPrototype): void {
   installJournalAudioPlaybackGuard();
   proto.renderMonthlyPdfFlowPages = renderRefinedBookFlow;
+
+  const originalShowBooks = proto.showMonthlyBooks;
+  if (originalShowBooks) {
+    proto.showMonthlyBooks = function(this: JournalHost): void {
+      originalShowBooks.call(this as unknown as object);
+      requestAnimationFrame(() => refreshBooksCoverThumbs(this));
+    };
+  }
+
+  const originalOpenMonthlyBook = proto.openMonthlyBook;
+  if (originalOpenMonthlyBook) {
+    proto.openMonthlyBook = function(this: JournalHost, monthKey?: string): void {
+      originalOpenMonthlyBook.call(this as unknown as object, monthKey);
+      const resolvedMonth = monthKey ?? this.overlay.querySelector<HTMLElement>("[data-action='export-month-pdf']")?.dataset.month ?? "";
+      requestAnimationFrame(() => {
+        refreshReaderCover(this, resolvedMonth);
+        installImmediateCoverPreview(this, resolvedMonth);
+      });
+    };
+  }
+
+  const originalCoverInput = proto.handleMonthCoverInput;
+  if (originalCoverInput) {
+    proto.handleMonthCoverInput = async function(this: JournalHost, input: HTMLInputElement): Promise<void> {
+      const monthKey = this.overlay.querySelector<HTMLElement>("[data-action='export-month-pdf']")?.dataset.month ?? "";
+      await originalCoverInput.call(this as unknown as object, input);
+      if (monthKey && this.openMonthlyBook) this.openMonthlyBook(monthKey);
+    };
+  }
 }
