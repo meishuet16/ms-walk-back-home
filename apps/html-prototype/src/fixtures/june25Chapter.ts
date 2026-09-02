@@ -299,7 +299,7 @@ export const june25Chapter: ChapterDefinition = {
   dialogue: [],
   canonicalClosure: {
     historicalEventId: "june25-bed-main-memory",
-    lines: ["那晚没有发生什么需要被命名的事。", "只是她没有留下来了。", "我们就这样待到了第二天早上。"]
+    lines: ["那晚没有发生什么需要被命名的事。", "只是她留下来了。", "我们就这样待到了第二天早上。"]
   },
   reflectionQuotes: [
     { id: "june25-accepting", tone: "accepting", preference: { acceptance: 1, closeness: 1 }, lines: ["她本来有很多事情要做。", "后来门还是响了。"],
