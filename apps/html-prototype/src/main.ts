@@ -6,6 +6,7 @@ import { installRecordsLibraryVisibilityBridge } from "./systems/RecordsLibraryV
 import { installReflectionWallUi } from "./systems/ReflectionWallUiBridge.js";
 import { initializeReflectionNoteRemove } from "./systems/ReflectionNoteRemoveBridge.js";
 import { installCapsuleMachineBridge } from "./systems/CapsuleMachineBridge.js";
+import { initializeCapsuleFullscreenBridge } from "./systems/CapsuleFullscreenBridge.js";
 import { installCapsuleMenuBridge } from "./systems/CapsuleMenuBridge.js";
 import { installCapsuleAudioCaptureBridge } from "./systems/CapsuleAudioCaptureBridge.js";
 import { installCapsuleKeptOrganizerBridge } from "./systems/CapsuleKeptOrganizerBridge.js";
@@ -41,4 +42,5 @@ if (new URLSearchParams(window.location.search).get("debug") === "scene") {
   initializeStoryRouteStartup(app);
   initializeStoryRouteFollowups(app);
   initializeReflectionNoteRemove(app);
+  initializeCapsuleFullscreenBridge(app);
 }
