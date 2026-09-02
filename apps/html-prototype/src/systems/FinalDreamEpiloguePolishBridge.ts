@@ -70,9 +70,10 @@ export function installFinalDreamEpiloguePolishBridge(): void {
 
   proto.scheduleEpilogueAdvance = function(this: EpiloguePresentation): void {
     window.clearTimeout(this.autoAdvanceTimer);
+    const isLast = this.epilogueIndex >= finalDreamEpiloguePages.length - 1;
     this.autoAdvanceTimer = window.setTimeout(() => {
       if (this.destroyed || this.phase !== "epilogue" || this.epilogueTyping) return;
       this.advance();
-    }, this.reducedMotion ? 700 : 2000);
+    }, this.reducedMotion ? 1200 : isLast ? 7600 : 6200);
   };
 }
