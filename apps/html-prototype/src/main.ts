@@ -4,6 +4,7 @@ import { installLabisLifecycleBridge } from "./systems/LabisLifecycleBridge.js";
 import { installRecordsScrollStabilityBridge } from "./systems/RecordsScrollStabilityBridge.js";
 import { installRecordsLibraryVisibilityBridge } from "./systems/RecordsLibraryVisibilityBridge.js";
 import { installReflectionWallUi } from "./systems/ReflectionWallUiBridge.js";
+import { initializeReflectionNoteRemove } from "./systems/ReflectionNoteRemoveBridge.js";
 import { installCapsuleMachineBridge } from "./systems/CapsuleMachineBridge.js";
 import { installCapsuleMenuBridge } from "./systems/CapsuleMenuBridge.js";
 import { installCapsuleAudioCaptureBridge } from "./systems/CapsuleAudioCaptureBridge.js";
@@ -39,4 +40,5 @@ if (new URLSearchParams(window.location.search).get("debug") === "scene") {
   const app = new WalkBackHomeApp(root);
   initializeStoryRouteStartup(app);
   initializeStoryRouteFollowups(app);
+  initializeReflectionNoteRemove(app);
 }
