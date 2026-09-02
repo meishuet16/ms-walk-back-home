@@ -3131,7 +3131,7 @@ export const authoredContentExpectations = {
       },
       "closure": [
         "那晚没有发生什么需要被命名的事。",
-        "只是她没有留下来了。",
+        "只是她留下来了。",
         "我们就这样待到了第二天早上。"
       ],
       "collections": {
