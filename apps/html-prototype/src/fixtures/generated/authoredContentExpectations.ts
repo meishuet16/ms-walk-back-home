@@ -207,9 +207,9 @@ export const authoredContentExpectations = {
     },
     "april06": {
       "closure": [
-        "MS leaves the McDonald's in the KTHO lobby.",
-        "ET comes downstairs before MS can leave.",
-        "MS returns to the waiting Perodua Alza."
+        "她最后还是下来了。",
+        "我们在楼下聊了一会儿。",
+        "后来朋友把车开回来了，我才离开。"
       ],
       "collections": {
         "echo": [
@@ -234,7 +234,7 @@ export const authoredContentExpectations = {
       "dialogue": [
         {
           "portrait": "assets/523/memory-portrait/bus-stop-memory.png",
-          "text": "叶同学 你的宵夜已送到。"
+          "text": "同学 你的宵夜已送到。"
         },
         {
           "portrait": "assets/523/memory-portrait/bus-stop-memory.png",
@@ -242,11 +242,11 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/523/memory-portrait/bus-stop-memory.png",
-          "text": "不要食用的话你就当早餐哈哈拜拜。"
+          "text": "不要食用的话你就当早餐嘻嘻，拜拜。"
         },
         {
           "portrait": "assets/523/memory-portrait/03.png",
-          "text": "wtf？？？"
+          "text": "wtf？？？车怎么开走了？！我还没上车啊朋友们QAQ"
         },
         {
           "portrait": "assets/624/echo-portraits/et-portraits/01-questioning.png",
@@ -346,7 +346,7 @@ export const authoredContentExpectations = {
         "title": "04.06 · This Soon?"
       },
       "display": {
-        "location": "KTHO Lobby",
+        "location": "Lobby",
         "mood": "a humid ordinary hostel night where a quick delivery fails to stay anonymous",
         "title": "还没走啊？",
         "weather": "quiet humid night after an earlier rainy day"
@@ -380,7 +380,7 @@ export const authoredContentExpectations = {
               "response": "我可以记得疑问还在。"
             },
             {
-              "label": "她就是下来拿宵夜的。不要自己配 BGM。",
+              "label": "她就是下来拿宵夜的。",
               "response": "事情也可以只停在事情。"
             }
           ],
