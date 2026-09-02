@@ -28,7 +28,7 @@ export const oct29MainPortraitSequence: AuthoredPortraitSequence = {
     ]),
     beat("main-single-challenge.png", [
       memory("一开始跟其他人打了一下。"),
-      memory("然后 coach 过来问我。"),
+      memory("然后她过来问我。"),
       et("你要打 single 还是 double？"),
       ms("prefer single。"),
       memory("她看了我一下。"),
@@ -97,7 +97,7 @@ export const oct29MainPortraitSequence: AuthoredPortraitSequence = {
     beat("main-training-continue.png", [
       memory("那时候当然不会觉得几步路有什么值得记的。"),
       memory("只是球场太吵。"),
-      memory("她讲话太小声。"),
+      memory("那天初见时的印象就是她讲话太小声。"),
       memory("听不见。"),
       memory("就走近一点。"),
       memory("还是听不清。"),
@@ -112,12 +112,12 @@ export const oct29PortraitSequences: Record<string, AuthoredPortraitSequence> = 
     id: "oct29-singles-selection",
     beats: [
       beat("echo-singles.png", [
-        memory("后来 NG 也想争 single。"),
+        memory("后来别人也想争 single。"),
         ms("我可以做候补吗？"),
         et("没有候补。"),
         et("2 single。"),
         et("2 double。"),
-        memory("然后她直接叫 NG 跟我打十一粒。"),
+        memory("然后她直接叫别人跟我打十一粒。"),
         ms("……"),
         memory("我开始瑟瑟发抖。")
       ]),
@@ -136,7 +136,7 @@ export const oct29PortraitSequences: Record<string, AuthoredPortraitSequence> = 
       beat("echo-singles.png", [
         memory("第二场打到 4-10 的时候。"),
         memory("我已经开始怀疑人生。"),
-        memory("感觉 NG 是不是在放水。"),
+        memory("感觉对面是不是在放水。"),
         memory("所以我也偷偷放了两粒。"),
         ms("这样比较公平。"),
         memory("结果最后。"),
@@ -251,9 +251,9 @@ export const oct29Chapter: ChapterDefinition = {
   canonicalClosure: {
     historicalEventId: "oct29-main-memory",
     lines: [
-      "2025 年 10 月 29 日，training 结束的时候，她对我来说还是 coach。",
+      "2025 年 10 月 29 日，我们第一次见面。training 结束的时候，她对我来说还只是 coach。",
       "我拿到了 single，脚也真的起泡了。",
-      "那天我没有觉得，我们之间发生了什么特别的事。"
+      "那天我没有觉得，我们后面还会有交集。"
     ]
   },
   reflectionQuotes: [
