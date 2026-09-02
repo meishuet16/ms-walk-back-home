@@ -8,8 +8,14 @@ function fullscreenHost(): HTMLElement | null {
   return document.fullscreenElement instanceof HTMLElement ? document.fullscreenElement : null;
 }
 
+function findCapsule(): HTMLElement | null {
+  const host = fullscreenHost();
+  return host?.querySelector<HTMLElement>(".capsule-experience")
+    ?? document.querySelector<HTMLElement>(".capsule-experience");
+}
+
 function keepCapsuleInVisibleTree(): void {
-  const capsule = document.querySelector<HTMLElement>(".capsule-experience");
+  const capsule = findCapsule();
   if (!capsule) return;
   const host = fullscreenHost();
   if (host) {
@@ -21,10 +27,8 @@ function keepCapsuleInVisibleTree(): void {
 
 function openCapsuleAndMount(app: CapsuleFullscreenApp): void {
   app.activateRoomInteraction?.({ id: "capsule" });
-  // Fullscreen only renders descendants of document.fullscreenElement. The
-  // Capsule machine creates its modal under body, so move it synchronously
-  // into the fullscreen host before the browser paints the next frame.
   keepCapsuleInVisibleTree();
+  queueMicrotask(keepCapsuleInVisibleTree);
   requestAnimationFrame(keepCapsuleInVisibleTree);
 }
 
@@ -37,6 +41,9 @@ export function initializeCapsuleFullscreenBridge(appObject: object): void {
   observer.observe(document.body, { childList: true, subtree: true });
   document.addEventListener("fullscreenchange", keepCapsuleInVisibleTree);
 
+  // In fullscreen the browser only paints descendants of fullscreenElement.
+  // CapsuleMachineBridge intentionally owns Capsule state/UI and appends its
+  // dialog under body, so this bridge only remounts that existing dialog.
   document.addEventListener("click", (event) => {
     const target = (event.target as HTMLElement | null)?.closest<HTMLElement>("[data-quick-destination='capsule']");
     if (!target || !fullscreenHost()) return;
