@@ -45,7 +45,6 @@ jobs:
           ]
           mapping = {"ms": "我", "et": "她", "ziqi": "朋友", "st": "朋友", "angela": "朋友"}
 
-          # Only speaker-bearing syntax is touched: speaker: "NAME" and dialogue("NAME", ...).
           speaker_prop = re.compile(r'(\bspeaker\s*:\s*["\'])(ms|et|ziqi|st|angela)(["\'])', re.I)
           dialogue_arg = re.compile(r'(\bdialogue\(\s*["\'])(ms|et|ziqi|st|angela)(["\'])', re.I)
 
@@ -55,11 +54,10 @@ jobs:
               if not path.exists():
                   raise SystemExit(f"Expected target file missing: {filename}")
               text = path.read_text(encoding="utf-8")
-              count = 0
+              nonlocal_count = [0]
               def repl(m):
                   nonlocal_count[0] += 1
                   return m.group(1) + mapping[m.group(2).lower()] + m.group(3)
-              nonlocal_count = [0]
               updated = speaker_prop.sub(repl, text)
               updated = dialogue_arg.sub(repl, updated)
               count = nonlocal_count[0]
@@ -67,6 +65,19 @@ jobs:
                   path.write_text(updated, encoding="utf-8")
                   print(f"{filename}: {count} speaker label(s) changed")
                   total += count
+
+          # March 30 has a narrow speaker type and one compile-time test fixture.
+          # These are support/schema updates only; dialogue text, actors, assets, ids, and characters remain untouched.
+          march30 = Path("apps/html-prototype/src/fixtures/march30Memory.ts")
+          text = march30.read_text(encoding="utf-8")
+          text = text.replace('speaker: "MS" | "ET"', 'speaker: "我" | "她"')
+          march30.write_text(text, encoding="utf-8")
+
+          test = Path("apps/html-prototype/tests/march30-memory.test.ts")
+          text = test.read_text(encoding="utf-8")
+          text = text.replace('speaker: "MS",\n    text: "test"', 'speaker: "我",\n    text: "test"')
+          test.write_text(text, encoding="utf-8")
+
           print(f"TOTAL speaker labels changed: {total}")
           if total == 0:
               raise SystemExit("No target speaker labels found; refusing a no-op commit")
@@ -78,7 +89,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add apps/html-prototype/src/fixtures/oct29Chapter.ts apps/html-prototype/src/fixtures/november22Chapter.ts apps/html-prototype/src/fixtures/march30Chapter.ts apps/html-prototype/src/fixtures/march30Memory.ts apps/html-prototype/src/fixtures/march30RefinedChapter.ts apps/html-prototype/src/fixtures/april05Chapter.ts apps/html-prototype/src/fixtures/april06Chapter.ts apps/html-prototype/src/fixtures/april25Chapter.ts apps/html-prototype/src/fixtures/may23Chapter.ts apps/html-prototype/src/fixtures/june24Chapter.ts apps/html-prototype/src/fixtures/june25Chapter.ts apps/html-prototype/src/fixtures/labisMotorChapter.ts apps/html-prototype/src/fixtures/labisMotorMemory.ts apps/html-prototype/src/fixtures/labisMemoryEchoes.ts apps/html-prototype/src/fixtures/july21Chapter.ts
+          git add apps/html-prototype/src/fixtures/oct29Chapter.ts apps/html-prototype/src/fixtures/november22Chapter.ts apps/html-prototype/src/fixtures/march30Chapter.ts apps/html-prototype/src/fixtures/march30Memory.ts apps/html-prototype/src/fixtures/march30RefinedChapter.ts apps/html-prototype/src/fixtures/april05Chapter.ts apps/html-prototype/src/fixtures/april06Chapter.ts apps/html-prototype/src/fixtures/april25Chapter.ts apps/html-prototype/src/fixtures/may23Chapter.ts apps/html-prototype/src/fixtures/june24Chapter.ts apps/html-prototype/src/fixtures/june25Chapter.ts apps/html-prototype/src/fixtures/labisMotorChapter.ts apps/html-prototype/src/fixtures/labisMotorMemory.ts apps/html-prototype/src/fixtures/labisMemoryEchoes.ts apps/html-prototype/src/fixtures/july21Chapter.ts apps/html-prototype/tests/march30-memory.test.ts
           git add -f apps/html-prototype/src/fixtures/generated/authoredContentExpectations.ts
           git add .github/workflows/normalize-chapter-speakers-temp.yml
           git commit -m "Normalize authored chapter speaker labels"
