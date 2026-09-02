@@ -1,0 +1,95 @@
+/* Narrow, late-loaded fixes for Reflection note detail on phones. */
+.reflection-kept-detail .reflection-detail-actions .danger {
+  display: none !important;
+}
+
+@media (max-width: 760px) {
+  .reflection-kept-detail .reflection-detail-actions {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+    padding: 2px 0 6px !important;
+  }
+
+  .reflection-kept-detail .reflection-detail-actions > button:not(.danger) {
+    display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    grid-column: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    min-height: 44px !important;
+    justify-self: stretch !important;
+    padding: 0 5px !important;
+    background: #fffaf1 !important;
+    border: 1px solid rgba(82, 63, 49, .14) !important;
+    color: #443832 !important;
+    font-size: clamp(10px, 2.75vw, 12px) !important;
+    line-height: 1.05 !important;
+    letter-spacing: -.012em !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .reflection-kept-detail .reflection-detail-actions > button.selected:not(.danger) {
+    background: #b48f78 !important;
+    border-color: rgba(132, 92, 70, .28) !important;
+    color: #fff8eb !important;
+  }
+
+  .reflection-kept-detail .reflection-detail-papers {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .reflection-kept-detail .reflection-detail-papers > div {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 7px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding: 2px 18px 8px 2px !important;
+    scroll-padding-inline: 2px 18px !important;
+    scroll-snap-type: x proximity !important;
+    overscroll-behavior-x: contain !important;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x !important;
+    scrollbar-width: none;
+  }
+
+  .reflection-kept-detail .reflection-detail-papers > div::-webkit-scrollbar {
+    display: none;
+  }
+
+  .reflection-kept-detail .reflection-detail-paper {
+    flex: 0 0 58px !important;
+    width: 58px !important;
+    min-width: 58px !important;
+    scroll-snap-align: start;
+    touch-action: manipulation;
+  }
+
+  .reflection-kept-detail .reflection-detail-footer {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 10px !important;
+    width: 100% !important;
+    padding: 14px 28px 18px !important;
+  }
+
+  .reflection-kept-detail .reflection-detail-footer > button {
+    flex: 0 1 160px !important;
+    max-width: 160px !important;
+    min-width: 0 !important;
+  }
+}
