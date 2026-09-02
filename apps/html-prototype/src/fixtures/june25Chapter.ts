@@ -115,29 +115,30 @@ export const june25PortraitSequences: Record<string, AuthoredPortraitSequence> =
       beat("04-conversation.png",
         dialogue("她", "你最近好吗"),
         dialogue("我", "蛤 不好\n我的脖子都这样了"),
-        dialogue("她", "只有身体吗\nmental health也要注意了"),
-        dialogue("我", "已经绝望了"),
+        dialogue("她", "只有身体吗\n精神状态也要注意了"),
+        dialogue("我", "哎 没招了 精神状态良好 已经绝望了"),
         dialogue("她", "我可以跟你讲我最近发生了什么事"),
         dialogue("我", "什么事"),
         dialogue("她", "你想听吗"),
         memory("我立马从床上爬起来坐到她面前。"),
         dialogue("我", "包的啊\n我很有兴趣\n来来来快点跟我讲什么事"),
-        memory("她说自己作为姐姐觉得很愧疚，study week 想回家，也在想要不要参加 final PALAPES dinner。"),
-        dialogue("我", "你不用把别人的整个人生都扛在自己身上。"),
-        dialogue("她", "我不介意把我的人生跟我弟弟绑在一起。"),
-        dialogue("她", "你听了不要觉得有负担。"),
-        dialogue("我", "不会打扰啦")
+        memory("她说了最近发生的一些事情，有点沉重，我看得出她很难受"),
+        memory("她觉得自己没尽到足够的责任。"),
+        dialogue("我", "你不用把别人的整个人生都扛在自己身上。你已经做的很好了。"),
+        dialogue("她", "。。。"),
+        dialogue("她", "你听完了不要觉得有负担。"),
+        dialogue("我", "不会啦")
       )
     ]
   },
   "june25-wardrobe": {
     id: "june25-wardrobe",
     beats: [beat("05-wardrobe.png",
-      memory("MS挑了一套蜡笔小新上衣\n和粉色蜡笔小新短裤给她。"),
+      memory("我挑了一套蜡笔小新上衣\n和粉色蜡笔小新短裤给她。"),
       dialogue("我", "哇你一身蜡笔小新很好笑 很可爱\n帮你拍起来记录一下哈哈哈"),
-      dialogue("她", "你最好不要流传出去。\n不然我就不是et了。"),
+      dialogue("她", "你最好不要流传出去。\n不然我的名声就毁了。"),
       dialogue("我", "怎么可能流传出去。"),
-      dialogue("我", "hehe这是et自己选的睡衣。\n她很喜欢"),
+      dialogue("我", "hehe这是你自己选的睡衣。\n看得出你很喜欢"),
       dialogue("她", "屁。\n我是被迫的。\n只有蜡笔小新给我选。")
     )]
   },
@@ -152,7 +153,7 @@ export const june25PortraitSequences: Record<string, AuthoredPortraitSequence> =
       dialogue("她", "我来你这里好像来一日游那样。\n\n单凭帮我吹头发这一点\n就可以收钱了。"),
       memory("我笑而不语。\n顺手薅几下她的刘海"),
       dialogue("她", "你就是想趁机拍我头吧"),
-      dialogue("我", "厉害嘞\n我下次帮你洗"),
+      dialogue("我", "我厉害吧\n我下次帮你洗头"),
       dialogue("她", "这就不用了\n你帮我吹头发就很离谱了"),
       dialogue("我", "会吗"),
       dialogue("她", "平时朋友会帮忙吹头发吗")
@@ -298,13 +299,17 @@ export const june25Chapter: ChapterDefinition = {
   dialogue: [],
   canonicalClosure: {
     historicalEventId: "june25-bed-main-memory",
-    lines: ["那晚没有发生什么需要被命名的事。", "只是天亮以后，房间里多了一篮没带走的衣服。"]
+    lines: ["那晚没有发生什么需要被命名的事。", "只是她没有留下来了。", "我们就这样待到了第二天早上。"]
   },
   reflectionQuotes: [
-    { id: "june25-accepting", tone: "accepting", preference: { acceptance: 1, closeness: 1 }, lines: ["她本来有很多事情要做。", "后来门还是响了。"] },
-    { id: "june25-holding", tone: "holding", preference: { closeness: 1, companionship: 1 }, lines: ["后来有些话已经记不清了。", "倒还记得两杯饮料，\n一支吹风筒，\n和五点响起来的闹钟。"] },
-    { id: "june25-rewriting", tone: "rewriting", preference: { honesty: 1, acceptance: 1 }, lines: ["那晚没有发生什么需要被命名的事。", "只是天亮以后，\n房间里多了一篮没带走的衣服。"] },
-    { id: "june25-not-ready", tone: "not-ready", preference: { distance: 1, acceptance: 1 }, lines: ["早上以后，", "房间又只是房间了。"] }
+    { id: "june25-accepting", tone: "accepting", preference: { acceptance: 1, closeness: 1 }, lines: ["她本来有很多事情要做。", "后来门还是响了。"],
+    afterline: "我不需要知道她为什么来，才能承认她真的来了。" },
+    { id: "june25-holding", tone: "holding", preference: { closeness: 1, companionship: 1 }, lines: ["后来有些话已经记不清了。", "倒还记得两杯饮料，\n一支吹风筒，\n和五点响起来的闹钟。"],
+   afterline: "至于说过什么，反而没有这些东西记得清楚。"},
+    { id: "june25-rewriting", tone: "rewriting", preference: { honesty: 1, acceptance: 1 }, lines: ["那晚没有发生什么需要被命名的事。", "只是天亮以后，\n房间里多了一篮没带走的衣服。"],
+    afterline: "后来我也不再急着替那一天找一个名字。" },
+    { id: "june25-not-ready", tone: "not-ready", preference: { distance: 1, acceptance: 1 }, lines: ["早上以后，", "房间又只是房间了。"],
+    afterline: "至少现在，我只想把它记到天亮。" }
   ]
 };
 
@@ -325,7 +330,7 @@ export const june25DiaryEntry: DiaryEntry = {
     "那时候我突然觉得，原来有些陪伴可以很安静。不是一直要聊天，不是一直要制造特别的瞬间。一个人做自己的事，另一个人也做自己的事。只要知道对方还在那里，好像就已经够了。",
     "后来你忽然问我最近好吗。聊着聊着，你说了一句，你可以跟我讲最近发生了什么事。然后又问，我想不想听。",
     "我从床上坐起来。",
-    "那天我第一次听见很多以前不知道的事情。你说家里的事，说弟弟，说你不知道该怎么做，说自己很愧疚。你一直觉得自己应该再多做一点，好像只要做得够多，就可以把所有人的生活都一起撑住。",
+    "那天我第一次听见很多以前不知道的事情。你说家里的事，说你不知道该怎么做，说自己很愧疚。你一直觉得自己应该再多做一点，好像只要做得够多，就可以把所有人的生活都一起撑住。",
     "我记得自己一直告诉你，不要把全部责任都往自己身上放。你和别人的人生不是同一条线。你可以关心，可以陪，可以很爱一个人，可是你不需要因为爱，就负责替他把所有路都走完。",
     "现在回头想，那些话其实也像是在说给另一个人听。",
     "你一直很会照顾别人，却好像不太会允许自己累。你会为了不让别人失望，把社交里的每个人都顾好；会为了证明自己可以，继续参加那些已经把身体弄得很疲惫的事情。后来我问你，证明了以后呢。你安慰别人不要那么累的时候很容易，为什么轮到自己就不肯。",
