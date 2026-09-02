@@ -6,13 +6,8 @@
   image-rendering: pixelated;
 }
 
-.story-title-muji {
-  transform: translateX(-50%) scale(1.28) !important;
-}
-
-.threshold-muji {
-  transform: translateX(-50%) scale(1.12) !important;
-}
+.story-title-muji { transform: translateX(-50%) scale(1.28) !important; }
+.threshold-muji { transform: translateX(-50%) scale(1.12) !important; }
 
 .story-route-muji {
   width: 58px !important;
@@ -22,7 +17,6 @@
   pointer-events: none;
   z-index: 7;
 }
-
 .story-route-muji.is-following-current {
   position: absolute !important;
   bottom: auto !important;
@@ -30,13 +24,11 @@
   filter: drop-shadow(0 7px 8px rgba(0,0,0,.55));
   transition: left .28s ease, top .28s ease;
 }
-
 .menu-panel [data-story-return="threshold"] {
   border-color: rgba(255, 221, 157, .42);
   background: rgba(50, 38, 27, .78);
 }
 
-/* Gameplay chrome: make the two established controls true viewport anchors. */
 .game-shell:not(.story-shell-active) > .top-menu {
   position: relative;
   z-index: 46;
@@ -46,7 +38,6 @@
   max-width: none;
   pointer-events: none;
 }
-
 .game-shell:not(.story-shell-active) .top-actions-menu,
 .game-shell:not(.story-shell-active) .shell-music-toggle,
 .game-shell:not(.story-shell-active) .quick-access {
@@ -54,24 +45,17 @@
   z-index: 46;
   pointer-events: auto;
 }
-
 .game-shell:not(.story-shell-active) .top-actions-menu {
   top: max(12px, env(safe-area-inset-top));
   left: max(12px, env(safe-area-inset-left));
 }
-
 .game-shell:not(.story-shell-active) .shell-music-toggle {
   top: max(12px, env(safe-area-inset-top));
   right: max(12px, env(safe-area-inset-right));
   left: auto;
   margin: 0;
 }
-
-.game-shell:not(.story-shell-active) .menu-panel {
-  top: calc(100% + 8px);
-  left: 0;
-}
-
+.game-shell:not(.story-shell-active) .menu-panel { top: calc(100% + 8px); left: 0; }
 .quick-access {
   top: calc(max(12px, env(safe-area-inset-top)) + 52px);
   right: max(12px, env(safe-area-inset-right));
@@ -79,7 +63,6 @@
   justify-items: end;
   gap: 7px;
 }
-
 .quick-access-trigger {
   display: grid;
   place-items: center;
@@ -94,13 +77,11 @@
   font: 600 15px/1 Georgia, serif;
   backdrop-filter: blur(5px);
 }
-
 .quick-access.is-open .quick-access-trigger {
   color: #ffe7b8;
   border-color: rgba(246, 205, 133, .58);
   background: rgba(10, 21, 34, .9);
 }
-
 .quick-access-rail {
   width: 44px;
   padding: 5px 2px;
@@ -110,11 +91,7 @@
   box-shadow: 0 15px 38px rgba(0,0,0,.34);
   backdrop-filter: blur(8px);
 }
-
-.quick-access-rail[hidden] {
-  display: none !important;
-}
-
+.quick-access-rail[hidden] { display: none !important; }
 .quick-access-item {
   position: relative;
   display: grid;
@@ -130,11 +107,7 @@
   box-shadow: none;
   touch-action: manipulation;
 }
-
-.quick-access-item.quick-access-group-start {
-  margin-top: 6px;
-}
-
+.quick-access-item.quick-access-group-start { margin-top: 6px; }
 .quick-access-item.quick-access-group-start::before {
   content: "";
   position: absolute;
@@ -144,7 +117,6 @@
   height: 1px;
   background: rgba(246, 205, 133, .16);
 }
-
 .quick-access-item svg {
   width: 19px;
   height: 19px;
@@ -155,12 +127,7 @@
   stroke-linejoin: round;
   pointer-events: none;
 }
-
-.quick-access-item svg .fill {
-  fill: currentColor;
-  stroke: none;
-}
-
+.quick-access-item svg .fill { fill: currentColor; stroke: none; }
 .quick-access-item:hover,
 .quick-access-item:focus-visible,
 .quick-access-item:active {
@@ -169,16 +136,94 @@
   filter: none;
   outline: none;
 }
-
 .top-actions-menu.gameplay-hamburger-hidden + .quick-access,
-.top-actions-menu.gameplay-hamburger-hidden ~ .quick-access {
-  display: none !important;
-}
-
+.top-actions-menu.gameplay-hamburger-hidden ~ .quick-access { display: none !important; }
 .game-shell.story-shell-active .quick-access,
 .game-shell.story-shell-active .shell-music-toggle,
-.game-shell.story-shell-active .top-actions-menu {
-  display: none !important;
+.game-shell.story-shell-active .top-actions-menu { display: none !important; }
+
+/* Reflection detail: keep the three useful actions visible instead of clipping Favourite off-screen. */
+.reflection-kept-detail .reflection-detail-actions .danger { display: none !important; }
+.reflection-kept-detail .reflection-detail-footer {
+  justify-content: center !important;
+  gap: 10px !important;
+}
+.reflection-kept-detail .reflection-detail-footer > button {
+  flex: 0 1 190px;
+  max-width: 190px;
+  text-align: center;
+}
+
+.reflection-remove-confirm {
+  position: absolute;
+  inset: 0;
+  z-index: 7200;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(7, 22, 31, .58);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+}
+.reflection-remove-card {
+  position: relative;
+  width: min(390px, 100%);
+  padding: 30px 26px 24px;
+  border: 1px solid rgba(117, 94, 70, .16);
+  border-radius: 18px;
+  background: linear-gradient(155deg, #fffaf0, #f3ead9);
+  color: #4a3e35;
+  box-shadow: 0 24px 70px rgba(4, 17, 24, .34), inset 0 0 0 1px rgba(255,255,255,.55);
+  text-align: center;
+}
+.reflection-remove-eyebrow {
+  display: block;
+  margin-bottom: 14px;
+  color: #78896f;
+  font: 700 10px/1.2 Georgia, serif;
+  letter-spacing: .22em;
+}
+.reflection-remove-mark {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  margin: 0 auto 13px;
+  border: 1px solid rgba(146, 102, 78, .2);
+  border-radius: 50%;
+  color: #9b6b5e;
+  background: rgba(185, 128, 105, .08);
+  font-size: 24px;
+  line-height: 1;
+}
+.reflection-remove-card h3 {
+  margin: 0;
+  color: #44372f;
+  font: 500 25px/1.15 Georgia, serif;
+}
+.reflection-remove-card p {
+  max-width: 290px;
+  margin: 12px auto 22px;
+  color: #807268;
+  font: 13px/1.55 Georgia, serif;
+}
+.reflection-remove-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.reflection-remove-actions button {
+  min-height: 46px;
+  border-radius: 12px !important;
+  border: 1px solid rgba(92, 75, 61, .15) !important;
+  background: rgba(255, 252, 245, .72) !important;
+  color: #4b4037 !important;
+  box-shadow: 0 4px 12px rgba(70, 55, 42, .06) !important;
+}
+.reflection-remove-actions .reflection-remove-danger {
+  border-color: rgba(151, 91, 72, .22) !important;
+  background: #a96f60 !important;
+  color: #fff9ef !important;
 }
 
 @media (max-height: 620px) {
@@ -190,17 +235,36 @@
   .quick-access-rail::-webkit-scrollbar { display: none; }
 }
 
+@media (max-width: 760px) {
+  .reflection-kept-detail .reflection-detail-actions {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px !important;
+    overflow: visible !important;
+    padding: 1px 0 5px !important;
+  }
+  .reflection-kept-detail .reflection-detail-actions button {
+    min-width: 0 !important;
+    width: 100%;
+    padding: 0 5px !important;
+    font-size: clamp(10px, 3.15vw, 13px) !important;
+    white-space: nowrap;
+  }
+  .reflection-kept-detail .reflection-detail-footer {
+    padding-inline: 18px !important;
+  }
+  .reflection-kept-detail .reflection-detail-footer > button {
+    flex: 1 1 0;
+    max-width: 180px;
+    min-width: 0;
+    padding-inline: 10px !important;
+  }
+  .reflection-remove-confirm { position: fixed; padding: 18px; }
+  .reflection-remove-card { padding: 27px 20px 20px; border-radius: 17px; }
+}
+
 @media (max-width: 720px) {
-  .story-title-muji {
-    width: 74px !important;
-    height: 90px !important;
-  }
-  .threshold-muji {
-    width: 68px !important;
-    height: 82px !important;
-  }
-  .story-route-muji {
-    width: 52px !important;
-    height: 63px !important;
-  }
+  .story-title-muji { width: 74px !important; height: 90px !important; }
+  .threshold-muji { width: 68px !important; height: 82px !important; }
+  .story-route-muji { width: 52px !important; height: 63px !important; }
 }
