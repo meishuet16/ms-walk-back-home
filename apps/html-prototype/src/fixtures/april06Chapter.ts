@@ -199,7 +199,7 @@ export const april06ReflectionChoices: April06ReflectionChoicePoint[] = [
     choices: [
       choice("catch-line-remember", "记住原话就好。", { acceptance: 1, honesty: 1 }, "我不替这句话加上没有说过的后半句。"),
       choice("catch-line-question", "我还是会想，这句话到底算什么。", { closeness: 1, intervention: 1 }, "我可以记得疑问还在。"),
-      choice("catch-line-ordinary", "她就是下来拿宵夜的。不要自己配 BGM。", { distance: 1, acceptance: 1 }, "事情也可以只停在事情。")
+      choice("catch-line-ordinary", "她就是下来拿宵夜的。", { distance: 1, acceptance: 1 }, "事情也可以只停在事情。")
     ]
   },
   {
@@ -214,10 +214,53 @@ export const april06ReflectionChoices: April06ReflectionChoicePoint[] = [
 ];
 
 export const april06ReflectionQuotes = [
-  { id: "april06-accepting", tone: "accepting" as const, preference: { acceptance: 1, companionship: 1 }, lines: ["那晚发生的，就只有这些。", "她下来了，我还没走。"] },
-  { id: "april06-holding", tone: "holding" as const, preference: { honesty: 1, closeness: 1 }, lines: ["我确实是特地送来的。", "至少这件事，不用装作不知道。"] },
-  { id: "april06-not-ready", tone: "not-ready" as const, preference: { concealment: 2, distance: 1 }, lines: ["我记得她说了什么。", "不替她补下一句。"] },
-  { id: "april06-rewriting", tone: "rewriting" as const, preference: { intervention: 2, closeness: 1 }, lines: ["我本来想把东西留下，把自己带走。", "配送成功，逃跑失败。"] }
+  {
+    id: "april06-accepting",
+    tone: "accepting" as const,
+    preference: { acceptance: 1, companionship: 1 },
+    lines: [
+      "那晚发生的，就只有这些。",
+      "她下来了，我还没走。"
+    ],
+    afterline:
+      "后来想想，也不需要把那几分钟解释成什么。"
+  },
+
+  {
+    id: "april06-holding",
+    tone: "holding" as const,
+    preference: { honesty: 1, closeness: 1 },
+    lines: [
+      "我确实是特地送来的。",
+      "至少这件事，不用装作不知道。"
+    ],
+    afterline:
+      "我只是终于承认，那晚的我其实很想见你。"
+  },
+
+  {
+    id: "april06-not-ready",
+    tone: "not-ready" as const,
+    preference: { concealment: 2, distance: 1 },
+    lines: [
+      "我记得她说了什么。",
+      "不替她补下一句。"
+    ],
+    afterline:
+      "有些话停在那晚，就已经够近了。"
+  },
+
+  {
+    id: "april06-rewriting",
+    tone: "rewriting" as const,
+    preference: { intervention: 2, closeness: 1 },
+    lines: [
+      "我本来想把东西留下，把自己带走。",
+      "配送成功，逃跑失败。"
+    ],
+    afterline:
+      "如果那辆车没有先开走，这一晚大概只会是一张成功送达的照片。"
+  }
 ];
 
 export const april06Chapter: ChapterDefinition = {
@@ -228,19 +271,30 @@ export const april06Chapter: ChapterDefinition = {
   title: "还没走啊？",
   mood: "a humid ordinary hostel night where a quick delivery fails to stay anonymous",
   weather: "quiet humid night after an earlier rainy day",
-  location: "KTHO Lobby",
+  location: "Lobby",
   characters: ["Muji", "MS", "ET"],
-  objects: ["McDonald's takeaway", "fries", "water container memory", "Perodua Alza", "KTHO lobby"],
-  evidence: ["authored-406-landscape-scene-layout", "authored-406-portrait-scene-layout"],
+  objects: [
+    "McDonald's takeaway",
+    "fries",
+    "water container memory",
+    "Perodua Alza",
+    "KTHO lobby"
+  ],
+  evidence: [
+    "authored-406-landscape-scene-layout",
+    "authored-406-portrait-scene-layout"
+  ],
   dialogue: [],
-  canonicalClosure: {
-    historicalEventId: "april06-mcd-lobby-memory",
-    lines: [
-      "MS leaves the McDonald's in the KTHO lobby.",
-      "ET comes downstairs before MS can leave.",
-      "MS returns to the waiting Perodua Alza."
-    ]
-  },
+
+canonicalClosure: {
+  historicalEventId: "april06-mcd-lobby-memory",
+  lines: [
+    "她最后还是下来了。",
+    "我们在楼下聊了一会儿。",
+    "后来朋友把车开回来了，我才离开。"
+  ]
+},
+
   reflectionQuotes: april06ReflectionQuotes
 };
 
@@ -276,9 +330,9 @@ export const april06MainMemoryActions: April06Action[] = [
   { type: "wait", duration: 0.38 },
   { type: "sprite", actor: "ms", asset: visual("ms-photo-mcd") },
   { type: "wait", duration: 0.48 },
-  { type: "dialogue", speaker: "MS", text: "叶同学 你的宵夜已送到。", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
+  { type: "dialogue", speaker: "MS", text: "同学 你的宵夜已送到。", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
   { type: "dialogue", speaker: "MS", text: "请趁热食用。", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
-  { type: "dialogue", speaker: "MS", text: "不要食用的话你就当早餐哈哈拜拜。", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
+  { type: "dialogue", speaker: "MS", text: "不要食用的话你就当早餐嘻嘻，拜拜。", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
   { type: "sprite", actor: "ms", asset: visual("ms-think-mcd") },
   { type: "wait", duration: 0.42 },
   { type: "sprite", actor: "ms", asset: visual("ms-leave-mcd") },
@@ -286,7 +340,7 @@ export const april06MainMemoryActions: April06Action[] = [
   { type: "move", actor: "ms", position: at("ms-roadside-stop"), duration: 0.48, asset: visual("ms-escape") , facing: "left" },
   { type: "sprite", actor: "ms", asset: visual("ms-empty-car") },
   { type: "wait", duration: 0.62 },
-  { type: "dialogue", speaker: "MS", text: "wtf？？？", portrait: "assets/523/memory-portrait/03.png" },
+  { type: "dialogue", speaker: "MS", text: "wtf？？？车怎么开走了？！我还没上车啊朋友们QAQ", portrait: "assets/523/memory-portrait/03.png" },
   { type: "checkpoint", id: "delivery-anonymity" },
   { type: "sprite", actor: "ms", asset: visual("ms-look-lobby") },
   { type: "wait", duration: 0.38 },
