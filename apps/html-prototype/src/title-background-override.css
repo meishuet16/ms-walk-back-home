@@ -1,0 +1,12 @@
+.story-title-screen {
+  background:
+    radial-gradient(circle at 72% 72%, rgba(251, 186, 113, .17), transparent 24%),
+    linear-gradient(180deg, rgba(1, 7, 17, .22), rgba(2, 8, 18, .12) 42%, rgba(2, 8, 18, .68) 77%, rgba(2, 8, 18, .93)),
+    url("./assets/title.png") center / cover no-repeat;
+}
+
+.threshold-hub {
+  background:
+    linear-gradient(180deg, rgba(2,8,18,.18), rgba(2,8,18,.24) 54%, rgba(2,8,18,.72)),
+    url("./assets/title.png") 53% center / cover no-repeat;
+}
