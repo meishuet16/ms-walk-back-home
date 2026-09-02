@@ -6,8 +6,8 @@ import type { SceneLayout } from "../systems/SceneLayouts.js";
 const portrait = (name: string): string => `assets/721/memory-portrait/${name}.png`;
 const beat = (image: string, dialogue: Array<{ speaker: string; text: string }>): AuthoredPortraitBeat => ({ portrait: portrait(image), dialogue });
 const memory = (text: string) => ({ speaker: "Memory", text });
-const ms = (text: string) => ({ speaker: "MS", text });
-const et = (text: string) => ({ speaker: "ET", text });
+const ms = (text: string) => ({ speaker: "我", text });
+const et = (text: string) => ({ speaker: "她", text });
 
 export const july21MainPortraitSequence: AuthoredPortraitSequence = {
   id: "july21-main",

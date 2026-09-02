@@ -198,37 +198,37 @@ export const may23EchoDialogues: Record<
 > = {
   "bus-stop-memory": [
     {
-      speaker: "MS",
+      speaker: "我",
       text: "明天你要去flying fox吗",
       portrait: "assets/523/memory-portrait/bus-stop-memory.png"
     },
     {
-      speaker: "ET",
+      speaker: "她",
       text: "我明天回家啦 又放你飞机了哈哈哈",
       portrait: "assets/523/memory-portrait/bus-stop-memory.png"
     },
     {
-      speaker: "MS",
+      speaker: "我",
       text: "靠背哦",
       portrait: "assets/523/memory-portrait/bus-stop-memory.png"
     },
     {
-      speaker: "MS",
+      speaker: "我",
       text: "去完再回",
       portrait: "assets/523/memory-portrait/bus-stop-memory.png"
     },
     {
-      speaker: "ET",
+      speaker: "她",
       text: "靠背哦",
       portrait: "assets/523/memory-portrait/bus-stop-memory.png"
     },
     {
-      speaker: "ET",
+      speaker: "她",
       text: "早八 巴士",
       portrait: "assets/523/memory-portrait/bus-stop-memory.png"
     },
     {
-      speaker: "MS",
+      speaker: "我",
       text: "靠北哦 sad",
       portrait: "assets/523/memory-portrait/bus-stop-memory.png"
     },
@@ -254,19 +254,19 @@ export const may23EchoDialogues: Record<
     }
   ],
   "judge-stars": [
-    { speaker: "MS", text: "ziqi 说，她看见 judge 的纸。" ,portrait: "assets/523/memory-portrait/judge-stars.png"  },
-    { speaker: "MS", text: "我们组一颗星。学姐那组两颗。" ,portrait: "assets/523/memory-portrait/judge-stars.png"  },
-    { speaker: "MS", text: "那时候我们还以为，是第一和第二。后来学姐那组第三。我们什么也没有。" ,portrait: "assets/523/memory-portrait/judge-stars.png"   }
+    { speaker: "我", text: "ziqi 说，她看见 judge 的纸。" ,portrait: "assets/523/memory-portrait/judge-stars.png"  },
+    { speaker: "我", text: "我们组一颗星。学姐那组两颗。" ,portrait: "assets/523/memory-portrait/judge-stars.png"  },
+    { speaker: "我", text: "那时候我们还以为，是第一和第二。后来学姐那组第三。我们什么也没有。" ,portrait: "assets/523/memory-portrait/judge-stars.png"   }
   ],
   "tart-after-rain": [
-    { speaker: "ET", text: "下雨后送温暖。" ,portrait: "assets/523/memory-portrait/tart-after-rain.png"  },
-    { speaker: "MS", text: "有心的话留三粒给我。" ,portrait: "assets/523/memory-portrait/tart-after-rain.png"  },
-    { speaker: "ET", text: "对不起美雪 我不该每天挑衅你\n结果你以德报怨！！" ,portrait: "assets/523/memory-portrait/tart-after-rain.png"  }
+    { speaker: "她", text: "下雨后送温暖。" ,portrait: "assets/523/memory-portrait/tart-after-rain.png"  },
+    { speaker: "我", text: "有心的话留三粒给我。" ,portrait: "assets/523/memory-portrait/tart-after-rain.png"  },
+    { speaker: "她", text: "对不起美雪 我不该每天挑衅你\n结果你以德报怨！！" ,portrait: "assets/523/memory-portrait/tart-after-rain.png"  }
   ],
   "laundry-weight": [
-    { speaker: "MS", text: "那天后来，脚车还是坏着。" ,portrait: "assets/523/memory-portrait/laundry-weight.png"  },
-    { speaker: "MS", text: "我自己扛着很重很重的衣服，走进黑暗的走廊，一路走去 dobi。" ,portrait: "assets/523/memory-portrait/laundry-weight.png"  },
-    { speaker: "MS", text: "洗好了，又自己扛回来。" ,portrait: "assets/523/memory-portrait/laundry-weight.png"  }
+    { speaker: "我", text: "那天后来，脚车还是坏着。" ,portrait: "assets/523/memory-portrait/laundry-weight.png"  },
+    { speaker: "我", text: "我自己扛着很重很重的衣服，走进黑暗的走廊，一路走去 dobi。" ,portrait: "assets/523/memory-portrait/laundry-weight.png"  },
+    { speaker: "我", text: "洗好了，又自己扛回来。" ,portrait: "assets/523/memory-portrait/laundry-weight.png"  }
   ]
 };
 
@@ -348,13 +348,13 @@ export function resolveMay23Actions(layout: SceneLayout, mode: "main" | "echo", 
   const teExit = point(layout, { anchor: "tung-ern-exit-position" });
   const msWatch = point(layout, { anchor: "ms-watch-exit" });
   return [
-    { type: "dialogue", speaker: "MS", text: "为了证明你不是飞机王 现在来散步",portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
-    { type: "dialogue", speaker: "ET", text: "来啊",portrait:"assets/624/echo-portraits/et-portraits/02-speaking.png"  },
-    { type: "dialogue", speaker: "ET", text: "认真的",portrait:"assets/624/echo-portraits/et-portraits/02-speaking.png"  },
-    { type: "dialogue", speaker: "MS", text: "letsgo",portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
-    { type: "dialogue", speaker: "MS", text: "不出来是狗",portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
+    { type: "dialogue", speaker: "我", text: "为了证明你不是飞机王 现在来散步",portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
+    { type: "dialogue", speaker: "她", text: "来啊",portrait:"assets/624/echo-portraits/et-portraits/02-speaking.png"  },
+    { type: "dialogue", speaker: "她", text: "认真的",portrait:"assets/624/echo-portraits/et-portraits/02-speaking.png"  },
+    { type: "dialogue", speaker: "我", text: "letsgo",portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
+    { type: "dialogue", speaker: "我", text: "不出来是狗",portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
     { type: "spawn", actor: "ms", kind: "human", x: msLobby.x, y: msLobby.y, facing: directionBetween(layout, "ms-lobby-arrival", "ms-toilet-doorway", "up"), sprite: sprite("ms", directionBetween(layout, "ms-lobby-arrival", "ms-toilet-doorway", "up"), "passing"), visualScale: 0.3 },
-    { type: "dialogue", speaker: "MS", text: "我到了 你呢" ,portrait: "assets/523/memory-portrait/bus-stop-memory.png"},
+    { type: "dialogue", speaker: "我", text: "我到了 你呢" ,portrait: "assets/523/memory-portrait/bus-stop-memory.png"},
     move(layout, "ms", "ms-lobby-arrival", "ms-toilet-doorway", "up", 1.2, 0.3, 0.2, "down"),
     { type: "sprite", actor: "ms", sprite: sprite("ms", "down", "idle"), visualScale: 0.2 },
     { type: "spawn", actor: "et", kind: "human", x: etStairs.x, y: etStairs.y, facing: directionBetween(layout, "et-stairs-arrival", "et-lobby-cross", "down"), sprite: sprite("et", directionBetween(layout, "et-stairs-arrival", "et-lobby-cross", "down"), "passing"), visualScale: 0.25 },
@@ -363,7 +363,7 @@ export function resolveMay23Actions(layout: SceneLayout, mode: "main" | "echo", 
       groupMove(layout, "et", "et-stairs-arrival", "et-lobby-cross", "right", 0.25, 0.3),
       groupMove(layout, "tung-ern", "tung-ern-stairs-arrival", "tung-ern-lobby-cross", "right", 0.25, 0.3)
     ] },
-    { type: "dialogue", speaker: "ET", text: "你吃了吗 letsgo",portrait: "assets/523/memory-portrait/01.png" },
+    { type: "dialogue", speaker: "她", text: "你吃了吗 letsgo",portrait: "assets/523/memory-portrait/01.png" },
     { type: "moveGroup", duration: 0.9, moves: [
       groupMove(layout, "et", "et-lobby-cross", "et-exit-position", "right", 0.3, 0.3),
       groupMove(layout, "tung-ern", "tung-ern-lobby-cross", "tung-ern-exit-position", "right", 0.3, 0.3)
@@ -392,20 +392,20 @@ export function resolveMay23Actions(layout: SceneLayout, mode: "main" | "echo", 
     ] },
     { type: "despawn", actor: "et" },
     { type: "despawn", actor: "tung-ern" },
-    { type: "dialogue", speaker: "MS", text: "她还是没有回我。",portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
-    { type: "dialogue", speaker: "MS", text: "我甚至还在想，\n她是不是买了东西回来给我。",portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
-    { type: "dialogue", speaker: "MS", text: "结果都是我以为。",portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
+    { type: "dialogue", speaker: "我", text: "她还是没有回我。",portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
+    { type: "dialogue", speaker: "我", text: "我甚至还在想，\n她是不是买了东西回来给我。",portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
+    { type: "dialogue", speaker: "我", text: "结果都是我以为。",portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
     move(layout, "ms", "ms-bus-stop-wait", "ms-walk-away", "down", 0.85, 0.3),
     { type: "sprite", actor: "ms", sprite: spriteForPath(layout, "ms", "ms-bus-stop-wait", "ms-walk-away", "down", "passing"), visualScale: 0.3 },
     move(layout, "ms", "ms-walk-away", "ms-halfway-home", "down", 1.1, 0.3),
     { type: "sprite", actor: "ms", sprite: spriteForPath(layout, "ms", "ms-walk-away", "ms-halfway-home", "down", "passing"), visualScale: 0.3 },
-    { type: "dialogue", speaker: "ET", text: "你在哪里！！！！" ,portrait: "assets/523/memory-portrait/01.png"},
+    { type: "dialogue", speaker: "她", text: "你在哪里！！！！" ,portrait: "assets/523/memory-portrait/01.png"},
     { type: "wait", duration: 0.22 },
     { type: "face", actor: "ms", direction: "up" },
-    move(layout, "ms", "ms-halfway-home", "ms-return-stop", "up", 0.8, 0.3, 0.3, "up", { speaker: "ET", text: "算了啦 我8：30要去吃饭" ,portrait: "assets/523/memory-portrait/bus-stop-memory.png"}, 0.35),
+    move(layout, "ms", "ms-halfway-home", "ms-return-stop", "up", 0.8, 0.3, 0.3, "up", { speaker: "她", text: "算了啦 我8：30要去吃饭" ,portrait: "assets/523/memory-portrait/bus-stop-memory.png"}, 0.35),
     { type: "sprite", actor: "ms", sprite: spriteForPath(layout, "ms", "ms-halfway-home", "ms-return-stop", "up", "passing"), visualScale: 0.3 },
-    { type: "dialogue", speaker: "ET", text: "刚跟朋友走mecar" ,portrait: "assets/523/memory-portrait/01.png"},
-    { type: "dialogue", speaker: "ET", text: "哈哈哈哈" ,portrait: "assets/523/memory-portrait/01.png"},
+    { type: "dialogue", speaker: "她", text: "刚跟朋友走mecar" ,portrait: "assets/523/memory-portrait/01.png"},
+    { type: "dialogue", speaker: "她", text: "哈哈哈哈" ,portrait: "assets/523/memory-portrait/01.png"},
     { type: "checkpoint", id: "may23-reflection-1" },
     { type: "checkpoint", id: "may23-reflection-2" },
     { type: "checkpoint", id: "may23-reflection-3" },

@@ -7,8 +7,8 @@ const beat = (filename: string, dialogue: Array<{ speaker: string; text: string 
   dialogue
 });
 const memory = (text: string) => ({ speaker: "Memory", text });
-const ms = (text: string) => ({ speaker: "MS", text });
-const et = (text: string) => ({ speaker: "ET", text });
+const ms = (text: string) => ({ speaker: "我", text });
+const et = (text: string) => ({ speaker: "她", text });
 const friend = (text: string) => ({ speaker: "朋友", text });
 
 export const november22MainPortraitSequence: AuthoredPortraitSequence = {

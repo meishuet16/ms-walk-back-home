@@ -62,7 +62,7 @@ export const labisMotorMemoryActions: CutsceneAction[] = [
   { type: "face", actor: "motor", direction: "left" },
   { type: "expression", actor: "motor", value: "look_back_happy" },
   { type: "wait", duration: 0.42 },
-  { type: "dialogue", speaker: "ET", text: "单凭这一点，没有白来。" ,portrait: {
+  { type: "dialogue", speaker: "她", text: "单凭这一点，没有白来。" ,portrait: {
     src: "assets/labis/et-motor-lookback.png",
     height: 180
   }},

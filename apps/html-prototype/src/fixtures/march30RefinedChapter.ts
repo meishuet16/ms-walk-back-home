@@ -6,8 +6,8 @@ import type { AuthoredPortraitSequence } from "../systems/MemoryPortraitPresenta
 import { march30Assets, march30MainMemoryActions, resolveMarch30CutsceneActions, type March30AssetId } from "./march30Memory.js";
 
 const choice = (id: string, label: string, effects: ReflectionChoice["effects"], response: string): ReflectionChoice => ({ id, label, effects, response });
-const ms = (text: string) => ({ speaker: "MS", text });
-const et = (text: string) => ({ speaker: "ET", text });
+const ms = (text: string) => ({ speaker: "我", text });
+const et = (text: string) => ({ speaker: "她", text });
 const frameAssetId = (assetId: string, frame: number): string => `${assetId}:${frame}`;
 
 function frameAsset(assetId: March30AssetId, frame: number): SceneSpriteAsset {

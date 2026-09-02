@@ -6,11 +6,11 @@ import type { SceneLayout } from "../systems/SceneLayouts.js";
 const portrait = (name: string): string => `assets/425/memory-portrait/${name}.png`;
 const beat = (image: string, dialogue: Array<{ speaker: string; text: string }>): AuthoredPortraitBeat => ({ portrait: portrait(image), dialogue });
 const memory = (text: string) => ({ speaker: "Memory", text });
-const ms = (text: string) => ({ speaker: "MS", text });
-const et = (text: string) => ({ speaker: "ET", text });
+const ms = (text: string) => ({ speaker: "我", text });
+const et = (text: string) => ({ speaker: "她", text });
 const friend = (text: string) => ({ speaker: "朋友", text });
 const sharedFriend = (text: string) => ({ speaker: "那个共同朋友", text });
-const angela = (text: string) => ({ speaker: "Angela", text });
+const angela = (text: string) => ({ speaker: "朋友", text });
 
 export const april25MainPortraitSequence: AuthoredPortraitSequence = {
   id: "apr25-main",
