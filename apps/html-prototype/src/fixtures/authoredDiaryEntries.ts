@@ -170,7 +170,7 @@ body: [
   "后来才知道，有时候一句很轻的话，会让一个人多走很远。说的人未必记得。走路的人会。"
 ]
   .join("\n\n"),
-    location: "KTHO Lobby",
+    location: "Lobby",
     weather: "quiet humid night after an earlier rainy day",
     memoryKind: "chapter",
     mood: "calm",
@@ -194,7 +194,7 @@ body: [
 ]
 
 .join("\n\n"),
-    location: "KTHO residential-college entrance / front sitting area",
+    location: "front sitting area",
     weather: "warm night after a humid day",
     memoryKind: "chapter",
     mood: "close",
@@ -232,7 +232,7 @@ body: [
   "如果另一边没有人走来，再多走几遍，也只是会更熟悉回去的路。"
 ]
     .join("\n\n"),
-    location: "KTHO",
+    location: "lobby",
     weather: "Rain",
     memoryKind: "chapter",
     mood: "quiet",
