@@ -47,7 +47,8 @@ for (const file of [
   "capsule-kept-organizer.css",
   "story-route.css",
   "story-route-followup.css",
-  "reflection-detail-hotfix.css"
+  "reflection-detail-hotfix.css",
+  "journal-ui-polish.css"
 ]) {
   await copyFile(resolve(root, `src/${file}`), resolve(root, `dist/${file}`));
 }
