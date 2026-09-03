@@ -102,7 +102,7 @@
 .capsule-kept-bulk-bar {
   position: fixed;
   left: 50%;
-  bottom: max(18px, env(safe-area-inset-bottom));
+  bottom: max(18px, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
   z-index: 35;
   width: min(500px, calc(100vw - 34px));
   transform: translateX(-50%);

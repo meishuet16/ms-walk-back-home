@@ -1,3 +1,5 @@
+import { reportMediaCaptureError } from "./MediaCaptureDiagnostics.js";
+
 export type MediaStreamTrackLike = {
   stop(): void;
 };
@@ -53,7 +55,13 @@ export class JournalAudioRecorder {
   async start(): Promise<void> {
     if (this.isActive()) throw new Error("Audio recording is already active.");
     if (!this.dependencies.getUserMedia || !this.dependencies.createRecorder) throw new Error("Audio recording is unavailable in this browser.");
-    const stream = await this.dependencies.getUserMedia({ audio: true });
+    let stream: MediaStreamLike;
+    try {
+      stream = await this.dependencies.getUserMedia({ audio: true });
+    } catch (error) {
+      reportMediaCaptureError("getUserMedia failed", error);
+      throw error;
+    }
     const mimeType = selectSupportedAudioMimeType(this.dependencies.isTypeSupported ?? defaultIsTypeSupported);
     try {
       const recorder = this.dependencies.createRecorder(stream, mimeType);

@@ -145,7 +145,7 @@
   .reflection-find-panel {
     left: 12px;
     right: 12px;
-    bottom: calc(12px + env(safe-area-inset-bottom));
+    bottom: calc(12px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
     max-height: min(66dvh, 500px);
     padding: 17px 14px 14px;
   }
@@ -215,7 +215,7 @@
     justify-content: stretch;
     gap: 8px;
     margin-top: 8px;
-    padding: 9px 12px calc(9px + env(safe-area-inset-bottom));
+    padding: 9px 12px calc(9px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
     background: rgba(13, 14, 27, .985);
     backdrop-filter: blur(10px);
   }

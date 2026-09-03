@@ -21,6 +21,7 @@ import { initializeStoryRouteLabisCompletion, installStoryRouteLabisCompletionBr
 import { installJournalUiPdfPolishBridge } from "./systems/JournalUiPdfPolishBridge.js";
 import { installJournalUiPdfRefineBridge } from "./systems/JournalUiPdfRefineBridge.js";
 import { SceneDebugEditor } from "./systems/SceneDebugEditor.js";
+import { initializeCapacitorBridge } from "./systems/CapacitorBridge.js";
 
 installAuthoredCutsceneLifecycleBridge(WalkBackHomeApp.prototype);
 installLabisLifecycleBridge(WalkBackHomeApp.prototype);
@@ -52,4 +53,6 @@ if (new URLSearchParams(window.location.search).get("debug") === "scene") {
   initializeStoryRouteLabisCompletion(app);
   initializeReflectionNoteRemove(app);
   initializeCapsuleFullscreenBridge(app);
+  const shell = root.querySelector<HTMLElement>(".game-shell");
+  if (shell) initializeCapacitorBridge(app, shell);
 }
