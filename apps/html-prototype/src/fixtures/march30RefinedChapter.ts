@@ -6,8 +6,8 @@ import type { AuthoredPortraitSequence } from "../systems/MemoryPortraitPresenta
 import { march30Assets, march30MainMemoryActions, resolveMarch30CutsceneActions, type March30AssetId } from "./march30Memory.js";
 
 const choice = (id: string, label: string, effects: ReflectionChoice["effects"], response: string): ReflectionChoice => ({ id, label, effects, response });
-const ms = (text: string) => ({ speaker: "MS", text });
-const et = (text: string) => ({ speaker: "ET", text });
+const ms = (text: string) => ({ speaker: "我", text });
+const et = (text: string) => ({ speaker: "她", text });
 const frameAssetId = (assetId: string, frame: number): string => `${assetId}:${frame}`;
 
 function frameAsset(assetId: March30AssetId, frame: number): SceneSpriteAsset {
@@ -79,7 +79,7 @@ export const march30PortraitSequences: Record<string, AuthoredPortraitSequence> 
     id: "march30-elevator",
     beats: [
       {
-        portrait: "",
+        portrait: "/assets/1122/memory-portrait/echo-bye.png",
         dialogue: [
           ms("额嘿嘿好巧哈哈 又见面了 太有缘了"),
           et("是咯~你怎么还在这里"),

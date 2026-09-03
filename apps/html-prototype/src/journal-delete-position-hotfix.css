@@ -1,0 +1,64 @@
+/* Keep Timeline delete confirmation inside the Journal panel's coordinate space.
+   The base `.delete-confirmation` centers itself with left/top 50% plus
+   translate(-50%, -50%). Once this element became a full-panel veil, that
+   transform shifted the entire veil/card half a panel toward the upper-left. */
+.timeline-panel {
+  position: relative !important;
+  isolation: isolate;
+}
+
+.timeline-panel > .timeline-delete-confirmation.delete-confirmation {
+  position: absolute !important;
+  inset: 0 !important;
+  left: 0 !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  transform: none !important;
+  z-index: 7600 !important;
+  box-sizing: border-box !important;
+  width: auto !important;
+  height: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 20px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+}
+
+.timeline-panel > .timeline-delete-confirmation.delete-confirmation > div:first-child,
+.timeline-panel > .timeline-delete-confirmation .delete-confirmation-actions {
+  width: min(360px, calc(100% - 20px)) !important;
+  max-width: 360px !important;
+  flex: 0 0 auto !important;
+}
+
+@media (max-width: 760px) {
+  .timeline-panel > .timeline-delete-confirmation.delete-confirmation {
+    padding: 16px !important;
+  }
+
+  .timeline-panel > .timeline-delete-confirmation.delete-confirmation > div:first-child,
+  .timeline-panel > .timeline-delete-confirmation .delete-confirmation-actions {
+    width: min(340px, calc(100% - 8px)) !important;
+  }
+}
+
+/* Reuse the supplied title artwork without adding another build-managed stylesheet. */
+.story-title-screen {
+  background:
+    radial-gradient(circle at 72% 72%, rgba(251, 186, 113, .17), transparent 24%),
+    linear-gradient(180deg, rgba(1, 7, 17, .22), rgba(2, 8, 18, .12) 42%, rgba(2, 8, 18, .68) 77%, rgba(2, 8, 18, .93)),
+    url("./assets/title.png") center / cover no-repeat;
+}
+
+.threshold-hub {
+  background:
+    linear-gradient(180deg, rgba(2,8,18,.18), rgba(2,8,18,.24) 54%, rgba(2,8,18,.72)),
+    url("./assets/title.png") 53% center / cover no-repeat;
+}

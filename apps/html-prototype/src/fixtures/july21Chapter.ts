@@ -6,8 +6,8 @@ import type { SceneLayout } from "../systems/SceneLayouts.js";
 const portrait = (name: string): string => `assets/721/memory-portrait/${name}.png`;
 const beat = (image: string, dialogue: Array<{ speaker: string; text: string }>): AuthoredPortraitBeat => ({ portrait: portrait(image), dialogue });
 const memory = (text: string) => ({ speaker: "Memory", text });
-const ms = (text: string) => ({ speaker: "MS", text });
-const et = (text: string) => ({ speaker: "ET", text });
+const ms = (text: string) => ({ speaker: "我", text });
+const et = (text: string) => ({ speaker: "她", text });
 
 export const july21MainPortraitSequence: AuthoredPortraitSequence = {
   id: "july21-main",
@@ -35,9 +35,9 @@ export const july21MainPortraitSequence: AuthoredPortraitSequence = {
     beat("main-03", [
       et("对我来说，\n每个朋友都没有什么不一样。"),
       ms("只有我在伤心。"),
-      et("不要夸张 leh。"),
-      et("很正常的不是，朋友离别。"),
-      et("你跟你朋友也会这样吗？"),
+      et("不要夸张勒。"),
+      et("很正常的不是吗，只是朋友离别。"),
+      et("你跟你朋友离别也会这样吗？"),
       ms("不会。"),
       ms("只对你会伤心。"),
       et("为什么？"),
@@ -50,11 +50,11 @@ export const july21MainPortraitSequence: AuthoredPortraitSequence = {
       ms("你可以安慰我吗？"),
       et("又不是死了或者绝交。"),
       ms("根本没有差别了。\n我以后看不到你了。"),
-      et("我后个 sem 就回来了。"),
-      ms("可是要毕业了。"),
+      et("我后个学期就回来了。"),
+      ms("可是你要毕业了。"),
       et("还有很久啊。"),
       et("我都不懂你在伤心什么。"),
-      et("你琢磨。"),
+      et("你到底怎么了。"),
       et("到底在心碎什么？")
     ]),
     beat("main-05", [
@@ -63,11 +63,11 @@ export const july21MainPortraitSequence: AuthoredPortraitSequence = {
       et("你玩手机吧。"),
       ms("不要再玩了。"),
       ms("你可以别玩手机了吗？"),
-      ms("和我玩。"),
+      ms("。。。"),
       ms("你都要走了。"),
       et("不可以。"),
       et("你打扰到我玩手机了。"),
-      et("我们还有明天半天不是。")
+      et("我明天傍晚才回 我们还有明天半天 不是吗。")
     ])
   ]
 };
@@ -79,7 +79,7 @@ export const july21PortraitSequences: Record<string, AuthoredPortraitSequence> =
     beats: [
       beat("echo-distance", [
         memory("那天去爬山，一开始还走错路。\n一脸怀疑地开车进黄泥路。"),
-        memory("后来误打误撞去到 Jementah 的德教会。"),
+        memory("后来误打误撞去到那边的德教会。"),
       ]),
       beat("02", [
         et("好笑哦。\n昨天一个德教会。\n今天又另一个德教会。")
@@ -92,7 +92,7 @@ export const july21PortraitSequences: Record<string, AuthoredPortraitSequence> =
         memory("我不知道。")
       ]),
       beat("echo-deer", [
-        et("我的 ETS 学生价申请通过了。"),
+        et("我的火车票学生价申请通过了。"),
         memory("她要买明天的票回家。"),
       ]),
       beat("echo-ask", [
@@ -107,8 +107,8 @@ export const july21PortraitSequences: Record<string, AuthoredPortraitSequence> =
   "july21-eggtoast": {
     id: "july21-eggtoast",
     beats: [beat("echo-distance", [
-      memory("回家前，我们去二桥吃午餐。"),
-      memory("她很喜欢 Eggtoast Cafe 的 omelette bowl。"),
+      memory("回家前，我们去吃午餐。"),
+      memory("她很喜欢那家店的 omelette bowl。"),
     ]),
     beat("03", [
       et("我是一个很喜欢吃这个的人。"),
@@ -147,8 +147,8 @@ export const july21PortraitSequences: Record<string, AuthoredPortraitSequence> =
         memory("不然给她知道价钱，\n她又要转回来给我了。")
       ]),
       beat("echo-temple01", [
-        memory("阿爸带我们去老庙。"),
-        memory("ET第一次点那么多支香。"),
+        memory("之后阿爸带我们去老庙。"),
+        memory("她第一次点那么多支香。"),
         memory("她还主动扫地。"),
         memory("阿爸还让她去神台倒酒。"),
       ]),
@@ -200,10 +200,10 @@ export const july21PortraitSequences: Record<string, AuthoredPortraitSequence> =
     beats: [
       beat("ms-portrait-20", [
       memory("今天8am就起来了。"),
-      memory("我比ET早起。"),
-      memory("我在想该不该摊牌。"),
+      memory("我比她早起。"),
+      memory("我在想该不该说。"),
       memory("但是好像没必要了。"),
-      memory("ET自己泡Milo喝。"),
+      memory("她起床后自己泡饮料喝。"),
       memory("去客厅开戏看。"),
       ]),
       beat("ms-portrait-19", [
@@ -218,7 +218,7 @@ export const july21PortraitSequences: Record<string, AuthoredPortraitSequence> =
       beat("echo-watch", [
       memory("她收完了，\n又回客厅看戏。"),
       memory("我继续躺在床上思考人生。"),
-      memory("她还会在客厅喊我出来看戏。\n因为我的手机还在沙发没拿走。")
+      memory("她看见我的手机还留在客厅，\n便喊我出来看戏。")
     ])]
   },
   "july21-departure": {
@@ -237,7 +237,7 @@ export const july21PortraitSequences: Record<string, AuthoredPortraitSequence> =
         ms("真的诶。\n笑死。\n拍下来。")
       ]),
       beat("echo-gift", [
-        memory("最后载ET到火车站。"),
+        memory("最后载她到火车站。"),
         memory("我给她最后的那个小八挂绳。")
       ]),
       beat("echo-leave", [
@@ -338,20 +338,20 @@ export const july21Chapter: ChapterDefinition = {
   title: "One More Day",
   mood: "a day that was ordinary until it was leaving",
   weather: "rain into a bright afternoon",
-  location: "Labis family home",
+  location: "Home",
   characters: ["Muji", "MS", "ET"],
   objects: ["train ticket", "phone", "omelette bowl", "luggage", "water bottle"],
   evidence: ["approved-721-portrait-world", "approved-721-landscape-world", "approved-721-memory-portraits"],
   dialogue: [],
   canonicalClosure: {
     historicalEventId: "july21-sofa-main-memory",
-    lines: ["那天下午，她还是走了。", "水壶留在车上。"]
+    lines: ["那天下午，她还是走了。", "水壶却留在车上。"]
   },
   reflectionQuotes: [
-    { id: "july21-accepting", tone: "accepting", preference: { acceptance: 1 }, lines: ["她还是回家了。", "我也终于没有再替那一天找一个更长的理由。"], afterline: "" },
-    { id: "july21-holding", tone: "holding", preference: { holding: 1, closeness: 1 }, lines: ["后来我还会想起那几天。", "不是因为它本来可以多一天。"], afterline: "" },
-    { id: "july21-not-ready", tone: "not-ready", preference: { honesty: 1 }, lines: ["有些话那时没有说。", "现在也不必为了完整，重新说一遍。"], afterline: "" },
-    { id: "july21-rewriting", tone: "rewriting", preference: { companionship: 1 }, lines: ["我没有把那几天写成另一个结局。", "它就是这样发生过。"], afterline: "" }
+    { id: "july21-accepting", tone: "accepting", preference: { acceptance: 1 }, lines: ["她还是回家了。", "我也终于没有再替那一天找一个更长的理由。"], afterline: "那一天停在哪里，就让它停在哪里。" },
+    { id: "july21-holding", tone: "holding", preference: { holding: 1, closeness: 1 }, lines: ["后来我还会想起那几天。", "不是因为它本来可以多一天。"], afterline: "只是已经有过的那些，我还是很舍不得忘记。" },
+    { id: "july21-not-ready", tone: "not-ready", preference: { honesty: 1 }, lines: ["有些话那时没有说。", "现在也不必为了完整，重新说一遍。"], afterline: "至少现在，我还想把它留在没有说出口的时候。" },
+    { id: "july21-rewriting", tone: "rewriting", preference: { companionship: 1 }, lines: ["我没有把那几天写成另一个结局。", "它就是这样发生过。"], afterline: "少掉的那一天，不会把已经一起走过的几天拿走。" }
   ]
 };
 
@@ -359,7 +359,7 @@ export const july21DiaryBody = [
   "07.21–07.22 · One More Day",
   "那两天我一直觉得时间走得很快。",
   "七月二十一号早上下雨。我们九点多去吃芋头饭，你又把我的那份钱一起转给我。我看着转账记录觉得很好笑。明明是你来我家做客，最后却好像什么都要跟我算清楚。",
-  "后来我开车去 Jementah。路有一点远，我一路都想和你讲话。想听你说最近发生的事，或者随便什么八卦也可以。",
+  "后来我开车去爬山地点。路有一点远，我一路都想和你讲话。想听你说最近发生的事，或者随便什么八卦也可以。",
   "我问，八卦呢。",
   "你说没有，让我讲自己的。",
   "我说，那正经的也可以。",
@@ -368,21 +368,21 @@ export const july21DiaryBody = [
   "我那时候才发现，我们好像已经很久没有像以前那样一直讲话了。晚上睡觉以前也是，各自看各自的手机。你十二点很准时地睡，我躺在旁边，总觉得应该还有一句什么话没有说。",
   "可是没有。",
   "那天我们还是去了很多地方。",
-  "去 Bukit Cinta 的时候走错了路，车开进一条黄泥路，两个人都开始怀疑到底是不是这里。后来误打误撞去了 Jementah 的德教会，上香、问路。你还笑，说昨天一个德教会，今天又一个德教会。",
+  "去爬山的时候走错了路，车开进一条黄泥路，两个人都开始怀疑到底是不是这里。后来误打误撞去了那边的又一间德教会，上香、问路。你还笑，说昨天一个德教会，今天又一个德教会。",
   "太阳很大的时候，我们终于开始爬山。一路都是上坡，很喘。你一直叫我走在你前面，不要走在你后面。",
   "我没有问为什么。",
   "那几天你好像也开始不太喜欢我拍你。以前那些很自然留下来的照片，忽然变成一件需要先问过你的事情。",
   "所以后来我就走在前面。",
   "山顶其实没有发生什么。",
-  "我们还是照常下山，去云峰宫喂鹿、摸鱼、拍照。世界没有因为我心里那些乱七八糟的东西停下来。",
-  "也是在那里，你告诉我，ETS 的学生票申请通过了。",
+  "我们还是照常下山，去庙里喂鹿、摸鱼、拍照。世界没有因为我心里那些乱七八糟的东西停下来。",
+  "也是在那里，你告诉我，火车的学生票申请通过了。",
   "你可以买明天的票回家了。",
-  "我半开玩笑地说，后天再回吧。",
+  "我半开玩笑地说，后天再回吧 求求你。",
   "你愣了一下，说，好啊。",
   "然后问我，明天要做什么。",
   "我说，明天再看。",
   "你说不行。如果没有东西做，你就明天回。",
-  "后来我们又去了青云岩，去二桥吃午餐。你很喜欢 Eggtoast Cafe 的 omelette bowl，说你本来就很喜欢吃这个，这家的特别好吃。回去以前又买了排骨饼。",
+  "后来我们又去了另一间庙，吃午餐。你很喜欢那边的omelette bowl，你说你本来就很喜欢吃这个，这家的特别好吃。吃饱后回家前我们又买了排骨饼。",
   "那一天明明已经去了很多地方。",
   "可是我一路都在想另一件事。",
   "为什么一定要有 plan，才值得多留一天。",
@@ -429,7 +429,7 @@ export const july21DiaryBody = [
   "要不要告诉你。",
   "好像真的只差一句。",
   "可是想了很久，又觉得没有必要了。",
-  "后来你自己泡了一杯 Milo，坐到客厅开戏看。我也过去坐在沙发上。",
+  "后来你自己泡了一杯热饮料，坐到客厅开戏看。我也过去坐在沙发上。",
   "电视一直播。",
   "我们谁都没有提昨天。",
   "中途你回房间收行李。我也跟进去，看着你把东西一件一件放回去。我的手机还留在客厅。",
@@ -441,8 +441,8 @@ export const july21DiaryBody = [
   "电视开着。",
   "你还在。",
   "好像只要不开口，今天就还只是一个普通的早上。",
-  "十点多，我们出去吃早餐。Kampung 蛋、面包，然后回家。你照旧把钱转给我，我也照旧想办法再转回去。",
-  "后来回到店里，又开始吃。",
+  "十点多，我们出去吃早餐。鸡蛋、面包，然后回家。你照旧把钱转给我，我也照旧想办法再转回去。",
+  "后来回到阿爸店里，又开始吃。",
   "阿爸煮东西，阿姐早早买了香饼给你带回去，还故意不告诉你多少钱。大家已经知道了，只要让你知道，你一定又会把钱转回来。",
   "你好像很不习惯白白收下别人的好。",
   "一直说太多了，很夸张。",
@@ -462,10 +462,10 @@ export const july21DiaryBody = [
   "食物装进袋子。",
   "行李收进箱子。",
   "回家的票已经买好了。",
-  "只有我还没有准备好。",
-  "三点多，我们回家拿行李。",
-  "搬东西上车的时候，又看见阿爸穿着红色衣服跟对面蓝色政党的人聊得很开心。你站在那里研究了一下，说，你们家不是投红色的吗，为什么聊得那么开心。",
-  "我笑着说，真的诶。",
+  "好像只有我还没有准备好。",
+  "下午三点多，我们带你回家拿行李。",
+  "搬东西上车的时候，又看见阿爸穿着红色衣服跟对面蓝色政党的人聊得很开心。你站在那里研究了一下，说，你们家不是投红色的吗，为什么阿爸可以和那人聊得那么开心。",
+  "我笑着说，真的诶 有点搞笑。",
   "还拿手机拍了下来。",
   "我很喜欢自己还记得这种东西。",
   "因为到最后，我们还是在讲这些没有意义的小事。",
@@ -479,14 +479,14 @@ export const july21DiaryBody = [
   "最后没有。",
   "我不知道是因为害怕，还是因为前一天已经隐约知道答案。",
   "也可能只是觉得，如果一件事情说出来以后只会让你为难，那留在我这里就好了。",
-  "所以最后只是用 WhatsApp 语音叮嘱了一些很普通的东西。",
+  "所以最后只是用语音信息叮嘱了一些很普通的东西。",
   "然后你上车。",
   "火车开走。",
   "就这样。",
   "我原本以为这一天到这里应该就结束了。",
   "后来你发消息告诉我，你的水壶落在车上了。",
   "你说，帮你保管。",
-  "下下个 semester 回来再跟我拿。",
+  "下下个学期回来再跟我拿。",
   "我看到那句话的时候，不知道该笑还是该哭。",
   "明明已经很努力在接受，有些东西就是会结束。",
   "你却偏偏留下了一件东西。",
@@ -501,7 +501,7 @@ export const july21DiaryBody = [
   "回家以后，我翻了很久前几天的照片。",
   "那些照片里没有什么特别的东西。",
   "吃饭，开车，剪头发，学 motor，看戏，去庙里，坐在客厅。",
-  "别人看了，说很像恋爱日常。",
+  "别人看了，说很特别。",
   "我觉得很好笑。",
   "因为在你的故事里，大概真的只是去一个朋友家住了几天。",
   "吃了很多东西。",
@@ -531,7 +531,7 @@ export const july21DiaryEntry: DiaryEntry = {
   date: "2026-07-21",
   title: "07.21–07.22 · One More Day",
   body: july21DiaryBody.join("\n\n"),
-  location: "Labis family home",
+  location: "Family home",
   weather: "rain into a bright afternoon",
   memoryKind: "chapter",
   mood: "quiet",

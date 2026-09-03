@@ -199,7 +199,7 @@ export const april06ReflectionChoices: April06ReflectionChoicePoint[] = [
     choices: [
       choice("catch-line-remember", "记住原话就好。", { acceptance: 1, honesty: 1 }, "我不替这句话加上没有说过的后半句。"),
       choice("catch-line-question", "我还是会想，这句话到底算什么。", { closeness: 1, intervention: 1 }, "我可以记得疑问还在。"),
-      choice("catch-line-ordinary", "她就是下来拿宵夜的。不要自己配 BGM。", { distance: 1, acceptance: 1 }, "事情也可以只停在事情。")
+      choice("catch-line-ordinary", "她就是下来拿宵夜的。", { distance: 1, acceptance: 1 }, "事情也可以只停在事情。")
     ]
   },
   {
@@ -214,10 +214,53 @@ export const april06ReflectionChoices: April06ReflectionChoicePoint[] = [
 ];
 
 export const april06ReflectionQuotes = [
-  { id: "april06-accepting", tone: "accepting" as const, preference: { acceptance: 1, companionship: 1 }, lines: ["那晚发生的，就只有这些。", "她下来了，我还没走。"] },
-  { id: "april06-holding", tone: "holding" as const, preference: { honesty: 1, closeness: 1 }, lines: ["我确实是特地送来的。", "至少这件事，不用装作不知道。"] },
-  { id: "april06-not-ready", tone: "not-ready" as const, preference: { concealment: 2, distance: 1 }, lines: ["我记得她说了什么。", "不替她补下一句。"] },
-  { id: "april06-rewriting", tone: "rewriting" as const, preference: { intervention: 2, closeness: 1 }, lines: ["我本来想把东西留下，把自己带走。", "配送成功，逃跑失败。"] }
+  {
+    id: "april06-accepting",
+    tone: "accepting" as const,
+    preference: { acceptance: 1, companionship: 1 },
+    lines: [
+      "那晚发生的，就只有这些。",
+      "她下来了，我还没走。"
+    ],
+    afterline:
+      "后来想想，也不需要把那几分钟解释成什么。"
+  },
+
+  {
+    id: "april06-holding",
+    tone: "holding" as const,
+    preference: { honesty: 1, closeness: 1 },
+    lines: [
+      "我确实是特地送来的。",
+      "至少这件事，不用装作不知道。"
+    ],
+    afterline:
+      "我只是终于承认，那晚的我其实很想见你。"
+  },
+
+  {
+    id: "april06-not-ready",
+    tone: "not-ready" as const,
+    preference: { concealment: 2, distance: 1 },
+    lines: [
+      "我记得她说了什么。",
+      "不替她补下一句。"
+    ],
+    afterline:
+      "有些话停在那晚，就已经够近了。"
+  },
+
+  {
+    id: "april06-rewriting",
+    tone: "rewriting" as const,
+    preference: { intervention: 2, closeness: 1 },
+    lines: [
+      "我本来想把东西留下，把自己带走。",
+      "配送成功，逃跑失败。"
+    ],
+    afterline:
+      "如果那辆车没有先开走，这一晚大概只会是一张成功送达的照片。"
+  }
 ];
 
 export const april06Chapter: ChapterDefinition = {
@@ -228,19 +271,30 @@ export const april06Chapter: ChapterDefinition = {
   title: "还没走啊？",
   mood: "a humid ordinary hostel night where a quick delivery fails to stay anonymous",
   weather: "quiet humid night after an earlier rainy day",
-  location: "KTHO Lobby",
+  location: "Lobby",
   characters: ["Muji", "MS", "ET"],
-  objects: ["McDonald's takeaway", "fries", "water container memory", "Perodua Alza", "KTHO lobby"],
-  evidence: ["authored-406-landscape-scene-layout", "authored-406-portrait-scene-layout"],
+  objects: [
+    "McDonald's takeaway",
+    "fries",
+    "water container memory",
+    "Perodua Alza",
+    "KTHO lobby"
+  ],
+  evidence: [
+    "authored-406-landscape-scene-layout",
+    "authored-406-portrait-scene-layout"
+  ],
   dialogue: [],
-  canonicalClosure: {
-    historicalEventId: "april06-mcd-lobby-memory",
-    lines: [
-      "MS leaves the McDonald's in the KTHO lobby.",
-      "ET comes downstairs before MS can leave.",
-      "MS returns to the waiting Perodua Alza."
-    ]
-  },
+
+canonicalClosure: {
+  historicalEventId: "april06-mcd-lobby-memory",
+  lines: [
+    "她最后还是下来了。",
+    "我们在楼下聊了一会儿。",
+    "后来朋友把车开回来了，我才离开。"
+  ]
+},
+
   reflectionQuotes: april06ReflectionQuotes
 };
 
@@ -276,9 +330,9 @@ export const april06MainMemoryActions: April06Action[] = [
   { type: "wait", duration: 0.38 },
   { type: "sprite", actor: "ms", asset: visual("ms-photo-mcd") },
   { type: "wait", duration: 0.48 },
-  { type: "dialogue", speaker: "MS", text: "叶同学 你的宵夜已送到。", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
-  { type: "dialogue", speaker: "MS", text: "请趁热食用。", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
-  { type: "dialogue", speaker: "MS", text: "不要食用的话你就当早餐哈哈拜拜。", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
+  { type: "dialogue", speaker: "我", text: "同学 你的宵夜已送到。", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
+  { type: "dialogue", speaker: "我", text: "请趁热食用。", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
+  { type: "dialogue", speaker: "我", text: "不要食用的话你就当早餐嘻嘻，拜拜。", portrait: "assets/523/memory-portrait/bus-stop-memory.png" },
   { type: "sprite", actor: "ms", asset: visual("ms-think-mcd") },
   { type: "wait", duration: 0.42 },
   { type: "sprite", actor: "ms", asset: visual("ms-leave-mcd") },
@@ -286,7 +340,7 @@ export const april06MainMemoryActions: April06Action[] = [
   { type: "move", actor: "ms", position: at("ms-roadside-stop"), duration: 0.48, asset: visual("ms-escape") , facing: "left" },
   { type: "sprite", actor: "ms", asset: visual("ms-empty-car") },
   { type: "wait", duration: 0.62 },
-  { type: "dialogue", speaker: "MS", text: "wtf？？？", portrait: "assets/523/memory-portrait/03.png" },
+  { type: "dialogue", speaker: "我", text: "wtf？？？车怎么开走了？！我还没上车啊朋友们QAQ", portrait: "assets/523/memory-portrait/03.png" },
   { type: "checkpoint", id: "delivery-anonymity" },
   { type: "sprite", actor: "ms", asset: visual("ms-look-lobby") },
   { type: "wait", duration: 0.38 },
@@ -297,14 +351,14 @@ export const april06MainMemoryActions: April06Action[] = [
   { type: "wait", duration: 0.32 },
   { type: "sprite", actor: "et", asset: visual("et-amused") },
   { type: "wait", duration: 0.48 },
-  { type: "dialogue", speaker: "ET", text: "诶还没走啊~", portrait: "assets/624/echo-portraits/et-portraits/01-questioning.png" },
+  { type: "dialogue", speaker: "她", text: "诶还没走啊~", portrait: "assets/624/echo-portraits/et-portraits/01-questioning.png" },
   { type: "move", actor: "et", position: at("et-catch-position"), duration: 0.38, asset: visual("et-approaches"), facing: "left" },
   { type: "sprite", actor: "et", asset: visual("et-stop") },
   { type: "wait", duration: 0.34 },
   { type: "sprite", actor: "et", asset: visual("et-conversational") },
   { type: "sprite", actor: "ms", asset: visual("ms-awkward-caught") },
-  { type: "dialogue", speaker: "MS", text: "……你下来的很快哦。", portrait: "assets/523/memory-portrait/01.png" },
-  { type: "dialogue", speaker: "ET", text: "肯定，为了要抓你嘛。", portrait: "assets/624/echo-portraits/et-portraits/01-questioning.png" },
+  { type: "dialogue", speaker: "我", text: "……你下来的很快哦。", portrait: "assets/523/memory-portrait/01.png" },
+  { type: "dialogue", speaker: "她", text: "肯定，为了要抓你嘛。", portrait: "assets/624/echo-portraits/et-portraits/01-questioning.png" },
   { type: "checkpoint", id: "catch-line" },
 
   { type: "prop", id: "mcd", asset: "mcd", position: at("mcd-drop-point"), visible: false },
@@ -319,25 +373,25 @@ export const april06MainMemoryActions: April06Action[] = [
   { type: "wait", duration: 0.42 },
   { type: "spawn", actor: "ms", position: at("ms-chat-position"), asset: visual("ms-chat-a"), frame: 0, facing: "right" },
   { type: "move", actor: "et", position: at("et-chat-position"), duration: 0.58, asset: visual("et-hold-bag"), facing: "left" },
-  { type: "dialogue", speaker: "ET", text: "你现在怎样回去？",portrait: "assets/624/echo-portraits/et-portraits/08-soft-look.png" },
-  { type: "dialogue", speaker: "MS", text: "我朋友等下来载我 hehe。", portrait: "assets/523/memory-portrait/01.png" },
+  { type: "dialogue", speaker: "她", text: "你现在怎样回去？",portrait: "assets/624/echo-portraits/et-portraits/08-soft-look.png" },
+  { type: "dialogue", speaker: "我", text: "我朋友等下来载我 hehe。", portrait: "assets/523/memory-portrait/01.png" },
   { type: "sprite", actor: "et", asset: visual("et-talk") },
   { type: "sprite", actor: "ms", asset: visual("ms-chat-b") },
-  { type: "dialogue", speaker: "ET", text: "你吃了吗？", portrait: "assets/624/echo-portraits/et-portraits/01-questioning.png" },
-  { type: "dialogue", speaker: "ET", text: "多少钱我转你啦。", portrait: "assets/624/echo-portraits/et-portraits/01-questioning.png" },
-  { type: "dialogue", speaker: "MS", text: "不用不用。", portrait: "assets/523/memory-portrait/02.png" },
-  { type: "dialogue", speaker: "MS", text: "你吃了就等于我吃了。", portrait: "assets/523/memory-portrait/02.png" },
-  { type: "dialogue", speaker: "MS", text: "你要带着我的那份吃下去嘻嘻。", portrait: "assets/523/memory-portrait/02.png" },
-  { type: "dialogue", speaker: "ET", text: "Angela 不在宿舍，去 inspection 了。", portrait: "assets/624/echo-portraits/et-portraits/01-questioning.png" },
-  { type: "dialogue", speaker: "ET", text: "明天她要 5.30am 起床。", portrait: "assets/624/echo-portraits/et-portraits/01-questioning.png" },
-  { type: "dialogue", speaker: "MS", text: "那你几点？", portrait: "assets/523/memory-portrait/02.png" },
-  { type: "dialogue", speaker: "ET", text: "也是 5.30am。", portrait: "assets/624/echo-portraits/et-portraits/01-questioning.png" },
-  { type: "dialogue", speaker: "ET", text: "你明天有没有去 faculty 的活动？", portrait: "assets/624/echo-portraits/et-portraits/01-questioning.png" },
-  { type: "dialogue", speaker: "MS", text: "你去吗？", portrait: "assets/523/memory-portrait/02.png" },
-  { type: "dialogue", speaker: "ET", text: "我和我朋友都去。", portrait: "assets/624/echo-portraits/et-portraits/01-questioning.png" },
-  { type: "dialogue", speaker: "MS", text: "njhl。", portrait: "assets/523/memory-portrait/02.png" },
-  { type: "dialogue", speaker: "ET", text: "怎么，你有上课？", portrait: "assets/624/echo-portraits/et-portraits/01-questioning.png" },
-  { type: "dialogue", speaker: "MS", text: "对啊。", portrait: "assets/523/memory-portrait/02.png" },
+  { type: "dialogue", speaker: "她", text: "你吃了吗？", portrait: "assets/624/echo-portraits/et-portraits/01-questioning.png" },
+  { type: "dialogue", speaker: "她", text: "多少钱我转你啦。", portrait: "assets/624/echo-portraits/et-portraits/01-questioning.png" },
+  { type: "dialogue", speaker: "我", text: "不用不用。", portrait: "assets/523/memory-portrait/02.png" },
+  { type: "dialogue", speaker: "我", text: "你吃了就等于我吃了。", portrait: "assets/523/memory-portrait/02.png" },
+  { type: "dialogue", speaker: "我", text: "你要带着我的那份吃下去嘻嘻。", portrait: "assets/523/memory-portrait/02.png" },
+  { type: "dialogue", speaker: "她", text: "你朋友不在房间，有事出去了。", portrait: "assets/624/echo-portraits/et-portraits/01-questioning.png" },
+  { type: "dialogue", speaker: "她", text: "明天她还要 5.30am 起床。", portrait: "assets/624/echo-portraits/et-portraits/01-questioning.png" },
+  { type: "dialogue", speaker: "我", text: "噢是吗 那你几点？", portrait: "assets/523/memory-portrait/02.png" },
+  { type: "dialogue", speaker: "她", text: "也是 5.30am。", portrait: "assets/624/echo-portraits/et-portraits/01-questioning.png" },
+  { type: "dialogue", speaker: "她", text: "你明天有没有去 faculty 的活动？", portrait: "assets/624/echo-portraits/et-portraits/01-questioning.png" },
+  { type: "dialogue", speaker: "我", text: "你去吗？", portrait: "assets/523/memory-portrait/02.png" },
+  { type: "dialogue", speaker: "她", text: "我和我朋友都去。", portrait: "assets/624/echo-portraits/et-portraits/01-questioning.png" },
+  { type: "dialogue", speaker: "我", text: "njhl。", portrait: "assets/523/memory-portrait/02.png" },
+  { type: "dialogue", speaker: "她", text: "怎么，你有上课？", portrait: "assets/624/echo-portraits/et-portraits/01-questioning.png" },
+  { type: "dialogue", speaker: "我", text: "对啊。", portrait: "assets/523/memory-portrait/02.png" },
   { type: "checkpoint", id: "fries-meaning" },
 
   { type: "sprite", actor: "ms", asset: visual("ms-notice-car") },
@@ -351,11 +405,11 @@ export const april06MainMemoryActions: April06Action[] = [
   { type: "sprite", actor: "alza", asset: visual("alza-enter-final") },
   { type: "wait", duration: 0.56 },
   { type: "move", actor: "et", position: at("car-return-edge"), duration: 0.78, asset: visual("et-glance"), facing: "left" },
-  { type: "dialogue", speaker: "ET", text: "噢你朋友来了。", portrait: "assets/624/echo-portraits/et-portraits/01-questioning.png" },
+  { type: "dialogue", speaker: "她", text: "噢你朋友来了。", portrait: "assets/624/echo-portraits/et-portraits/01-questioning.png" },
   { type: "move", actor: "et", position: at("car-return-edge"), duration: 0.32, asset: visual("et-goodbye"), facing: "left" },
-  { type: "dialogue", speaker: "ET", text: "拜拜。", portrait: "assets/624/echo-portraits/et-portraits/08-soft-look.png" },
+  { type: "dialogue", speaker: "她", text: "拜拜。", portrait: "assets/624/echo-portraits/et-portraits/08-soft-look.png" },
   { type: "move", actor: "ms", position: at("ms-exit-pickup"), duration: 0.72, asset: visual("ms-turn"), facing: "left" },
-  { type: "dialogue", speaker: "MS", text: "拜拜。", portrait: "assets/523/memory-portrait/02.png" },
+  { type: "dialogue", speaker: "我", text: "拜拜。", portrait: "assets/523/memory-portrait/02.png" },
   { type: "fade", actors: ["ms", "et", "alza"], duration: 0.55 }
 ];
 
@@ -376,10 +430,10 @@ export const april06EchoActions: April06Action[] = [
   ...april06EchoBeats.map((beat): April06Action => ({ type: "echo-beat", id: beat.id, ms: beat.ms, et: beat.et, duration: beat.duration, msOffset: beat.msOffset, etOffset: beat.etOffset })),
   { type: "fade", actors: ["ms", "et"], duration: 0.45 },
   { type: "wait", duration: 0.32 },
-  { type: "dialogue", speaker: "Ziqi", text: "今天不 monday blue 了咯", portrait:"assets/624/echo-portraits/group-echoes/01-morning-angela-st.png"},
-  { type: "dialogue", speaker: "MS", text: "hehe 本来就不blue 你不懂昨天晚上发生了啥", portrait: "assets/523/memory-portrait/02.png" },
-  { type: "dialogue", speaker: "Ziqi", text: "啥 快告诉我！", portrait:"assets/624/echo-portraits/group-echoes/01-morning-angela-st.png"},
-  { type: "dialogue", speaker: "MS", text: "hehe", portrait: "assets/523/memory-portrait/02.png" }
+  { type: "dialogue", speaker: "朋友", text: "今天不 monday blue 了咯", portrait:"assets/624/echo-portraits/group-echoes/01-morning-angela-st.png"},
+  { type: "dialogue", speaker: "我", text: "hehe 本来就不blue 你不懂昨天晚上发生了啥", portrait: "assets/523/memory-portrait/02.png" },
+  { type: "dialogue", speaker: "朋友", text: "啥 快告诉我！", portrait:"assets/624/echo-portraits/group-echoes/01-morning-angela-st.png"},
+  { type: "dialogue", speaker: "我", text: "hehe", portrait: "assets/523/memory-portrait/02.png" }
 ];
 
 function resolvePosition(layout: SceneLayout, position: April06Position): Point {

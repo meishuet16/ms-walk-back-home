@@ -96,7 +96,7 @@ test("March 30 uses the authored direct portraits for ET's question and MS's ans
 test("March 30 dialogue actions accept the shared generic portrait config", () => {
   const action: Extract<March30Action, { type: "dialogue" }> = {
     type: "dialogue",
-    speaker: "MS",
+    speaker: "我",
     text: "test",
     portrait: {
       src: "assets/330/test.png",

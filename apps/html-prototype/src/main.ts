@@ -18,6 +18,8 @@ import { initializeStoryRouteStartup, installStoryRouteBridge } from "./systems/
 import { installStoryRouteMobileFixBridge } from "./systems/StoryRouteMobileFixBridge.js";
 import { initializeStoryRouteFollowups, installStoryRouteFollowupBridge } from "./systems/StoryRouteFollowupBridge.js";
 import { initializeStoryRouteLabisCompletion, installStoryRouteLabisCompletionBridge } from "./systems/StoryRouteLabisCompletionBridge.js";
+import { installJournalUiPdfPolishBridge } from "./systems/JournalUiPdfPolishBridge.js";
+import { installJournalUiPdfRefineBridge } from "./systems/JournalUiPdfRefineBridge.js";
 import { SceneDebugEditor } from "./systems/SceneDebugEditor.js";
 
 installAuthoredCutsceneLifecycleBridge(WalkBackHomeApp.prototype);
@@ -37,6 +39,8 @@ installStoryRouteBridge(WalkBackHomeApp.prototype as unknown as Parameters<typeo
 installStoryRouteMobileFixBridge(WalkBackHomeApp.prototype as unknown as Parameters<typeof installStoryRouteMobileFixBridge>[0]);
 installStoryRouteFollowupBridge(WalkBackHomeApp.prototype as unknown as Parameters<typeof installStoryRouteFollowupBridge>[0]);
 installStoryRouteLabisCompletionBridge(WalkBackHomeApp.prototype as unknown as Parameters<typeof installStoryRouteLabisCompletionBridge>[0]);
+installJournalUiPdfPolishBridge(WalkBackHomeApp.prototype as unknown as Parameters<typeof installJournalUiPdfPolishBridge>[0]);
+installJournalUiPdfRefineBridge(WalkBackHomeApp.prototype as unknown as Parameters<typeof installJournalUiPdfRefineBridge>[0]);
 
 const root = document.querySelector<HTMLElement>("#app")!;
 if (new URLSearchParams(window.location.search).get("debug") === "scene") {

@@ -228,9 +228,9 @@ test("1029 Reflection has three complete points and reaches all four current-run
   }
   assert.equal(closures.size, 1);
   assert.deepEqual(oct29Chapter.canonicalClosure.lines, [
-    "2025 年 10 月 29 日，training 结束的时候，她对我来说还是 coach。",
+    "2025 年 10 月 29 日，我们第一次见面。training 结束的时候，她对我来说还只是 coach。",
     "我拿到了 single，脚也真的起泡了。",
-    "那天我没有觉得，我们之间发生了什么特别的事。"
+    "那天我没有觉得，我们后面还会有交集。"
   ]);
 });
 

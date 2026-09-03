@@ -38,9 +38,9 @@ test("April 6 resolves one semantic water-gun echo anchor per orientation withou
 
 test("generic cutscene pauses at a checkpoint before the next action", () => {
   const cutscene = new CutsceneSystem([
-    { type: "dialogue", speaker: "MS", text: "first" },
+    { type: "dialogue", speaker: "我", text: "first" },
     { type: "checkpoint", id: "reflection-1" },
-    { type: "dialogue", speaker: "MS", text: "second" }
+    { type: "dialogue", speaker: "我", text: "second" }
   ]);
   cutscene.update(0);
   assert.equal(cutscene.currentDialogue?.text, "first");
@@ -196,9 +196,9 @@ test("April 6 standalone MCD remains a world-only single prop", () => {
 
 test("April 6 canonical dialogue keeps the required speaker assignments", () => {
   const dialogueActions = april06MainMemoryActions.filter((action): action is Extract<typeof april06MainMemoryActions[number], { type: "dialogue" }> => action.type === "dialogue");
-  assert.deepEqual(dialogueActions.map((action) => action.speaker), ["MS", "MS", "MS", "MS", "ET", "MS", "ET", "ET", "MS", "ET", "ET", "MS", "MS", "MS", "ET", "ET", "MS", "ET", "ET", "MS", "ET", "MS", "ET", "MS", "ET", "ET", "MS"]);
+  assert.deepEqual(dialogueActions.map((action) => action.speaker), ["我", "我", "我", "我", "她", "我", "她", "她", "我", "她", "她", "我", "我", "我", "她", "她", "我", "她", "她", "我", "她", "我", "她", "我", "她", "她", "我"]);
   assert.deepEqual(dialogueActions.map((action) => action.text), authoredContentExpectations.chapters.april06.dialogue.map((line) => line.text));
-  assert.deepEqual(dialogueActions.slice(-2).map((action) => action.speaker), ["ET", "MS"]);
+  assert.deepEqual(dialogueActions.slice(-2).map((action) => action.speaker), ["她", "我"]);
 });
 
 test("April 6 chat actors consume distinct authored anchors", () => {
@@ -259,7 +259,7 @@ test("April 6 morning aftermath uses the canonical offscreen dialogue after the 
   const fadeIndex = april06EchoActions.findIndex((action) => action.type === "fade");
   const aftermath = april06EchoActions.slice(fadeIndex + 1).filter((action): action is Extract<typeof april06EchoActions[number], { type: "dialogue" }> => action.type === "dialogue");
   assert.deepEqual(aftermath.map(({ text, portrait }) => ({ text, portrait })), authoredContentExpectations.chapters.april06.collections?.echo);
-  assert.deepEqual(aftermath.map(({ speaker }) => speaker), ["Ziqi", "MS", "Ziqi", "MS"]);
+  assert.deepEqual(aftermath.map(({ speaker }) => speaker), ["朋友", "我", "朋友", "我"]);
 });
 
 test("April 6 rendered-state checkpoints use approved current visuals", () => {

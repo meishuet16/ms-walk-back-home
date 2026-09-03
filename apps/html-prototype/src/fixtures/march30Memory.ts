@@ -52,7 +52,7 @@ export type March30Action =
   | { type: "move"; actor: "ms" | "et"; anchor: March30AnchorKey; duration: number; asset?: March30AssetId; frame?: number; facing?: "left" | "right"; offset?: Point }
   | { type: "sprite"; actor: "ms" | "et"; asset: March30AssetId; frame: number }
   | { type: "face"; actor: "ms" | "et"; facing: "left" | "right" }
-  | { type: "dialogue"; speaker: "MS" | "ET"; text: string; portrait?: March30DialoguePortrait }
+  | { type: "dialogue"; speaker: "我" | "她"; text: string; portrait?: March30DialoguePortrait }
   | { type: "prop"; id: March30PropId; owner: "ms" | "et"; visible: boolean }
   | { type: "water-vfx"; beat: 1 | 2 | 3; frame: number; duration: number }
   | { type: "jacket-wipe" }
@@ -173,39 +173,39 @@ export const march30MainMemoryActions: March30Action[] = [
   { type: "move", actor: "et", anchor: "et-talk-position", duration: 0.35, asset: "etBase", frame: 5, facing: "left" },
   { type: "sprite", actor: "ms", asset: "msBase", frame: 8 },
   { type: "sprite", actor: "et", asset: "etBase", frame: 5 },
-  { type: "dialogue", speaker: "MS", text: "halo~早上好叶同学", portrait:  {
+  { type: "dialogue", speaker: "我", text: "halo~早上好叶同学", portrait:  {
     src: "assets/labis/ms-confuse.png",
     height: 200,
     offsetY: 8
   }  },
-  { type: "dialogue", speaker: "ET", text: "。。。", portrait:  {
+  { type: "dialogue", speaker: "她", text: "。。。", portrait:  {
     src: "assets/labis/et-idle.png",
     height: 200,
     offsetY: 8
   } },
   { type: "wait", duration: 0.5 },
-  { type: "dialogue", speaker: "ET", text: "来,拿好你的礼物，神圣的交接仪式。", portrait: "gift"},
+  { type: "dialogue", speaker: "她", text: "来,拿好你的礼物，神圣的交接仪式。", portrait: "gift"},
   { type: "prop", id: "gift", owner: "et", visible: true },
   { type: "wait", duration: 0.42 },
   { type: "prop", id: "gift", owner: "ms", visible: true },
   { type: "wait", duration: 0.35 },
   { type: "prop", id: "gift", owner: "et", visible: false },
   { type: "prop", id: "gift", owner: "ms", visible: false },
-  { type: "dialogue", speaker: "MS", text: "我也有好东西给你，拿着。", portrait: "waterGun" },
+  { type: "dialogue", speaker: "我", text: "我也有好东西给你，拿着。", portrait: "waterGun" },
   { type: "prop", id: "waterGun", owner: "ms", visible: true },
-  { type: "dialogue", speaker: "ET", text: "这是什么", portrait: {src: "assets/330/330-1.png",
+  { type: "dialogue", speaker: "她", text: "这是什么", portrait: {src: "assets/330/330-1.png",
     height: 200,
     offsetY: 8
   } },
-  { type: "dialogue", speaker: "MS", text: "水枪", portrait: {src: "assets/330/330-2.png",
+  { type: "dialogue", speaker: "我", text: "水枪", portrait: {src: "assets/330/330-2.png",
     height: 200,
     offsetY: 8
   } },
-  { type: "dialogue", speaker: "ET", text: "里面有水啊？可以喷水的吗 怎样哦？",portrait: {src: "assets/330/330-3.png",
+  { type: "dialogue", speaker: "她", text: "里面有水啊？可以喷水的吗 怎样哦？",portrait: {src: "assets/330/330-3.png",
     height: 200,
     offsetY: 8
   }  },
-  { type: "dialogue", speaker: "MS", text: "有 你拿来我教你" },
+  { type: "dialogue", speaker: "我", text: "有 你拿来我教你" },
   { type: "prop", id: "waterGun", owner: "ms", visible: false },
   { type: "sprite", actor: "et", asset: "waterSpraying", frame: 0 },
   { type: "wait", duration: 0.35 },
@@ -220,7 +220,7 @@ export const march30MainMemoryActions: March30Action[] = [
   { type: "sprite", actor: "ms", asset: "waterSprayed", frame: 5 },
   { type: "water-vfx", beat: 3, frame: 3, duration: 0.22 },
   { type: "wait", duration: 0.65 },
-  { type: "dialogue", speaker: "ET", text: "哇塞真的可以喷水ei" ,portrait: {src: "assets/330/330-5.png",
+  { type: "dialogue", speaker: "她", text: "哇塞真的可以喷水ei" ,portrait: {src: "assets/330/330-5.png",
     height: 200,
     offsetY: 8
   }  },
@@ -229,36 +229,36 @@ export const march30MainMemoryActions: March30Action[] = [
   { type: "sprite", actor: "et", asset: "etBase", frame: 5 },
   { type: "sprite", actor: "ms", asset: "msBase", frame: 8 },
   { type: "sprite", actor: "ms", asset: "keychains", frame: 2 },
-  { type: "dialogue", speaker: "MS", text: "。。。！！！" ,portrait: {src: "assets/330/330-4.png",
+  { type: "dialogue", speaker: "我", text: "。。。！！！" ,portrait: {src: "assets/330/330-4.png",
     height: 200,
     offsetY: 8
   } },
-    { type: "dialogue", speaker: "MS", text: "你。。。算了先不跟你计较。" ,portrait: {src: "assets/330/330-2.png",
+    { type: "dialogue", speaker: "我", text: "你。。。算了先不跟你计较。" ,portrait: {src: "assets/330/330-2.png",
     height: 200,
     offsetY: 8
   } },
-    { type: "dialogue", speaker: "MS", text: "这边两个同款图案的挂饰里面你选一个吧",portrait: {src: "assets/330/330-7.png",
+    { type: "dialogue", speaker: "我", text: "这边两个同款图案的挂饰里面你选一个吧",portrait: {src: "assets/330/330-7.png",
     height: 200,
     offsetY: 8
   }  },
-  { type: "dialogue", speaker: "MS", text: "来，选吧", portrait: "keychains" },
-  { type: "dialogue", speaker: "ET", text: "哇老你zomok 不是我送你礼物吗 怎么又变成你送我了"  ,portrait: {src: "assets/330/330-5.png",
+  { type: "dialogue", speaker: "我", text: "来，选吧", portrait: "keychains" },
+  { type: "dialogue", speaker: "她", text: "哇老你zomok 不是我送你礼物吗 怎么又变成你送我了"  ,portrait: {src: "assets/330/330-5.png",
     height: 200,
     offsetY: 8
   } },
-  { type: "dialogue", speaker: "MS", text: "哎呀你不懂 我是行走的小八仓库 库存多的很~",portrait: {src: "assets/330/330-7.png",
+  { type: "dialogue", speaker: "我", text: "哎呀你不懂 我是行走的小八仓库 库存多的很~",portrait: {src: "assets/330/330-7.png",
     height: 200,
     offsetY: 8
   }  },
-  { type: "dialogue", speaker: "ET", text: "哇我还有得选啊 有什么差别" ,portrait: {src: "assets/330/330-6.png",
+  { type: "dialogue", speaker: "她", text: "哇我还有得选啊 有什么差别" ,portrait: {src: "assets/330/330-6.png",
     height:200,
     offsetY: 8
   }  },
-  { type: "dialogue", speaker: "MS", text: "一个是普通钥匙圈 另外一个是手机挂饰那种",portrait: {src: "assets/330/330-7.png",
+  { type: "dialogue", speaker: "我", text: "一个是普通钥匙圈 另外一个是手机挂饰那种",portrait: {src: "assets/330/330-7.png",
     height: 200,
     offsetY: 8
   }  },
-    { type: "dialogue", speaker: "MS", text: "你选这个的话，我就拿另一个咯",portrait: {src: "assets/330/330-7.png",
+    { type: "dialogue", speaker: "我", text: "你选这个的话，我就拿另一个咯",portrait: {src: "assets/330/330-7.png",
     height: 200,
     offsetY: 8
   }  },
@@ -267,11 +267,11 @@ export const march30MainMemoryActions: March30Action[] = [
   { type: "prop", id: "phoneCharm", owner: "ms", visible: true },
   { type: "prop", id: "ordinaryKeychain", owner: "et", visible: false },
   { type: "prop", id: "phoneCharm", owner: "ms", visible: false },
-    { type: "dialogue", speaker: "MS", text: "OK现在可以算账了。。。" ,portrait: {src: "assets/330/330-4.png",
+    { type: "dialogue", speaker: "我", text: "OK现在可以算账了。。。" ,portrait: {src: "assets/330/330-4.png",
     height: 200,
     offsetY: 8
   } },
-  { type: "dialogue", speaker: "MS", text: "walao你刚刚拿水枪喷我 还不止一下,你惨了，我记住了", portrait: "waterGun" },
+  { type: "dialogue", speaker: "我", text: "walao你刚刚拿水枪喷我 还不止一下,你惨了，我记住了", portrait: "waterGun" },
   { type: "wait", duration: 0.55 },
   { type: "move", actor: "et", anchor: "et-jacket-wipe-start", duration: 0.55, asset: "etBase", frame: 5, facing: "left" },
   { type: "wait", duration: 0.45 },
@@ -280,23 +280,23 @@ export const march30MainMemoryActions: March30Action[] = [
   { type: "sprite", actor: "ms", asset: "jacketReaction", frame: 4 },
   { type: "jacket-wipe" },
   { type: "wait", duration: 0.85 },
-  { type: "dialogue", speaker: "ET", text: "惨了这个家伙要打我了",portrait: {src: "assets/330/330-1.png",
+  { type: "dialogue", speaker: "她", text: "惨了这个家伙要打我了",portrait: {src: "assets/330/330-1.png",
     height: 200,
     offsetY: 8
   } },
-  { type: "dialogue", speaker: "MS", text: "不会啦 你那么可怜 上到6pm才放学 我1pm就放学了嘻嘻" ,portrait: {src: "assets/330/330-8.png",
+  { type: "dialogue", speaker: "我", text: "不会啦 你那么可怜 上到6pm才放学 我1pm就放学了嘻嘻" ,portrait: {src: "assets/330/330-8.png",
     height: 200,
     offsetY: 8
   } },
-  { type: "dialogue", speaker: "ET", text: "我去！挑衅我"  ,portrait: {src: "assets/330/330-6.png",
+  { type: "dialogue", speaker: "她", text: "我去！挑衅我"  ,portrait: {src: "assets/330/330-6.png",
     height: 200,
     offsetY: 8
   }},
-  { type: "dialogue", speaker: "MS", text: "拜拜~" ,portrait: {src: "assets/330/330-4.png",
+  { type: "dialogue", speaker: "我", text: "拜拜~" ,portrait: {src: "assets/330/330-4.png",
     height: 200,
     offsetY: 8
   } },
-  { type: "dialogue", speaker: "ET", text: "拜拜"  ,portrait: {src: "assets/330/330-6.png",
+  { type: "dialogue", speaker: "她", text: "拜拜"  ,portrait: {src: "assets/330/330-6.png",
     height: 200,
     offsetY: 8
   }},
@@ -316,84 +316,84 @@ export const march30EchoActions: March30Action[] = [
   { type: "spawn", actor: "et", anchor: "elevator-reencounter", asset: "etBase", frame: 4, facing: "left", offset: { x: 26, y: 0 } },
   { type: "spawn", actor: "ms", anchor: "elevator-reencounter", asset: "msBase", frame: 8, facing: "right", offset: { x: -26, y: 0 } },
   { type: "wait", duration: 0.7 },
-  { type: "dialogue", speaker: "MS", text: "额嘿嘿好巧哈哈 又见面了 太有缘了" ,portrait: {src: "assets/330/330-4.png",
+  { type: "dialogue", speaker: "我", text: "额嘿嘿好巧哈哈 又见面了 太有缘了" ,portrait: {src: "assets/330/330-4.png",
     height: 200,
     offsetY: 8
   } },
-  { type: "dialogue", speaker: "ET", text: "是咯~你怎么还在这里" ,portrait: {src: "assets/330/330-1.png",
+  { type: "dialogue", speaker: "她", text: "是咯~你怎么还在这里" ,portrait: {src: "assets/330/330-1.png",
     height: 200,
     offsetY: 8
   } },
-  { type: "dialogue", speaker: "MS", text: "我要去五楼买吃的" ,portrait: {src: "assets/330/330-4.png",
+  { type: "dialogue", speaker: "我", text: "我要去五楼买吃的" ,portrait: {src: "assets/330/330-4.png",
     height: 200,
     offsetY: 8
   } },
-  { type: "dialogue", speaker: "ET", text: "你等下上课在哪个mpk" ,portrait: {src: "assets/330/330-1.png",
+  { type: "dialogue", speaker: "她", text: "你等下上课在哪个mpk" ,portrait: {src: "assets/330/330-1.png",
     height: 200,
     offsetY: 8
   } },
-  { type: "dialogue", speaker: "MS", text: "我在隔壁blok上课" ,portrait: {src: "assets/330/330-4.png",
+  { type: "dialogue", speaker: "我", text: "我在隔壁blok上课" ,portrait: {src: "assets/330/330-4.png",
     height: 200,
     offsetY: 8
   } },
-  { type: "dialogue", speaker: "ET", text: "原来如此" ,portrait: {src: "assets/330/330-1.png",
+  { type: "dialogue", speaker: "她", text: "原来如此" ,portrait: {src: "assets/330/330-1.png",
     height: 200,
     offsetY: 8
   } },
-  { type: "dialogue", speaker: "MS", text: "ei sda有用到电脑吗" ,portrait: {src: "assets/330/330-4.png",
+  { type: "dialogue", speaker: "我", text: "ei sda有用到电脑吗" ,portrait: {src: "assets/330/330-4.png",
     height: 200,
     offsetY: 8
   } },
-  { type: "dialogue", speaker: "ET", text: "有啊" ,portrait: {src: "assets/330/330-1.png",
+  { type: "dialogue", speaker: "她", text: "有啊" ,portrait: {src: "assets/330/330-1.png",
     height: 200,
     offsetY: 8
   } },
-  { type: "dialogue", speaker: "MS", text: "噢那还好我有带到"  ,portrait: {src: "assets/330/330-4.png",
+  { type: "dialogue", speaker: "我", text: "噢那还好我有带到"  ,portrait: {src: "assets/330/330-4.png",
     height: 200,
     offsetY: 8
   }},
-  { type: "dialogue", speaker: "ET", text: "看slide要用到罢了哈哈" ,portrait: {src: "assets/330/330-1.png",
+  { type: "dialogue", speaker: "她", text: "看slide要用到罢了哈哈" ,portrait: {src: "assets/330/330-1.png",
     height: 200,
     offsetY: 8
   } },
-  { type: "dialogue", speaker: "MS", text: "什么屁 看slide我带tab不就好了呜呜"  ,portrait: {src: "assets/330/330-4.png",
+  { type: "dialogue", speaker: "我", text: "什么屁 看slide我带tab不就好了呜呜"  ,portrait: {src: "assets/330/330-4.png",
     height: 200,
     offsetY: 8
   }},
   { type: "move", actor: "ms", anchor: "walk-together", duration: 0.9, asset: "msBase", frame: 9, facing: "right", offset: { x: -26, y: 0 } },
   { type: "move", actor: "et", anchor: "walk-together", duration: 0.9, asset: "etBase", frame: 6, facing: "right", offset: { x: 26, y: 0 } },
-  { type: "dialogue", speaker: "MS", text: "哎哟又遇到了 我们还是那么顺路 太有缘分了"  ,portrait: {src: "assets/330/330-4.png",
+  { type: "dialogue", speaker: "我", text: "哎哟又遇到了 我们还是那么顺路 太有缘分了"  ,portrait: {src: "assets/330/330-4.png",
     height: 200,
     offsetY: 8
   }},
   { type: "sprite", actor: "ms", asset: "msBase", frame: 9 },
   { type: "sprite", actor: "et", asset: "etBase", frame: 6 },
-  { type: "dialogue", speaker: "ET", text: "诶你昨晚真的没睡觉吗"  ,portrait: {src: "assets/330/330-1.png",
+  { type: "dialogue", speaker: "她", text: "诶你昨晚真的没睡觉吗"  ,portrait: {src: "assets/330/330-1.png",
     height: 200,
     offsetY: 8
   }},
-  { type: "dialogue", speaker: "MS", text: "真的啊 不要不信" ,portrait: {src: "assets/330/330-4.png",
+  { type: "dialogue", speaker: "我", text: "真的啊 不要不信" ,portrait: {src: "assets/330/330-4.png",
     height: 200,
     offsetY: 8
   } },
-  { type: "dialogue", speaker: "ET", text: "为什么不睡" ,portrait: {src: "assets/330/330-1.png",
+  { type: "dialogue", speaker: "她", text: "为什么不睡" ,portrait: {src: "assets/330/330-1.png",
     height: 200,
     offsetY: 8
   } },
-  { type: "dialogue", speaker: "MS", text: "失眠啊"  ,portrait: {src: "assets/330/330-4.png",
+  { type: "dialogue", speaker: "我", text: "失眠啊"  ,portrait: {src: "assets/330/330-4.png",
     height: 200,
     offsetY: 8
   }},
-  { type: "dialogue", speaker: "ET", text: "是不是又半夜抢asnb" ,portrait: {src: "assets/330/330-1.png",
+  { type: "dialogue", speaker: "她", text: "是不是又半夜抢asnb" ,portrait: {src: "assets/330/330-1.png",
     height: 200,
     offsetY: 8
   } },
-  { type: "dialogue", speaker: "MS", text: "walao没钱抢asnb 更失眠了呜呜" ,portrait: {src: "assets/330/330-4.png",
+  { type: "dialogue", speaker: "我", text: "walao没钱抢asnb 更失眠了呜呜" ,portrait: {src: "assets/330/330-4.png",
     height:200,
     offsetY: 8
   } },
   { type: "wait", duration: 1.1 },
-  { type: "dialogue", speaker: "MS", text: "这都还没到你教室 我们竟然真的那么顺路的吗 " ,portrait: {src: "assets/330/330-4.png",
+  { type: "dialogue", speaker: "我", text: "这都还没到你教室 我们竟然真的那么顺路的吗 " ,portrait: {src: "assets/330/330-4.png",
     height: 200,
     offsetY: 8
   } },

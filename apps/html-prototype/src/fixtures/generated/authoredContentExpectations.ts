@@ -3,8 +3,8 @@ export const authoredContentExpectations = {
   "chapters": {
     "april05": {
       "closure": [
-        "那晚，她最后还是回去冲凉了。",
-        "第二天早上，她还有 quiz。"
+        "那天她下楼以后，我们在宿舍门口闹了一阵，也聊了一会儿。",
+        "后来她说要回去冲凉，就上楼了。"
       ],
       "collections": {
         "bicycle": [
@@ -12,7 +12,7 @@ export const authoredContentExpectations = {
             "text": "你们两个是好朋友吗"
           },
           {
-            "text": "好朋友会摸头吗"
+            "text": "真的是这样吗"
           },
           {
             "text": "不知道，好像也不需要知道了"
@@ -39,15 +39,15 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/523/memory-portrait/01.png",
-            "text": "4月5号痛完了 还有6号7号要过"
+            "text": "还是会痛也没关系 不需要刻意逼自己遗忘 4月5号痛完了 还有6号7号要过"
           },
           {
             "portrait": "assets/523/memory-portrait/01.png",
-            "text": "等你长大了就懂了"
+            "text": "等你长大了就懂了。"
           },
           {
             "portrait": "assets/624/echo-portraits/et-portraits/01-questioning.png",
-            "text": "我明明比你大"
+            "text": "我明明比你大。"
           }
         ]
       },
@@ -74,7 +74,7 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/624/echo-portraits/group-echoes/01-morning-angela-st.png",
-          "text": "你看ms无差别攻击"
+          "text": "你看这个人无差别攻击"
         },
         {
           "portrait": "assets/624/echo-portraits/group-echoes/hug.png",
@@ -82,15 +82,15 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/624/echo-portraits/group-echoes/hug.png",
-          "text": "啊你讲谁"
+          "text": "啊 你讲谁"
         },
         {
           "portrait": "assets/624/echo-portraits/group-echoes/hug.png",
-          "text": "啧 顽皮"
+          "text": "啧 顽皮 没想到还真的是给你复仇成功"
         },
         {
           "portrait": "assets/624/echo-portraits/et-portraits/01-questioning.png",
-          "text": "你知道今天是四月五号吗"
+          "text": "你知道今天是什么日子吗"
         },
         {
           "portrait": "assets/624/echo-portraits/et-portraits/01-questioning.png",
@@ -98,7 +98,7 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/523/memory-portrait/02.png",
-          "text": "你哭过啊"
+          "text": "你哭过？"
         },
         {
           "portrait": "assets/624/echo-portraits/et-portraits/03-guilt-quiet.png",
@@ -114,7 +114,7 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/624/echo-portraits/et-portraits/01-questioning.png",
-          "text": "你们看她不回我"
+          "text": "你们看她不回应我"
         },
         {
           "portrait": "assets/523/memory-portrait/01.png",
@@ -126,7 +126,7 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/523/memory-portrait/02.png",
-          "text": "那我帮你拿去给 faculty，书包不用背着跑。"
+          "text": "那我帮你拿去给 faculty，书包你就不用背着跑了。"
         },
         {
           "portrait": "assets/624/echo-portraits/et-portraits/01-questioning.png",
@@ -134,11 +134,11 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/624/echo-portraits/et-portraits/01-questioning.png",
-          "text": "欸我明天早上还有 presentation 和 quiz，我还没读完。"
+          "text": "欸我明天早上还有 presentation 和 quiz，我现在还没读完。"
         },
         {
           "portrait": "assets/624/echo-portraits/et-portraits/03-guilt-quiet.png",
-          "text": "我不行了ms 我要去冲凉了"
+          "text": "天气很冷 我不行了 我要回去冲凉了"
         }
       ],
       "diary": {
@@ -146,7 +146,7 @@ export const authoredContentExpectations = {
         "title": "04.05 · 下来一下"
       },
       "display": {
-        "location": "KTHO residential-college entrance / front sitting area",
+        "location": "Residential-college entrance / front sitting area",
         "mood": "a late hostel-night memory that stays ordinary and close",
         "title": "下来一下",
         "weather": "warm night after a humid day"
@@ -207,9 +207,9 @@ export const authoredContentExpectations = {
     },
     "april06": {
       "closure": [
-        "MS leaves the McDonald's in the KTHO lobby.",
-        "ET comes downstairs before MS can leave.",
-        "MS returns to the waiting Perodua Alza."
+        "她最后还是下来了。",
+        "我们在楼下聊了一会儿。",
+        "后来朋友把车开回来了，我才离开。"
       ],
       "collections": {
         "echo": [
@@ -234,7 +234,7 @@ export const authoredContentExpectations = {
       "dialogue": [
         {
           "portrait": "assets/523/memory-portrait/bus-stop-memory.png",
-          "text": "叶同学 你的宵夜已送到。"
+          "text": "同学 你的宵夜已送到。"
         },
         {
           "portrait": "assets/523/memory-portrait/bus-stop-memory.png",
@@ -242,11 +242,11 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/523/memory-portrait/bus-stop-memory.png",
-          "text": "不要食用的话你就当早餐哈哈拜拜。"
+          "text": "不要食用的话你就当早餐嘻嘻，拜拜。"
         },
         {
           "portrait": "assets/523/memory-portrait/03.png",
-          "text": "wtf？？？"
+          "text": "wtf？？？车怎么开走了？！我还没上车啊朋友们QAQ"
         },
         {
           "portrait": "assets/624/echo-portraits/et-portraits/01-questioning.png",
@@ -290,15 +290,15 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/624/echo-portraits/et-portraits/01-questioning.png",
-          "text": "Angela 不在宿舍，去 inspection 了。"
+          "text": "你朋友不在房间，有事出去了。"
         },
         {
           "portrait": "assets/624/echo-portraits/et-portraits/01-questioning.png",
-          "text": "明天她要 5.30am 起床。"
+          "text": "明天她还要 5.30am 起床。"
         },
         {
           "portrait": "assets/523/memory-portrait/02.png",
-          "text": "那你几点？"
+          "text": "噢是吗 那你几点？"
         },
         {
           "portrait": "assets/624/echo-portraits/et-portraits/01-questioning.png",
@@ -346,7 +346,7 @@ export const authoredContentExpectations = {
         "title": "04.06 · This Soon?"
       },
       "display": {
-        "location": "KTHO Lobby",
+        "location": "Lobby",
         "mood": "a humid ordinary hostel night where a quick delivery fails to stay anonymous",
         "title": "还没走啊？",
         "weather": "quiet humid night after an earlier rainy day"
@@ -380,7 +380,7 @@ export const authoredContentExpectations = {
               "response": "我可以记得疑问还在。"
             },
             {
-              "label": "她就是下来拿宵夜的。不要自己配 BGM。",
+              "label": "她就是下来拿宵夜的。",
               "response": "事情也可以只停在事情。"
             }
           ],
@@ -454,7 +454,7 @@ export const authoredContentExpectations = {
         "apr25-main": [
           {
             "portrait": "assets/425/memory-portrait/echo-wait.png",
-            "text": "傍晚骑脚车，要回的时候，我本来只是打算去 KTHO 装水了顺路找 ST。"
+            "text": "傍晚骑脚车，要回的时候，我本来只是打算经过她宿舍楼下 装水了顺路去朋友房间。"
           },
           {
             "portrait": "assets/425/memory-portrait/echo-wait.png",
@@ -494,7 +494,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/425/memory-portrait/echo-wait.png",
-            "text": "我满头大汗 wor。"
+            "text": "真的假的 我满头大汗 wor。"
           },
           {
             "portrait": "assets/425/memory-portrait/echo-look.png",
@@ -582,11 +582,11 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/425/memory-portrait/echo-chat.png",
-            "text": "后来我跟她确认下一次爬山的时间。"
+            "text": "后来我就跟她确认下一次爬山的时间。"
           },
           {
             "portrait": "assets/425/memory-portrait/echo-chat.png",
-            "text": "本来还想 jio 她去 Flying Fox。"
+            "text": "本来还想 jio 她去别一个活动。"
           },
           {
             "portrait": "assets/425/memory-portrait/echo-chat.png",
@@ -594,7 +594,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/425/memory-portrait/echo-chat.png",
-            "text": "只是 Grab 太远了。"
+            "text": "只是车程太远了。"
           },
           {
             "portrait": "assets/425/memory-portrait/echo-hair-start.png",
@@ -630,11 +630,11 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/425/memory-portrait/echo-hair-02.png",
-            "text": "她笑得很大声。"
+            "text": "她笑得很大声。。。"
           },
           {
             "portrait": "assets/425/memory-portrait/echo-hair-03.png",
-            "text": "然后她的剪刀一直划过我的眉毛。"
+            "text": "她的剪刀一直划过我的眉毛。"
           },
           {
             "portrait": "assets/425/memory-portrait/echo-hair-03.png",
@@ -678,7 +678,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/425/memory-portrait/echo-argue.png",
-            "text": "回到 lobby 的时候遇到 Angela。"
+            "text": "回到 lobby 的时候遇到朋友。"
           },
           {
             "portrait": "assets/425/memory-portrait/echo-argue.png",
@@ -734,7 +734,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/425/memory-portrait/echo-arm.png",
-            "text": "Angela 帮我录。"
+            "text": "朋友帮我录。"
           },
           {
             "portrait": "assets/425/memory-portrait/echo-arm.png",
@@ -742,7 +742,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/425/memory-portrait/echo-arm.png",
-            "text": "我的 muscle 没有你大粒。"
+            "text": "哇佬 我的 muscle 没有你大粒。"
           },
           {
             "portrait": "assets/425/memory-portrait/echo-arm.png",
@@ -754,11 +754,11 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/425/memory-portrait/echo-arm.png",
-            "text": "我之前没有赢过。"
+            "text": "我之前都没有赢过。"
           },
           {
             "portrait": "assets/425/memory-portrait/echo-arm.png",
-            "text": "我是你赢的第一个人。"
+            "text": "那我就是你赢的第一个人。"
           },
           {
             "portrait": "assets/425/memory-portrait/echo-arm.png",
@@ -806,15 +806,15 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/425/memory-portrait/echo-wait.png",
-            "text": "散场以前我又约她明天。"
+            "text": "散场以前我又约她明天剪头发。"
           },
           {
             "portrait": "assets/425/memory-portrait/echo-wait.png",
-            "text": "明天我要去练羽球。"
+            "text": "明天不可以 我要去练羽球。"
           },
           {
             "portrait": "assets/425/memory-portrait/echo-wait.png",
-            "text": "我们报名混双了。"
+            "text": "我和你认识的那个朋友报名混双了。"
           },
           {
             "portrait": "assets/425/memory-portrait/echo-arm.png",
@@ -858,7 +858,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/425/memory-portrait/echo-arm.png",
-            "text": "只是一个有点敏感多疑的小男生。"
+            "text": "只是一个感觉有点奇怪的男生。"
           },
           {
             "portrait": "assets/425/memory-portrait/echo-arm.png",
@@ -870,7 +870,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/425/memory-portrait/echo-arm.png",
-            "text": "那明天他如果要找人，我可以拉你吗？"
+            "text": "那明天他如果要拉人打球，我可以拉你吗？"
           },
           {
             "portrait": "assets/425/memory-portrait/echo-arm.png",
@@ -882,15 +882,15 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/425/memory-portrait/echo-invite.png",
-            "text": "那个男生真的来找我。"
+            "text": "那个男生还真的来找我。"
           },
           {
             "portrait": "assets/425/memory-portrait/echo-invite.png",
-            "text": "还 mention ET 也去。"
+            "text": "还 mention 她也去。"
           },
           {
             "portrait": "assets/425/memory-portrait/echo-invite.png",
-            "text": "是你叫他问的吗？"
+            "text": "欸 是你叫他问的吗？"
           },
           {
             "portrait": "assets/425/memory-portrait/echo-invite.png",
@@ -938,7 +938,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/425/memory-portrait/echo-invite.png",
-            "text": "妈妈要打我了 把头发给别人剪"
+            "text": "感觉妈妈要打我了 把头发给别人剪"
           },
           {
             "portrait": "assets/425/memory-portrait/echo-invite.png",
@@ -946,7 +946,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/425/memory-portrait/echo-invite.png",
-            "text": "我们只是好朋友。"
+            "text": "我的一个朋友。"
           }
         ],
         "apr26-badminton-companion": [
@@ -1022,7 +1022,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/425/memory-portrait/echo-introvert.png",
-            "text": "为什么你这么安静？"
+            "text": "为什么你今天这么安静？"
           },
           {
             "portrait": "assets/425/memory-portrait/echo-introvert.png",
@@ -1038,7 +1038,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/425/memory-portrait/echo-introvert.png",
-            "text": "你对我又不看你i。"
+            "text": "你对着我又不看你i。"
           },
           {
             "portrait": "assets/425/memory-portrait/echo-introvert.png",
@@ -1060,7 +1060,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/425/memory-portrait/echo-guilty.png",
-            "text": "我很愧疚。"
+            "text": "我觉得很愧疚。"
           },
           {
             "portrait": "assets/425/memory-portrait/echo-guilty.png",
@@ -1173,7 +1173,7 @@ export const authoredContentExpectations = {
       "dialogue": [
         {
           "portrait": "assets/425/memory-portrait/echo-wait.png",
-          "text": "傍晚骑脚车，要回的时候，我本来只是打算去 KTHO 装水了顺路找 ST。"
+          "text": "傍晚骑脚车，要回的时候，我本来只是打算经过她宿舍楼下 装水了顺路去朋友房间。"
         },
         {
           "portrait": "assets/425/memory-portrait/echo-wait.png",
@@ -1213,7 +1213,7 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/425/memory-portrait/echo-wait.png",
-          "text": "我满头大汗 wor。"
+          "text": "真的假的 我满头大汗 wor。"
         },
         {
           "portrait": "assets/425/memory-portrait/echo-look.png",
@@ -1301,11 +1301,11 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/425/memory-portrait/echo-chat.png",
-          "text": "后来我跟她确认下一次爬山的时间。"
+          "text": "后来我就跟她确认下一次爬山的时间。"
         },
         {
           "portrait": "assets/425/memory-portrait/echo-chat.png",
-          "text": "本来还想 jio 她去 Flying Fox。"
+          "text": "本来还想 jio 她去别一个活动。"
         },
         {
           "portrait": "assets/425/memory-portrait/echo-chat.png",
@@ -1313,7 +1313,7 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/425/memory-portrait/echo-chat.png",
-          "text": "只是 Grab 太远了。"
+          "text": "只是车程太远了。"
         },
         {
           "portrait": "assets/425/memory-portrait/echo-hair-start.png",
@@ -1349,11 +1349,11 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/425/memory-portrait/echo-hair-02.png",
-          "text": "她笑得很大声。"
+          "text": "她笑得很大声。。。"
         },
         {
           "portrait": "assets/425/memory-portrait/echo-hair-03.png",
-          "text": "然后她的剪刀一直划过我的眉毛。"
+          "text": "她的剪刀一直划过我的眉毛。"
         },
         {
           "portrait": "assets/425/memory-portrait/echo-hair-03.png",
@@ -1397,7 +1397,7 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/425/memory-portrait/echo-argue.png",
-          "text": "回到 lobby 的时候遇到 Angela。"
+          "text": "回到 lobby 的时候遇到朋友。"
         },
         {
           "portrait": "assets/425/memory-portrait/echo-argue.png",
@@ -1453,7 +1453,7 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/425/memory-portrait/echo-arm.png",
-          "text": "Angela 帮我录。"
+          "text": "朋友帮我录。"
         },
         {
           "portrait": "assets/425/memory-portrait/echo-arm.png",
@@ -1461,7 +1461,7 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/425/memory-portrait/echo-arm.png",
-          "text": "我的 muscle 没有你大粒。"
+          "text": "哇佬 我的 muscle 没有你大粒。"
         },
         {
           "portrait": "assets/425/memory-portrait/echo-arm.png",
@@ -1473,11 +1473,11 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/425/memory-portrait/echo-arm.png",
-          "text": "我之前没有赢过。"
+          "text": "我之前都没有赢过。"
         },
         {
           "portrait": "assets/425/memory-portrait/echo-arm.png",
-          "text": "我是你赢的第一个人。"
+          "text": "那我就是你赢的第一个人。"
         },
         {
           "portrait": "assets/425/memory-portrait/echo-arm.png",
@@ -1525,15 +1525,15 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/425/memory-portrait/echo-wait.png",
-          "text": "散场以前我又约她明天。"
+          "text": "散场以前我又约她明天剪头发。"
         },
         {
           "portrait": "assets/425/memory-portrait/echo-wait.png",
-          "text": "明天我要去练羽球。"
+          "text": "明天不可以 我要去练羽球。"
         },
         {
           "portrait": "assets/425/memory-portrait/echo-wait.png",
-          "text": "我们报名混双了。"
+          "text": "我和你认识的那个朋友报名混双了。"
         },
         {
           "portrait": "assets/425/memory-portrait/echo-arm.png",
@@ -1577,7 +1577,7 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/425/memory-portrait/echo-arm.png",
-          "text": "只是一个有点敏感多疑的小男生。"
+          "text": "只是一个感觉有点奇怪的男生。"
         },
         {
           "portrait": "assets/425/memory-portrait/echo-arm.png",
@@ -1589,7 +1589,7 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/425/memory-portrait/echo-arm.png",
-          "text": "那明天他如果要找人，我可以拉你吗？"
+          "text": "那明天他如果要拉人打球，我可以拉你吗？"
         },
         {
           "portrait": "assets/425/memory-portrait/echo-arm.png",
@@ -1601,15 +1601,15 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/425/memory-portrait/echo-invite.png",
-          "text": "那个男生真的来找我。"
+          "text": "那个男生还真的来找我。"
         },
         {
           "portrait": "assets/425/memory-portrait/echo-invite.png",
-          "text": "还 mention ET 也去。"
+          "text": "还 mention 她也去。"
         },
         {
           "portrait": "assets/425/memory-portrait/echo-invite.png",
-          "text": "是你叫他问的吗？"
+          "text": "欸 是你叫他问的吗？"
         },
         {
           "portrait": "assets/425/memory-portrait/echo-invite.png",
@@ -1657,7 +1657,7 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/425/memory-portrait/echo-invite.png",
-          "text": "妈妈要打我了 把头发给别人剪"
+          "text": "感觉妈妈要打我了 把头发给别人剪"
         },
         {
           "portrait": "assets/425/memory-portrait/echo-invite.png",
@@ -1665,17 +1665,17 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/425/memory-portrait/echo-invite.png",
-          "text": "我们只是好朋友。"
+          "text": "我的一个朋友。"
         }
       ],
       "diary": {
-        "body": "04.25–04.26 · Just Friends\n\n那两天其实没有发生什么很大的事情。\n\n四月二十五号中午醒来的时候，第一条听见的是你的语音。你说，早安美雪，你的饭团到了。我还很认真地问，你怎么知道。\n\n后来才想起来，那阵子我好像常常买。名字一次又一次出现在订单里面，被你看见，也不是什么奇怪的事。\n\n晚上我去骑脚车。骑完以后，本来只是想去 KTHO 装水，再去找别人。\n\n转进去的时候，远远看见一个很熟悉的人。\n\n你说，你也是远远看到一个骑脚车的人，觉得好像是我，所以多等了一下。\n\n我第一反应还是那句。\n\n好有缘哦。\n\n那时候我很喜欢把这种事情叫作缘分。\n\n后来才觉得，也许真正让我开心的，从来不是刚好遇见。\n\n是你本来可以走，却因为觉得那个人可能是我，所以多站了一会儿。\n\n我们后来坐在 lobby 聊天。你拍我，我也拍你。你当着我的面看我发的照片，还留言说，这是哪个天使。\n\n我嘴上一直嫌你烦。\n\n其实也没有真的想让你停。\n\n后来你突然说，要帮我剪刘海。\n\n我刚骑完脚车，满头都是汗，还是跟着你去了厕所。你拿着剪刀下手一点都不犹豫，我却一直担心自己的眉毛会不会顺便一起消失。\n\n碎头发落在脸上的时候，你很自然地凑过来，对着我的脸吹了一口气。\n\n我愣了一下。\n\n你已经在笑了。\n\n好像刚才什么都没有发生。\n\n可能真的什么都没有发生。\n\n剪完以后，你很满意，说很可爱。\n\n我说，我要的是帅气。\n\n后来 Angela 来了，也说可爱。你们两个像讲好的一样，我一个人坚持了半天，最后还是没有人理。\n\n再后来你看到我练 muscle 的视频，突然要跟我掰手腕。\n\n第一次输了，你不服，换了位置又来一次。\n\n还是输。\n\n你说，我是第一个赢你的人。\n\n那天的视频后来被别人看见。\n\n有人问我，我们两个到底是什么关系。\n\n我说，只是好朋友。\n\n那时候我应该是真的这样觉得。\n\n至少我不知道还能叫什么。\n\n第二天，我还是去了球场。\n\n其实前一晚睡得很迟，早上起来也很累。上车以后还晕车。你坐在副驾驶，我一路都觉得自己到底为什么要来。\n\n到了球场，一进门就看见你。\n\n你也看见我。\n\n然后我们两个不知道为什么先笑了。\n\n你说：结果你最后还是来陪我了。\n\n我马上说，我只是来看你打罢了。\n\n那时候我好像很喜欢把一些东西说轻一点。\n\n陪就是陪。\n\n偏偏要说只是来看。\n\n想来就是想来。\n\n又总觉得应该顺便找一个别的理由。\n\n后来你问我为什么天天吃饭团。你说，每天整理订单都看到我的名字，还很认真地谢谢我支持。\n\n我也不知道为什么连续买了那么多天。\n\n可能真的只是好吃。\n\n只是现在想起来觉得很好玩。\n\n一个人的名字出现在另一个人的生活里，有时候就是从这种很无聊的地方开始。\n\n一张订单。\n\n一条语音。\n\n一句早安。\n\n然后某一天，对方已经知道那个名字今天又出现了。\n\n后来你突然给我看你的羽球 bag。\n\n上面挂着我以前送你的 Ace 钥匙圈。\n\n你问，挂在这里是不是很适合。\n\n我说，不适合。\n\n你白了我一眼。\n\n其实很适合。\n\n我只是那时候不知道为什么，不太想让你发现，我看到它还在那里，会有一点开心。\n\n后来真的下场打球。\n\n六个人里面五个人都在为了比赛练习，只有我是来玩的。结果最后打最久的好像也是我。\n\n你一直叫我不要把球打那么高，又一直逼我练开球。\n\n我说，我又没有比赛。\n\n你说，下次。\n\n双打的时候，你知道我会逃开球，所以一直把机会留给我。\n\n你说，不要逃避了。\n\n那时候当然只是在讲羽球。\n\n我也只是觉得你很烦。\n\n后来再想起这句话，才发现那阵子的我确实很会逃。\n\n不太敢承认自己为什么那么想来。\n\n不太敢承认为什么你说“陪我”，我会记那么久。\n\n不太敢承认一个钥匙圈还挂在你的 bag 上，居然也可以让我开心。\n\n不过这些都是后来才有的答案。\n\n那时候我只是继续打球。\n\n打完以后，我们去买水。你说请我喝，我说我不喝饮料。\n\n你还是买了。\n\n第一次让我喝的时候，我还很小心，没有碰到瓶口。\n\n后来去吃 Arabic food，你又点了西瓜汁，说是给我喝的。\n\n我一直拖，说等我吃完。\n\n你隔一会儿就把杯子推回来，说快点喝，不要拒绝你，不然你会伤心到吃不下。\n\n最后你直接把西瓜汁送到我面前。\n\n你说，你要我喂你是吗。\n\n来，公主请喝水。\n\n我看了一眼那根已经被你用过的吸管。\n\n停了一下。\n\n然后还是喝了。\n\n那时候我只觉得，你这个 e 人攻势实在太猛，我招架不住。\n\n现在想起来，真正让我招架不住的可能从来不是那杯西瓜汁。\n\n是你做很多事情的时候都太自然了。\n\n自然到我不知道哪些事情值得记，哪些其实根本没有别的意思。\n\n你会在我下场以后走过来，抓着我的肩膀念我。\n\n经过的时候又顺手揉乱我的头发，说这个刘海真的很可爱。\n\n你记得我平时很安静，所以那天还问我怎么了。\n\n我说，我本来就是 i 人。\n\n你说，屁啦，你对我又不看你 i。\n\n我只会嘿嘿。\n\n其实那句话也没有错。\n\n有些人不会真的把你变成另外一种人。\n\n只是她在的时候，你好像比较愿意往外走一点。\n\n后来我又想起前一天别人问我的那个问题。\n\n我们到底是什么关系。\n\n如果那时候再问一次，我大概还是会回答一样。\n\n朋友。\n\n因为那些事情本来就可以发生在朋友之间。\n\n等一个人一下，替她剪头发，挂着她送的东西，陪她打球，把饮料推过去，顺手揉乱她的头发。\n\n没有哪一件事情单独拿出来，可以证明什么。\n\n我也不想替那时候的你，把它们改写成别的意思。\n\n只是很奇怪。\n\n为什么那么多普通的小事，后来偏偏都没有忘。\n\n我记得你远远认出脚车上的我。\n\n记得脸上的碎头发。\n\n记得那个 Ace 还挂在那里。\n\n记得你说，结果你最后还是来陪我了。\n\n记得一杯被推回来很多次的西瓜汁。\n\n甚至记得那根吸管。\n\n可能那时候真正开始改变的，并不是我们之间的关系。\n\n只是我看你的方式。\n\n朋友这个答案一直都没有错。\n\n只是从那两天开始，\n\n我好像第一次发现，\n\n有些朋友，会被记得比别的朋友仔细一点。",
+        "body": "04.25–04.26 · Just Friends\n\n那两天其实没有发生什么很大的事情。\n\n四月二十五号中午醒来的时候，第一条听见的是你的语音。你说，早安，你的饭团到了。我还很认真地问，你怎么知道。\n\n后来才想起来，那阵子我好像常常买。名字一次又一次出现在订单里面，被你看见，也不是什么奇怪的事。\n\n晚上我去骑脚车。骑完以后，本来只是想去你宿舍楼下装水，再去找别人。\n\n转进去的时候，远远看见一个很熟悉的人。\n\n你说，你也是远远看到一个骑脚车的人，觉得好像是我，所以多等了一下。\n\n我第一反应还是那句。\n\n好有缘哦。\n\n那时候我很喜欢把这种事情叫作缘分。\n\n后来才觉得，也许真正让我开心的，从来不是刚好遇见。\n\n是你本来可以走，却因为觉得那个人可能是我，所以多站了一会儿。\n\n我们后来坐在 lobby 聊天。你拍我，我也拍你。你当着我的面看我发的照片，还留言说，这是哪个天使。\n\n我嘴上一直嫌你烦。\n\n其实也没有真的想让你停。\n\n后来你突然说，要帮我剪刘海。\n\n我刚骑完脚车，满头都是汗，还是跟着你去了厕所。你拿着剪刀下手一点都不犹豫，我却一直担心自己的眉毛会不会顺便一起消失。\n\n碎头发落在脸上的时候，你很自然地凑过来，对着我的脸吹了一口气。\n\n我愣了一下。\n\n你已经在笑了。\n\n好像刚才什么都没有发生。\n\n可能真的什么都没有发生。\n\n剪完以后，你很满意，说很可爱。\n\n我说，我要的是帅气。\n\n后来朋友来了，也说可爱。你们两个像讲好的一样，我一个人坚持了半天，最后还是没有人理。\n\n再后来你看到我练 muscle 的视频，突然要跟我掰手腕。\n\n第一次输了，你不服，换了位置又来一次。\n\n还是输。\n\n你说，我是第一个赢你的人。\n\n那天的视频后来被别人看见。\n\n有人问我，我们两个到底是什么关系。\n\n我说，只是好朋友。\n\n那时候我应该是真的这样觉得。\n\n至少我不知道还能叫什么。\n\n第二天，我还是去了球场。\n\n其实前一晚睡得很迟，早上起来也很累。上车以后还晕车。你坐在副驾驶，我一路都觉得自己到底为什么要来。\n\n到了球场，一进门就看见你。\n\n你也看见我。\n\n然后我们两个不知道为什么先笑了。\n\n你说：结果你最后还是来陪我了。\n\n我马上说，我只是来看你打罢了。\n\n那时候我好像很喜欢把一些东西说轻一点。\n\n陪就是陪。\n\n偏偏要说只是来看。\n\n想来就是想来。\n\n又总觉得应该顺便找一个别的理由。\n\n后来你问我为什么天天吃饭团。你说，每天整理订单都看到我的名字，还很认真地谢谢我支持。\n\n我也不知道为什么连续买了那么多天。\n\n可能真的只是好吃。\n\n只是现在想起来觉得很好玩。\n\n一个人的名字出现在另一个人的生活里，有时候就是从这种很无聊的地方开始。\n\n一张订单。\n\n一条语音。\n\n一句早安。\n\n然后某一天，对方已经知道那个名字今天又出现了。\n\n后来你突然给我看你的羽球 bag。\n\n上面挂着我以前送你的 Ace 钥匙圈。\n\n你问，挂在这里是不是很适合。\n\n我说，不适合。\n\n你白了我一眼。\n\n其实很适合。\n\n我只是那时候不知道为什么，不太想让你发现，我看到它还在那里，会有一点开心。\n\n后来真的下场打球。\n\n六个人里面五个人都在为了比赛练习，只有我是来玩的。结果最后打最久的好像也是我。\n\n你一直叫我不要把球打那么高，又一直逼我练开球。\n\n我说，我又没有比赛。\n\n你说，下次。\n\n双打的时候，你知道我会逃开球，所以一直把机会留给我。\n\n你说，不要逃避了。\n\n那时候当然只是在讲羽球。\n\n我也只是觉得你很烦。\n\n后来再想起这句话，才发现那阵子的我确实很会逃。\n\n不太敢承认自己为什么那么想来。\n\n不太敢承认为什么你说“陪我”，我会记那么久。\n\n不太敢承认一个钥匙圈还挂在你的 bag 上，居然也可以让我开心。\n\n不过这些都是后来才有的答案。\n\n那时候我只是继续打球。\n\n打完以后，我们去买水。你说请我喝，我说我不喝饮料。\n\n你还是买了。\n\n第一次让我喝的时候，我还很小心，没有碰到瓶口。\n\n后来去吃 Arabic food，你又点了西瓜汁，说是给我喝的。\n\n我一直拖，说等我吃完。\n\n你隔一会儿就把杯子推回来，说快点喝，不要拒绝你，不然你会伤心到吃不下。\n\n最后你直接把西瓜汁送到我面前。\n\n你说，你要我喂你是吗。\n\n来，公主请喝水。\n\n我看了一眼那根已经被你用过的吸管。\n\n停了一下。\n\n然后还是喝了。\n\n那时候我只觉得，你这个 e 人攻势实在太猛，我招架不住。\n\n现在想起来，真正让我招架不住的可能从来不是那杯西瓜汁。\n\n是你做很多事情的时候都太自然了。\n\n自然到我不知道哪些事情值得记，哪些其实根本没有别的意思。\n\n你会在我下场以后走过来，抓着我的肩膀念我。\n\n经过的时候又顺手揉乱我的头发，说这个刘海真的很可爱。\n\n你记得我平时没有那么安静，所以那天回程车上还问我今天怎么了。\n\n我说，我本来就是 i 人。\n\n你说：屁啦，你对着我又不看你 i。\n\n我只会嘿嘿。\n\n其实那句话也没有错。\n\n有些人不会真的把你变成另外一种人。\n\n只是她在的时候，你好像比较愿意往外走一点。\n\n后来我又想起前一天别人问我的那个问题。\n\n我们到底是什么关系。\n\n如果那时候再问一次，我大概还是会回答一样。\n\n朋友。\n\n因为那些事情本来就可以发生在朋友之间。\n\n等一个人一下，替她剪头发，挂着她送的东西，陪她打球，把饮料推过去，顺手揉乱她的头发。\n\n没有哪一件事情单独拿出来，可以证明什么。\n\n我也不想替那时候的你，把它们改写成别的意思。\n\n只是很奇怪。\n\n为什么那么多普通的小事，后来偏偏都没有忘。\n\n我记得你远远认出脚车上的我。\n\n记得脸上的碎头发。\n\n记得那个 Ace 还挂在那里。\n\n记得你说，结果你最后还是来陪我了。\n\n记得一杯被推回来很多次的西瓜汁。\n\n甚至记得那根吸管。\n\n可能那时候真正开始改变的，并不是我们之间的关系。\n\n只是我看你的方式。\n\n朋友这个答案一直都没有错。\n\n只是从那两天开始，\n\n我好像第一次发现，\n\n有些朋友，会被记得比别的朋友仔细一点。",
         "title": "04.25–04.26 · Just Friends"
       },
       "display": {
-        "location": "KTHO / April 26 memory residues",
+        "location": "April 26 memory residues",
         "mood": "quiet",
-        "title": "只是好朋友",
+        "title": "只是朋友",
         "weather": "晴"
       },
       "reflections": [
@@ -1721,7 +1721,7 @@ export const authoredContentExpectations = {
             },
             {
               "label": "我怕我想要的，比好朋友多。",
-              "response": "“好朋友是肯定是的。”\n\n难的是后面那半句。\n\n我一直没有说。"
+              "response": "“好朋友或许是的。”\n\n难的是后面那半句。\n\n我一直没有说。"
             },
             {
               "label": "我不知道她怎么想，所以那时候宁愿不动。",
@@ -1794,7 +1794,7 @@ export const authoredContentExpectations = {
       },
       "closure": [
         "那天下午，她还是走了。",
-        "水壶留在车上。"
+        "水壶却留在车上。"
       ],
       "collections": {
         "july21-bedroom": [
@@ -1862,7 +1862,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/721/memory-portrait/echo-gift.png",
-            "text": "最后载ET到火车站。"
+            "text": "最后载她到火车站。"
           },
           {
             "portrait": "assets/721/memory-portrait/echo-gift.png",
@@ -1884,11 +1884,11 @@ export const authoredContentExpectations = {
         "july21-eggtoast": [
           {
             "portrait": "assets/721/memory-portrait/echo-distance.png",
-            "text": "回家前，我们去二桥吃午餐。"
+            "text": "回家前，我们去吃午餐。"
           },
           {
             "portrait": "assets/721/memory-portrait/echo-distance.png",
-            "text": "她很喜欢 Eggtoast Cafe 的 omelette bowl。"
+            "text": "她很喜欢那家店的 omelette bowl。"
           },
           {
             "portrait": "assets/721/memory-portrait/03.png",
@@ -1926,11 +1926,11 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/721/memory-portrait/echo-temple01.png",
-            "text": "阿爸带我们去老庙。"
+            "text": "之后阿爸带我们去老庙。"
           },
           {
             "portrait": "assets/721/memory-portrait/echo-temple01.png",
-            "text": "ET第一次点那么多支香。"
+            "text": "她第一次点那么多支香。"
           },
           {
             "portrait": "assets/721/memory-portrait/echo-temple01.png",
@@ -2096,15 +2096,15 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/721/memory-portrait/main-03.png",
-            "text": "不要夸张 leh。"
+            "text": "不要夸张勒。"
           },
           {
             "portrait": "assets/721/memory-portrait/main-03.png",
-            "text": "很正常的不是，朋友离别。"
+            "text": "很正常的不是吗，只是朋友离别。"
           },
           {
             "portrait": "assets/721/memory-portrait/main-03.png",
-            "text": "你跟你朋友也会这样吗？"
+            "text": "你跟你朋友离别也会这样吗？"
           },
           {
             "portrait": "assets/721/memory-portrait/main-03.png",
@@ -2148,11 +2148,11 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/721/memory-portrait/main-04.png",
-            "text": "我后个 sem 就回来了。"
+            "text": "我后个学期就回来了。"
           },
           {
             "portrait": "assets/721/memory-portrait/main-04.png",
-            "text": "可是要毕业了。"
+            "text": "可是你要毕业了。"
           },
           {
             "portrait": "assets/721/memory-portrait/main-04.png",
@@ -2164,7 +2164,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/721/memory-portrait/main-04.png",
-            "text": "你琢磨。"
+            "text": "你到底怎么了。"
           },
           {
             "portrait": "assets/721/memory-portrait/main-04.png",
@@ -2192,7 +2192,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/721/memory-portrait/main-05.png",
-            "text": "和我玩。"
+            "text": "。。。"
           },
           {
             "portrait": "assets/721/memory-portrait/main-05.png",
@@ -2208,7 +2208,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/721/memory-portrait/main-05.png",
-            "text": "我们还有明天半天不是。"
+            "text": "我明天傍晚才回 我们还有明天半天 不是吗。"
           }
         ],
         "july21-money-back": [
@@ -2248,11 +2248,11 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/721/memory-portrait/ms-portrait-20.png",
-            "text": "我比ET早起。"
+            "text": "我比她早起。"
           },
           {
             "portrait": "assets/721/memory-portrait/ms-portrait-20.png",
-            "text": "我在想该不该摊牌。"
+            "text": "我在想该不该说。"
           },
           {
             "portrait": "assets/721/memory-portrait/ms-portrait-20.png",
@@ -2260,7 +2260,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/721/memory-portrait/ms-portrait-20.png",
-            "text": "ET自己泡Milo喝。"
+            "text": "她起床后自己泡饮料喝。"
           },
           {
             "portrait": "assets/721/memory-portrait/ms-portrait-20.png",
@@ -2296,7 +2296,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/721/memory-portrait/echo-watch.png",
-            "text": "她还会在客厅喊我出来看戏。\n因为我的手机还在沙发没拿走。"
+            "text": "她看见我的手机还留在客厅，\n便喊我出来看戏。"
           }
         ],
         "july21-travel": [
@@ -2306,7 +2306,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/721/memory-portrait/echo-distance.png",
-            "text": "后来误打误撞去到 Jementah 的德教会。"
+            "text": "后来误打误撞去到那边的德教会。"
           },
           {
             "portrait": "assets/721/memory-portrait/02.png",
@@ -2334,7 +2334,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/721/memory-portrait/echo-deer.png",
-            "text": "我的 ETS 学生价申请通过了。"
+            "text": "我的火车票学生价申请通过了。"
           },
           {
             "portrait": "assets/721/memory-portrait/echo-deer.png",
@@ -2437,15 +2437,15 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/721/memory-portrait/main-03.png",
-          "text": "不要夸张 leh。"
+          "text": "不要夸张勒。"
         },
         {
           "portrait": "assets/721/memory-portrait/main-03.png",
-          "text": "很正常的不是，朋友离别。"
+          "text": "很正常的不是吗，只是朋友离别。"
         },
         {
           "portrait": "assets/721/memory-portrait/main-03.png",
-          "text": "你跟你朋友也会这样吗？"
+          "text": "你跟你朋友离别也会这样吗？"
         },
         {
           "portrait": "assets/721/memory-portrait/main-03.png",
@@ -2489,11 +2489,11 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/721/memory-portrait/main-04.png",
-          "text": "我后个 sem 就回来了。"
+          "text": "我后个学期就回来了。"
         },
         {
           "portrait": "assets/721/memory-portrait/main-04.png",
-          "text": "可是要毕业了。"
+          "text": "可是你要毕业了。"
         },
         {
           "portrait": "assets/721/memory-portrait/main-04.png",
@@ -2505,7 +2505,7 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/721/memory-portrait/main-04.png",
-          "text": "你琢磨。"
+          "text": "你到底怎么了。"
         },
         {
           "portrait": "assets/721/memory-portrait/main-04.png",
@@ -2533,7 +2533,7 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/721/memory-portrait/main-05.png",
-          "text": "和我玩。"
+          "text": "。。。"
         },
         {
           "portrait": "assets/721/memory-portrait/main-05.png",
@@ -2549,15 +2549,15 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/721/memory-portrait/main-05.png",
-          "text": "我们还有明天半天不是。"
+          "text": "我明天傍晚才回 我们还有明天半天 不是吗。"
         }
       ],
       "diary": {
-        "body": "07.21–07.22 · One More Day\n\n那两天我一直觉得时间走得很快。\n\n七月二十一号早上下雨。我们九点多去吃芋头饭，你又把我的那份钱一起转给我。我看着转账记录觉得很好笑。明明是你来我家做客，最后却好像什么都要跟我算清楚。\n\n后来我开车去 Jementah。路有一点远，我一路都想和你讲话。想听你说最近发生的事，或者随便什么八卦也可以。\n\n我问，八卦呢。\n\n你说没有，让我讲自己的。\n\n我说，那正经的也可以。\n\n你说，我没有话要讲哦。\n\n后来车还是继续开。窗外的东西一直往后退，我也没有再问。\n\n我那时候才发现，我们好像已经很久没有像以前那样一直讲话了。晚上睡觉以前也是，各自看各自的手机。你十二点很准时地睡，我躺在旁边，总觉得应该还有一句什么话没有说。\n\n可是没有。\n\n那天我们还是去了很多地方。\n\n去 Bukit Cinta 的时候走错了路，车开进一条黄泥路，两个人都开始怀疑到底是不是这里。后来误打误撞去了 Jementah 的德教会，上香、问路。你还笑，说昨天一个德教会，今天又一个德教会。\n\n太阳很大的时候，我们终于开始爬山。一路都是上坡，很喘。你一直叫我走在你前面，不要走在你后面。\n\n我没有问为什么。\n\n那几天你好像也开始不太喜欢我拍你。以前那些很自然留下来的照片，忽然变成一件需要先问过你的事情。\n\n所以后来我就走在前面。\n\n山顶其实没有发生什么。\n\n我们还是照常下山，去云峰宫喂鹿、摸鱼、拍照。世界没有因为我心里那些乱七八糟的东西停下来。\n\n也是在那里，你告诉我，ETS 的学生票申请通过了。\n\n你可以买明天的票回家了。\n\n我半开玩笑地说，后天再回吧。\n\n你愣了一下，说，好啊。\n\n然后问我，明天要做什么。\n\n我说，明天再看。\n\n你说不行。如果没有东西做，你就明天回。\n\n后来我们又去了青云岩，去二桥吃午餐。你很喜欢 Eggtoast Cafe 的 omelette bowl，说你本来就很喜欢吃这个，这家的特别好吃。回去以前又买了排骨饼。\n\n那一天明明已经去了很多地方。\n\n可是我一路都在想另一件事。\n\n为什么一定要有 plan，才值得多留一天。\n\n如果明天什么都不做呢。\n\n如果只是醒来，吃一点东西，看戏，躺着，各自玩手机。\n\n如果没有下一站。\n\n你会不会也愿意留下来。\n\n下午回到家，你睡了一觉。醒来以后，又问我明天有什么 plan。\n\n我看着你，最后没有再想一个地方出来。\n\n因为我忽然觉得，如果一个人是真的想回家，那我再找出一条路线、一家店、一个景点把她留下来，好像也没有什么意思。\n\n所以我坐在那里，看着你买了第二天的票。\n\n你说，星期三回和星期四回没有什么分别。\n\n迟早都是要走的。\n\n我知道。\n\n我只是那时候还不太会接受“迟早”。\n\n后来我还是忍不住问，为什么不能多待一天。\n\n你说，家里人想你了。\n\n我说，我也想你啊。\n\n你摆摆手，说，家人排第一。\n\n其实这句话一点都没有错。\n\n只是那一刻我第一次很清楚地看见，我把你放的位置，和你把我放的位置，好像从来不是同一个地方。\n\n我说，只有我在伤心。\n\n你说，不要夸张，很正常的朋友离别。\n\n你问，我跟其他朋友也会这样吗。\n\n我说，不会。\n\n只对你会。\n\n你问，为什么。有什么不一样。\n\n我说，就是不一样。\n\n然后就说不下去了。\n\n其实答案已经离嘴边很近了。\n\n近到再多说一句，很多事情可能就会有名字。\n\n可是我没有说。\n\n后来你问我，到底在心碎什么。\n\n我也答不出来。\n\n现在想想，我不是在为少掉的一天难过。\n\n一天其实很短。\n\n就算你真的多留一天，星期四还是会来。\n\n我难过的大概是，我终于明白，我一直很舍不得结束的东西，在你那里并没有正在结束。\n\n对你来说，只是回家。\n\n对我来说，那一天却已经开始告别。\n\n第二天，我八点就醒了。\n\n刷完牙以后，一个人坐在客厅发呆。阿爸阿妈都觉得奇怪，问我们为什么这么早起来。\n\n我其实还在想昨天没有说完的事情。\n\n要不要告诉你。\n\n好像真的只差一句。\n\n可是想了很久，又觉得没有必要了。\n\n后来你自己泡了一杯 Milo，坐到客厅开戏看。我也过去坐在沙发上。\n\n电视一直播。\n\n我们谁都没有提昨天。\n\n中途你回房间收行李。我也跟进去，看着你把东西一件一件放回去。我的手机还留在客厅。\n\n你收完出去以后，发现手机还在那里，又从客厅喊我出来看戏。\n\n于是我又出去。\n\n现在想起来，那几个小时其实很奇怪。\n\n我明明一直觉得，有一句很重要的话必须在你走以前说完。\n\n可是真正坐在你旁边的时候，又觉得这样也很好。\n\n电视开着。\n\n你还在。\n\n好像只要不开口，今天就还只是一个普通的早上。\n\n十点多，我们出去吃早餐。Kampung 蛋、面包，然后回家。你照旧把钱转给我，我也照旧想办法再转回去。\n\n后来回到店里，又开始吃。\n\n阿爸煮东西，阿姐早早买了香饼给你带回去，还故意不告诉你多少钱。大家已经知道了，只要让你知道，你一定又会把钱转回来。\n\n你好像很不习惯白白收下别人的好。\n\n一直说太多了，很夸张。\n\n我们说，你来做客，哪里有让客人请客的道理。\n\n后来我干脆把之前的钱全部转回给你，警告你不准再转。你再转回来，我就连火车票一起帮你付。\n\n不知道你是真的妥协了，还是懒得继续跟我吵。\n\n吃完以后，阿爸又带我们去老庙。\n\n走一段 kampung 路进去，你第一次拿那么多支香，还很自然地帮忙扫地。阿爸叫你去神台前倒酒，你也照做。\n\n那个画面其实有一点奇怪。\n\n可是我站在旁边看，又觉得好像没有哪里不对。\n\n你明明第一次来，却已经会坐在我家的客厅看戏，会吃阿爸煮的东西，会被阿姐塞一堆食物，会跟着去庙里上香，会在别人叫你帮忙的时候很自然地走过去。\n\n好像你已经来过很多次。\n\n可是没有。\n\n这是最后一天。\n\n回到店以后，阿爸又煮面。你一脸不可置信地问，怎么又吃。阿姐泡茶给你，又拿香饼出来。那个大包你实在吃不下了，她最后帮你弄热，装进盒子，说带去火车上吃。\n\n大家都在很自然地替你的离开准备东西。\n\n食物装进袋子。\n\n行李收进箱子。\n\n回家的票已经买好了。\n\n只有我还没有准备好。\n\n三点多，我们回家拿行李。\n\n搬东西上车的时候，又看见阿爸穿着红色衣服跟对面蓝色政党的人聊得很开心。你站在那里研究了一下，说，你们家不是投红色的吗，为什么聊得那么开心。\n\n我笑着说，真的诶。\n\n还拿手机拍了下来。\n\n我很喜欢自己还记得这种东西。\n\n因为到最后，我们还是在讲这些没有意义的小事。\n\n没有电影里的最后一天。\n\n没有谁在车里突然把所有秘密说完。\n\n没有一个刚好足够漂亮的告别。\n\n只是有人忘记付钱，有人一直被喂东西，有人研究邻居的政党颜色。\n\n然后车就开到了火车站。\n\n我把最后一个小八挂绳给你。\n\n其实还是有很多话想说。\n\n最后没有。\n\n我不知道是因为害怕，还是因为前一天已经隐约知道答案。\n\n也可能只是觉得，如果一件事情说出来以后只会让你为难，那留在我这里就好了。\n\n所以最后只是用 WhatsApp 语音叮嘱了一些很普通的东西。\n\n然后你上车。\n\n火车开走。\n\n就这样。\n\n我原本以为这一天到这里应该就结束了。\n\n后来你发消息告诉我，你的水壶落在车上了。\n\n你说，帮你保管。\n\n下下个 semester 回来再跟我拿。\n\n我看到那句话的时候，不知道该笑还是该哭。\n\n明明已经很努力在接受，有些东西就是会结束。\n\n你却偏偏留下了一件东西。\n\n不是信。\n\n不是照片。\n\n也不是什么值得郑重收藏的纪念品。\n\n只是一个水壶。\n\n后来我想，这样其实也很好。\n\n至少七月二十二号没有变成一个很完整的句号。\n\n你还有东西在这里。\n\n所以好像总有一个很小、很普通的理由，说明以后还会再见。\n\n回家以后，我翻了很久前几天的照片。\n\n那些照片里没有什么特别的东西。\n\n吃饭，开车，剪头发，学 motor，看戏，去庙里，坐在客厅。\n\n别人看了，说很像恋爱日常。\n\n我觉得很好笑。\n\n因为在你的故事里，大概真的只是去一个朋友家住了几天。\n\n吃了很多东西。\n\n去了几个地方。\n\n然后坐火车回家。\n\n只有我偷偷把它过成了一场很长的告别。\n\n后来我才发现，七月二十一号一直想要的那一天，其实并不能解决什么。\n\n如果你真的留下，第二天还是会来。\n\n我还是会送你去车站。\n\n火车还是会开。\n\n你还是会回家。\n\n所以现在再问我，那时候到底为什么那么想让你多留一天，我好像也没有一个很好的答案。\n\n可能只是因为那几天太像日常了。\n\n像到我差一点忘记，它其实有一张回程票。\n\n晚上十二点以后，家里少了一个会准时去睡觉的人。\n\n房间还是那个房间。\n\n客厅的电视还是会开。\n\n阿爸还是会煮太多东西。\n\n路也还是那些路。\n\n只是你已经在回家的路上。\n\n而你的水壶，还留在这里。",
+        "body": "07.21–07.22 · One More Day\n\n那两天我一直觉得时间走得很快。\n\n七月二十一号早上下雨。我们九点多去吃芋头饭，你又把我的那份钱一起转给我。我看着转账记录觉得很好笑。明明是你来我家做客，最后却好像什么都要跟我算清楚。\n\n后来我开车去爬山地点。路有一点远，我一路都想和你讲话。想听你说最近发生的事，或者随便什么八卦也可以。\n\n我问，八卦呢。\n\n你说没有，让我讲自己的。\n\n我说，那正经的也可以。\n\n你说，我没有话要讲哦。\n\n后来车还是继续开。窗外的东西一直往后退，我也没有再问。\n\n我那时候才发现，我们好像已经很久没有像以前那样一直讲话了。晚上睡觉以前也是，各自看各自的手机。你十二点很准时地睡，我躺在旁边，总觉得应该还有一句什么话没有说。\n\n可是没有。\n\n那天我们还是去了很多地方。\n\n去爬山的时候走错了路，车开进一条黄泥路，两个人都开始怀疑到底是不是这里。后来误打误撞去了那边的又一间德教会，上香、问路。你还笑，说昨天一个德教会，今天又一个德教会。\n\n太阳很大的时候，我们终于开始爬山。一路都是上坡，很喘。你一直叫我走在你前面，不要走在你后面。\n\n我没有问为什么。\n\n那几天你好像也开始不太喜欢我拍你。以前那些很自然留下来的照片，忽然变成一件需要先问过你的事情。\n\n所以后来我就走在前面。\n\n山顶其实没有发生什么。\n\n我们还是照常下山，去庙里喂鹿、摸鱼、拍照。世界没有因为我心里那些乱七八糟的东西停下来。\n\n也是在那里，你告诉我，火车的学生票申请通过了。\n\n你可以买明天的票回家了。\n\n我半开玩笑地说，后天再回吧 求求你。\n\n你愣了一下，说，好啊。\n\n然后问我，明天要做什么。\n\n我说，明天再看。\n\n你说不行。如果没有东西做，你就明天回。\n\n后来我们又去了另一间庙，吃午餐。你很喜欢那边的omelette bowl，你说你本来就很喜欢吃这个，这家的特别好吃。吃饱后回家前我们又买了排骨饼。\n\n那一天明明已经去了很多地方。\n\n可是我一路都在想另一件事。\n\n为什么一定要有 plan，才值得多留一天。\n\n如果明天什么都不做呢。\n\n如果只是醒来，吃一点东西，看戏，躺着，各自玩手机。\n\n如果没有下一站。\n\n你会不会也愿意留下来。\n\n下午回到家，你睡了一觉。醒来以后，又问我明天有什么 plan。\n\n我看着你，最后没有再想一个地方出来。\n\n因为我忽然觉得，如果一个人是真的想回家，那我再找出一条路线、一家店、一个景点把她留下来，好像也没有什么意思。\n\n所以我坐在那里，看着你买了第二天的票。\n\n你说，星期三回和星期四回没有什么分别。\n\n迟早都是要走的。\n\n我知道。\n\n我只是那时候还不太会接受“迟早”。\n\n后来我还是忍不住问，为什么不能多待一天。\n\n你说，家里人想你了。\n\n我说，我也想你啊。\n\n你摆摆手，说，家人排第一。\n\n其实这句话一点都没有错。\n\n只是那一刻我第一次很清楚地看见，我把你放的位置，和你把我放的位置，好像从来不是同一个地方。\n\n我说，只有我在伤心。\n\n你说，不要夸张，很正常的朋友离别。\n\n你问，我跟其他朋友也会这样吗。\n\n我说，不会。\n\n只对你会。\n\n你问，为什么。有什么不一样。\n\n我说，就是不一样。\n\n然后就说不下去了。\n\n其实答案已经离嘴边很近了。\n\n近到再多说一句，很多事情可能就会有名字。\n\n可是我没有说。\n\n后来你问我，到底在心碎什么。\n\n我也答不出来。\n\n现在想想，我不是在为少掉的一天难过。\n\n一天其实很短。\n\n就算你真的多留一天，星期四还是会来。\n\n我难过的大概是，我终于明白，我一直很舍不得结束的东西，在你那里并没有正在结束。\n\n对你来说，只是回家。\n\n对我来说，那一天却已经开始告别。\n\n第二天，我八点就醒了。\n\n刷完牙以后，一个人坐在客厅发呆。阿爸阿妈都觉得奇怪，问我们为什么这么早起来。\n\n我其实还在想昨天没有说完的事情。\n\n要不要告诉你。\n\n好像真的只差一句。\n\n可是想了很久，又觉得没有必要了。\n\n后来你自己泡了一杯热饮料，坐到客厅开戏看。我也过去坐在沙发上。\n\n电视一直播。\n\n我们谁都没有提昨天。\n\n中途你回房间收行李。我也跟进去，看着你把东西一件一件放回去。我的手机还留在客厅。\n\n你收完出去以后，发现手机还在那里，又从客厅喊我出来看戏。\n\n于是我又出去。\n\n现在想起来，那几个小时其实很奇怪。\n\n我明明一直觉得，有一句很重要的话必须在你走以前说完。\n\n可是真正坐在你旁边的时候，又觉得这样也很好。\n\n电视开着。\n\n你还在。\n\n好像只要不开口，今天就还只是一个普通的早上。\n\n十点多，我们出去吃早餐。鸡蛋、面包，然后回家。你照旧把钱转给我，我也照旧想办法再转回去。\n\n后来回到阿爸店里，又开始吃。\n\n阿爸煮东西，阿姐早早买了香饼给你带回去，还故意不告诉你多少钱。大家已经知道了，只要让你知道，你一定又会把钱转回来。\n\n你好像很不习惯白白收下别人的好。\n\n一直说太多了，很夸张。\n\n我们说，你来做客，哪里有让客人请客的道理。\n\n后来我干脆把之前的钱全部转回给你，警告你不准再转。你再转回来，我就连火车票一起帮你付。\n\n不知道你是真的妥协了，还是懒得继续跟我吵。\n\n吃完以后，阿爸又带我们去老庙。\n\n走一段 kampung 路进去，你第一次拿那么多支香，还很自然地帮忙扫地。阿爸叫你去神台前倒酒，你也照做。\n\n那个画面其实有一点奇怪。\n\n可是我站在旁边看，又觉得好像没有哪里不对。\n\n你明明第一次来，却已经会坐在我家的客厅看戏，会吃阿爸煮的东西，会被阿姐塞一堆食物，会跟着去庙里上香，会在别人叫你帮忙的时候很自然地走过去。\n\n好像你已经来过很多次。\n\n可是没有。\n\n这是最后一天。\n\n回到店以后，阿爸又煮面。你一脸不可置信地问，怎么又吃。阿姐泡茶给你，又拿香饼出来。那个大包你实在吃不下了，她最后帮你弄热，装进盒子，说带去火车上吃。\n\n大家都在很自然地替你的离开准备东西。\n\n食物装进袋子。\n\n行李收进箱子。\n\n回家的票已经买好了。\n\n好像只有我还没有准备好。\n\n下午三点多，我们带你回家拿行李。\n\n搬东西上车的时候，又看见阿爸穿着红色衣服跟对面蓝色政党的人聊得很开心。你站在那里研究了一下，说，你们家不是投红色的吗，为什么阿爸可以和那人聊得那么开心。\n\n我笑着说，真的诶 有点搞笑。\n\n还拿手机拍了下来。\n\n我很喜欢自己还记得这种东西。\n\n因为到最后，我们还是在讲这些没有意义的小事。\n\n没有电影里的最后一天。\n\n没有谁在车里突然把所有秘密说完。\n\n没有一个刚好足够漂亮的告别。\n\n只是有人忘记付钱，有人一直被喂东西，有人研究邻居的政党颜色。\n\n然后车就开到了火车站。\n\n我把最后一个小八挂绳给你。\n\n其实还是有很多话想说。\n\n最后没有。\n\n我不知道是因为害怕，还是因为前一天已经隐约知道答案。\n\n也可能只是觉得，如果一件事情说出来以后只会让你为难，那留在我这里就好了。\n\n所以最后只是用语音信息叮嘱了一些很普通的东西。\n\n然后你上车。\n\n火车开走。\n\n就这样。\n\n我原本以为这一天到这里应该就结束了。\n\n后来你发消息告诉我，你的水壶落在车上了。\n\n你说，帮你保管。\n\n下下个学期回来再跟我拿。\n\n我看到那句话的时候，不知道该笑还是该哭。\n\n明明已经很努力在接受，有些东西就是会结束。\n\n你却偏偏留下了一件东西。\n\n不是信。\n\n不是照片。\n\n也不是什么值得郑重收藏的纪念品。\n\n只是一个水壶。\n\n后来我想，这样其实也很好。\n\n至少七月二十二号没有变成一个很完整的句号。\n\n你还有东西在这里。\n\n所以好像总有一个很小、很普通的理由，说明以后还会再见。\n\n回家以后，我翻了很久前几天的照片。\n\n那些照片里没有什么特别的东西。\n\n吃饭，开车，剪头发，学 motor，看戏，去庙里，坐在客厅。\n\n别人看了，说很特别。\n\n我觉得很好笑。\n\n因为在你的故事里，大概真的只是去一个朋友家住了几天。\n\n吃了很多东西。\n\n去了几个地方。\n\n然后坐火车回家。\n\n只有我偷偷把它过成了一场很长的告别。\n\n后来我才发现，七月二十一号一直想要的那一天，其实并不能解决什么。\n\n如果你真的留下，第二天还是会来。\n\n我还是会送你去车站。\n\n火车还是会开。\n\n你还是会回家。\n\n所以现在再问我，那时候到底为什么那么想让你多留一天，我好像也没有一个很好的答案。\n\n可能只是因为那几天太像日常了。\n\n像到我差一点忘记，它其实有一张回程票。\n\n晚上十二点以后，家里少了一个会准时去睡觉的人。\n\n房间还是那个房间。\n\n客厅的电视还是会开。\n\n阿爸还是会煮太多东西。\n\n路也还是那些路。\n\n只是你已经在回家的路上。\n\n而你的水壶，还留在这里。",
         "title": "07.21–07.22 · One More Day"
       },
       "display": {
-        "location": "Labis family home",
+        "location": "Home",
         "mood": "a day that was ordinary until it was leaving",
         "title": "One More Day",
         "weather": "rain into a bright afternoon"
@@ -2618,19 +2618,19 @@ export const authoredContentExpectations = {
     },
     "june24": {
       "closure": [
-        "后来她终于知道，我真的来过。",
-        "但 5 月 23 日还是 5 月 23 日。"
+        "那天下午，我们坐在同一张桌子前。",
+        "后来聊到了 5 月 23 日，她才知道那天我其实真的来过。"
       ],
       "collections": {
         "june24-angela-st-echo": [
           {
-            "text": "诶你没有看到et吗\n她在楼下坐着诶\n你没有去找她吗"
+            "text": "诶你没有看到她吗\n她在楼下坐着诶\n你没有去找她吗"
           },
           {
-            "text": "蛤\n我zomok会看到她"
+            "text": "蛤\n我怎么会看到她"
           },
           {
-            "text": "她现在眼里已经没有et了"
+            "text": "你现在眼里已经没有她了吗"
           },
           {
             "text": "啊对对对"
@@ -2639,7 +2639,7 @@ export const authoredContentExpectations = {
             "text": "。。。\n她现在在楼下？\n为啥 她在这里干嘛"
           },
           {
-            "text": "温习吧\n对 她就在这里楼下坐着\n你现在下去就可以看到她了"
+            "text": "好像在温习吧\n对 她就在这里楼下坐着\n你现在下去就可以看到她了"
           },
           {
             "text": "噢噢\n。。。\n科科"
@@ -2687,16 +2687,16 @@ export const authoredContentExpectations = {
             "text": "hi屁噢"
           },
           {
-            "text": "zomok你在这里的\n你怎样知道我在这里\n你不用上课吗"
+            "text": "你怎么会在这里的\n你怎样知道我在这里\n你不用上课吗"
           },
           {
             "text": "我没有上课啊"
           },
           {
-            "text": "骗人\nangela讲你们上philosophy"
+            "text": "骗人\n你朋友刚刚说你们有课"
           },
           {
-            "text": "对啊angela上罢了"
+            "text": "对啊我朋友上罢了"
           },
           {
             "text": "真的么"
@@ -2705,22 +2705,37 @@ export const authoredContentExpectations = {
             "text": "对啊我没有上课\n特地来这里只为了找你的"
           },
           {
-            "text": "我现在不止钱包破洞\n脖子也破洞"
+            "text": "我信你个鬼"
           },
           {
-            "text": "哇你一大早就喝冰的 够力"
+            "text": "看下你脖子的伤口好点了吗 可怜的孩子。"
           },
           {
-            "text": "你看我的小八可爱吗"
+            "text": "唉 我现在不止脖子破洞\n钱包也破洞了 惨惨的。"
+          },
+          {
+            "text": "哇你一大早就喝冰的饮料 够力"
+          },
+          {
+            "text": "随便吧 生活已经不会更糟糕了"
+          },
+          {
+            "text": "。。。"
+          },
+          {
+            "text": "给你看这个 我的小八可爱吗"
           },
           {
             "text": "可爱啊 欸我有更可爱的\n等下我拿给你 嘿嘿"
           },
           {
-            "text": "一定是很丑的\n我不要 你不要来了"
+            "text": "一定是很丑的\n我不要 你等下别再来了"
           },
           {
             "text": "谁理你 就来"
+          },
+          {
+            "text": "哇塞这杯萝卜鲜奶有够难喝的，放这里先，我下课了再回来拿。"
           },
           {
             "text": "walao你不要留这杯东西在这边\n等下我喝掉"
@@ -2741,13 +2756,19 @@ export const authoredContentExpectations = {
             "text": "哇靠谁家好人喝萝卜"
           },
           {
+            "text": "其实萝卜本身是好喝的 只是这杯太甜了 跟你一样嘻嘻"
+          },
+          {
+            "text": "。。。。。。"
+          },
+          {
             "text": "你要一直坐在这里吗？你朋友几时来哦"
           },
           {
             "text": "怎么？我就是想坐在这里看你读书啊\n你越不给我在这里\n我越要在这里"
           },
           {
-            "text": "其实我5月23号那天真的去了"
+            "text": "欸 其实我5月23号那天真的去了"
           },
           {
             "text": "真的吗\n你不要骗我"
@@ -2807,10 +2828,10 @@ export const authoredContentExpectations = {
             "text": "呵呵"
           },
           {
-            "text": "球球你不要转那个五毛回来了\n等下欠人东西我心里总觉得不踏实"
+            "text": "球球你不要再转那个五毛回来了\n等下欠人东西我心里总觉得不踏实"
           },
           {
-            "text": "ok那我不要还你\n然后也继续讲你\n我不亏诶"
+            "text": "ok啊那我不要还你\n然后也继续讲你\n我不亏诶"
           },
           {
             "text": "可以啊\n至少我知道我还了"
@@ -2828,10 +2849,7 @@ export const authoredContentExpectations = {
             "text": "我朋友来带我走了\n你开心了咯"
           },
           {
-            "text": "我靠你们琢磨偷拍我"
-          },
-          {
-            "text": "哇靠琢磨他们突然要拍你"
+            "text": "嘿嘿，拜拜。"
           }
         ]
       },
@@ -2843,16 +2861,16 @@ export const authoredContentExpectations = {
           "text": "hi屁噢"
         },
         {
-          "text": "zomok你在这里的\n你怎样知道我在这里\n你不用上课吗"
+          "text": "你怎么会在这里的\n你怎样知道我在这里\n你不用上课吗"
         },
         {
           "text": "我没有上课啊"
         },
         {
-          "text": "骗人\nangela讲你们上philosophy"
+          "text": "骗人\n你朋友刚刚说你们有课"
         },
         {
-          "text": "对啊angela上罢了"
+          "text": "对啊我朋友上罢了"
         },
         {
           "text": "真的么"
@@ -2861,22 +2879,37 @@ export const authoredContentExpectations = {
           "text": "对啊我没有上课\n特地来这里只为了找你的"
         },
         {
-          "text": "我现在不止钱包破洞\n脖子也破洞"
+          "text": "我信你个鬼"
         },
         {
-          "text": "哇你一大早就喝冰的 够力"
+          "text": "看下你脖子的伤口好点了吗 可怜的孩子。"
         },
         {
-          "text": "你看我的小八可爱吗"
+          "text": "唉 我现在不止脖子破洞\n钱包也破洞了 惨惨的。"
+        },
+        {
+          "text": "哇你一大早就喝冰的饮料 够力"
+        },
+        {
+          "text": "随便吧 生活已经不会更糟糕了"
+        },
+        {
+          "text": "。。。"
+        },
+        {
+          "text": "给你看这个 我的小八可爱吗"
         },
         {
           "text": "可爱啊 欸我有更可爱的\n等下我拿给你 嘿嘿"
         },
         {
-          "text": "一定是很丑的\n我不要 你不要来了"
+          "text": "一定是很丑的\n我不要 你等下别再来了"
         },
         {
           "text": "谁理你 就来"
+        },
+        {
+          "text": "哇塞这杯萝卜鲜奶有够难喝的，放这里先，我下课了再回来拿。"
         },
         {
           "text": "walao你不要留这杯东西在这边\n等下我喝掉"
@@ -2897,13 +2930,19 @@ export const authoredContentExpectations = {
           "text": "哇靠谁家好人喝萝卜"
         },
         {
+          "text": "其实萝卜本身是好喝的 只是这杯太甜了 跟你一样嘻嘻"
+        },
+        {
+          "text": "。。。。。。"
+        },
+        {
           "text": "你要一直坐在这里吗？你朋友几时来哦"
         },
         {
           "text": "怎么？我就是想坐在这里看你读书啊\n你越不给我在这里\n我越要在这里"
         },
         {
-          "text": "其实我5月23号那天真的去了"
+          "text": "欸 其实我5月23号那天真的去了"
         },
         {
           "text": "真的吗\n你不要骗我"
@@ -2963,10 +3002,10 @@ export const authoredContentExpectations = {
           "text": "呵呵"
         },
         {
-          "text": "球球你不要转那个五毛回来了\n等下欠人东西我心里总觉得不踏实"
+          "text": "球球你不要再转那个五毛回来了\n等下欠人东西我心里总觉得不踏实"
         },
         {
-          "text": "ok那我不要还你\n然后也继续讲你\n我不亏诶"
+          "text": "ok啊那我不要还你\n然后也继续讲你\n我不亏诶"
         },
         {
           "text": "可以啊\n至少我知道我还了"
@@ -2984,10 +3023,7 @@ export const authoredContentExpectations = {
           "text": "我朋友来带我走了\n你开心了咯"
         },
         {
-          "text": "我靠你们琢磨偷拍我"
-        },
-        {
-          "text": "哇靠琢磨他们突然要拍你"
+          "text": "嘿嘿，拜拜。"
         }
       ],
       "diary": {
@@ -3095,7 +3131,8 @@ export const authoredContentExpectations = {
       },
       "closure": [
         "那晚没有发生什么需要被命名的事。",
-        "只是天亮以后，房间里多了一篮没带走的衣服。"
+        "只是她留下来了。",
+        "我们就这样待到了第二天早上。"
       ],
       "collections": {
         "june25-cards": [
@@ -3171,11 +3208,11 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/625/memory-portrait/04-conversation.png",
-            "text": "只有身体吗\nmental health也要注意了"
+            "text": "只有身体吗\n精神状态也要注意了"
           },
           {
             "portrait": "assets/625/memory-portrait/04-conversation.png",
-            "text": "已经绝望了"
+            "text": "哎 没招了 精神状态良好 已经绝望了"
           },
           {
             "portrait": "assets/625/memory-portrait/04-conversation.png",
@@ -3199,23 +3236,27 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/625/memory-portrait/04-conversation.png",
-            "text": "她说自己作为姐姐觉得很愧疚，study week 想回家，也在想要不要参加 final PALAPES dinner。"
+            "text": "她说了最近发生的一些事情，有点沉重，我看得出她很难受"
           },
           {
             "portrait": "assets/625/memory-portrait/04-conversation.png",
-            "text": "你不用把别人的整个人生都扛在自己身上。"
+            "text": "她觉得自己没尽到足够的责任。"
           },
           {
             "portrait": "assets/625/memory-portrait/04-conversation.png",
-            "text": "我不介意把我的人生跟我弟弟绑在一起。"
+            "text": "你不用把别人的整个人生都扛在自己身上。你已经做的很好了。"
           },
           {
             "portrait": "assets/625/memory-portrait/04-conversation.png",
-            "text": "你听了不要觉得有负担。"
+            "text": "。。。"
           },
           {
             "portrait": "assets/625/memory-portrait/04-conversation.png",
-            "text": "不会打扰啦"
+            "text": "你听完了不要觉得有负担。"
+          },
+          {
+            "portrait": "assets/625/memory-portrait/04-conversation.png",
+            "text": "不会啦"
           }
         ],
         "june25-door": [
@@ -3275,7 +3316,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/625/memory-portrait/06-hairdryer.png",
-            "text": "厉害嘞\n我下次帮你洗"
+            "text": "我厉害吧\n我下次帮你洗头"
           },
           {
             "portrait": "assets/625/memory-portrait/06-hairdryer.png",
@@ -3687,7 +3728,7 @@ export const authoredContentExpectations = {
         "june25-wardrobe": [
           {
             "portrait": "assets/625/memory-portrait/05-wardrobe.png",
-            "text": "MS挑了一套蜡笔小新上衣\n和粉色蜡笔小新短裤给她。"
+            "text": "我挑了一套蜡笔小新上衣\n和粉色蜡笔小新短裤给她。"
           },
           {
             "portrait": "assets/625/memory-portrait/05-wardrobe.png",
@@ -3695,7 +3736,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/625/memory-portrait/05-wardrobe.png",
-            "text": "你最好不要流传出去。\n不然我就不是et了。"
+            "text": "你最好不要流传出去。\n不然我的名声就毁了。"
           },
           {
             "portrait": "assets/625/memory-portrait/05-wardrobe.png",
@@ -3703,7 +3744,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/625/memory-portrait/05-wardrobe.png",
-            "text": "hehe这是et自己选的睡衣。\n她很喜欢"
+            "text": "hehe这是你自己选的睡衣。\n看得出你很喜欢"
           },
           {
             "portrait": "assets/625/memory-portrait/05-wardrobe.png",
@@ -3946,7 +3987,7 @@ export const authoredContentExpectations = {
         }
       ],
       "diary": {
-        "body": "06.25 · She Really Came\n\n那天下午我一直在看会不会下雨。你说，等考试结束、录完 group project 的 video 就来。我嘴上还是不太信，心里却一直等。后来我一个人蹲在宿舍外面喝牛奶，看着天，偷偷希望雨不要落下来。\n\n我那时候想得很简单。只是希望这一次，不是我走过去。希望你可以自己走来一次。\n\n后来真的有人敲门。\n\n我拿着手机去开门，门外站着的是你。背着很重的电脑 bag，手上还捧着两杯 Tealive。你说考试结束以后，就从 D06 一路走过来了。\n\n我到现在都还记得自己那一瞬间有多意外。不是因为那两杯饮料，也不是因为你走了多远。只是有一件我已经不太敢期待的事情，忽然很普通地发生了。\n\n你真的走来了。\n\n后来你坐在我的桌子前做功课，我躺在床上玩手机。偶尔抬头看你，你就在那边开着电脑，放自己的歌。我们没有一直讲话，也没有特地安排要做什么。你只是说，因为我叫你来，所以你就来了。还很认真地强调，你会做完东西才走。\n\n那时候我突然觉得，原来有些陪伴可以很安静。不是一直要聊天，不是一直要制造特别的瞬间。一个人做自己的事，另一个人也做自己的事。只要知道对方还在那里，好像就已经够了。\n\n后来你忽然问我最近好吗。聊着聊着，你说了一句，你可以跟我讲最近发生了什么事。然后又问，我想不想听。\n\n我从床上坐起来。\n\n那天我第一次听见很多以前不知道的事情。你说家里的事，说弟弟，说你不知道该怎么做，说自己很愧疚。你一直觉得自己应该再多做一点，好像只要做得够多，就可以把所有人的生活都一起撑住。\n\n我记得自己一直告诉你，不要把全部责任都往自己身上放。你和别人的人生不是同一条线。你可以关心，可以陪，可以很爱一个人，可是你不需要因为爱，就负责替他把所有路都走完。\n\n现在回头想，那些话其实也像是在说给另一个人听。\n\n你一直很会照顾别人，却好像不太会允许自己累。你会为了不让别人失望，把社交里的每个人都顾好；会为了证明自己可以，继续参加那些已经把身体弄得很疲惫的事情。后来我问你，证明了以后呢。你安慰别人不要那么累的时候很容易，为什么轮到自己就不肯。\n\n你最后有点无奈地说，本来没有觉得那么累，被我讲到开始觉得累了。\n\n我那时候只是笑。其实心里很心疼。\n\n再后来已经很晚了。你本来说要回去，最后却真的留下来。衣服、毛巾、牙刷、睡衣，全都临时从我的房间里凑。你一直说不好意思，觉得用了我的东西很麻烦。\n\n我说，我不是别人。\n\n现在想起来，这句话好像比我当时以为的重一点。\n\n后来你洗完澡，穿着那套很荒唐的蜡笔小新睡衣，我帮你吹头发。你一直觉得很离谱，说平时哪有朋友会这样。后来你又帮我洗头，小心按着我脖子后面的伤口，不让它碰到水。\n\n那一晚好像一直都是这种很小的事情。没有谁在告白，也没有谁突然变成另外一种关系。只是两个人很自然地替对方做一点点事。\n\n睡觉的时候你躺在里面，我躺在外面。你抱着娃娃，说很久没有抱家里的娃娃了。后来你睡着以后一直翻身，偶尔靠得很近。我不敢动，也不敢看太久。\n\n其实你离我只有一点点距离。\n\n可我那天第一次很清楚地知道，距离近和拥有一个人，从来不是同一件事。\n\n我整晚没有睡。不是因为发生了什么。恰恰是因为什么都没有发生。你只是睡在那里，偶尔翻身，偶尔说梦话，偶尔把被子踢掉。我就一次次替你盖回去。\n\n天快亮的时候，你的闹钟一直响。你起来看我一眼，发现我真的一整晚没睡，还问我到底在做什么。\n\n我也不知道。\n\n可能只是舍不得睡。\n\n因为那一天太普通了。普通到像以后还会有很多次。\n\n可是后来才知道，有些很像日常的东西，未必真的会成为日常。\n\n所以我记得你背着电脑走来的样子，记得两杯 Tealive，记得你坐在桌前做功课，记得那套很丑的睡衣，记得凌晨一直响的闹钟。\n\n也记得那天我曾经很安静地想：\n\n原来我真正想要的，好像一直都不是谁需要我。\n\n只是有一天，在完全可以不来的时候，你还是自己走来了。",
+        "body": "06.25 · She Really Came\n\n那天下午我一直在看会不会下雨。你说，等考试结束、录完 group project 的 video 就来。我嘴上还是不太信，心里却一直等。后来我一个人蹲在宿舍外面喝牛奶，看着天，偷偷希望雨不要落下来。\n\n我那时候想得很简单。只是希望这一次，不是我走过去。希望你可以自己走来一次。\n\n后来真的有人敲门。\n\n我拿着手机去开门，门外站着的是你。背着很重的电脑 bag，手上还捧着两杯 Tealive。你说考试结束以后，就从 D06 一路走过来了。\n\n我到现在都还记得自己那一瞬间有多意外。不是因为那两杯饮料，也不是因为你走了多远。只是有一件我已经不太敢期待的事情，忽然很普通地发生了。\n\n你真的走来了。\n\n后来你坐在我的桌子前做功课，我躺在床上玩手机。偶尔抬头看你，你就在那边开着电脑，放自己的歌。我们没有一直讲话，也没有特地安排要做什么。你只是说，因为我叫你来，所以你就来了。还很认真地强调，你会做完东西才走。\n\n那时候我突然觉得，原来有些陪伴可以很安静。不是一直要聊天，不是一直要制造特别的瞬间。一个人做自己的事，另一个人也做自己的事。只要知道对方还在那里，好像就已经够了。\n\n后来你忽然问我最近好吗。聊着聊着，你说了一句，你可以跟我讲最近发生了什么事。然后又问，我想不想听。\n\n我从床上坐起来。\n\n那天我第一次听见很多以前不知道的事情。你说家里的事，说你不知道该怎么做，说自己很愧疚。你一直觉得自己应该再多做一点，好像只要做得够多，就可以把所有人的生活都一起撑住。\n\n我记得自己一直告诉你，不要把全部责任都往自己身上放。你和别人的人生不是同一条线。你可以关心，可以陪，可以很爱一个人，可是你不需要因为爱，就负责替他把所有路都走完。\n\n现在回头想，那些话其实也像是在说给另一个人听。\n\n你一直很会照顾别人，却好像不太会允许自己累。你会为了不让别人失望，把社交里的每个人都顾好；会为了证明自己可以，继续参加那些已经把身体弄得很疲惫的事情。后来我问你，证明了以后呢。你安慰别人不要那么累的时候很容易，为什么轮到自己就不肯。\n\n你最后有点无奈地说，本来没有觉得那么累，被我讲到开始觉得累了。\n\n我那时候只是笑。其实心里很心疼。\n\n再后来已经很晚了。你本来说要回去，最后却真的留下来。衣服、毛巾、牙刷、睡衣，全都临时从我的房间里凑。你一直说不好意思，觉得用了我的东西很麻烦。\n\n我说，我不是别人。\n\n现在想起来，这句话好像比我当时以为的重一点。\n\n后来你洗完澡，穿着那套很荒唐的蜡笔小新睡衣，我帮你吹头发。你一直觉得很离谱，说平时哪有朋友会这样。后来你又帮我洗头，小心按着我脖子后面的伤口，不让它碰到水。\n\n那一晚好像一直都是这种很小的事情。没有谁在告白，也没有谁突然变成另外一种关系。只是两个人很自然地替对方做一点点事。\n\n睡觉的时候你躺在里面，我躺在外面。你抱着娃娃，说很久没有抱家里的娃娃了。后来你睡着以后一直翻身，偶尔靠得很近。我不敢动，也不敢看太久。\n\n其实你离我只有一点点距离。\n\n可我那天第一次很清楚地知道，距离近和拥有一个人，从来不是同一件事。\n\n我整晚没有睡。不是因为发生了什么。恰恰是因为什么都没有发生。你只是睡在那里，偶尔翻身，偶尔说梦话，偶尔把被子踢掉。我就一次次替你盖回去。\n\n天快亮的时候，你的闹钟一直响。你起来看我一眼，发现我真的一整晚没睡，还问我到底在做什么。\n\n我也不知道。\n\n可能只是舍不得睡。\n\n因为那一天太普通了。普通到像以后还会有很多次。\n\n可是后来才知道，有些很像日常的东西，未必真的会成为日常。\n\n所以我记得你背着电脑走来的样子，记得两杯 Tealive，记得你坐在桌前做功课，记得那套很丑的睡衣，记得凌晨一直响的闹钟。\n\n也记得那天我曾经很安静地想：\n\n原来我真正想要的，好像一直都不是谁需要我。\n\n只是有一天，在完全可以不来的时候，你还是自己走来了。",
         "title": "06.25 · She Really Came"
       },
       "display": {
@@ -4367,7 +4408,7 @@ export const authoredContentExpectations = {
     "may23": {
       "closure": [
         "那晚最后没有散到步。",
-        "MS 一个人走了回去。"
+        "我一个人走了回去。"
       ],
       "collections": {
         "bus-stop-memory": [
@@ -4409,7 +4450,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/523/memory-portrait/bus-stop-memory.png",
-            "text": "我原本就是因为她会去，\n才跟朋友约了这个活动。"
+            "text": "其实我讲了，只是不重要了。"
           },
           {
             "portrait": "assets/523/memory-portrait/bus-stop-memory.png",
@@ -4419,15 +4460,15 @@ export const authoredContentExpectations = {
         "judge-stars": [
           {
             "portrait": "assets/523/memory-portrait/judge-stars.png",
-            "text": "ziqi 说，她看见 judge 的纸。"
+            "text": "朋友说，她看见 judge 的纸。"
           },
           {
             "portrait": "assets/523/memory-portrait/judge-stars.png",
-            "text": "我们组一颗星。学姐那组两颗。"
+            "text": "我们组一颗星。另外一组组两颗。"
           },
           {
             "portrait": "assets/523/memory-portrait/judge-stars.png",
-            "text": "那时候我们还以为，是第一和第二。后来学姐那组第三。我们什么也没有。"
+            "text": "那时候我们还以为，是第一和第二。后来那组第三。我们什么也没有。"
           }
         ],
         "laundry-weight": [
@@ -4479,11 +4520,11 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/523/memory-portrait/bus-stop-memory.png",
-            "text": "我甚至还在想，\n她是不是买了东西回来给我。"
+            "text": "我甚至还在想，\n她是不是没看手机。"
           },
           {
             "portrait": "assets/523/memory-portrait/bus-stop-memory.png",
-            "text": "结果都是我以为。"
+            "text": "结果都是我以为。我就这样呆了半小时 要离开时才等来回复"
           },
           {
             "portrait": "assets/523/memory-portrait/01.png",
@@ -4495,7 +4536,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/523/memory-portrait/01.png",
-            "text": "刚跟朋友走mecar"
+            "text": "刚跟朋友出去"
           },
           {
             "portrait": "assets/523/memory-portrait/01.png",
@@ -4513,7 +4554,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/523/memory-portrait/tart-after-rain.png",
-            "text": "对不起美雪 我不该每天挑衅你\n结果你以德报怨！！"
+            "text": "对不起 我不该每天挑衅你\n结果你以德报怨！！"
           }
         ]
       },
@@ -4552,11 +4593,11 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/523/memory-portrait/bus-stop-memory.png",
-          "text": "我甚至还在想，\n她是不是买了东西回来给我。"
+          "text": "我甚至还在想，\n她是不是没看手机。"
         },
         {
           "portrait": "assets/523/memory-portrait/bus-stop-memory.png",
-          "text": "结果都是我以为。"
+          "text": "结果都是我以为。我就这样呆了半小时 要离开时才等来回复"
         },
         {
           "portrait": "assets/523/memory-portrait/01.png",
@@ -4568,7 +4609,7 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/523/memory-portrait/01.png",
-          "text": "刚跟朋友走mecar"
+          "text": "刚跟朋友出去"
         },
         {
           "portrait": "assets/523/memory-portrait/01.png",
@@ -4580,7 +4621,7 @@ export const authoredContentExpectations = {
         "title": "05.23 · The Long Way Back"
       },
       "display": {
-        "location": "KTHO",
+        "location": "lobby",
         "mood": "rain, silence, and a walk that turned back",
         "title": "05.23 · 我到了，你呢",
         "weather": "Rain"
@@ -4742,7 +4783,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/1122/memory-portrait/echo-corridor.png",
-            "text": "突然走去 H01 dobi 看有没有人洗衣。"
+            "text": "突然走去 dobi 看有没有人洗衣。"
           },
           {
             "portrait": "assets/1122/memory-portrait/echo-corridor.png",
@@ -4758,7 +4799,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/1122/memory-portrait/echo-corridor.png",
-            "text": "没有我的份。"
+            "text": "ok。没有我的份。"
           },
           {
             "portrait": "assets/1122/memory-portrait/echo-corridor.png",
@@ -5178,7 +5219,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/1122/memory-portrait/echo-photo-kept.png",
-            "text": "早上明明还很兴奋。"
+            "text": "早上明明还很开心。"
           },
           {
             "portrait": "assets/1122/memory-portrait/echo-photo-kept.png",
@@ -5216,13 +5257,13 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/1122/memory-portrait/echo-dobi01.png",
-            "text": "我们两个突然都笑了。"
+            "text": "我们两个突然都莫名其妙的笑了。"
           }
         ],
         "1122-wrong-way-again": [
           {
             "portrait": "assets/1122/memory-portrait/echo-car-02.png",
-            "text": "我又看着她把车开出了 KTF。"
+            "text": "我又看着她把车开出了宿舍区。"
           },
           {
             "portrait": "assets/1122/memory-portrait/echo-car-02.png",
@@ -5258,7 +5299,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/1122/memory-portrait/echo-car-02.png",
-            "text": "早知道我等你载我回你的 KTHO 才提醒你。"
+            "text": "早知道我等你载我回你的宿舍才提醒你。"
           },
           {
             "portrait": "assets/1122/memory-portrait/echo-car-02.png",
@@ -5445,11 +5486,11 @@ export const authoredContentExpectations = {
         }
       ],
       "diary": {
-        "body": "11.21–11.22 · Before Sunrise\n\n那两天一直下雨。\n\n十一月二十一号早上，我去考试。写得很快，剩下的时间只能坐在那里东张西望。考完以后，大家都在复盘题目，我蹲在小卖部外面玩猫，然后抬头看见你走过来。\n\n我愣了几秒才打招呼。旁边的人马上开始笑，说我的笑容太不值钱。后来你准备走的时候，又绕回来问我考试怎么样。你走以后，她们告诉我，你刚才好像特地在等我跟你说拜拜。\n\n我不知道她们有没有看得太多。\n\n只记得自己听完以后，又笑了一下。\n\n下午我一直带着一瓶气泡水。原本可以当面给你，却不知道为什么觉得那样太正式，所以还是按照原计划，想偷偷放进你的脚车后篮。\n\n那瓶明明“不是特地送你的”气泡水，就这样跟着我唱 K、吃饭，再一路回到学校。朋友看不下去，问我为什么一直带着。\n\n我还是说，没什么。\n\n晚上终于去了 KTHO。我在一排 motor 里面找到脚车，把气泡水和一张小纸条放进后篮，然后很快走掉。\n\n后来回宿舍，我一个人经过很暗的走廊，越走越怕，最后直接跑起来。你看到我发的 status，很快问我回到宿舍了吗。\n\n聊着聊着，说到了洗衣。\n\n你说，明天早上五点去 dobi。\n\n我开玩笑叫你顺便帮我洗。\n\n你说，可以啊。\n\n还说可以开车来载我。\n\n我问，真的五点吗。\n\n你说，看你，没人拿枪逼你。\n\n我说，很乐意，快拿枪逼我。\n\n那时候我大概只把它当成一句很好玩的玩笑。\n\n后来我去冲凉。出来以后，看见你发来一张照片。\n\n是那瓶气泡水。\n\n你写：喂！！！\n\n再后来，你发现里面还有纸条，把它发到 close friends，说被治愈了。\n\n我看着手机偷笑。\n\n那天晚上没有睡多少。\n\n4:50，你发消息来。\n\n起床了吗。\n\n我回，还醒着。\n\n然后你真的开车来了。\n\n天还没有亮，学校很安静。我们去 dobi，把衣服丢进洗衣机，然后坐下来等。\n\n你提起前一天的空投，问我到底怎样偷偷放进去的。又问我是不是也喜欢小八。\n\n我没有很会回答。\n\n因为有些东西，那时候连我自己都还没有想清楚。\n\n洗衣机一直转。\n\n我们就坐在那里聊天。聊一些很普通的东西，功课、比赛、早餐，还有之后要做什么。\n\n后来你的衣服洗好了，你却没有马上走。\n\n你坐在那里，等我的衣服烘完。\n\n其实你完全可以先回去。\n\n我那时候甚至想过，要不要主动叫你走。\n\n最后还是没有说。\n\n有一点不好意思。\n\n又有一点，不想那个早上那么快结束。\n\n回去的时候，天已经亮了。\n\n我后来想，这两天其实也没有发生什么很特别的事情。\n\n只是前一天，我偷偷给你留了一点东西。\n\n第二天，天还没亮，你真的来了。\n\n没有谁说这代表什么。\n\n它也不一定代表什么。\n\n只是那时候的我，好像已经开始把这种很普通的事情，记得比别的事情清楚一点。\n\n下午大家陆续回家以后，宿舍忽然变得很空。早上的兴奋退下去，我一个人待在房间，第一次认真提醒自己：\n\n不要把太多情绪放在一个人身上。\n\n我那时候已经知道这个道理。\n\n只是还没有很会做到。\n\n毕竟有时候，一天变得很好，并不是因为发生了什么了不起的事情。\n\n只是因为一句前一天说过的话，\n\n第二天真的有人记得。",
+        "body": "11.21–11.22 · Before Sunrise\n\n那两天一直下雨。\n\n十一月二十一号早上，我去考试。写得很快，剩下的时间只能坐在那里东张西望。考完以后，大家都在复盘题目，我蹲在小卖部外面玩猫，然后抬头看见你走过来。\n\n我愣了几秒才打招呼。旁边的人马上开始笑，说我的笑容太不值钱。后来你准备走的时候，又绕回来问我考试怎么样。你走以后，她们告诉我，你刚才好像特地在等我跟你说拜拜。\n\n我不知道她们有没有看得太多。\n\n只记得自己听完以后，又笑了一下。\n\n下午我一直带着一瓶气泡水。原本可以当面给你，却不知道为什么觉得那样太正式，所以还是按照原计划，想偷偷放进你的脚车后篮。\n\n那瓶明明“不是特地送你的”气泡水，就这样跟着我唱 K、吃饭，再一路回到学校。朋友看不下去，问我为什么一直带着。\n\n我还是说，没什么。\n\n晚上终于去了你宿舍楼下。我在一排 motor 里面找到脚车，把气泡水和一张小纸条放进后篮，然后很快走掉。\n\n后来回宿舍，我一个人经过很暗的走廊，越走越怕，最后直接跑起来。你看到我发的 status，很快问我回到宿舍了吗。\n\n聊着聊着，说到了洗衣。\n\n你说，明天早上五点去 dobi。\n\n我开玩笑叫你顺便帮我洗。\n\n你说，可以啊。\n\n还说可以开车来载我。\n\n我问，真的五点吗。\n\n你说，看你，没人拿枪逼你。\n\n我说，很乐意，快拿枪逼我。\n\n那时候我大概只把它当成一句很好玩的玩笑。\n\n后来我去冲凉。出来以后，看见你发来一张照片。\n\n是那瓶气泡水。\n\n你写：喂！！！\n\n再后来，你发现里面还有纸条，把它发到动态，说被治愈了。\n\n我看着手机偷笑。\n\n那天晚上没有睡多少。\n\n凌晨4:50，你发消息来。\n\n起床了吗。\n\n我回，还醒着。\n\n然后你真的开车来了。\n\n天还没有亮，学校很安静。我们去 dobi，把衣服丢进洗衣机，然后坐下来等。\n\n你提起前一天的空投，问我到底怎样偷偷放进去的。又问我是不是也喜欢小八。\n\n我没有很会回答。\n\n因为有些东西，那时候连我自己都还没有想清楚。\n\n洗衣机一直转。\n\n我们就坐在那里聊天。聊一些很普通的东西，功课、比赛、早餐，还有之后要做什么。\n\n后来你的衣服洗好了，你却没有马上走。\n\n你坐在那里，等我的衣服烘完。\n\n其实你完全可以先回去。\n\n我那时候甚至想过，要不要主动叫你走。\n\n最后还是没有说。\n\n有一点不好意思。\n\n又有一点，不想那个早上那么快结束。\n\n回去的时候，天已经亮了。\n\n我后来想，这两天其实也没有发生什么很特别的事情。\n\n只是前一天，我偷偷给你留了一点东西。\n\n第二天，天还没亮，你真的来了。\n\n没有谁说这代表什么。\n\n它也不一定代表什么。\n\n只是那时候的我，好像已经开始把这种很普通的事情，记得比别的事情清楚一点。\n\n下午大家陆续回家以后，宿舍忽然变得很空。早上的开心退下去，我一个人待在房间，第一次认真提醒自己：\n\n不要把太多情绪放在一个人身上。\n\n我那时候已经知道这个道理。\n\n只是还没有很会做到。\n\n毕竟有时候，一天变得很好，并不是因为发生了什么了不起的事情。\n\n只是因为一句前一天说过的话，\n\n第二天真的有人记得。",
         "title": "11.21–11.22 · Before Sunrise"
       },
       "display": {
-        "location": "KTF / H01 dobi",
+        "location": "dobi",
         "mood": "a real morning without a required meaning",
         "title": "Before Sunrise",
         "weather": "rain into the quiet before dawn"
@@ -5475,7 +5516,7 @@ export const authoredContentExpectations = {
         {
           "choices": [
             {
-              "label": "我怕自己越来越依赖她。",
+              "label": "我怕自己越来越陌生。",
               "response": "那时候的我已经注意到了自己的重心在移动。\n注意到，不代表已经失去自己。"
             },
             {
@@ -5534,9 +5575,9 @@ export const authoredContentExpectations = {
         ]
       },
       "closure": [
-        "2025 年 10 月 29 日，training 结束的时候，她对我来说还是 coach。",
+        "2025 年 10 月 29 日，我们第一次见面。training 结束的时候，她对我来说还只是 coach。",
         "我拿到了 single，脚也真的起泡了。",
-        "那天我没有觉得，我们之间发生了什么特别的事。"
+        "那天我没有觉得，我们后面还会有交集。"
       ],
       "collections": {
         "oct29-hiking-shoe": [
@@ -5656,7 +5697,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
-            "text": "然后 coach 过来问我。"
+            "text": "然后她过来问我。"
           },
           {
             "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
@@ -5884,7 +5925,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/1029/memory-portrait/main-training-continue.png",
-            "text": "她讲话太小声。"
+            "text": "那天初见时的印象就是她讲话太小声。"
           },
           {
             "portrait": "assets/1029/memory-portrait/main-training-continue.png",
@@ -5940,7 +5981,7 @@ export const authoredContentExpectations = {
         "oct29-singles-selection": [
           {
             "portrait": "assets/1029/memory-portrait/echo-singles.png",
-            "text": "后来 NG 也想争 single。"
+            "text": "后来别人也想争 single。"
           },
           {
             "portrait": "assets/1029/memory-portrait/echo-singles.png",
@@ -5960,7 +6001,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/1029/memory-portrait/echo-singles.png",
-            "text": "然后她直接叫 NG 跟我打十一粒。"
+            "text": "然后她直接叫别人跟我打十一粒。"
           },
           {
             "portrait": "assets/1029/memory-portrait/echo-singles.png",
@@ -6020,7 +6061,7 @@ export const authoredContentExpectations = {
           },
           {
             "portrait": "assets/1029/memory-portrait/echo-singles.png",
-            "text": "感觉 NG 是不是在放水。"
+            "text": "感觉对面是不是在放水。"
           },
           {
             "portrait": "assets/1029/memory-portrait/echo-singles.png",
@@ -6103,7 +6144,7 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
-          "text": "然后 coach 过来问我。"
+          "text": "然后她过来问我。"
         },
         {
           "portrait": "assets/1029/memory-portrait/main-single-challenge.png",
@@ -6331,7 +6372,7 @@ export const authoredContentExpectations = {
         },
         {
           "portrait": "assets/1029/memory-portrait/main-training-continue.png",
-          "text": "她讲话太小声。"
+          "text": "那天初见时的印象就是她讲话太小声。"
         },
         {
           "portrait": "assets/1029/memory-portrait/main-training-continue.png",
