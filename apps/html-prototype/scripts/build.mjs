@@ -1,8 +1,16 @@
-import { cp, mkdir, copyFile, readdir, writeFile, access } from "node:fs/promises";
+import { cp, mkdir, copyFile, readdir, writeFile, access, rm } from "node:fs/promises";
 import { build } from "esbuild";
 import { dirname, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
+const distRoot = resolve(root, "dist");
+await rm(resolve(distRoot, "assets"), { recursive: true, force: true });
+await rm(resolve(distRoot, "lrc"), { recursive: true, force: true });
+await rm(resolve(distRoot, "scene-layouts"), { recursive: true, force: true });
+await rm(resolve(distRoot, "browser"), { recursive: true, force: true });
+await rm(resolve(distRoot, "config.js"), { force: true });
+await rm(resolve(distRoot, "index.html"), { force: true });
+await rm(resolve(distRoot, "styles.css"), { force: true });
 await cp(resolve(root, "public/lrc"), resolve(root, "dist/lrc"), { recursive: true });
 await cp(resolve(root, "public/scene-layouts"), resolve(root, "dist/scene-layouts"), { recursive: true });
 await cp(resolve(root, "public/assets"), resolve(root, "dist/assets"), { recursive: true });
