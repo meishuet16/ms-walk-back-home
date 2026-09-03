@@ -50,7 +50,8 @@ for (const file of [
   "reflection-detail-hotfix.css",
   "journal-ui-polish.css",
   "journal-ui-refine.css",
-  "journal-delete-position-hotfix.css"
+  "journal-delete-position-hotfix.css",
+  "title-background-override.css"
 ]) {
   await copyFile(resolve(root, `src/${file}`), resolve(root, `dist/${file}`));
 }
