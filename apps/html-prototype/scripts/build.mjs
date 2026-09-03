@@ -1,8 +1,10 @@
-import { cp, mkdir, copyFile, readdir, writeFile, access } from "node:fs/promises";
+import { cp, mkdir, copyFile, readdir, writeFile, access, rm } from "node:fs/promises";
 import { build } from "esbuild";
 import { dirname, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
+await rm(resolve(root, "dist"), { recursive: true, force: true });
+await mkdir(resolve(root, "dist"), { recursive: true });
 await cp(resolve(root, "public/lrc"), resolve(root, "dist/lrc"), { recursive: true });
 await cp(resolve(root, "public/scene-layouts"), resolve(root, "dist/scene-layouts"), { recursive: true });
 await cp(resolve(root, "public/assets"), resolve(root, "dist/assets"), { recursive: true });
