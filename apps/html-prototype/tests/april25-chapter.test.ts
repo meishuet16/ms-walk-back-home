@@ -125,7 +125,7 @@ test("425 Main is one uninterrupted 19-beat sequence with the approved portraits
     ["Memory", "Memory", "Memory", "她", "我"],
     ["Memory", "Memory"],
     ["她", "我", "我", "她"],
-    ["Memory", "Angela", "我", "我", "她", "我", "她", "她"],
+    ["Memory", "朋友", "我", "我", "她", "我", "她", "她"],
     ["Memory", "Memory", "Memory", "她"],
     ["Memory", "Memory", "Memory", "Memory", "她", "我", "我", "我", "她", "Memory", "Memory", "Memory", "我", "我"],
     ["她", "她", "她"],

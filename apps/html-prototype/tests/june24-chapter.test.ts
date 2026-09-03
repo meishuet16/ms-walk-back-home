@@ -167,7 +167,7 @@ test("June 24 follows the exact authored dialogue sequence", () => {
     .filter((action) => action.type === "dialogue")
     .map((action) => action.speaker + ": " + action.text);
   assert.deepEqual(dialogue.map((line) => line.split(": ", 1)[0]), [
-    "她", "我", "她", "我", "她", "我", "她", "我", "我", "她", "她", "我", "她", "我", "她", "我", "她", "她", "我", "她", "她", "我", "我", "她", "我", "她", "我", "她", "我", "我", "她", "我", "她", "我", "她", "我", "她", "我", "她", "我", "她", "我", "她", "我", "她", "她", "我", "她", "我", "我", "她"
+    "她", "我", "她", "我", "她", "我", "她", "我", "她", "她", "我", "她", "我", "她", "她", "我", "她", "我", "我", "她", "我", "她", "她", "我", "她", "我", "她", "她", "我", "我", "她", "我", "她", "我", "她", "我", "我", "她", "我", "她", "我", "她", "我", "她", "我", "她", "我", "她", "我", "她", "我", "她", "她", "我", "她", "我", "她"
   ]);
   assert.deepEqual(dialogue.map((line) => ({ text: line.slice(line.indexOf(": ") + 2) })), authoredContentExpectations.chapters.june24.dialogue.map((line) => ({ text: line.text })));
 });
@@ -233,7 +233,7 @@ test("June 24 reflection choices use the authored prompts, responses, and effect
 
 test("June 24 Echoes use the exact secondary memories and stop at their uncertainty", () => {
   for (const [id, expectedSpeakers] of Object.entries({
-    "june24-angela-st-echo": ["Angela", "我", "朋友", "我", "我", "Angela", "我"],
+    "june24-angela-st-echo": ["朋友", "我", "朋友", "我", "我", "朋友", "我"],
     "june24-room-study-echo": ["她", "我", "她", "我", "她"],
     "june24-haircut-echo": ["我", "她", "我", "她", "我"]
   })) {
