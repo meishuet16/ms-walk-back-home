@@ -53,7 +53,9 @@ if (clientKey.startsWith("sb_secret_") || jwtPayload?.role === "service_role") {
   process.exit(1);
 }
 
-const child = spawn(process.platform === "win32" ? "npm.cmd" : "npm", ["run", "android:sync"], {
+const command = process.platform === "win32" ? (process.env.ComSpec || "cmd.exe") : "npm";
+const args = process.platform === "win32" ? ["/d", "/s", "/c", "npm run android:sync"] : ["run", "android:sync"];
+const child = spawn(command, args, {
   stdio: "inherit",
   env: {
     ...process.env,
@@ -62,4 +64,8 @@ const child = spawn(process.platform === "win32" ? "npm.cmd" : "npm", ["run", "a
   }
 });
 
+child.on("error", (error) => {
+  console.error(`Failed to start Android cloud sync: ${error.message}`);
+  process.exit(1);
+});
 child.on("exit", (code) => process.exit(code ?? 1));
