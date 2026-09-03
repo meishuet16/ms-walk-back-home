@@ -7,6 +7,16 @@
 
 .threshold-hub {
   background:
-    linear-gradient(180deg, rgba(2,8,18,.18), rgba(2,8,18,.24) 54%, rgba(2,8,18,.72)),
-    url("./assets/title.png") 53% center / cover no-repeat;
+    linear-gradient(180deg, rgba(2, 8, 18, .18), rgba(2, 8, 18, .24) 54%, rgba(2, 8, 18, .72)),
+    url("./assets/title.png") center / cover no-repeat;
+}
+
+.story-route-shell {
+  background:
+    linear-gradient(180deg, rgba(2, 8, 18, .22), rgba(2, 8, 18, .44)),
+    url("./assets/title.png") center / cover no-repeat;
+}
+
+.story-route-scroll {
+  background: linear-gradient(180deg, rgba(4, 10, 18, .10), rgba(4, 10, 18, .38));
 }
