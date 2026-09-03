@@ -468,4 +468,4 @@ It is a complete first version of the idea:
 
 > **A diary you can walk back into.**
 
-**For now, Muji made it home.**
+**For now, Muji keeps walking.**
