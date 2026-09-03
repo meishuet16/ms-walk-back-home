@@ -103,7 +103,7 @@ test("labis cutscene reaches ET dialogue and completes after acknowledgement", (
   const cutscene = new CutsceneSystem(labisMotorMemoryActions);
   for (let i = 0; i < 600 && !cutscene.currentDialogue; i += 1) cutscene.update(1 / 30);
 
-  assert.equal(cutscene.currentDialogue?.speaker, "ET");
+  assert.equal(cutscene.currentDialogue?.speaker, "她");
   assert.equal(cutscene.currentDialogue?.text, "单凭这一点，没有白来。");
   assert.equal(cutscene.actors.has("motor"), true);
 

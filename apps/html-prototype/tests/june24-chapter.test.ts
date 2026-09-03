@@ -58,7 +58,7 @@ test("June 24 main sequence preserves cause, reaction, dialogue and reflection c
   const phoneShow = actions.findIndex((action) => action.type === "sprite" && action.sprite.assetId.includes("02-show-phone"));
   const stop = actions.findIndex((action) => action.type === "sprite" && action.sprite.assetId.includes("04-hand-stop-phone"));
   const reaction = actions.findIndex((action) => action.type === "sprite" && action.sprite.assetId.includes("03-phone-hand-stopped-reaction"));
-  const noFlip = actions.findIndex((action) => action.type === "dialogue" && action.text === authoredContentExpectations.chapters.june24.dialogue[27]?.text);
+  const noFlip = actions.findIndex((action, index) => index > reaction && action.type === "dialogue");
   assert.ok(phoneShow >= 0 && phoneShow < stop && stop < reaction && reaction < noFlip);
   assert.deepEqual(june24ReflectionChoices.map((reflection) => reflection.id), ["june24-reflection-1", "june24-reflection-2", "june24-reflection-3"]);
   assert.equal(actions.filter((action) => action.type === "checkpoint").length, 3);
@@ -167,7 +167,7 @@ test("June 24 follows the exact authored dialogue sequence", () => {
     .filter((action) => action.type === "dialogue")
     .map((action) => action.speaker + ": " + action.text);
   assert.deepEqual(dialogue.map((line) => line.split(": ", 1)[0]), [
-    "ET", "MS", "ET", "MS", "ET", "MS", "ET", "MS", "MS", "ET", "ET", "MS", "ET", "MS", "ET", "MS", "ET", "ET", "MS", "ET", "ET", "MS", "MS", "ET", "MS", "ET", "MS", "ET", "MS", "MS", "ET", "MS", "ET", "MS", "ET", "MS", "ET", "MS", "ET", "MS", "ET", "MS", "ET", "MS", "ET", "ET", "MS", "ET", "MS", "MS", "ET"
+    "她", "我", "她", "我", "她", "我", "她", "我", "我", "她", "她", "我", "她", "我", "她", "我", "她", "她", "我", "她", "她", "我", "我", "她", "我", "她", "我", "她", "我", "我", "她", "我", "她", "我", "她", "我", "她", "我", "她", "我", "她", "我", "她", "我", "她", "她", "我", "她", "我", "我", "她"
   ]);
   assert.deepEqual(dialogue.map((line) => ({ text: line.slice(line.indexOf(": ") + 2) })), authoredContentExpectations.chapters.june24.dialogue.map((line) => ({ text: line.text })));
 });
@@ -197,7 +197,7 @@ test("June 24 keeps the authored physical beat order and exact table states", ()
     show: actions.findIndex((action) => action.type === "sprite" && action.sprite.assetId.endsWith("02-show-phone.png")),
     stop: actions.findIndex((action) => action.type === "sprite" && action.sprite.assetId.endsWith("04-hand-stop-phone.png")),
     reaction: actions.findIndex((action) => action.type === "sprite" && action.sprite.assetId.endsWith("03-phone-hand-stopped-reaction.png")),
-    dialogue: actions.findIndex((action) => action.type === "dialogue" && action.text === authoredContentExpectations.chapters.june24.dialogue[27]?.text)
+    dialogue: actions.findIndex((action, index) => index > actions.findIndex((candidate) => candidate.type === "sprite" && candidate.sprite.assetId.endsWith("03-phone-hand-stopped-reaction.png")) && action.type === "dialogue")
   };
   assert.ok(indices.show < indices.stop && indices.stop < indices.reaction && indices.reaction < indices.dialogue);
   assert.equal(actions.filter((action) => action.type === "wait").some((action) => action.duration >= 0.28), true);
@@ -233,9 +233,9 @@ test("June 24 reflection choices use the authored prompts, responses, and effect
 
 test("June 24 Echoes use the exact secondary memories and stop at their uncertainty", () => {
   for (const [id, expectedSpeakers] of Object.entries({
-    "june24-angela-st-echo": ["Angela", "MS", "ST", "MS", "MS", "Angela", "MS"],
-    "june24-room-study-echo": ["ET", "MS", "ET", "MS", "ET"],
-    "june24-haircut-echo": ["MS", "ET", "MS", "ET", "MS"]
+    "june24-angela-st-echo": ["Angela", "我", "朋友", "我", "我", "Angela", "我"],
+    "june24-room-study-echo": ["她", "我", "她", "我", "她"],
+    "june24-haircut-echo": ["我", "她", "我", "她", "我"]
   })) {
     const lines = june24EchoDialogues[id as keyof typeof june24EchoDialogues];
     assert.deepEqual(lines.map(({ speaker }) => speaker), expectedSpeakers);

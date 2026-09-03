@@ -114,25 +114,25 @@ test("425 Main is one uninterrupted 19-beat sequence with the approved portraits
     "assets/425/memory-portrait/echo-invite.png"
   ]);
   assert.deepEqual(april25MainPortraitSequence.beats.map((beat) => beat.dialogue.map((line) => line.speaker)), [
-    ["Memory", "Memory", "Memory", "MS", "Memory"],
-    ["ET", "ET", "ET", "MS", "ET", "MS"],
+    ["Memory", "Memory", "Memory", "我", "Memory"],
+    ["她", "她", "她", "我", "她", "我"],
     ["Memory", "Memory", "Memory"],
-    ["Memory", "Memory", "那个共同朋友", "Memory", "ET", "ET"],
-    ["Memory", "MS", "Memory", "ET"],
-    ["Memory", "Memory", "ET", "MS", "MS", "MS", "ET", "ET", "Memory", "Memory", "Memory", "Memory"],
+    ["Memory", "Memory", "那个共同朋友", "Memory", "她", "她"],
+    ["Memory", "我", "Memory", "她"],
+    ["Memory", "Memory", "她", "我", "我", "我", "她", "她", "Memory", "Memory", "Memory", "Memory"],
     ["Memory", "Memory", "Memory", "Memory"],
-    ["Memory", "Memory", "Memory", "MS", "Memory"],
-    ["Memory", "Memory", "Memory", "ET", "MS"],
+    ["Memory", "Memory", "Memory", "我", "Memory"],
+    ["Memory", "Memory", "Memory", "她", "我"],
     ["Memory", "Memory"],
-    ["ET", "MS", "MS", "ET"],
-    ["Memory", "Angela", "MS", "MS", "ET", "MS", "ET", "ET"],
-    ["Memory", "Memory", "Memory", "ET"],
-    ["Memory", "Memory", "Memory", "Memory", "ET", "MS", "MS", "MS", "ET", "Memory", "Memory", "Memory", "MS", "MS"],
-    ["ET", "ET", "ET"],
-    ["MS", "MS", "Memory", "Memory", "ET", "ET"],
-    ["MS", "ET", "MS", "MS", "ET", "ET", "MS", "ET", "ET", "MS", "MS", "ET", "MS", "ET", "MS"],
-    ["Memory", "Memory", "Memory", "MS", "ET", "ET", "ET", "MS", "MS", "ET"],
-    ["Memory", "Memory", "Memory", "Memory", "Memory", "Memory", "Memory", "MS"]
+    ["她", "我", "我", "她"],
+    ["Memory", "Angela", "我", "我", "她", "我", "她", "她"],
+    ["Memory", "Memory", "Memory", "她"],
+    ["Memory", "Memory", "Memory", "Memory", "她", "我", "我", "我", "她", "Memory", "Memory", "Memory", "我", "我"],
+    ["她", "她", "她"],
+    ["我", "我", "Memory", "Memory", "她", "她"],
+    ["我", "她", "我", "我", "她", "她", "我", "她", "她", "我", "我", "她", "我", "她", "我"],
+    ["Memory", "Memory", "Memory", "我", "她", "她", "她", "我", "我", "她"],
+    ["Memory", "Memory", "Memory", "Memory", "Memory", "Memory", "Memory", "我"]
   ]);
   assert.deepEqual(april25MainPortraitSequence.beats.map((beat) => beat.portrait), expectedApril25.beatPortraits?.["apr25-main"]);
   assert.deepEqual(april25MainPortraitSequence.beats.flatMap((beat) => beat.dialogue.map(({ text }) => ({ text }))), expectedApril25.dialogue.map(({ text }) => ({ text })));
@@ -232,7 +232,7 @@ test("425 uses one canonical authored Diary with the shared book artwork and no 
   assert.equal(april25DiaryEntry.title, "04.25–04.26 · Just Friends");
   assert.equal(april25DiaryEntry.body, april25DiaryBody.join("\n\n"));
   assert.equal(april25DiaryBody.length, 124);
-  assert.equal(stableHash(april25DiaryEntry.body), "8540e65163b81649c614bac18353a31734bda6f40bba6a94e7c30ee30153ae22");
+  assert.equal(stableHash(april25DiaryEntry.body), "2643cb5be9bed58706c99c445fef9eea5c04ef771f1169a68ed6c268eaa8aac9");
   assert.equal(sharedChapterDiaryBookAssetPath, "assets/labis/book-with-ms-photos.png");
   assert.equal(april25Chapter.diaryEntryId, april25DiaryEntry.id);
   assert.equal(startChapterMemoryExperience({ chapterId: april25Chapter.id, mode: "automatic" }).diaryRead, false);

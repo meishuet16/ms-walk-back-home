@@ -109,7 +109,7 @@ test("721 Main is one continuous five-beat portrait sequence in semantic order",
   assert.deepEqual(july21MainPortraitSequence.beats.map((beat) => beat.portrait), authoredContentExpectations.chapters.july21.beatPortraits?.["july21-main"]);
   const dialogue = july21MainPortraitSequence.beats.flatMap((beat) => beat.dialogue);
   assert.deepEqual(dialogue.map((line) => line.speaker), [
-    "ET", "ET", "ET", "Memory", "Memory", "Memory", "MS", "ET", "MS", "MS", "ET", "MS", "ET", "MS", "ET", "Memory", "ET", "MS", "ET", "ET", "ET", "MS", "MS", "ET", "ET", "MS", "Memory", "Memory", "MS", "ET", "MS", "ET", "MS", "ET", "ET", "ET", "ET", "ET", "MS", "ET", "MS", "MS", "MS", "MS", "ET", "ET", "ET"
+    "她", "她", "她", "Memory", "Memory", "Memory", "我", "她", "我", "我", "她", "我", "她", "我", "她", "Memory", "她", "我", "她", "她", "她", "我", "我", "她", "她", "我", "Memory", "Memory", "我", "她", "我", "她", "我", "她", "她", "她", "她", "她", "我", "她", "我", "我", "我", "我", "她", "她", "她"
   ]);
   assert.deepEqual(dialogue.map((line) => ({ text: line.text })), authoredContentExpectations.chapters.july21.dialogue.map((line) => ({ text: line.text })));
   for (const [index, beat] of july21MainPortraitSequence.beats.entries()) {
@@ -155,7 +155,7 @@ test("721 reflection choices all carry their authored response and current-run e
   assert.deepEqual(currentRunReflectionInput(run).choices, july21ReflectionChoices.map((point) => point.choices[0].id));
   assert.equal(run.tendencies.closeness, 2);
   assert.equal(run.tendencies.honesty, 2);
-  assert.equal(resolveChapterReflection(july21Chapter, currentRunReflectionInput(run)).closureLines.at(-1), "水壶留在车上。");
+  assert.equal(resolveChapterReflection(july21Chapter, currentRunReflectionInput(run)).closureLines.at(-1), "水壶却留在车上。");
 });
 
 test("721 reflection progresses R1 response to R2 response to R3 response before ending", () => {
@@ -188,7 +188,7 @@ test("721 reflection progresses R1 response to R2 response to R3 response before
   assert.equal(run.tendencies.holding, 1);
   const ending = resolveChapterReflection(july21Chapter, currentRunReflectionInput(run));
   assert.equal(ending.quoteId, "july21-holding");
-  assert.deepEqual(ending.closureLines, ["那天下午，她还是走了。", "水壶留在车上。"]);
+  assert.deepEqual(ending.closureLines, ["那天下午，她还是走了。", "水壶却留在车上。"]);
 });
 
 test("721 authored runtime is data-driven and does not add chapter-specific renderer branches", () => {

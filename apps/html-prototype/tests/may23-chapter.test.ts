@@ -61,10 +61,10 @@ test("May23 Portrait action resolver keeps approved facing semantics and histori
     return [];
   });
   assert.equal(upMove?.facing, "up");
-  assert.equal(mainDialogues[5]?.speaker, "MS");
-  assert.equal(mainDialogues[6]?.speaker, "ET");
+  assert.equal(mainDialogues[5]?.speaker, "我");
+  assert.equal(mainDialogues[6]?.speaker, "她");
   assert.deepEqual(mainDialogues.map((action) => action.speaker), [
-    "MS", "ET", "ET", "MS", "MS", "MS", "ET", "MS", "MS", "MS", "ET", "ET", "ET", "ET"
+    "我", "她", "她", "我", "我", "我", "她", "我", "我", "我", "她", "她", "她", "她"
   ]);
   assert.deepEqual(mainDialogues.map((action) => action.text), authoredContentExpectations.chapters.may23.dialogue.map((line) => line.text));
   assert.equal(actions.filter((action) => action.type === "spawn" && action.actor === "et").length, 2);
@@ -168,7 +168,7 @@ test("May23 optional memory keeps authored points and uses the shared Labis diar
   assert.equal(sharedChapterDiaryBookAssetPath, "assets/labis/book-with-ms-photos.png");
   const optionalLines = may23EchoDialogues["bus-stop-memory"];
   assert.deepEqual(optionalLines.map(({ text, portrait }) => ({ text, portrait })), authoredContentExpectations.chapters.may23.collections?.["bus-stop-memory"]);
-  assert.deepEqual(optionalLines.map(({ speaker }) => speaker), ["MS", "ET", "MS", "MS", "ET", "ET", "MS", "MEMORY", "MEMORY", "MEMORY", "MEMORY"]);
+  assert.deepEqual(optionalLines.map(({ speaker }) => speaker), ["我", "她", "我", "我", "她", "她", "我", "MEMORY", "MEMORY", "MEMORY", "MEMORY"]);
   const optionalActions = resolveMay23Actions(portrait, "echo", "bus-stop-memory");
   assert.equal(optionalActions.every((action) => action.type === "dialogue"), true);
   assert.equal(optionalActions.some((action) => action.type === "checkpoint" || action.type === "move" || action.type === "spawn"), false);
@@ -225,7 +225,7 @@ test("Cutscene move dialogue pauses and resumes the same authored movement", () 
       visualScale: 0.3,
       startVisualScale: 0.3,
       sprite: { assetId: "passing", frame: 0 },
-      dialogue: { speaker: "ET", text: "算了啦" },
+      dialogue: { speaker: "她", text: "算了啦" },
       dialogueAtProgress: 0.25
     }
   ]);

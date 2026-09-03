@@ -144,7 +144,7 @@ const msFrameFourIndex = actions.findIndex((action) => action.type === "sprite" 
   assert.match(assetPath(fixture, resolvedHit.actors.get("ms")?.sprite?.assetId ?? ""), /assets[\\/]405[\\/]405-water-spraying[\\/]frame-08\.png/);
   assert.match(assetPath(fixture, resolvedHit.actors.get("et")?.sprite?.assetId ?? ""), /assets[\\/]405[\\/]405-water-sprayed[\\/]et-april05-water-sprayed-frame-08\.png/);
   assert.ok((resolvedHit.actors.get("et")?.x ?? 0) < (resolvedHit.actors.get("ms")?.x ?? 0));
-  assert.equal(resolvedHit.currentDialogue?.speaker, "ET");
+  assert.equal(resolvedHit.currentDialogue?.speaker, "她");
   assert.equal([...resolvedHit.props.values()].filter((prop) => prop.id === "water-gun" && prop.visible).length, 0);
   assert.equal(assetPath(fixture, resolvedHit.actors.get("ms")?.sprite?.assetId ?? "").includes("assets/330/330-water-spraying.png"), false);
   assert.equal(assetPath(fixture, resolvedHit.actors.get("et")?.sprite?.assetId ?? "").includes("assets/330/330-water-sprayed.png"), false);
@@ -169,7 +169,7 @@ test("April 5 hair ruffle and side-lock use dedicated synchronized pairs without
 test("April 5 canonical dialogue and goodbye ordering are preserved", async () => {
   const fixture = await loadApril05();
   const actions = fixture.april05MainMemoryActions.filter((action: { type: string }) => action.type === "dialogue") as Array<{ type: "dialogue"; speaker: string; text: string }>;
-  assert.deepEqual(actions.map((action) => action.speaker), ["MS", "ET", "MS", "ET", "ET", "ST", "ET", "MS", "ET", "ET", "ET", "MS", "ET", "MS", "ET", "ET", "MS", "ET", "MS", "ET", "ET", "ET"]);
+  assert.deepEqual(actions.map((action) => action.speaker), ["我", "她", "我", "她", "她", "朋友", "她", "我", "她", "她", "她", "我", "她", "我", "她", "她", "我", "她", "我", "她", "她", "她"]);
   assert.deepEqual(actions.map(({ text }) => text), authoredContentExpectations.chapters.april05.dialogue.map((line) => line.text));
   const finalDialogueIndex = fixture.april05MainMemoryActions.reduce((last: number, action: { type: string }, index: number) => action.type === "dialogue" ? index : last, -1);
   const fadeIndex = fixture.april05MainMemoryActions.findIndex((action: { type: string }) => action.type === "fade");
