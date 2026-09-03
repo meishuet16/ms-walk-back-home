@@ -19,7 +19,7 @@ jobs:
           ref: feat/journal-ui-pdf-polish
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       - name: Finish stale authored regression expectations
@@ -36,16 +36,21 @@ jobs:
               p.write_text(s)
 
           p = Path('apps/html-prototype/tests/march30-refined-runtime.test.ts')
-          s = p.read_text().replace(
+          s = p.read_text()
+          s = s.replace(
               'assert.equal(sequence.beats[0].portrait, "");',
               'assert.equal(sequence.beats[0].portrait, "/assets/1122/memory-portrait/echo-bye.png");'
+          )
+          s = s.replace(
+              'assert.doesNotMatch(rendered, /memory-portrait-image/);',
+              'assert.match(rendered, /memory-portrait-image/);\n  assert.match(rendered, /assets\\/1122\\/memory-portrait\\/echo-bye\\.png/);'
           )
           p.write_text(s)
 
           p = Path('apps/html-prototype/tests/june24-chapter.test.ts')
           s = p.read_text()
           old = '"她", "我", "她", "我", "她", "我", "她", "我", "我", "她", "她", "我", "她", "我", "她", "我", "她", "她", "我", "她", "她", "我", "我", "她", "我", "她", "我", "她", "我", "我", "她", "我", "她", "我", "她", "我", "她", "我", "她", "我", "她", "我", "她", "我", "她", "她", "我", "她", "我", "我", "她"'
-          new = '"她", "我", "她", "我", "她", "我", "她", "我", "她", "她", "我", "她", "我", "她", "她", "我", "她", "我", "我", "她", "我", "她", "她", "我", "她", "我", "她", "她", "我", "我", "她", "我", "她", "我", "她", "我", "我", "她", "我", "她", "我", "她", "我", "她", "我", "她", "我", "她", "我", "她", "我", "她", "她", "我", "她", "我"'
+          new = '"她", "我", "她", "我", "她", "我", "她", "我", "她", "她", "我", "她", "我", "她", "她", "我", "她", "我", "我", "她", "我", "她", "她", "我", "她", "我", "她", "她", "我", "我", "她", "我", "她", "我", "她", "我", "我", "她", "我", "她", "我", "她", "我", "她", "我", "她", "我", "她", "我", "她", "我", "她", "她", "我", "她", "我", "她"'
           if old not in s:
               raise SystemExit('June24 stale speaker sequence not found')
           p.write_text(s.replace(old, new))
