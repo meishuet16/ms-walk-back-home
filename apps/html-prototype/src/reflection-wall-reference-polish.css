@@ -131,7 +131,7 @@
 .reflection-wall-look-controls {
   position: sticky;
   z-index: 1850;
-  bottom: calc(10px + env(safe-area-inset-bottom));
+  bottom: calc(10px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
   display: flex;
   justify-content: flex-end;
   gap: 7px;

@@ -95,6 +95,7 @@ import { drawSceneAsset } from "./systems/SceneAssetRenderer.js";
 import { imagesToPdf, mergePdfFiles, movePdfPage, optimizePdf, pdfOutputFilename, pdfToPngImages, removePdfPage, reorderOrExtractPdf, splitPdfPageGroups, type PdfSplitMode } from "./systems/PdfToolkit.js";
 import { mediaOutputFilename, processMediaFile } from "./systems/MediaToolkit.js";
 import { decodeMediaWaveform, waveformPeaksInView } from "./systems/MediaWaveform.js";
+import { isCapacitorAndroid, setNativeFullscreen } from "./systems/CapacitorBridge.js";
 import { createTrimTimeline, formatTimelineTime, parseTimelineTime, setPlayhead, setTrimBoundary, timeAtPixel, timelineKeyboardStep, visibleDuration, zoomTimeline, type TrimTimelineState, type WaveformPeak } from "./systems/WaveformModel.js";
 import { runAbortableStage } from "./systems/LocalJob.js";
 import { toolboxFieldChangeEffect } from "./systems/ToolboxInteraction.js";
@@ -491,6 +492,56 @@ export class WalkBackHomeApp {
       this.journalMediaObjectUrls.clear();
     });
     requestAnimationFrame((time) => this.loop(time));
+  }
+
+  public handleNativeBackButton(): boolean {
+    const capsuleDialogCancel = document.querySelector<HTMLElement>(".capsule-remove-dialog-backdrop [data-capsule-organizer-action='cancel-remove']");
+    if (capsuleDialogCancel) {
+      capsuleDialogCancel.click();
+      return true;
+    }
+    const capsuleClose = document.querySelector<HTMLElement>(".capsule-experience [data-capsule-action='close']");
+    if (capsuleClose) {
+      capsuleClose.click();
+      return true;
+    }
+    const journalDiscardCancel = this.overlay.querySelector<HTMLElement>(".journal-discard-confirmation [data-action='journal-discard-cancel']");
+    if (journalDiscardCancel) {
+      journalDiscardCancel.click();
+      return true;
+    }
+    if (this.isJournalEditorActive()) {
+      this.handleJournalEditorBack();
+      return true;
+    }
+    if (this.livingWindowPanelOpen) {
+      this.closeLivingWindow();
+      return true;
+    }
+    if (this.fullLyricsOpen) {
+      this.closeFullLyrics();
+      return true;
+    }
+    if (this.recordsPanelOpen) {
+      this.closeRecords();
+      return true;
+    }
+    if (this.toolboxOpen) {
+      const toolboxBack = this.overlay.querySelector<HTMLElement>('[data-action="toolbox-back"]');
+      if (toolboxBack) toolboxBack.click();
+      else this.closeToolbox();
+      return true;
+    }
+    const overlayClose = this.overlay.querySelector<HTMLElement>('[data-action="close"]');
+    if (overlayClose) {
+      overlayClose.click();
+      return true;
+    }
+    if (this.scene !== "title" && this.scene !== "forest") {
+      this.returnToForest();
+      return true;
+    }
+    return false;
   }
 
   private handleClick(event: Event): void {
@@ -9088,6 +9139,21 @@ export class WalkBackHomeApp {
   }
 
   private async toggleFullscreen(): Promise<void> {
+    if (isCapacitorAndroid()) {
+      const shell = this.root.querySelector<HTMLElement>(".game-shell");
+      if (!shell) {
+        this.showToast("Fullscreen unavailable here");
+        return;
+      }
+      try {
+        const enabled = !shell.classList.contains("native-fullscreen");
+        await setNativeFullscreen(shell, enabled);
+        this.showToast(enabled ? "Fullscreen on" : "Fullscreen off");
+      } catch {
+        this.showToast("Fullscreen unavailable here");
+      }
+      return;
+    }
     try {
       if (document.fullscreenElement) {
         await document.exitFullscreen?.();

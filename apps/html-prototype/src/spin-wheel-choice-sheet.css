@@ -103,7 +103,7 @@
 @keyframes spin-choice-sheet-in { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: none; } }
 
 @media (max-width: 700px) {
-  .spin-choice-sheet { position: fixed; inset: max(10px,env(safe-area-inset-top)) 10px max(10px,env(safe-area-inset-bottom)); max-width: 470px; margin-inline: auto; border-radius: 10px; }
+  .spin-choice-sheet { position: fixed; inset: max(10px,var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) 10px max(10px,var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))); max-width: 470px; margin-inline: auto; border-radius: 10px; }
   .spin-choice-sheet-header { padding: 13px 13px 11px; }
   .spin-choice-sheet-hint { padding: 9px 13px 3px; }
   .spin-editor-preset-hub { margin: 8px 12px 0; }

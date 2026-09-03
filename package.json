@@ -20,11 +20,20 @@
     "authored:check": "node scripts/authored-content.mjs --check",
     "verify": "npm run authored:check && npm run typecheck && npm test && npm run build && git diff --check",
     "hooks:install": "node scripts/install-hooks.mjs",
-    "safe-push": "node scripts/safe-push.mjs"
+    "safe-push": "node scripts/safe-push.mjs",
+    "android:sync": "npm run build && npx cap sync android",
+    "android:assets": "node scripts/verify-capacitor-assets.mjs",
+    "android:build": "npm run android:sync && npx cap build android"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.5.1",
     "@types/node": "^22.13.1",
     "typescript": "^5.7.3",
     "vitest": "^3.0.5"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.1",
+    "@capacitor/app": "8.1.1",
+    "@capacitor/core": "8.5.1"
   }
 }

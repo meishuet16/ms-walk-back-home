@@ -13,7 +13,7 @@
   top: 0;
   z-index: 8;
   min-height: 76px;
-  padding: max(10px, env(safe-area-inset-top)) 14px 10px;
+  padding: max(10px, var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) 14px 10px;
   border-bottom: 1px solid rgba(229, 199, 142, .22);
   background: rgba(8, 24, 39, .94);
   color: #f4e5c2;
@@ -246,7 +246,7 @@
 /* Exactly three tools: image, voice and video. No added editor capabilities. */
 .mobile-editor-toolbar {
   gap: 8px !important;
-  padding: 9px max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)) !important;
+  padding: 9px max(10px, var(--safe-area-inset-right, env(safe-area-inset-right, 0px))) max(10px, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))) max(10px, var(--safe-area-inset-left, env(safe-area-inset-left, 0px))) !important;
   border-top: 1px solid rgba(111, 76, 43, .2) !important;
   background: rgba(249, 240, 220, .96) !important;
   box-shadow: 0 -12px 30px rgba(39, 28, 18, .13) !important;
@@ -451,7 +451,7 @@
 
   .journal-modal.diary-editor .journal-sheet {
     width: calc(100% - 18px);
-    margin: 14px auto calc(104px + env(safe-area-inset-bottom));
+    margin: 14px auto calc(104px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
     border-radius: 5px 12px 12px 5px;
   }
 
@@ -492,7 +492,7 @@
     max-width: none !important;
     max-height: none !important;
     margin: 0 !important;
-    padding-bottom: max(34px, env(safe-area-inset-bottom)) !important;
+    padding-bottom: max(34px, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))) !important;
     overflow-x: hidden !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
@@ -502,7 +502,7 @@
     min-height: 0 !important;
     max-height: none !important;
     overflow: visible !important;
-    padding-bottom: max(64px, env(safe-area-inset-bottom)) !important;
+    padding-bottom: max(64px, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))) !important;
   }
 
   .monthly-reader .pdf-cover-preview {

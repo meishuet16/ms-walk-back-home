@@ -174,7 +174,8 @@
 
 #app .spin-wheel-tool .spin-wheel-canvas,
 #app[data-orientation="portrait"] .spin-wheel-tool .spin-wheel-canvas,
-.game-shell:fullscreen #app .spin-wheel-tool .spin-wheel-canvas {
+.game-shell:fullscreen #app .spin-wheel-tool .spin-wheel-canvas,
+.game-shell.native-fullscreen #app .spin-wheel-tool .spin-wheel-canvas {
   display: block;
   width: 100%;
   height: 100% !important;
@@ -388,7 +389,7 @@
     align-items: flex-start;
     justify-content: center;
     overflow-y: auto;
-    padding: max(8px, env(safe-area-inset-top)) 8px max(16px, env(safe-area-inset-bottom));
+    padding: max(8px, var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) 8px max(16px, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
   }
   .toolbox-panel:has(.spin-wheel-tool) {
     width: min(100%, 470px);

@@ -78,7 +78,7 @@
     max-width: none !important;
     max-height: none !important;
     margin: 0 !important;
-    padding-bottom: max(48px, env(safe-area-inset-bottom)) !important;
+    padding-bottom: max(48px, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))) !important;
     overflow-x: hidden !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
@@ -91,7 +91,7 @@
   }
 
   .monthly-books .book-shelf-section {
-    padding-bottom: max(88px, calc(env(safe-area-inset-bottom) + 48px)) !important;
+    padding-bottom: max(88px, calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) + 48px)) !important;
   }
 
   .journal-modal.diary-editor .journal-meta-card {
