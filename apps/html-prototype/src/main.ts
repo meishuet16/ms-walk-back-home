@@ -48,6 +48,7 @@ if (new URLSearchParams(window.location.search).get("debug") === "scene") {
   void new SceneDebugEditor(root).mount();
 } else {
   const app = new WalkBackHomeApp(root);
+  window.addEventListener("walk-back-home:cloud-authenticated", () => window.location.reload());
   initializeStoryRouteStartup(app);
   initializeStoryRouteFollowups(app);
   initializeStoryRouteLabisCompletion(app);
