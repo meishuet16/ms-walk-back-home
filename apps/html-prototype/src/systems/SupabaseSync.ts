@@ -1,3 +1,5 @@
+import { App } from "@capacitor/app";
+import { Capacitor, registerPlugin } from "@capacitor/core";
 import type { AppConfig } from "./AppConfig.js";
 import type { DiaryEntry, DiaryLibraryState, DiaryMedia, JourneyState, ReflectionWallState, RoomJourneyState } from "../types.js";
 import { mergeCanonicalAndPersonalDiaries } from "./DiaryLibrary.js";
@@ -24,7 +26,8 @@ type SupabaseQuery<T> = PromiseLike<{ error: unknown; data: T | null }>;
 type SupabaseClient = {
   auth: {
     getSession(): Promise<{ error: unknown; data: { session?: { user: SupabaseUser } | null } }>;
-    signInWithOAuth(input: { provider: "google"; options: { redirectTo: string } }): Promise<{ error: unknown }>;
+    signInWithOAuth(input: { provider: "google"; options: { redirectTo: string; skipBrowserRedirect?: boolean } }): Promise<{ error: unknown; data?: { url?: string | null } | null }>;
+    setSession(input: { access_token: string; refresh_token: string }): Promise<{ error: unknown }>;
     signOut(): Promise<{ error: unknown }>;
   };
   from(table: string): {
@@ -33,6 +36,28 @@ type SupabaseClient = {
     delete(): { eq(column: string, value: unknown): SupabaseQuery<unknown> };
   };
 };
+
+type ExternalBrowserPlugin = { open(input: { url: string }): Promise<void> };
+const ExternalBrowser = registerPlugin<ExternalBrowserPlugin>("ExternalBrowser");
+export const ANDROID_AUTH_REDIRECT = "com.meishuet16.walkbackhome://auth/callback";
+
+function isNativeAndroid(): boolean {
+  return Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
+}
+
+export function sessionTokensFromAuthUrl(url: string): { access_token: string; refresh_token: string } | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== "com.meishuet16.walkbackhome:" || parsed.host !== "auth" || parsed.pathname !== "/callback") return null;
+  const params = new URLSearchParams(parsed.hash.startsWith("#") ? parsed.hash.slice(1) : parsed.hash);
+  const accessToken = params.get("access_token");
+  const refreshToken = params.get("refresh_token");
+  return accessToken && refreshToken ? { access_token: accessToken, refresh_token: refreshToken } : null;
+}
 
 function sanitizeDiaryEntryForCloud(entry: DiaryEntry): DiaryEntry {
   if (!entry.media?.some((media) => media.type === "audio")) return entry;
@@ -58,7 +83,13 @@ export class SupabaseSync {
   private client: SupabaseClient | null = null;
   private loadClientPromise: Promise<SupabaseClient | null> | null = null;
 
-  constructor(private config: AppConfig) {}
+  constructor(private config: AppConfig) {
+    if (isNativeAndroid()) {
+      void App.addListener("appUrlOpen", ({ url }) => {
+        void this.acceptNativeAuthCallback(url).catch((error) => console.error("Supabase OAuth callback failed", error));
+      });
+    }
+  }
 
   isConfigured(): boolean {
     return this.config.authProvider === "supabase" && Boolean(this.config.supabaseUrl && this.config.supabaseAnonKey);
@@ -80,11 +111,29 @@ export class SupabaseSync {
 
   async signInWithGoogle(): Promise<void> {
     const client = await this.requireClient();
-    const { error } = await client.auth.signInWithOAuth({
+    const nativeAndroid = isNativeAndroid();
+    const { data, error } = await client.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: window.location.origin }
+      options: {
+        redirectTo: nativeAndroid ? ANDROID_AUTH_REDIRECT : window.location.origin,
+        ...(nativeAndroid ? { skipBrowserRedirect: true } : {})
+      }
     });
     if (error) throw error;
+    if (nativeAndroid) {
+      if (!data?.url) throw new Error("Supabase did not return an OAuth URL.");
+      await ExternalBrowser.open({ url: data.url });
+    }
+  }
+
+  async acceptNativeAuthCallback(url: string): Promise<boolean> {
+    const tokens = sessionTokensFromAuthUrl(url);
+    if (!tokens) return false;
+    const client = await this.requireClient();
+    const { error } = await client.auth.setSession(tokens);
+    if (error) throw error;
+    window.dispatchEvent(new CustomEvent("walk-back-home:cloud-authenticated"));
+    return true;
   }
 
   async signOut(): Promise<void> {
@@ -149,7 +198,7 @@ export class SupabaseSync {
     if (!window.supabase) await this.loadSupabaseScript();
     if (!window.supabase) throw new Error("Supabase client failed to load.");
     this.client = window.supabase.createClient(this.config.supabaseUrl, this.config.supabaseAnonKey, {
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: !isNativeAndroid() }
     });
     return this.client;
   }
@@ -158,6 +207,10 @@ export class SupabaseSync {
     return new Promise((resolve, reject) => {
       const existing = document.querySelector<HTMLScriptElement>('script[data-walk-supabase-client="true"]');
       if (existing) {
+        if (window.supabase) {
+          resolve();
+          return;
+        }
         existing.addEventListener("load", () => resolve(), { once: true });
         existing.addEventListener("error", () => reject(new Error("Supabase client failed to load.")), { once: true });
         return;
