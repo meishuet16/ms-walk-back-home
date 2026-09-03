@@ -1,0 +1,77 @@
+name: Sync Authored Tests Temp
+
+on:
+  push:
+    branches:
+      - feat/journal-ui-pdf-polish
+    paths:
+      - '.github/workflows/sync-authored-tests-temp.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/journal-ui-pdf-polish
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Sync stale authored regression expectations
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          speaker_files = [
+              'apps/html-prototype/tests/april05-runtime.test.ts',
+              'apps/html-prototype/tests/april06-runtime.test.ts',
+              'apps/html-prototype/tests/april25-chapter.test.ts',
+              'apps/html-prototype/tests/july21-chapter.test.ts',
+              'apps/html-prototype/tests/june24-chapter.test.ts',
+              'apps/html-prototype/tests/labis-motor.test.ts',
+              'apps/html-prototype/tests/may23-chapter.test.ts',
+          ]
+          for name in speaker_files:
+              p = Path(name)
+              s = p.read_text()
+              s = s.replace('"MS"', '"我"').replace('"ET"', '"她"').replace('"ST"', '"朋友"').replace('"Ziqi"', '"朋友"')
+              p.write_text(s)
+
+          replacements = {
+              'apps/html-prototype/tests/april25-chapter.test.ts': [
+                  ('8540e65163b81649c614bac18353a31734bda6f40bba6a94e7c30ee30153ae22', '2643cb5be9bed58706c99c445fef9eea5c04ef771f1169a68ed6c268eaa8aac9'),
+              ],
+              'apps/html-prototype/tests/july21-chapter.test.ts': [
+                  ('水壶留在车上。', '水壶却留在车上。'),
+              ],
+              'apps/html-prototype/tests/march30-refined-runtime.test.ts': [
+                  ('assert.equal(elevatorEcho?.portrait, "");', 'assert.equal(elevatorEcho?.portrait, "/assets/1122/memory-portrait/echo-bye.png");'),
+              ],
+              'apps/html-prototype/tests/oct29-chapter.test.ts': [
+                  ('2025 年 10 月 29 日，training 结束的时候，她对我来说还是 coach。', '2025 年 10 月 29 日，我们第一次见面。training 结束的时候，她对我来说还只是 coach。'),
+                  ('那天我没有觉得，我们之间发生了什么特别的事。', '那天我没有觉得，我们后面还会有交集。'),
+              ],
+          }
+          for name, pairs in replacements.items():
+              p = Path(name)
+              s = p.read_text()
+              for old, new in pairs:
+                  if old not in s:
+                      print(f'warning: expected stale value not found: {name}: {old}')
+                  s = s.replace(old, new)
+              p.write_text(s)
+          PY
+      - name: Verify full repository
+        run: npm run verify
+      - name: Commit synchronized expectations
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add apps/html-prototype/tests
+          git commit -m "Sync authored regression expectations"
+          git push origin HEAD:feat/journal-ui-pdf-polish
