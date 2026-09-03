@@ -30,6 +30,7 @@ import { createBackupBundle, parseBackupBundle, restoreBackupBlobEntries, walkBa
 import { JournalMediaBlobStore } from "./systems/JournalMediaBlobStore.js";
 import { collectReferencedJournalMediaKeys, commitPendingJournalAudio, journalMediaTempKey, makeJournalAudioMedia, type PendingJournalAudio } from "./systems/JournalMedia.js";
 import { JournalAudioRecorder } from "./systems/JournalAudioRecorder.js";
+import { exportBlob, nativeExportStatus } from "./systems/BlobExport.js";
 import { MusicBlobStore } from "./systems/MusicBlobStore.js";
 import { ParticleSystem } from "./systems/ParticleSystem.js";
 import { BundledLyricsLoader, trackIdentity } from "./systems/BundledLyrics.js";
@@ -1676,14 +1677,20 @@ export class WalkBackHomeApp {
       });
       if (controller.signal.aborted) return;
       if (result.images) {
-        result.images.forEach((image, index) => this.downloadLocalBlob(image, pdfOutputFilename(files[0].name, "page-" + (index + 1)).replace(/\.pdf$/, ".png")));
-        this.pdfStatus = "Saved " + result.images.length + " local page image" + (result.images.length === 1 ? "" : "s");
+        let native = false;
+        for (const [index, image] of result.images.entries()) {
+          native = (await exportBlob(image, pdfOutputFilename(files[0].name, "page-" + (index + 1)).replace(/\.pdf$/, ".png"))).native || native;
+        }
+        this.pdfStatus = native ? nativeExportStatus(result.images.length === 1 ? "page image" : "page images") : "Saved " + result.images.length + " local page image" + (result.images.length === 1 ? "" : "s");
       } else if (result.bytesList && result.filenames) {
-        result.bytesList.forEach((output, index) => this.downloadLocalBlob(new Blob([output.buffer as ArrayBuffer], { type: "application/pdf" }), result.filenames![index]));
-        this.pdfStatus = result.detail || `Saved ${result.bytesList.length} local PDFs`;
+        let native = false;
+        for (const [index, output] of result.bytesList.entries()) {
+          native = (await exportBlob(new Blob([output.buffer as ArrayBuffer], { type: "application/pdf" }), result.filenames[index])).native || native;
+        }
+        this.pdfStatus = native ? nativeExportStatus(result.bytesList.length === 1 ? result.filenames[0] : `${result.bytesList.length} PDFs`) : result.detail || `Saved ${result.bytesList.length} local PDFs`;
       } else if (result.bytes && result.filename) {
-        this.downloadLocalBlob(new Blob([result.bytes.buffer as ArrayBuffer], { type: "application/pdf" }), result.filename);
-        this.pdfStatus = result.detail || "Saved locally as " + result.filename;
+        const exported = await exportBlob(new Blob([result.bytes.buffer as ArrayBuffer], { type: "application/pdf" }), result.filename);
+        this.pdfStatus = exported.native ? nativeExportStatus(result.filename) : result.detail || "Saved locally as " + result.filename;
       } else {
         throw new Error("PDF processing produced no output");
       }
@@ -1948,9 +1955,9 @@ export class WalkBackHomeApp {
         onProgress: (progress) => { this.mediaProgress = progress; this.mediaStatus = progress > 0 ? "Exporting locally... " + Math.round(progress * 100) + "%" : this.mediaStatus; this.refreshToolboxMediaProgress(); }
       });
       const filename = mediaOutputFilename(file.name, mode === "extract-audio" ? "audio" : "trimmed", result.extension);
-      this.downloadLocalBlob(result.blob, filename);
+      const exported = await exportBlob(result.blob, filename);
       this.mediaProgress = 1;
-      this.mediaStatus = "Saved locally as " + filename;
+      this.mediaStatus = exported.native ? nativeExportStatus(filename) : "Saved locally as " + filename;
     } catch (error) {
       if (this.mediaAbortController !== controller) return;
       this.mediaStatus = controller.signal.aborted ? "Media processing cancelled" : error instanceof Error ? error.message : "Media processing failed";
@@ -1967,15 +1974,6 @@ export class WalkBackHomeApp {
     if (progress) progress.value = this.mediaProgress;
     const status = this.overlay.querySelector<HTMLElement>(".media-tool .toolbox-status");
     if (status) status.textContent = this.mediaStatus;
-  }
-
-  private downloadLocalBlob(blob: Blob, filename: string): void {
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = filename;
-    anchor.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   private timerDurationFromPanel(): number {
@@ -5870,15 +5868,15 @@ export class WalkBackHomeApp {
   private async exportMonthlyPdf(monthKey: string): Promise<void> {
     const month = this.currentBooksMonth(monthKey);
     this.showToast("Exporting monthly PDF...");
-    const pages = await this.renderMonthlyPdfPages(month);
-    const blob = makeMonthlyJournalImagePdf(month, pages);
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = monthlyPdfFilename(month.key);
-    anchor.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    this.showToast(`Exported ${anchor.download}`);
+    try {
+      const pages = await this.renderMonthlyPdfPages(month);
+      const filename = monthlyPdfFilename(month.key);
+      const blob = makeMonthlyJournalImagePdf(month, pages);
+      const exported = await exportBlob(blob, filename);
+      this.showToast(exported.native ? nativeExportStatus(filename) : `Exported ${filename}`);
+    } catch (error) {
+      this.showToast(`PDF export failed · ${this.errorMessage(error)}`);
+    }
   }
 
   private showMap(): void {
@@ -8948,24 +8946,24 @@ export class WalkBackHomeApp {
   }
 
   private async downloadBackup(): Promise<void> {
-    const blobs = await this.backupBlobEntries();
-    const bundle = createBackupBundle({
-      diaryLibrary: this.makeDiaryLibrary(),
-      journey: this.makeJourney(),
-      reflectionWall: this.reflectionWall,
-      musicLibrary: this.musicLibrary,
-      personalPlayer: this.personalPlayer,
-      miniGamesState: this.miniGamesState,
-      blobs
-    });
-    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = walkBackupFilename();
-    anchor.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    this.showToast(`Backup downloaded · ${blobs.length} media item${blobs.length === 1 ? "" : "s"}`);
+    try {
+      const blobs = await this.backupBlobEntries();
+      const bundle = createBackupBundle({
+        diaryLibrary: this.makeDiaryLibrary(),
+        journey: this.makeJourney(),
+        reflectionWall: this.reflectionWall,
+        musicLibrary: this.musicLibrary,
+        personalPlayer: this.personalPlayer,
+        miniGamesState: this.miniGamesState,
+        blobs
+      });
+      const filename = walkBackupFilename();
+      const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
+      const exported = await exportBlob(blob, filename);
+      this.showToast(exported.native ? nativeExportStatus(filename) : `Backup downloaded · ${blobs.length} media item${blobs.length === 1 ? "" : "s"}`);
+    } catch (error) {
+      this.showToast(`Backup export failed · ${this.errorMessage(error)}`);
+    }
   }
 
   private async backupBlobEntries(): Promise<BackupBlobEntry[]> {
