@@ -2,8 +2,7 @@
 
 > **What if your diary was not something you read, but somewhere you could return to?**
 
-**Walk Back Home** is a personal memory RPG about walking through a life that
-has already happened.
+**Walk Back Home** is a personal memory RPG about walking through a life that has already happened.
 
 Every diary entry can become a place.
 
@@ -27,9 +26,7 @@ And here, remembering means being able to walk back in.
 
 You play as **Muji** — a small companion carrying the memories you left behind.
 
-Muji walks through places created from past diary entries, finding traces of
-people, conversations, objects, weather, music, and moments that once existed
-there.
+Muji walks through places created from past diary entries, finding traces of people, conversations, objects, weather, music, and moments that once existed there.
 
 Sometimes nothing happens at first.
 
@@ -92,8 +89,7 @@ A song that happened to be playing.
 
 A joke that was funny for approximately seven seconds.
 
-A room that looked completely normal until one day you realized you would
-never see it in quite the same way again.
+A room that looked completely normal until one day you realized you would never see it in quite the same way again.
 
 Not every memory needs to become a tragedy.
 
@@ -122,9 +118,7 @@ Objects become memory triggers.<br>
 Conversations return.<br>
 Smaller details survive as echoes.
 
-Muji can walk through these spaces, approach meaningful objects, trigger
-reenactments, listen to conversations, discover smaller traces, and eventually
-leave with a reflection.
+Muji can walk through these spaces, approach meaningful objects, trigger reenactments, listen to conversations, discover smaller traces, and eventually leave with a reflection.
 
 The world is not trying to determine the one correct meaning of a memory.
 
@@ -142,13 +136,11 @@ Together, they form a growing map of a life.
 
 Some days become full playable chapters.
 
-Some survive only as a small interaction, an object, a sentence, a song, or a
-place you can stand in for a while.
+Some survive only as a small interaction, an object, a sentence, a song, or a place you can stand in for a while.
 
 New memories slowly extend the world.
 
-The result should feel less like opening an archive and more like wandering
-through somewhere strangely familiar.
+The result should feel less like opening an archive and more like wandering through somewhere strangely familiar.
 
 You know these places.
 
@@ -168,22 +160,19 @@ There is also somewhere to return to.
 
 The Journal keeps the original days behind the playable memories.
 
-Before a memory became a scene, it was simply something that happened and was
-written down.
+Before a memory became a scene, it was simply something that happened and was written down.
 
 ### 🎵 Records
 
 Some memories come with music whether you asked them to or not.
 
-Records keeps songs connected to the life around them instead of turning them
-into detached background audio.
+Records keeps songs connected to the life around them instead of turning them into detached background audio.
 
 ### 🏠 Muji Room
 
 Muji has somewhere to exist between journeys.
 
-A small present-tense room where the game is allowed to continue even when
-nobody is replaying the past.
+A small present-tense room where the game is allowed to continue even when nobody is replaying the past.
 
 ### 🪞 Reflection Wall
 
@@ -245,8 +234,7 @@ A sentence you are no longer completely sure was said exactly that way.
 
 The distance between two people.
 
-Something tiny that should have disappeared with the rest of the day, but
-didn't.
+Something tiny that should have disappeared with the rest of the day, but didn't.
 
 Walk Back Home is an experiment in giving those memories space again.
 
@@ -270,11 +258,9 @@ Some become vague.
 
 Some disappear completely.
 
-People's intentions are not rewritten simply because the player wants an
-answer.
+People's intentions are not rewritten simply because the player wants an answer.
 
-If a memory never explained itself in real life, the game does not need to
-solve it either.
+If a memory never explained itself in real life, the game does not need to solve it either.
 
 The past can return without becoming clearer.
 
@@ -305,22 +291,19 @@ Old cars.
 
 Ceiling fans.
 
-Rain that appears out of nowhere five minutes after the sky looked completely
-fine.
+Rain that appears out of nowhere five minutes after the sky looked completely fine.
 
 The emotional rhythm can be quiet and nostalgic.
 
 The world itself should still feel like home.
 
-Walk Back Home is not interested in sanding away where these memories came
-from just to make them look like somebody else's nostalgia.
+Walk Back Home is not interested in sanding away where these memories came from just to make them look like somebody else's nostalgia.
 
 ---
 
 ## 🎮 What it actually is
 
-At its core, Walk Back Home turns diary material into **playable memory
-chapters**.
+At its core, Walk Back Home turns diary material into **playable memory chapters**.
 
 A chapter may contain:
 
@@ -351,7 +334,7 @@ If you came here for the feelings, you can stop before this part.
 
 If you came here because the feelings somehow need TypeScript, welcome. 😭
 
-Walk Back Home is currently developed as a browser-based TypeScript game.
+Walk Back Home is developed as a browser-based TypeScript game and packaged for Android with Capacitor.
 
 The canonical application lives in:
 
@@ -359,10 +342,7 @@ The canonical application lives in:
 apps/html-prototype
 ```
 
-The current application includes playable memory chapters, landscape and
-portrait scene layouts, Journal, Records, Muji Room, Reflection Wall, Living
-Window, Muji Toolbox, optional private Supabase sync, and internal
-scene-authoring/debug tools.
+The current application includes playable authored memory chapters, landscape and portrait scene layouts, Journal, Records, Muji Room, Reflection Wall, Living Window, Muji Toolbox, optional private Supabase sync, and internal scene-authoring/debug tools.
 
 ---
 
@@ -371,6 +351,7 @@ scene-authoring/debug tools.
 ```text
 apps/html-prototype/   Canonical Walk Back Home application
 packages/shared/       Active shared schemas and tested contracts
+android/               Capacitor Android project
 docs/                  Design and implementation history
 supabase/              Repository-level Supabase configuration
 ```
@@ -390,36 +371,76 @@ npm run dev
 <details>
 <summary><strong>Verification</strong></summary>
 
+The repository-level verification command checks authored expectations, TypeScript, tests, production build output, and whitespace errors:
+
+```bash
+npm run verify
+```
+
+You can also run the individual steps:
+
 ```bash
 npm run typecheck
 npm test
 npm run build
 ```
 
-The production HTML build is expected to be generated into:
+The production HTML build is generated into:
 
 ```text
 apps/html-prototype/dist
 ```
+
+Build output is regenerated from the canonical runtime sources so removed artifacts do not silently survive in `dist`.
+
+</details>
+
+<details>
+<summary><strong>Android build</strong></summary>
+
+The Android project uses Capacitor with application ID:
+
+```text
+com.meishuet16.walkbackhome
+```
+
+Sync the latest web build and verify the required offline assets:
+
+```bash
+npm run android:sync
+npm run android:assets
+```
+
+Then build the Android debug APK from `android/`:
+
+```bash
+./gradlew :app:assembleDebug
+```
+
+On Windows PowerShell:
+
+```powershell
+.\gradlew.bat :app:assembleDebug
+```
+
+The debug APK is generated at:
+
+```text
+android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+The Android package bundles its runtime web assets locally, so the current app can launch and load its authored content without fetching the game itself from Vercel.
 
 </details>
 
 <details>
 <summary><strong>Deployment & private data</strong></summary>
 
-Vercel should use `apps/html-prototype` as the project root. The checked-in
-configuration uses `npm run build` and serves the static output from `dist`.
+Vercel should use `apps/html-prototype` as the project root. The checked-in configuration uses `npm run build` and serves the static output from `dist`.
 
-Local/fixture mode is the default, and no paid API or service is required for
-local development. Private specifications under `.private-spec/`, real diary
-entries, uploads, generated memory graphs, embeddings, scene caches, private
-media, and logs containing personal content are runtime data and must not be
-committed.
+Local/fixture mode is the default, and no paid API or service is required for local development. Private specifications under `.private-spec/`, real diary entries, uploads, generated memory graphs, embeddings, scene caches, private media, and logs containing personal content are runtime data and must not be committed.
 
-Optional private sync uses Supabase only when the explicit auth provider and
-Supabase environment variables are configured. It syncs private JSON data;
-imported Records audio and covers remain on the local device. Never place
-service-role or admin secrets in the frontend.
+Optional private sync uses Supabase only when the explicit auth provider and Supabase environment variables are configured. It syncs private JSON data; imported Records audio and covers remain on the local device. Never place service-role or admin secrets in the frontend.
 
 </details>
 
@@ -427,12 +448,24 @@ service-role or admin secrets in the frontend.
 
 ## 🌱 Status
 
-Walk Back Home is still growing.
+### v0.1 — current milestone
 
-The systems are real.<br>
-The chapters are playable.<br>
-The world is unfinished.
+The first complete Walk Back Home milestone is now playable across its main browser and Android paths.
 
-There are more days than there are chapters.
+The core systems are implemented.<br>
+Authored memory chapters are playable.<br>
+The Memory Forest and present-tense spaces are connected.<br>
+The Android package can bundle and run the current authored experience offline.<br>
+Build, CI, deployment, and Android packaging have all been validated for this milestone.
 
-**For now, Muji keeps walking.**
+This does **not** mean the memory world is finished forever.
+
+There are still more days than there are chapters, and future memories can continue extending the world.
+
+But v0.1 no longer represents an unfinished prototype waiting to become real.
+
+It is a complete first version of the idea:
+
+> **A diary you can walk back into.**
+
+**For now, Muji made it home.**
