@@ -9,6 +9,7 @@ const repoRoot = resolve(process.cwd(), "..", "..");
 test("Android manifest declares microphone permission for WebView audio capture", () => {
   const manifest = readFileSync(resolve(repoRoot, "android", "app", "src", "main", "AndroidManifest.xml"), "utf8");
   assert.match(manifest, /android\.permission\.RECORD_AUDIO/);
+  assert.match(manifest, /android\.permission\.MODIFY_AUDIO_SETTINGS/);
 });
 
 test("native Blob export completes the native handoff before reporting ready-to-save", async () => {
