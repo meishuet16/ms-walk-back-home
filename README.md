@@ -196,11 +196,19 @@ The moon is doing moon things.
 
 The Living Window keeps Muji's room connected to that present.
 
+### 🎰 Capsule Machine
+
+Sometimes the present needs a little randomness.
+
+The Capsule Machine turns small prompts, choices, and curiosities into something you can physically draw from the world. Some capsules are opened and forgotten. Some are kept.
+
+Not every interaction needs to become a memory chapter. Some can simply become part of living with Muji now.
+
 ### 🧰 Muji Toolbox
 
 And sometimes a tool can just be a tool.
 
-PDFs. Media. A spin wheel. Small local utilities.
+PDFs. Media. A spin wheel. Small local utilities. Tiny things that are useful, playful, or both.
 
 **Not every part of life needs to become lore.**
 
