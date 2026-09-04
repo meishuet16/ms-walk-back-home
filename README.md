@@ -22,6 +22,79 @@ And here, remembering means being able to walk back in.
 
 ---
 
+## ▶ Play the live demo
+
+<p align="center">
+  <a href="https://ms-walk-back-home.vercel.app"><strong>Open Walk Back Home in your browser →</strong></a>
+</p>
+
+<p align="center">
+  <img src="docs/Screenshot_20260905_010730.jpg" alt="Walk Back Home title screen" width="380" />
+</p>
+
+The browser demo is playable on desktop and mobile. Sound on is recommended.
+
+### How the experience flows
+
+```text
+Open Walk Back Home
+        ↓
+Choose a way home
+Story Route / Memory Forest / Muji Room
+        ↓
+Choose a chapter or a day
+        ↓
+Enter the memory as Muji
+        ↓
+Walk around and notice what is still there
+objects · people · music · echoes · places
+        ↓
+Trigger the authored memory
+        ↓
+Watch the past happen as it happened
+        ↓
+Leave a reflection
+        ↓
+Return to the present
+```
+
+You can choose what Muji notices, where Muji lingers, and what reflection remains afterward. **You cannot rewrite what happened.**
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/Screenshot_20260905_010735.jpg" alt="Choose a way home" width="250" /><br><sub><b>Choose a way home</b></sub></td>
+    <td align="center"><img src="docs/Screenshot_20260905_010757.jpg" alt="The Story chapter route" width="250" /><br><sub><b>Follow an authored story route</b></sub></td>
+    <td align="center"><img src="docs/IMG_20260905_011228.jpg" alt="Memory Forest" width="250" /><br><sub><b>Or wander through the Memory Forest</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/Screenshot_20260905_010847.jpg" alt="Exploring a memory" width="250" /><br><sub><b>Explore the place</b></sub></td>
+    <td align="center"><img src="docs/Screenshot_20260905_010918.jpg" alt="Memory dialogue reenactment" width="250" /><br><sub><b>Let the memory return</b></sub></td>
+    <td align="center"><img src="docs/Screenshot_20260905_011121.jpg" alt="Reflection Wall" width="250" /><br><sub><b>Carry something home</b></sub></td>
+  </tr>
+</table>
+
+<details>
+<summary><strong>More from the present-tense side of Walk Back Home</strong></summary>
+
+<br>
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/Screenshot_20260905_010810.jpg" alt="Record Corner" width="230" /><br><sub>Record Corner</sub></td>
+    <td align="center"><img src="docs/Screenshot_20260905_011025.jpg" alt="Muji Capsule" width="230" /><br><sub>Muji Capsule</sub></td>
+    <td align="center"><img src="docs/IMG_20260905_011203.jpg" alt="Journal" width="230" /><br><sub>Journal</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/IMG_20260905_011421.jpg" alt="Muji Toolbox" width="230" /><br><sub>Muji Toolbox</sub></td>
+    <td align="center"><img src="docs/IMG_20260905_011432.jpg" alt="Mini Games" width="230" /><br><sub>Mini Games</sub></td>
+    <td align="center"><img src="docs/IMG_20260905_011215.jpg" alt="Journal editor" width="230" /><br><sub>Write the next day</sub></td>
+  </tr>
+</table>
+
+</details>
+
+---
+
 ## 🐾 You don't play as yourself
 
 You play as **Muji** — a small companion carrying the memories you left behind.
