@@ -29,7 +29,7 @@ And here, remembering means being able to walk back in.
 </p>
 
 <p align="center">
-  <img src="docs/Screenshot_20260905_010730.jpg" alt="Walk Back Home title screen" width="380" />
+  <img src="docs/IMG_20260905_011203.jpg" alt="Walk Back Home title screen" width="380" />
 </p>
 
 The browser demo is playable on desktop and mobile. Sound on is recommended.
@@ -62,14 +62,14 @@ You can choose what Muji notices, where Muji lingers, and what reflection remain
 
 <table>
   <tr>
-    <td align="center"><img src="docs/Screenshot_20260905_010735.jpg" alt="Choose a way home" width="250" /><br><sub><b>Choose a way home</b></sub></td>
-    <td align="center"><img src="docs/Screenshot_20260905_010757.jpg" alt="The Story chapter route" width="250" /><br><sub><b>Follow an authored story route</b></sub></td>
-    <td align="center"><img src="docs/IMG_20260905_011228.jpg" alt="Memory Forest" width="250" /><br><sub><b>Or wander through the Memory Forest</b></sub></td>
+    <td align="center"><img src="docs/IMG_20260905_011215.jpg" alt="Choose a way home" width="250" /><br><sub><b>Choose a way home</b></sub></td>
+    <td align="center"><img src="docs/IMG_20260905_011228.jpg" alt="The Story chapter route" width="250" /><br><sub><b>Follow an authored story route</b></sub></td>
+    <td align="center"><img src="docs/Screenshot_20260905_011121.jpg" alt="Memory Forest" width="250" /><br><sub><b>Or wander through the Memory Forest</b></sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/Screenshot_20260905_010847.jpg" alt="Exploring a memory" width="250" /><br><sub><b>Explore the place</b></sub></td>
-    <td align="center"><img src="docs/Screenshot_20260905_010918.jpg" alt="Memory dialogue reenactment" width="250" /><br><sub><b>Let the memory return</b></sub></td>
-    <td align="center"><img src="docs/Screenshot_20260905_011121.jpg" alt="Reflection Wall" width="250" /><br><sub><b>Carry something home</b></sub></td>
+    <td align="center"><img src="docs/Screenshot_20260905_010757.jpg" alt="Exploring a memory" width="250" /><br><sub><b>Explore the place</b></sub></td>
+    <td align="center"><img src="docs/Screenshot_20260905_010810.jpg" alt="Memory dialogue reenactment" width="250" /><br><sub><b>Let the memory return</b></sub></td>
+    <td align="center"><img src="docs/Screenshot_20260905_010918.jpg" alt="Reflection Wall" width="250" /><br><sub><b>Carry something home</b></sub></td>
   </tr>
 </table>
 
@@ -80,14 +80,14 @@ You can choose what Muji notices, where Muji lingers, and what reflection remain
 
 <table>
   <tr>
-    <td align="center"><img src="docs/Screenshot_20260905_010810.jpg" alt="Record Corner" width="230" /><br><sub>Record Corner</sub></td>
-    <td align="center"><img src="docs/Screenshot_20260905_011025.jpg" alt="Muji Capsule" width="230" /><br><sub>Muji Capsule</sub></td>
-    <td align="center"><img src="docs/IMG_20260905_011203.jpg" alt="Journal" width="230" /><br><sub>Journal</sub></td>
+    <td align="center"><img src="docs/Screenshot_20260905_010730.jpg" alt="Record Corner" width="230" /><br><sub>Record Corner</sub></td>
+    <td align="center"><img src="docs/Screenshot_20260905_010847.jpg" alt="Muji Capsule" width="230" /><br><sub>Muji Capsule</sub></td>
+    <td align="center"><img src="docs/Screenshot_20260905_011025.jpg" alt="Journal editor" width="230" /><br><sub>Journal editor</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/IMG_20260905_011421.jpg" alt="Muji Toolbox" width="230" /><br><sub>Muji Toolbox</sub></td>
-    <td align="center"><img src="docs/IMG_20260905_011432.jpg" alt="Mini Games" width="230" /><br><sub>Mini Games</sub></td>
-    <td align="center"><img src="docs/IMG_20260905_011215.jpg" alt="Journal editor" width="230" /><br><sub>Write the next day</sub></td>
+    <td align="center"><img src="docs/IMG_20260905_011432.jpg" alt="Muji Toolbox" width="230" /><br><sub>Muji Toolbox</sub></td>
+    <td align="center"><img src="docs/IMG_20260905_011421.jpg" alt="Mini Games" width="230" /><br><sub>Mini Games</sub></td>
+    <td align="center"><img src="docs/Screenshot_20260905_010735.jpg" alt="Final Dream in the Memory Forest" width="230" /><br><sub>Final Dream</sub></td>
   </tr>
 </table>
 
