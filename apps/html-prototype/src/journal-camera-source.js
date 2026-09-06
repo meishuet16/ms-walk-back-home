@@ -1,7 +1,6 @@
 (() => {
   const MENU_ID = "journal-image-source-menu";
   const CAMERA_INPUT_ID = "journal-camera-input";
-  const GALLERY_TEMP_ID = "diary-mobile-media-input-gallery";
 
   const ensureStyle = () => {
     if (document.getElementById("journal-image-source-style")) return;
@@ -49,10 +48,10 @@
 
   const closeMenu = () => document.getElementById(MENU_ID)?.remove();
 
-  const galleryInput = () => document.querySelector("#diary-mobile-media-input, #diary-mobile-media-input-gallery");
+  const journalMediaInput = () => document.querySelector("#diary-mobile-media-input");
 
   const openGallery = () => {
-    const input = galleryInput();
+    const input = journalMediaInput();
     if (!(input instanceof HTMLInputElement)) return;
     const previousAccept = input.accept;
     input.accept = "image/*";
@@ -76,26 +75,36 @@
     return input;
   };
 
+  const forwardCapturedPhoto = (camera) => {
+    const file = camera.files?.[0];
+    const original = journalMediaInput();
+    if (!file || !(original instanceof HTMLInputElement)) return;
+
+    try {
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      original.files = transfer.files;
+      original.dispatchEvent(new Event("change", { bubbles: true }));
+    } catch {
+      // Some WebViews can reject assigning FileList. In that case temporarily
+      // reuse the Journal input identity and bubble the camera change through
+      // the same document-level change handler used by gallery selection.
+      const originalId = original.id;
+      original.id = `${originalId}-gallery`;
+      camera.id = originalId;
+      camera.dispatchEvent(new Event("change", { bubbles: true }));
+      camera.id = CAMERA_INPUT_ID;
+      original.id = originalId;
+    }
+  };
+
   const openCamera = () => {
-    const original = document.querySelector("#diary-mobile-media-input");
+    const original = journalMediaInput();
     const camera = ensureCameraInput();
     if (!(original instanceof HTMLInputElement)) return;
 
-    original.id = GALLERY_TEMP_ID;
-    camera.id = "diary-mobile-media-input";
     camera.value = "";
-
-    const restoreIds = () => {
-      window.setTimeout(() => {
-        if (camera.id === "diary-mobile-media-input") camera.id = CAMERA_INPUT_ID;
-        if (original.isConnected && original.id === GALLERY_TEMP_ID) original.id = "diary-mobile-media-input";
-      }, 0);
-    };
-
-    camera.addEventListener("change", restoreIds, { once: true });
-    window.addEventListener("focus", () => {
-      if (!camera.files?.length) restoreIds();
-    }, { once: true });
+    camera.onchange = () => forwardCapturedPhoto(camera);
     camera.click();
   };
 
