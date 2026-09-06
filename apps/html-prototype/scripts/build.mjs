@@ -56,7 +56,8 @@ for (const file of [
   "journal-ui-polish.css",
   "journal-ui-refine.css",
   "journal-delete-position-hotfix.css",
-  "journal-mobile-layout-hotfix.css"
+  "journal-mobile-layout-hotfix.css",
+  "journal-camera-source.js"
 ]) {
   await copyFile(resolve(root, `src/${file}`), resolve(root, `dist/${file}`));
 }
