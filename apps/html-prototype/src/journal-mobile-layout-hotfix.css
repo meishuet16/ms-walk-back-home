@@ -1,0 +1,61 @@
+/* Mobile-only Journal layout correction.
+   Keep this narrowly scoped to the shared Journal header/month navigator so
+   Timeline, Books and Reader retain their existing desktop/layout behavior. */
+@media (max-width: 760px) {
+  .journal-panel .journal-archive-header {
+    grid-template-columns: minmax(0, 1fr) 42px !important;
+    gap: 8px 10px !important;
+    margin: calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) * -1) -18px 8px !important;
+    padding: calc(9px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) 18px 9px !important;
+  }
+
+  .journal-panel .journal-archive-header h2 {
+    margin: 0 !important;
+    font-size: clamp(30px, 8.6vw, 36px) !important;
+    line-height: 1.02 !important;
+  }
+
+  .journal-panel .journal-archive-header p {
+    margin: 3px 0 0 !important;
+    font-size: clamp(16px, 4.7vw, 20px) !important;
+    line-height: 1.15 !important;
+  }
+
+  .journal-panel .journal-close-button {
+    width: 42px !important;
+    min-width: 42px !important;
+    height: 42px !important;
+    min-height: 42px !important;
+  }
+
+  .journal-panel .journal-tabs {
+    grid-column: 1 / -1 !important;
+    gap: 6px !important;
+  }
+
+  .journal-panel .journal-tabs button {
+    min-height: 42px !important;
+    padding: 6px 8px !important;
+    font-size: 14px !important;
+    line-height: 1.12 !important;
+  }
+
+  .journal-panel .month-nav {
+    margin: 8px 0 10px !important;
+  }
+
+  .journal-panel .month-nav:not(.timeline-month-nav) {
+    grid-template-columns: 38px minmax(0, 1fr) 38px !important;
+  }
+
+  .journal-panel .timeline-month-nav {
+    grid-template-columns: 38px minmax(0, 1fr) minmax(92px, auto) 38px !important;
+  }
+
+  .journal-panel .month-nav strong {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+}
