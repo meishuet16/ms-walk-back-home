@@ -44,7 +44,7 @@
   };
 
   const capsuleShell = () => document.querySelector(".capsule-experience");
-  const capsuleMediaInput = () => capsuleShell()?.querySelector("input[data-capsule-file]:not([data-capsule-camera-file])");
+  const capsuleMediaInput = () => capsuleShell()?.querySelector("input[data-capsule-file]:not([data-capsule-capture-file])");
 
   const openGallery = () => {
     const input = capsuleMediaInput();
@@ -52,23 +52,23 @@
     input.click();
   };
 
-  const openCamera = () => {
+  const openCapture = (kind) => {
     const shell = capsuleShell();
     if (!(shell instanceof HTMLElement)) return;
 
-    shell.querySelector("input[data-capsule-camera-file]")?.remove();
-    const camera = document.createElement("input");
-    camera.type = "file";
-    camera.accept = "image/*";
-    camera.setAttribute("capture", "environment");
-    camera.setAttribute("data-capsule-file", "");
-    camera.setAttribute("data-capsule-camera-file", "");
-    camera.hidden = true;
-    camera.addEventListener("change", () => {
-      window.setTimeout(() => camera.remove(), 0);
+    shell.querySelector("input[data-capsule-capture-file]")?.remove();
+    const capture = document.createElement("input");
+    capture.type = "file";
+    capture.accept = kind === "video" ? "video/*" : "image/*";
+    capture.setAttribute("capture", "environment");
+    capture.setAttribute("data-capsule-file", "");
+    capture.setAttribute("data-capsule-capture-file", kind);
+    capture.hidden = true;
+    capture.addEventListener("change", () => {
+      window.setTimeout(() => capture.remove(), 0);
     }, { once: true });
-    shell.appendChild(camera);
-    camera.click();
+    shell.appendChild(capture);
+    capture.click();
   };
 
   const showMenu = (anchor) => {
@@ -80,15 +80,16 @@
     menu.setAttribute("aria-label", "Choose capsule media source");
     menu.innerHTML = `
       <button type="button" data-capsule-media-source="gallery" role="menuitem"><span class="capsule-media-source-icon">▧</span>Choose from Gallery</button>
-      <button type="button" data-capsule-media-source="camera" role="menuitem"><span class="capsule-media-source-icon">📷</span>Take Photo</button>
+      <button type="button" data-capsule-media-source="photo" role="menuitem"><span class="capsule-media-source-icon">📷</span>Take Photo</button>
+      <button type="button" data-capsule-media-source="video" role="menuitem"><span class="capsule-media-source-icon">🎥</span>Record Video</button>
     `;
     document.body.appendChild(menu);
 
     const rect = anchor.getBoundingClientRect();
     const menuWidth = Math.min(230, window.innerWidth - 28);
     const left = Math.max(14, Math.min(window.innerWidth - menuWidth - 14, rect.left));
-    const preferredTop = rect.top - 116;
-    const top = preferredTop >= 14 ? preferredTop : Math.min(window.innerHeight - 130, rect.bottom + 8);
+    const preferredTop = rect.top - 170;
+    const top = preferredTop >= 14 ? preferredTop : Math.min(window.innerHeight - 184, rect.bottom + 8);
     menu.style.left = `${left}px`;
     menu.style.top = `${Math.max(14, top)}px`;
     menu.querySelector("button")?.focus({ preventScroll: true });
@@ -104,7 +105,8 @@
       event.stopImmediatePropagation();
       const choice = source.getAttribute("data-capsule-media-source");
       closeMenu();
-      if (choice === "camera") openCamera();
+      if (choice === "photo") openCapture("image");
+      else if (choice === "video") openCapture("video");
       else openGallery();
       return;
     }
