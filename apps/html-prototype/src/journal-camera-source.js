@@ -1,11 +1,11 @@
 (() => {
-  const MENU_ID = "journal-image-source-menu";
-  const CAMERA_INPUT_ID = "journal-camera-input";
+  const MENU_ID = "journal-media-source-menu";
+  const CAPTURE_INPUT_ID = "journal-capture-input";
 
   const ensureStyle = () => {
-    if (document.getElementById("journal-image-source-style")) return;
+    if (document.getElementById("journal-media-source-style")) return;
     const style = document.createElement("style");
-    style.id = "journal-image-source-style";
+    style.id = "journal-media-source-style";
     style.textContent = `
       #${MENU_ID} {
         position: fixed;
@@ -36,7 +36,7 @@
         transform: translateY(1px);
         background: #efdfbd;
       }
-      #${MENU_ID} .journal-image-source-icon {
+      #${MENU_ID} .journal-media-source-icon {
         display: inline-block;
         width: 28px;
         font-size: 18px;
@@ -47,36 +47,41 @@
   };
 
   const closeMenu = () => document.getElementById(MENU_ID)?.remove();
-
   const journalMediaInput = () => document.querySelector("#diary-mobile-media-input");
 
-  const openGallery = () => {
+  const galleryAccept = (kind) => kind === "video"
+    ? "video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
+    : "image/*";
+
+  const openGallery = (kind) => {
     const input = journalMediaInput();
     if (!(input instanceof HTMLInputElement)) return;
     const previousAccept = input.accept;
-    input.accept = "image/*";
+    input.accept = galleryAccept(kind);
     input.click();
     window.setTimeout(() => {
       if (input.isConnected) input.accept = previousAccept;
     }, 0);
   };
 
-  const ensureCameraInput = () => {
-    let input = document.getElementById(CAMERA_INPUT_ID);
-    if (input instanceof HTMLInputElement) return input;
-    input = document.createElement("input");
-    input.id = CAMERA_INPUT_ID;
+  const ensureCaptureInput = (kind) => {
+    const original = journalMediaInput();
+    if (!(original instanceof HTMLInputElement)) return null;
+
+    document.getElementById(CAPTURE_INPUT_ID)?.remove();
+    const input = document.createElement("input");
+    input.id = CAPTURE_INPUT_ID;
     input.type = "file";
-    input.accept = "image/*";
+    input.accept = kind === "video" ? "video/*" : "image/*";
     input.setAttribute("capture", "environment");
     input.className = "sr-only";
     input.tabIndex = -1;
-    document.body.appendChild(input);
+    original.parentElement?.appendChild(input);
     return input;
   };
 
-  const forwardCapturedPhoto = (camera) => {
-    const file = camera.files?.[0];
+  const forwardCapturedMedia = (capture) => {
+    const file = capture.files?.[0];
     const original = journalMediaInput();
     if (!file || !(original instanceof HTMLInputElement)) return;
 
@@ -86,46 +91,52 @@
       original.files = transfer.files;
       original.dispatchEvent(new Event("change", { bubbles: true }));
     } catch {
-      // Some WebViews can reject assigning FileList. In that case temporarily
-      // reuse the Journal input identity and bubble the camera change through
-      // the same document-level change handler used by gallery selection.
+      // Keep the capture input inside the Journal DOM so this fallback still
+      // bubbles through the app root's existing Journal change listener.
       const originalId = original.id;
       original.id = `${originalId}-gallery`;
-      camera.id = originalId;
-      camera.dispatchEvent(new Event("change", { bubbles: true }));
-      camera.id = CAMERA_INPUT_ID;
+      capture.id = originalId;
+      capture.dispatchEvent(new Event("change", { bubbles: true }));
+      capture.id = CAPTURE_INPUT_ID;
       original.id = originalId;
     }
   };
 
-  const openCamera = () => {
-    const original = journalMediaInput();
-    const camera = ensureCameraInput();
-    if (!(original instanceof HTMLInputElement)) return;
+  const openCapture = (kind) => {
+    const capture = ensureCaptureInput(kind);
+    if (!(capture instanceof HTMLInputElement)) return;
 
-    camera.value = "";
-    camera.onchange = () => forwardCapturedPhoto(camera);
-    camera.click();
+    capture.value = "";
+    capture.onchange = () => {
+      forwardCapturedMedia(capture);
+      window.setTimeout(() => capture.remove(), 0);
+    };
+    capture.click();
   };
 
-  const showMenu = (anchor) => {
+  const showMenu = (anchor, kind) => {
     closeMenu();
     ensureStyle();
     const menu = document.createElement("div");
     menu.id = MENU_ID;
     menu.setAttribute("role", "menu");
-    menu.setAttribute("aria-label", "Choose photo source");
-    menu.innerHTML = `
-      <button type="button" data-journal-image-source="gallery" role="menuitem"><span class="journal-image-source-icon">▧</span>Choose from Gallery</button>
-      <button type="button" data-journal-image-source="camera" role="menuitem"><span class="journal-image-source-icon">📷</span>Take Photo</button>
-    `;
+    menu.setAttribute("aria-label", kind === "video" ? "Choose video source" : "Choose photo source");
+    menu.innerHTML = kind === "video"
+      ? `
+        <button type="button" data-journal-media-source="gallery" data-journal-media-kind="video" role="menuitem"><span class="journal-media-source-icon">▧</span>Choose from Gallery</button>
+        <button type="button" data-journal-media-source="capture" data-journal-media-kind="video" role="menuitem"><span class="journal-media-source-icon">🎥</span>Record Video</button>
+      `
+      : `
+        <button type="button" data-journal-media-source="gallery" data-journal-media-kind="image" role="menuitem"><span class="journal-media-source-icon">▧</span>Choose from Gallery</button>
+        <button type="button" data-journal-media-source="capture" data-journal-media-kind="image" role="menuitem"><span class="journal-media-source-icon">📷</span>Take Photo</button>
+      `;
     document.body.appendChild(menu);
 
     const rect = anchor.getBoundingClientRect();
     const menuWidth = Math.min(230, window.innerWidth - 28);
     const left = Math.max(14, Math.min(window.innerWidth - menuWidth - 14, rect.left));
     const preferredTop = rect.top - 116;
-    const top = preferredTop >= 14 ? preferredTop : Math.min(window.innerHeight - 116 - 14, rect.bottom + 8);
+    const top = preferredTop >= 14 ? preferredTop : Math.min(window.innerHeight - 130, rect.bottom + 8);
     menu.style.left = `${left}px`;
     menu.style.top = `${Math.max(14, top)}px`;
     menu.querySelector("button")?.focus({ preventScroll: true });
@@ -135,14 +146,15 @@
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
 
-    const sourceButton = target.closest("[data-journal-image-source]");
+    const sourceButton = target.closest("[data-journal-media-source]");
     if (sourceButton) {
       event.preventDefault();
       event.stopPropagation();
-      const source = sourceButton.getAttribute("data-journal-image-source");
+      const source = sourceButton.getAttribute("data-journal-media-source");
+      const kind = sourceButton.getAttribute("data-journal-media-kind") === "video" ? "video" : "image";
       closeMenu();
-      if (source === "camera") openCamera();
-      else openGallery();
+      if (source === "capture") openCapture(kind);
+      else openGallery(kind);
       return;
     }
 
@@ -150,7 +162,15 @@
     if (addPhotoButton) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      showMenu(addPhotoButton);
+      showMenu(addPhotoButton, "image");
+      return;
+    }
+
+    const addVideoButton = target.closest('.mobile-editor-toolbar [data-action="journal-add-inline-media"][aria-label="Add video"]');
+    if (addVideoButton) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      showMenu(addVideoButton, "video");
       return;
     }
 
