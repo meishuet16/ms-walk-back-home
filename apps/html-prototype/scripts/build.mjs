@@ -59,7 +59,7 @@ for (const file of [
   "journal-mobile-layout-hotfix.css",
   "journal-camera-source.js",
   "capsule-camera-source.js",
-  "records-pause-navigation-hotfix.js"
+  "recording-audio-guard.js"
 ]) {
   await copyFile(resolve(root, `src/${file}`), resolve(root, `dist/${file}`));
 }
